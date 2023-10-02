@@ -1,0 +1,267 @@
+<html>
+<head><meta charset="utf-8"><title>invite inconsistency · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html">invite inconsistency</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1429593"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1429593" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Erik Tews <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1429593">(Sep 02 2022 at 15:20)</a>:</h4>
+<p>Hi, I upgraded a sever to Zulip 5.6 from an older version (4.X and it was later on running master or main for a while), and now I get this error when I try to see my invites:</p>
+<div class="codehilite"><pre><span></span><code>2022-09-02 15:13:14.967 ERR  [zerver.middleware.json_error_handler] Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/base.py&quot;, line 181, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/lib/rest.py&quot;, line 33, in _wrapped_view_func
+    response = view_func(request, *args, **kwargs)
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/views/decorators/csrf.py&quot;, line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/lib/rest.py&quot;, line 169, in rest_dispatch
+    return target_function(request, **kwargs)
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/utils/decorators.py&quot;, line 130, in _wrapped_view
+    response = view_func(request, *args, **kwargs)
+  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/decorator.py&quot;, line 791, in _wrapped_view_func
+    return authenticate_log_and_execute_json(
+  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/decorator.py&quot;, line 778, in authenticate_log_and_execute_json
+    return limited_view_func(request, user_profile, *args, **kwargs)
+  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/decorator.py&quot;, line 984, in wrapped_func
+    return func(request, *args, **kwargs)
+  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/decorator.py&quot;, line 600, in _wrapped_view_func
+    return view_func(request, user_profile, *args, **kwargs)
+  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/views/invite.py&quot;, line 102, in get_user_invites
+    all_users = do_get_invites_controlled_by_user(user_profile)
+  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/actions/invites.py&quot;, line 274, in do_get_invites_controlled_by_user
+    expiry_date=get_invitation_expiry_date(invitee.confirmation.get()),
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/manager.py&quot;, line 85, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 439, in get
+    raise self.model.MultipleObjectsReturned(
+confirmation.models.Confirmation.MultipleObjectsReturned: get() returned more than one Confirmation -- it returned 3!
+
+2022-09-02 15:13:14.995 ERR  [django.request] Internal Server Error: /json/invites
+</code></pre></div>
+<p>I don't know what causes this, but I would not mind losing all my invite links in case there is something wrong with the database.</p>
+
+
+
+<a name="1429613"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1429613" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Erik Tews <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1429613">(Sep 02 2022 at 15:59)</a>:</h4>
+<p>I figured out two things:</p>
+<p>First of all, it seems to be related to this line of code here: <a href="https://github.com/zulip/zulip/blob/fe9ed2e69d61a43ebe893eb5f7bde6815b431992/zerver/actions/invites.py#L275">https://github.com/zulip/zulip/blob/fe9ed2e69d61a43ebe893eb5f7bde6815b431992/zerver/actions/invites.py#L275</a></p>
+<p>And second, I figured out that I have some users multiple times in my <code>zerver_preregistrationuser</code> table in Postgres. They have a different id of course, but the same email address.</p>
+
+
+
+<a name="1430751"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1430751" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1430751">(Sep 06 2022 at 16:34)</a>:</h4>
+<p><span class="user-mention" data-user-id="16874">@Erik Tews</span> Hmm, multiple PreregistrationUsers with the same email is normal, since that's not supposed to be unique - but it looks like the error is caused by a PreregistrationUser with multiple Confirmations tied to it. Not sure how it would happen <span aria-label="thinking" class="emoji emoji-1f914" role="img" title="thinking">:thinking:</span>  We can start by finding out if it's just one object like that or if there's more. Can you run this in <code>manage.py shell</code>?</p>
+<div class="codehilite"><pre><span></span><code>from confirmation.models import Confirmation
+for prereg_user in PreregistrationUser.objects.all():
+    try:
+        prereg_user.confirmation.get()
+    except Confirmation.MultipleObjectsReturned:
+        print(f&quot;Multiple confirmation objects for {prereg_user.id}&quot;)
+</code></pre></div>
+
+
+
+<a name="1430886"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1430886" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1430886">(Sep 06 2022 at 19:18)</a>:</h4>
+<p>Yeah, that output would be helpful; this looks like some sort of database corruption. </p>
+<p><span class="user-mention" data-user-id="16874">@Erik Tews</span> did you upgrade the operating system as well by any chance? <a href="https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-the-operating-system">https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-the-operating-system</a> has the instructions.</p>
+
+
+
+<a name="1431398"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1431398" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Erik Tews <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1431398">(Sep 07 2022 at 14:38)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="10349">Mateusz Mandera</span> <a href="#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1430751">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="16874">Erik Tews</span> Hmm, multiple PreregistrationUsers with the same email is normal, since that's not supposed to be unique - but it looks like the error is caused by a PreregistrationUser with multiple Confirmations tied to it. Not sure how it would happen <span aria-label="thinking" class="emoji emoji-1f914" role="img" title="thinking">:thinking:</span>  We can start by finding out if it's just one object like that or if there's more. Can you run this in <code>manage.py shell</code>?</p>
+<p><div class="codehilite"><pre><span></span><code>from confirmation.models import Confirmation
+for prereg_user in PreregistrationUser.objects.all():
+    try:
+        prereg_user.confirmation.get()
+    except Confirmation.MultipleObjectsReturned:
+        print(f&quot;Multiple confirmation objects for {prereg_user.id}&quot;)
+</code></pre></div><br>
+</p>
+</blockquote>
+<p>Unfortunately not, I use the docker-compose deployment and there I get the following error when trying to start the shell:</p>
+<div class="codehilite"><pre><span></span><code># docker-compose exec -u zulip zulip     /home/zulip/deployments/current/manage.py shell
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/manage.py&quot;, line 157, in &lt;module&gt;
+    execute_from_command_line(sys.argv)
+  File &quot;/home/zulip/deployments/current/manage.py&quot;, line 122, in execute_from_command_line
+    utility.execute()
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/__init__.py&quot;, line 413, in execute
+    self.fetch_command(subcommand).run_from_argv(self.argv)
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 354, in run_from_argv
+    self.execute(*args, **cmd_options)
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 398, in execute
+    output = self.handle(*args, **options)
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/commands/shell.py&quot;, line 100, in handle
+    return getattr(self, shell)(options)
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/commands/shell.py&quot;, line 36, in ipython
+    start_ipython(argv=[])
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/IPython/__init__.py&quot;, line 130, in start_ipython
+    return launch_new_instance(argv=argv, **kwargs)
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/traitlets/config/application.py&quot;, line 975, in launch_instance
+    app.initialize(argv)
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/traitlets/config/application.py&quot;, line 110, in inner
+    return method(app, *args, **kwargs)
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/IPython/terminal/ipapp.py&quot;, line 319, in initialize
+    self.init_shell()
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/IPython/terminal/ipapp.py&quot;, line 333, in init_shell
+    self.shell = self.interactive_shell_class.instance(parent=self,
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/traitlets/config/configurable.py&quot;, line 551, in instance
+    inst = cls(*args, **kwargs)
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/IPython/terminal/interactiveshell.py&quot;, line 527, in __init__
+    super(TerminalInteractiveShell, self).__init__(*args, **kwargs)
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/IPython/core/interactiveshell.py&quot;, line 660, in __init__
+    self.init_virtualenv()
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/IPython/core/interactiveshell.py&quot;, line 943, in init_virtualenv
+    if any(p_venv == p.parents[1] for p in paths):
+  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/IPython/core/interactiveshell.py&quot;, line 943, in &lt;genexpr&gt;
+    if any(p_venv == p.parents[1] for p in paths):
+  File &quot;/usr/lib/python3.8/pathlib.py&quot;, line 621, in __getitem__
+    raise IndexError(idx)
+IndexError: 1
+
+If you suspect this is an IPython 7.33.0 bug, please report it at:
+    https://github.com/ipython/ipython/issues
+or send an email to the mailing list at ipython-dev@python.org
+
+You can print a more detailed traceback right now with &quot;%tb&quot;, or use &quot;%debug&quot;
+to interactively debug it.
+
+Extra-detailed tracebacks for bug-reporting purposes can be enabled via:
+    c.Application.verbose_crash=True
+</code></pre></div>
+
+
+
+<a name="1431399"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1431399" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Erik Tews <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1431399">(Sep 07 2022 at 14:39)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1430886">said</a>:</p>
+<blockquote>
+<p>Yeah, that output would be helpful; this looks like some sort of database corruption. </p>
+<p><span class="user-mention silent" data-user-id="16874">Erik Tews</span> did you upgrade the operating system as well by any chance? <a href="https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-the-operating-system">https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-the-operating-system</a> has the instructions.</p>
+</blockquote>
+<p>No, since I use the docker deployment, so I think that doesn't really apply there, right?</p>
+
+
+
+<a name="1431402"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1431402" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Erik Tews <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1431402">(Sep 07 2022 at 15:02)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="10349">Mateusz Mandera</span> <a href="#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1430751">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="16874">Erik Tews</span> Hmm, multiple PreregistrationUsers with the same email is normal, since that's not supposed to be unique - but it looks like the error is caused by a PreregistrationUser with multiple Confirmations tied to it. Not sure how it would happen</p>
+</blockquote>
+<p>But as a general idea: Somehow this happened. In general, Postgres is really good at making sure that certain things are unique in a table or across multiple tables. So when Zulip assumes that something is unique,  should one maybe add a constraint to the database that makes sure that will never happen?</p>
+
+
+
+<a name="1431445"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1431445" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1431445">(Sep 07 2022 at 17:04)</a>:</h4>
+<p>I think the Docker environment would have the same issue fixed by <code>/home/zulip/deployments/current/scripts/setup/reindex-textual-data --force</code> if you upgraded the host image for the database to newer <code>libc</code>, but yeah that should only happen if you're using an external database server.</p>
+
+
+
+<a name="1431451"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1431451" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1431451">(Sep 07 2022 at 17:13)</a>:</h4>
+<p>I would have thought we had a database constraint that would prevent this outcome. <span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> do you understand how the indexes are setup that might prevent such a bug? Studying that might help determine the bug here.</p>
+
+
+
+<a name="1431452"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1431452" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1431452">(Sep 07 2022 at 17:14)</a>:</h4>
+<p>(It's likely possible to just delete one of the duplicates to clear the error, but I'd like to be confident we understand the bug first).</p>
+
+
+
+<a name="1431464"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1431464" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1431464">(Sep 07 2022 at 17:29)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1431451">said</a>:</p>
+<blockquote>
+<p>I would have thought we had a database constraint that would prevent this outcome. <span class="user-mention silent" data-user-id="10349">Mateusz Mandera</span> do you understand how the indexes are setup that might prevent such a bug? Studying that might help determine the bug here.</p>
+</blockquote>
+<p>There isn't a database constraint and I don't think there can be in the current model - this is because our <code>Confirmation</code> objects can point to rows in  various tables. This happens via Django's GenericForeignKey (<a href="https://docs.djangoproject.com/en/4.1/ref/contrib/contenttypes/">https://docs.djangoproject.com/en/4.1/ref/contrib/contenttypes/</a>)</p>
+<div class="codehilite"><pre><span></span><code>content_object = GenericForeignKey(&quot;content_type&quot;, &quot;object_id&quot;)
+</code></pre></div>
+<p>I agree it'd be important to understand how this bug happened though, because I'm confused by how this could even happen for a single <code>PreregistrationUser</code> to be pointed to by multiple <code>Confirmation</code>s. Some race condition is one idea that comes to mind. Also some hypothetical bug in <code>zerver/migrations/0401_migrate_old_realm_reactivation_links.py</code> crossed my mind but it deals with <code>REALM_REACTIVATION</code> Confirmations, so I don't see how</p>
+
+
+
+<a name="1431468"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1431468" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1431468">(Sep 07 2022 at 17:35)</a>:</h4>
+<p>Oh, I have an idea for a potential overlap between <code>ConfirmationEmailWorker</code> and <code>maybe_send_to_registration</code> creating <code>Confirmations</code> for a <code>PreregistrationUser</code>, let me investigate that <span aria-label="thinking" class="emoji emoji-1f914" role="img" title="thinking">:thinking:</span></p>
+
+
+
+<a name="1431488"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1431488" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Erik Tews <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1431488">(Sep 07 2022 at 17:59)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1431452">said</a>:</p>
+<blockquote>
+<p>(It's likely possible to just delete one of the duplicates to clear the error, but I'd like to be confident we understand the bug first).</p>
+</blockquote>
+<p>It looks like the error went away by itself now. Maybe some of the duplicate ones expired?</p>
+
+
+
+<a name="1431489"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1431489" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Erik Tews <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1431489">(Sep 07 2022 at 18:00)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="10349">Mateusz Mandera</span> <a href="#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1431468">said</a>:</p>
+<blockquote>
+<p>Oh, I have an idea for a potential overlap between <code>ConfirmationEmailWorker</code> and <code>maybe_send_to_registration</code> creating <code>Confirmations</code> for a <code>PreregistrationUser</code>, let me investigate that <span aria-label="thinking" class="emoji emoji-1f914" role="img" title="thinking">:thinking:</span></p>
+</blockquote>
+<p>When it helps you, I use SAML auth on my server, so there are no real local full users with a password and so on.</p>
+
+
+
+<a name="1431490"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1431490" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Erik Tews <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1431490">(Sep 07 2022 at 18:02)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1431445">said</a>:</p>
+<blockquote>
+<p>I think the Docker environment would have the same issue fixed by <code>/home/zulip/deployments/current/scripts/setup/reindex-textual-data --force</code> if you upgraded the host image for the database to newer <code>libc</code>, but yeah that should only happen if you're using an external database server.</p>
+</blockquote>
+<p>I think that counts as <em>external</em> since it's a different docker container.</p>
+
+
+
+<a name="1431497"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1431497" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Erik Tews <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1431497">(Sep 07 2022 at 18:14)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1431445">said</a>:</p>
+<blockquote>
+<p>I think the Docker environment would have the same issue fixed by <code>/home/zulip/deployments/current/scripts/setup/reindex-textual-data --force</code> if you upgraded the host image for the database to newer <code>libc</code>, but yeah that should only happen if you're using an external database server.</p>
+</blockquote>
+<p>Is the script maybe triggered automatically by the default Docker setup?</p>
+
+
+
+<a name="1431565"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1431565" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1431565">(Sep 07 2022 at 19:28)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="16874">Erik Tews</span> <a href="#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1431490">said</a>:</p>
+<blockquote>
+<p>I think that counts as <em>external</em> since it's a different docker container.</p>
+</blockquote>
+<p>If you're using our Postgres container image, I don't think we've upgraded it in a way that would trigger the Postgres issue in question. When we do, we'll script it to run the reindexing tool.</p>
+
+
+
+<a name="1444269"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1444269" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1444269">(Oct 04 2022 at 01:15)</a>:</h4>
+<p><span class="user-mention" data-user-id="16874">@Erik Tews</span>: I don't know if you saw this, but we found <a href="https://github.com/zulip/zulip/pull/23050">#23050</a> recently which may explain how things got into that state.</p>
+
+
+
+<a name="1444276"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/invite%20inconsistency/near/1444276" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Erik Tews <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/invite.20inconsistency.html#1444276">(Oct 04 2022 at 01:36)</a>:</h4>
+<p>Yes, that's a good description of my bug</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,251 @@
+<html>
+<head><meta charset="utf-8"><title>upgrading Zulip OS · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html">upgrading Zulip OS</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="737435"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/737435" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#737435">(Apr 29 2019 at 05:26)</a>:</h4>
+<p>Upgrading from Ubuntu14 to 16 to 18. 14-16 works like a charm.</p>
+<p>I get all the way through the <a href="https://zulip.readthedocs.io/en/latest/production/maintain-secure-upgrade.html" target="_blank" title="https://zulip.readthedocs.io/en/latest/production/maintain-secure-upgrade.html">listed steps</a> with only one change (using <code>/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 /home/zulip/deployments/current/ --from-git</code> instead of <code>/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 /home/zulip/deployments/current/ --ignore-static-assets</code>as that's what the line was before the <code>--ignore-static assets</code> kwarg was added)</p>
+<p>on the final step, I run <code>/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 /home/zulip/deployments/current/ --from-git</code>and it bombs out with:</p>
+<div class="codehilite"><pre><span></span>Using cached node modules from /srv/zulip-npm-cache/f834f51a79a0a71e87978bb81f248c120e56f67b/node_modules
++ rm -rf node_modules
++ ln -nsf /srv/zulip-npm-cache/f834f51a79a0a71e87978bb81f248c120e56f67b/node_modules node_modules
++ ./tools/setup/emoji/build_emoji
++ ./tools/inline-email-css
++ ./tools/setup/generate_zulip_bots_static_files.py
++ ./tools/setup/generate-custom-icon-webfont
++ ./tools/setup/build_pygments_data
++ ./tools/minify-js --prev-deploy /home/zulip/deployments/current
++ cp -R node_modules/katex/dist/fonts /home/zulip/prod-static/node_modules/katex/dist/fonts
++ ./manage.py collectstatic --no-default-ignore --noinput -i assets -inode_modules -i styles -i templates
++ ./manage.py compilemessages
++ cp -aT static/locale /home/zulip/prod-static/locale
++ ./tools/update-authors-json --not-required
+2019-04-29 05:21:20,798 upgrade-zulip-stage-2: Checking for needed migrations
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2019-03-20-20-36-08/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/base/base.py&quot;, line 213, in ensure_connection
+    self.connect()
+  File &quot;/home/zulip/deployments/2019-03-20-20-36-08/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/base/base.py&quot;, line 189, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File &quot;/home/zulip/deployments/2019-03-20-20-36-08/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/postgresql/base.py&quot;, line 176, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File &quot;/home/zulip/deployments/2019-03-20-20-36-08/zulip-py3-venv/lib/python3.6/site-packages/psycopg2/__init__.py&quot;, line 130, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+  File &quot;/home/zulip/deployments/2019-03-20-20-36-08/zerver/lib/db.py&quot;, line 43, in __init__
+    super().__init__(*args, **kwargs)
+psycopg2.OperationalError: could not connect to server: No such file or directory
+    Is the server running locally and accepting
+    connections on Unix domain socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot;?
+</pre></div>
+
+
+<p>To get this far, I had to make sure to run <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply -f</code> first, as attempting to run the upgrade phase 2 first will cause it to bomb out with:</p>
+<div class="codehilite"><pre><span></span>Error: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]: Failed to call refresh: &#39;pg_ctlcluster 10 main restart&#39; returned 1 instead of one of [0]
+Error: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]: &#39;pg_ctlcluster 10 main restart&#39; returned 1 instead of one of [0]
+</pre></div>
+
+
+<p>I still get that error when run, but subsequent zulip-puppet-applies don't throw the error, so the script doesn't die... </p>
+<p>Sorry for having so many questions in this channel lately</p>
+
+
+
+<a name="737440"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/737440" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#737440">(Apr 29 2019 at 05:52)</a>:</h4>
+<p><span class="user-mention" data-user-id="3733">@Sean Wallitsch</span> just to check, were you on 2.0.2?  2.0.3 is what added <code>--ignore-static assets</code>.</p>
+
+
+
+<a name="737441"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/737441" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#737441">(Apr 29 2019 at 05:52)</a>:</h4>
+<p>No worries on posting questions, testing new documentation is very much appreciated!</p>
+
+
+
+<a name="737442"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/737442" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#737442">(Apr 29 2019 at 05:53)</a>:</h4>
+<p>So that error you got is clearly because postgres wasn't running.  In theory, the <code>service postgresql start</code> command a bit earlier was supposed to start it up.</p>
+
+
+
+<a name="737443"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/737443" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#737443">(Apr 29 2019 at 05:53)</a>:</h4>
+<p>(On 2.0.2, you had to either do <code>--from-git</code> or not depending how you'd installed the latest deployment)</p>
+
+
+
+<a name="737444"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/737444" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#737444">(Apr 29 2019 at 05:55)</a>:</h4>
+<p>yes, 2.0.2</p>
+
+
+
+<a name="737445"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/737445" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#737445">(Apr 29 2019 at 05:56)</a>:</h4>
+<p>hmm, I can try again (I have a full snapshot right before I start doing any of the migrations</p>
+
+
+
+<a name="737446"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/737446" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#737446">(Apr 29 2019 at 05:57)</a>:</h4>
+<p>should service postgressql start prevent the <code>Error: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]: Failed to call refresh: 'pg_ctlcluster 10 main restart' returned 1 instead of one of [0]</code> error?</p>
+
+
+
+<a name="737453"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/737453" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#737453">(Apr 29 2019 at 06:30)</a>:</h4>
+<p><span class="user-mention" data-user-id="3733">@Sean Wallitsch</span> yes, that's likely an error with a root cause of postgres not starting.</p>
+
+
+
+<a name="737454"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/737454" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#737454">(Apr 29 2019 at 06:30)</a>:</h4>
+<p>Now, it's possible that we have something misordered and need to tweak some code.</p>
+
+
+
+<a name="737463"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/737463" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#737463">(Apr 29 2019 at 06:35)</a>:</h4>
+<p>I'll give it a go now</p>
+
+
+
+<a name="737464"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/737464" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#737464">(Apr 29 2019 at 06:35)</a>:</h4>
+<p>thanks for your late night support</p>
+
+
+
+<a name="737466"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/737466" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#737466">(Apr 29 2019 at 06:44)</a>:</h4>
+<p>no luck. I'll reload from a snapshot and try again tomorrow.</p>
+
+
+
+<a name="742060"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/742060" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cesar Celis <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#742060">(May 15 2019 at 11:21)</a>:</h4>
+<blockquote>
+<p>I'll give it a go now</p>
+</blockquote>
+<p>Hello <span class="user-mention" data-user-id="3733">@Sean Wallitsch</span>  your upgrade was OK?</p>
+
+
+
+<a name="742169"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/742169" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#742169">(May 15 2019 at 15:57)</a>:</h4>
+<p>haha, it was not. we're trying again today</p>
+
+
+
+<a name="744948"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/744948" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#744948">(May 23 2019 at 01:01)</a>:</h4>
+<p>We ended up bringing in our database people and doing a database migration, which was stress free</p>
+
+
+
+<a name="745187"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/745187" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cesar Celis <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#745187">(May 23 2019 at 17:53)</a>:</h4>
+<p>Got it, my current OS is Ubuntu 14.04 and Zulip 1.9.1. I am going to upgrade to 2.0.3..</p>
+
+
+
+<a name="745290"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/745290" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#745290">(May 23 2019 at 23:49)</a>:</h4>
+<p>Yeah I recommend upgrading zulip and then ubuntu following our docs</p>
+
+
+
+<a name="746429"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/746429" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cesar Celis <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#746429">(May 28 2019 at 12:54)</a>:</h4>
+<blockquote>
+<p>Upgrading from Ubuntu14 to 16 to 18. 14-16 works like a charm.</p>
+</blockquote>
+<p>In my case upgrade  2.0.3 from a tarball, worked OK</p>
+
+
+
+<a name="746431"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/746431" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cesar Celis <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#746431">(May 28 2019 at 12:55)</a>:</h4>
+<blockquote>
+<p>should service postgressql start prevent the <code>Error: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]: Failed to call refresh: 'pg_ctlcluster 10 main restart' returned 1 instead of one of [0]</code> error?</p>
+</blockquote>
+<p>From Xenial to Bionic, the very same message.</p>
+
+
+
+<a name="746432"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/746432" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cesar Celis <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#746432">(May 28 2019 at 12:56)</a>:</h4>
+<p>I'll stay en Xenial, do you need any log to troubleshoot?</p>
+
+
+
+<a name="746689"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/746689" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#746689">(May 28 2019 at 21:27)</a>:</h4>
+<p><span class="user-mention" data-user-id="10549">@Cesar Celis</span> can you post the output?</p>
+
+
+
+<a name="746690"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/746690" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#746690">(May 28 2019 at 21:28)</a>:</h4>
+<p>I'm curious what happened on the <code>service postgresql start</code> line.</p>
+
+
+
+<a name="747074"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/747074" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cesar Celis <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#747074">(May 29 2019 at 15:47)</a>:</h4>
+<div class="codehilite"><pre><span></span>2019-05-29 15:43:48,045 upgrade-zulip-stage-2: Applying puppet changes...
+Warning: The string &#39;4033604&#39; was automatically coerced to the numerical value 4033604 (file: /home/zulip/deployments/2019-05-27-10-38-42/puppet/zulip/manifests/base.pp, line: 93, column: 19)
+Notice: Compiled catalog for zulip.megasoft.com.ve in environment production in 3.43 seconds
+Notice: /Stage[main]/Zulip::Apt_repository/Exec[setup_apt_repo]/returns: executed successfully
+Notice: /Stage[main]/Zulip::Postgres_appdb_tuned/File[/etc/postgresql/10/main/postgresql.conf]/content: content changed &#39;{md5}e18ff7c691b2dd6a0a966703adb1a45b&#39; to &#39;{md5}7d4015f37200f56bc9713a9add914230&#39;
+Notice: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]/returns: Job for postgresql@10-main.service failed because the service did not take the steps required by its unit configuration.
+Notice: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]/returns: See &quot;systemctl status postgresql@10-main.service&quot; and &quot;journalctl -xe&quot; for details.
+Error: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]: Failed to call refresh: &#39;pg_ctlcluster 10 main restart&#39; returned 1 instead of one of [0]
+Error: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]: &#39;pg_ctlcluster 10 main restart&#39; returned 1 instead of one of [0]
+Notice: Applied catalog in 22.86 seconds
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2&quot;, line 181, in &lt;module&gt;
+    subprocess.check_call([&quot;./scripts/zulip-puppet-apply&quot;, &quot;--force&quot;])
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;./scripts/zulip-puppet-apply&#39;, &#39;--force&#39;]&#39; returned non-zero exit status 1.
+root@zulip:~# systemctl status postgresql
+â postgresql.service - PostgreSQL RDBMS
+   Loaded: loaded (/lib/systemd/system/postgresql.service; enabled; vendor preset: enabled)
+   Active: active (exited) since Wed 2019-05-29 11:26:51 -04; 17min ago
+ Main PID: 4200 (code=exited, status=0/SUCCESS)
+    Tasks: 0 (limit: 4672)
+   CGroup: /system.slice/postgresql.service
+
+may 29 11:26:51 zulip systemd[1]: Starting PostgreSQL RDBMS...
+may 29 11:26:51 zulip systemd[1]: Started PostgreSQL RDBMS.
+root@zulip:~# systemctl start postgresql
+root@zulip:~# systemctl status postgresql
+â postgresql.service - PostgreSQL RDBMS
+   Loaded: loaded (/lib/systemd/system/postgresql.service; enabled; vendor preset: enabled)
+   Active: active (exited) since Wed 2019-05-29 11:26:51 -04; 18min ago
+ Main PID: 4200 (code=exited, status=0/SUCCESS)
+    Tasks: 0 (limit: 4672)
+   CGroup: /system.slice/postgresql.service
+
+may 29 11:26:51 zulip systemd[1]: Starting PostgreSQL RDBMS...
+may 29 11:26:51 zulip systemd[1]: Started PostgreSQL RDBMS.
+</pre></div>
+
+
+
+<a name="747075"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20Zulip%20OS/near/747075" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cesar Celis <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20Zulip.20OS.html#747075">(May 29 2019 at 15:47)</a>:</h4>
+<p>PostgreSQL seems to be running ok...</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

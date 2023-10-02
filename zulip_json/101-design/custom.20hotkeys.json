@@ -1,0 +1,158 @@
+[
+    {
+        "content": "<p>Should users be allowed to define their own hotkeys?</p>",
+        "id": 202034,
+        "sender_full_name": "Joshua Pan",
+        "timestamp": 1494622699
+    },
+    {
+        "content": "<p>(like choose which key does what feature)</p>",
+        "id": 202035,
+        "sender_full_name": "Joshua Pan",
+        "timestamp": 1494622722
+    },
+    {
+        "content": "<p>Probably.  It'd be a cool feature, but also a lot of work.</p>",
+        "id": 202036,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1494622754
+    },
+    {
+        "content": "<p>I can remember this being brouht up back a month <a href=\"https://chat.zulip.org/#narrow/stream/general/subject/tasks.20that.20require.20a.20mouse\" target=\"_blank\" title=\"https://chat.zulip.org/#narrow/stream/general/subject/tasks.20that.20require.20a.20mouse\">here</a>, so it seems to be a somewhat demanded feature.</p>",
+        "id": 202042,
+        "sender_full_name": "Robert Hönig",
+        "timestamp": 1494622915
+    },
+    {
+        "content": "<p><span class=\"emoji emoji-0032\" title=\":two:\">:two:</span></p>",
+        "id": 202043,
+        "sender_full_name": "Joshua Pan",
+        "timestamp": 1494622933
+    },
+    {
+        "content": "<p>Yeah, this may be something that'd make a good sprint project</p>",
+        "id": 202044,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1494622934
+    },
+    {
+        "content": "<p>Oh, it's a regression in the sprite sheet code we have here but not merged into master.  Nice find.</p>",
+        "id": 202045,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1494622945
+    },
+    {
+        "content": "<p>Yep</p>",
+        "id": 202046,
+        "sender_full_name": "Joshua Pan",
+        "timestamp": 1494622952
+    },
+    {
+        "content": "<p>I wonder if that just doesn't exist in our sprite sheet</p>",
+        "id": 202048,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1494622998
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> should I open an issue for custom hotkeys and label <code>good sprint project</code></p>",
+        "id": 202049,
+        "sender_full_name": "Joshua Pan",
+        "timestamp": 1494623101
+    },
+    {
+        "content": "<p>check that there isn't one, but yeah sounds good</p>",
+        "id": 202050,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1494623113
+    },
+    {
+        "content": "<p>Back to hotkeys,  I think basically there are a few components:</p>\n<ul>\n<li>Storage of the mappings for a given user (and how this will migrate over time).</li>\n<li>The UI, both display and widget for capturing a replacement key.</li>\n<li>How to handle new hotkeys, etc.</li>\n<li>The actually mapping.</li>\n</ul>",
+        "id": 202052,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1494623175
+    },
+    {
+        "content": "<p>As a follow-up project, maybe some way to easily export and import hotkey configurations in a file?</p>",
+        "id": 202060,
+        "sender_full_name": "Robert Hönig",
+        "timestamp": 1494623349
+    },
+    {
+        "content": "<p>probably not worth worrying about follow-ups until we have something working, but sure ;)</p>",
+        "id": 202062,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1494623401
+    },
+    {
+        "content": "<p>Doesn't seem like there is an open issue on this..</p>",
+        "id": 202082,
+        "sender_full_name": "Joshua Pan",
+        "timestamp": 1494624049
+    },
+    {
+        "content": "<p>ok, create one then :)</p>",
+        "id": 202083,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1494624083
+    },
+    {
+        "content": "<p>I didn't think there was, just wasn't sure</p>",
+        "id": 202084,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1494624096
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/4777\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/4777\">#4777</a></p>",
+        "id": 202096,
+        "sender_full_name": "Joshua Pan",
+        "timestamp": 1494624648
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  I would like to work on this issue and thought about the following approach:</p>\n<ul>\n<li>\n<p>Store the custom hotkeys per user profile in their own table in the database similar to hotspots. The columns could be: user_id, hotkey, action. (This would mean we don’t support the corner case of a user wanting to configure different hotkeys on different devices.)</p>\n</li>\n<li>\n<p>Use user_id and action as primary key because action is a fixed value space (other option would be user_id and hotkey). This would mean that a user can not have two hotkeys for the same action, which is not very useful anyway. The user can only choose to change the hotkey for an action, they can not define a new action. </p>\n</li>\n<li>\n<p>Either store all actions (with null for default) or only overrides.</p>\n<ul>\n<li>storing all actions advantages: logic to determine action for a hotkey is slightly less complex, logic to update hotkey for an action doesn’t require a fetch</li>\n<li>storing all actions disadvantages: adding a new default hotkey is expensive because a new row has to be added for all users</li>\n<li>vice versa for storing only overrides</li>\n</ul>\n</li>\n<li>\n<p>The interface for the database could be: <code>get_user_hotkeys(user_id)</code> <code>update_hotkey_for_action(user_id, action)</code></p>\n</li>\n<li>\n<p>Is it necessary to add a new migration in <code>migrations</code> for adding a new table?</p>\n</li>\n<li>\n<p>To ensure performance the hotkey mapping has to be cached in the browser.</p>\n</li>\n<li>\n<p>There may be a conflict if new default hotkeys are added and the key combination is already used by a custom hotkey. This can only happen after an update. Every time the desktop app is opened it should be checked for a conflict and in case show a popup that directs the user to the settings to fix the conflict. Same for the web app.</p>\n</li>\n<li>\n<p>I would like to focus on the backend first, before thinking about the frontend.</p>\n</li>\n</ul>",
+        "id": 1111446,
+        "sender_full_name": "mrchntia",
+        "timestamp": 1612095291
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17784\">@mrchntia</span> <a href=\"https://github.com/zulip/zulip/pull/7517\">#7517</a> is the more important issue related to this we would like to solve.</p>",
+        "id": 1111454,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1612098027
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/issues/7517#issuecomment-552017656\">https://github.com/zulip/zulip/issues/7517#issuecomment-552017656</a> has the details of the approach we would like to follow for this.</p>",
+        "id": 1111455,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1612098176
+    },
+    {
+        "content": "<p>For <a href=\"https://github.com/zulip/zulip/pull/4777\">#4777</a>, you are overthinking it. We just want user to be able to define their own key for a key (which may or may not be linked to an action). We just need to store which keys user has linked to which keys in the backend. UserProfile is a good place for this.</p>",
+        "id": 1111456,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1612098292
+    },
+    {
+        "content": "<p>I just closed <a href=\"https://github.com/zulip/zulip/pull/4777\">#4777</a>.  If <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> disagrees with me, he can re-open the issue.  I suspect he would agree with me on the tradeoffs, but I don't know for sure, and I don't feel super strongly here.</p>",
+        "id": 1111457,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1612098542
+    },
+    {
+        "content": "<p>Yeah, I don't think there is strong demand for it other than the internationalization issue which is a good one to solve.</p>",
+        "id": 1111458,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1612098597
+    },
+    {
+        "content": "<p>(And I agree with <span class=\"user-mention\" data-user-id=\"5140\">@Aman Agrawal (amanagr)</span> that <a href=\"https://github.com/zulip/zulip/pull/7517\">#7517</a> is the more important issue.)</p>",
+        "id": 1111459,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1612098602
+    },
+    {
+        "content": "<p>Alright, then I would like to work on <a href=\"https://github.com/zulip/zulip/pull/7517\">#7517</a> following the approach in the comments.</p>",
+        "id": 1111472,
+        "sender_full_name": "mrchntia",
+        "timestamp": 1612105412
+    }
+]

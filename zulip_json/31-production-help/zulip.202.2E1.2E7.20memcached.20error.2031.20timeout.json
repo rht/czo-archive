@@ -1,0 +1,302 @@
+[
+    {
+        "content": "<p>Somehow we're getting a lot of these Errors (every few seconds during high load, fewer when not as many users are online) we have around 460 users with around 200-300 online during office hours</p>\n<div class=\"codehilite\"><pre><span></span><code>Traceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.7/site-packages/django_pylibmc/memcached.py&quot;, line 130, in get\n    return super(PyLibMCCache, self).get(key, default, version)\n  File &quot;/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.7/site-packages/django/core/cache/backends/memcached.py&quot;, line 79, in get\n    val = self._cache.get(key)\npylibmc.Error: error 31 from memcached_get(:1:django.contrib.sessions.cache): (0x5564c93c9790) A TIMEOUT OCCURRED, No active_fd were found,  host: localhost:11211 -&gt; libmemcached/io.cc:259\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.7/site-packages/django_pylibmc/memcached.py&quot;, line 140, in set\n    **COMPRESS_KWARGS)\npylibmc.ServerDown: error 47 from memcached_set: (0x5564c93c9790) SERVER HAS FAILED AND IS DISABLED UNTIL TIMED RETRY,  host: localhost:11211 -&gt; libmemcached/connect.cc:720\n2020-07-30 16:10:38.643 ERR  [django.pylibmc] MemcachedError: error 31 from memcached_get(:1:django.contrib.sessions.cache): (0x5564c93c9790) A TIMEOUT OCCURRED, No active_fd were found,  host: localhost:11211 -&gt; libmemcached/io.cc:259\nTraceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.7/site-packages/django/contrib/sessions/backends/base.py&quot;, line 202, in _get_session\n    return self._session_cache\nAttributeError: &#39;SessionStore&#39; object has no attribute &#39;_session_cache&#39;\n</code></pre></div>\n\n\n<p>I've checked the zulp-secrets.conf and used the password to connect to memcached </p>\n<p><code>bmemcached-cli zulip:6452e9d1a829167de999bdd63f316cc252a22cd815b85axxxxx@localhost:11211</code></p>\n<p>sasl users seem to be fine:</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip01:~# sasldblistusers2  /etc/sasl2/memcached-sasldb2\nzulip@localhost: userPassword\nzulip@zulip01: userPassword\n</code></pre></div>\n\n\n<p>and that worked. I've tried the settings.py with localhost and 127.0.0.1 and no difference.</p>\n<p>Also Manage.py fill caches works just fine so i don't think its an authentication issue?</p>\n<p>Memcached stats reports a maximum of 16 active connections, which is far away from the 1024 limit.</p>\n<p>Memcached verbose logs also show a lot of connections with <code>Jul 30 16:02:28 zulip01 systemd-memcached-wrapper[12568]: sasl result code:  0</code> which I think  means everything is ok?</p>\n<p>I've thought about editing <code>/home/zulip/deployments/current/zproject/settings.py</code></p>\n<div class=\"codehilite\"><pre><span></span><code>CACHES = {\n    &#39;default&#39;: {\n        &#39;BACKEND&#39;: &#39;django_pylibmc.memcached.PyLibMCCache&#39;,\n        &#39;LOCATION&#39;: MEMCACHED_LOCATION,\n        &#39;TIMEOUT&#39;: 3600,\n        &#39;BINARY&#39;: True,\n        &#39;USERNAME&#39;: MEMCACHED_USERNAME,\n        &#39;PASSWORD&#39;: MEMCACHED_PASSWORD,\n        &#39;OPTIONS&#39;: {\n            &#39;tcp_nodelay&#39;: True,\n            &#39;retry_timeout&#39;: 1,\n        }\n</code></pre></div>\n\n\n<p>adding the <code>no_block</code> Option from here: <a href=\"http://sendapatch.se/projects/pylibmc/behaviors.html\">http://sendapatch.se/projects/pylibmc/behaviors.html</a></p>\n<p>But not quite sure if that would even make a difference.</p>\n<p>One effect of these errors is that Messages are sent with quite a delay, sometimes multiple seconds.</p>\n<p>Any Tips?</p>",
+        "id": 964711,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596126037
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16455\">@Adam Benesh</span> the issue is very likely memcached authentication being misconfigured.</p>",
+        "id": 965260,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596139260
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> were there further fixes in 3.0 for memcached authentication?</p>",
+        "id": 965261,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596139296
+    },
+    {
+        "content": "<p>when i change the password in zulip-secrets.conf it switches to \"authentication failure\" so I don't really think its that. esp. since the memcached logs do show successful connections</p>",
+        "id": 965273,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596139399
+    },
+    {
+        "content": "<p>Can you check <code>dmesg</code>?  I'd like to confirm you're not having OOM kills or anything.</p>",
+        "id": 965277,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596139530
+    },
+    {
+        "content": "<p>Don't see any process kills in dmesg or anywhere under /var/log</p>\n<p>and i have to correct myself, if i change the password to something wrong it just says error 47 Server has failed. But no more timeouts</p>",
+        "id": 965301,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596140170
+    },
+    {
+        "content": "<p>also when restarting zulip it can fill the cache just fine so i don't think it's an auth issue:</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip01:~# sudo -u zulip /home/zulip/deployments/current/scripts/restart-server --fill-cache\n2020-07-30 20:14:57,865 restart-server: Filling memcached caches\n2020-07-30 20:14:59.191 INFO [] Successfully populated user cache!  Consumed 1 remote cache queries (0.06 time)\n2020-07-30 20:14:59.193 INFO [] Successfully populated client cache!  Consumed 1 remote cache queries (0.0 time)\n2020-07-30 20:14:59.212 INFO [] Successfully populated recipient cache!  Consumed 1 remote cache queries (0.01 time)\n2020-07-30 20:14:59.225 INFO [] Successfully populated stream cache!  Consumed 1 remote cache queries (0.01 time)\n2020-07-30 20:14:59.336 INFO [] Successfully populated huddle cache!  Consumed 1 remote cache queries (0.09 time)\n2020-07-30 20:14:59.370 INFO [] Successfully populated session cache!  Consumed 1 remote cache queries (0.01 time)\nzulip-tornado: stopped\n</code></pre></div>",
+        "id": 965308,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596140280
+    },
+    {
+        "content": "<p>Hmm, interesting.</p>",
+        "id": 965310,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596140307
+    },
+    {
+        "content": "<p>What's in /etc/hosts?</p>",
+        "id": 965313,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596140328
+    },
+    {
+        "content": "<p>I wonder if <code>localhost</code> is somehow misconfigured there.</p>",
+        "id": 965314,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596140336
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>root@zulip01:~# cat /etc/hosts\n127.0.0.1       localhost\n::1             localhost ip6-localhost ip6-loopback\nff02::1         ip6-allnodes\nff02::2         ip6-allrouters\n</code></pre></div>\n\n\n<p>I've actually tried it with 127.0.0.1 as well, but its the same result</p>",
+        "id": 965319,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596140422
+    },
+    {
+        "content": "<p>Try removing <code>localhost</code> from that <code>::1</code> line.</p>",
+        "id": 965332,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596140559
+    },
+    {
+        "content": "<p>So I've just changed it back, at the moment not many people are using our instance, messages go through instantly but as soon as i start spamming test messages it gets delayed and this pops up in the error log:</p>\n<div class=\"codehilite\"><pre><span></span><code>Traceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.7/site-packages/django_pylibmc/memcached.py&quot;, line 130, in get\n    return super(PyLibMCCache, self).get(key, default, version)\n  File &quot;/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.7/site-packages/django/core/cache/backends/memcached.py&quot;, line 79, in get\n    val = self._cache.get(key)\npylibmc.Error: error 31 from memcached_get(:1:django.contrib.sessions.cache): (0x55d098b9bc80) A TIMEOUT OCCURRED, No active_fd were found,  host: 127.0.0.1:11211 -&gt; libmemcached/io.cc:259\n</code></pre></div>",
+        "id": 965333,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596140586
+    },
+    {
+        "content": "<p>I've seen weird problems like this caused by IPv6 being listed as <code>localhost</code> rather than <code>localhost6</code> with other services before.</p>",
+        "id": 965334,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596140587
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout/near/965332\">said</a>:</p>\n<blockquote>\n<p>Try removing <code>localhost</code> from that <code>::1</code> line.</p>\n</blockquote>\n<p>ok will do</p>",
+        "id": 965336,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596140594
+    },
+    {
+        "content": "<p>Yeah, so the nice thing about accessing a cache failing is that you'll get an exception but Zulip will still work, since it doesn't <strong>need</strong> the cache.  That's the full explanation for what you're seeing with things working but lots of error emails.</p>",
+        "id": 965337,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596140641
+    },
+    {
+        "content": "<p>But i guess without the cache it'll be significantly slower</p>",
+        "id": 965342,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596140760
+    },
+    {
+        "content": "<p>Well, significantly slower at scale; if you have very little usage, Zulip is very fast even without the cache.</p>",
+        "id": 965347,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596140839
+    },
+    {
+        "content": "<p>FTR, <code>::1 localhost</code> has been a totally normal configuration for at least <a href=\"https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=427067\">13 years</a>, so if that’s causing a problem I’d still want to know why.</p>",
+        "id": 965362,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1596141213
+    },
+    {
+        "content": "<p>I'm stumped as to why zulip/django can't connect then, </p>\n<p>I can even switch to the zulip user and use a sasl compatible memcached client to connect with the password:</p>\n<div class=\"codehilite\"><pre><span></span><code>bmemcached-cli zulip:6452e9d1a829167de999bdd63f316cc252a22cd815b85a79ead60183bxxxxx@127.0.0.1:11211\n([B]memcached) stats\n{&#39;127.0.0.1:11211&#39;: {&#39;accepting_conns&#39;: &#39;1&#39;,\n                     &#39;auth_cmds&#39;: &#39;525&#39;,\n                     &#39;auth_errors&#39;: &#39;0&#39;,\n                     &#39;bytes&#39;: &#39;20498930&#39;,\n                     &#39;bytes_read&#39;: &#39;24873622&#39;,\n                     &#39;bytes_written&#39;: &#39;15835460&#39;,\n                     &#39;cas_badval&#39;: &#39;0&#39;,\n                     &#39;cas_hits&#39;: &#39;0&#39;,\n                     &#39;cas_misses&#39;: &#39;0&#39;,\n                     &#39;cmd_flush&#39;: &#39;0&#39;,\n                     &#39;cmd_get&#39;: &#39;69915&#39;,\n                     &#39;cmd_set&#39;: &#39;45326&#39;,\n                     &#39;cmd_touch&#39;: &#39;0&#39;,\n                     &#39;conn_yields&#39;: &#39;3273&#39;,\n                     &#39;connection_structures&#39;: &#39;24&#39;,\n                     &#39;crawler_items_checked&#39;: &#39;9343&#39;,\n                     &#39;crawler_reclaimed&#39;: &#39;0&#39;,\n                     &#39;curr_connections&#39;: &#39;13&#39;,\n                     &#39;curr_items&#39;: &#39;45168&#39;,\n                     &#39;decr_hits&#39;: &#39;0&#39;,\n                     &#39;decr_misses&#39;: &#39;0&#39;,\n                     &#39;delete_hits&#39;: &#39;0&#39;,\n                     &#39;delete_misses&#39;: &#39;0&#39;,\n                     &#39;direct_reclaims&#39;: &#39;0&#39;,\n                     &#39;evicted_active&#39;: &#39;0&#39;,\n                     &#39;evicted_unfetched&#39;: &#39;0&#39;,\n                     &#39;evictions&#39;: &#39;0&#39;,\n                     &#39;expired_unfetched&#39;: &#39;0&#39;,\n                     &#39;get_expired&#39;: &#39;0&#39;,\n                     &#39;get_flushed&#39;: &#39;0&#39;,\n                     &#39;get_hits&#39;: &#39;24608&#39;,\n                     &#39;get_misses&#39;: &#39;45307&#39;,\n                     &#39;hash_bytes&#39;: &#39;524288&#39;,\n                     &#39;hash_is_expanding&#39;: &#39;0&#39;,\n                     &#39;hash_power_level&#39;: &#39;16&#39;,\n                     &#39;incr_hits&#39;: &#39;0&#39;,\n                     &#39;incr_misses&#39;: &#39;0&#39;,\n                     &#39;libevent&#39;: &#39;2.1.8-stable&#39;,\n                     &#39;limit_maxbytes&#39;: &#39;2102394880&#39;,\n                     &#39;listen_disabled_num&#39;: &#39;0&#39;,\n                     &#39;log_watcher_sent&#39;: &#39;0&#39;,\n                     &#39;log_watcher_skipped&#39;: &#39;0&#39;,\n                     &#39;log_worker_dropped&#39;: &#39;0&#39;,\n                     &#39;log_worker_written&#39;: &#39;0&#39;,\n                     &#39;lru_bumps_dropped&#39;: &#39;0&#39;,\n                     &#39;lru_crawler_running&#39;: &#39;0&#39;,\n                     &#39;lru_crawler_starts&#39;: &#39;510&#39;,\n                     &#39;lru_maintainer_juggles&#39;: &#39;6798&#39;,\n                     &#39;lrutail_reflocked&#39;: &#39;4&#39;,\n                     &#39;malloc_fails&#39;: &#39;0&#39;,\n                     &#39;max_connections&#39;: &#39;1024&#39;,\n                     &#39;moves_to_cold&#39;: &#39;36142&#39;,\n                     &#39;moves_to_warm&#39;: &#39;5296&#39;,\n                     &#39;moves_within_lru&#39;: &#39;500&#39;,\n                     &#39;pid&#39;: &#39;700&#39;,\n                     &#39;pointer_size&#39;: &#39;64&#39;,\n                     &#39;reclaimed&#39;: &#39;0&#39;,\n                     &#39;rejected_connections&#39;: &#39;0&#39;,\n                     &#39;reserved_fds&#39;: &#39;40&#39;,\n                     &#39;rusage_system&#39;: &#39;1.487569&#39;,\n                     &#39;rusage_user&#39;: &#39;0.348809&#39;,\n                     &#39;slab_global_page_pool&#39;: &#39;0&#39;,\n                     &#39;slab_reassign_busy_deletes&#39;: &#39;0&#39;,\n                     &#39;slab_reassign_busy_items&#39;: &#39;0&#39;,\n                     &#39;slab_reassign_chunk_rescues&#39;: &#39;0&#39;,\n                     &#39;slab_reassign_evictions_nomem&#39;: &#39;0&#39;,\n                     &#39;slab_reassign_inline_reclaim&#39;: &#39;0&#39;,\n                     &#39;slab_reassign_rescues&#39;: &#39;0&#39;,\n                     &#39;slab_reassign_running&#39;: &#39;0&#39;,\n                     &#39;slabs_moved&#39;: &#39;0&#39;,\n                     &#39;threads&#39;: &#39;8&#39;,\n                     &#39;time&#39;: &#39;1596140970&#39;,\n                     &#39;time_in_listen_disabled_us&#39;: &#39;0&#39;,\n                     &#39;total_connections&#39;: &#39;556&#39;,\n                     &#39;total_items&#39;: &#39;45326&#39;,\n                     &#39;touch_hits&#39;: &#39;0&#39;,\n                     &#39;touch_misses&#39;: &#39;0&#39;,\n                     &#39;uptime&#39;: &#39;111&#39;,\n                     &#39;version&#39;: &#39;1.5.6&#39;}}\n</code></pre></div>",
+        "id": 965371,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596141390
+    },
+    {
+        "content": "<p>A difference between Zulip and that <code>bmemcached-cli</code> invocation is that Zulip sends literally <code>zulip@localhost</code> as the username rather than <code>zulip</code> (<a href=\"https://github.com/zulip/zulip/pull/15462\">#15462</a>), assuming you haven’t customized the <code>MEMCACHED_USERNAME</code> setting.</p>",
+        "id": 965389,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1596141789
+    },
+    {
+        "content": "<p>I've found something else interesting, all the connections to 11211 are in TIME_WAIT condition for some reason</p>\n<div class=\"codehilite\"><pre><span></span><code>tcp        0      0 localhost:37686         localhost:11211         TIME_WAIT   -\ntcp        0      0 localhost:37816         localhost:11211         TIME_WAIT   -\ntcp        0      0 localhost:37782         localhost:11211         TIME_WAIT   -\ntcp        0      0 localhost:44637         localhost:epmd          TIME_WAIT   -\ntcp        0      0 localhost:51921         localhost:25672         TIME_WAIT   -\ntcp        0      0 localhost:43981         localhost:25672         TIME_WAIT   -\ntcp        0      0 localhost:37984         localhost:11211         TIME_WAIT   -\ntcp        0      0 localhost:50791         localhost:epmd          TIME_WAIT   -\ntcp        0      0 localhost:37876         localhost:11211         TIME_WAIT   -\ntcp        0      0 localhost:38681         localhost:epmd          TIME_WAIT   -\ntcp        0      0 localhost:37908         localhost:11211         TIME_WAIT   -\n</code></pre></div>",
+        "id": 965395,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596141967
+    },
+    {
+        "content": "<p><code>bmemcached-cli</code> doesn’t appear to have a way to send a username containing an <code>@</code>, because it parses that as a delimiter. Try <code>memcping --servers=127.0.0.1 --binary --username=zulip@127.0.0.1 --password=6452…</code>.</p>",
+        "id": 965397,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1596141989
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"699\">Anders Kaseorg</span> <a href=\"#narrow/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout/near/965397\">said</a>:</p>\n<blockquote>\n<p><code>bmemcached-cli</code> doesn’t appear to have a way to send a username containing an <code>@</code>, because it parses that as a delimiter. Try <code>memcping --servers=127.0.0.1 --binary --username=zulip@127.0.0.1 --password=6452…</code>.</p>\n</blockquote>\n<p>Interesting:</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip01:~# memcping --servers=127.0.0.1 --binary --username=zulip@127.0.0.1 --password=6452e9d1a829167de999bdd63f316cc252a22cd815b85a79ead60xxxxx\nFailed to ping 127.0.0.1:11211 AUTHENTICATION FAILURE\n</code></pre></div>\n\n\n<p>This is what the sasldb looks like:</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip01:~# sasldblistusers2  /etc/sasl2/memcached-sasldb2\nzulip@localhost: userPassword\nzulip@zulip01: userPassword\n</code></pre></div>\n\n\n<p>And I've already done this:</p>\n<div class=\"codehilite\"><pre><span></span><code>cat /etc/sasl2/memcached-zulip-password | saslpasswd2 -f /etc/sasl2/memcached-sasldb2 zulip\n</code></pre></div>",
+        "id": 965405,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596142189
+    },
+    {
+        "content": "<p>Er, sorry, I meant <code>--username=zulip@localhost</code>.</p>",
+        "id": 965406,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1596142239
+    },
+    {
+        "content": "<p>seems to work without errors</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip01:~# memcping --servers=127.0.0.1 --binary --username=zulip@localhost --password=6452e9d1a829167de999bdd63f316cc252a22cd815b85a79eadxxx\nroot@zulip01:~# memcping --servers=127.0.0.1 --binary --username=zulip@localhost --password=6452e9d1a829167de999bdd63f316cc252a22cd815b85a79ead6xxx\nroot@zulip01:~#\n</code></pre></div>",
+        "id": 965407,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596142283
+    },
+    {
+        "content": "<p>What version of <code>memcached</code> is this (<code>dpkg-query -W memcached</code>)?</p>",
+        "id": 965411,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1596142397
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>root@zulip01:~# dpkg-query -W memcached\nmemcached       1.5.6-1.1\n</code></pre></div>",
+        "id": 965412,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596142427
+    },
+    {
+        "content": "<p>Oh, so Debian, not Ubuntu. I wonder if this is a possible symptom of <a href=\"https://bugs.launchpad.net/ubuntu/+source/libmemcached/+bug/1573594\">https://bugs.launchpad.net/ubuntu/+source/libmemcached/+bug/1573594</a>.</p>",
+        "id": 965422,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1596142673
+    },
+    {
+        "content": "<p>Hmm but the Bug was in Versions 1.0 and we‘re on 1.5 already </p>\n<p>And yes we run on Debian 10</p>",
+        "id": 965433,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596143092
+    },
+    {
+        "content": "<p>i will take a look at socket limitations tomorrow, maybe its hitting some sort of connection limit there</p>",
+        "id": 965437,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596143154
+    },
+    {
+        "content": "<p>A way you could test this theory is by installing libmemcached11 from Ubuntu:</p>\n<div class=\"codehilite\"><pre><span></span><code>wget https://launchpad.net/ubuntu/+source/libmemcached/1.0.18-4.2ubuntu0.18.04.1/+build/16338164/+files/libmemcached11_1.0.18-4.2ubuntu0.18.04.1_amd64.deb\ndpkg -i libmemcached11_1.0.18-4.2ubuntu0.18.04.1_amd64.deb\n</code></pre></div>\n\n\n<p>and restarting Zulip.</p>\n<div class=\"codehilite\"><pre><span></span><code>supervisorctl restart all\n</code></pre></div>",
+        "id": 965438,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1596143169
+    },
+    {
+        "content": "<p>This would actually make perfect sense: that null termination bug is only fixed in an Ubuntu-specific patch because libmemcached upstream has been inactive for three years and hasn’t made a release in six. I did some work toward dropping libmemcached and pylibmc for python-binary-memcached in <a href=\"https://github.com/zulip/zulip/pull/14925\">#14925</a>, and we should probably follow through on that.</p>",
+        "id": 965447,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1596143724
+    },
+    {
+        "content": "<p>So i just tried that, even rebooted the entire VM but that didn't help unfortunately, still getting timeouts</p>",
+        "id": 966073,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596176009
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47 Read binary protocol data:\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47    0x80 0x07 0x00 0x00\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47    0x00 0x00 0x00 0x00\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47    0x00 0x00 0x00 0x00\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47    0x26 0x4a 0x00 0x00\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47    0x00 0x00 0x00 0x00\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47    0x00 0x00 0x00 0x00\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: authenticated() in cmd 0x07 is true\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &gt;47 Writing bin response:\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &gt;47   0x81 0x07 0x00 0x00\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &gt;47   0x00 0x00 0x00 0x00\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &gt;47   0x00 0x00 0x00 0x00\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &gt;47   0x26 0x4a 0x00 0x00\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &gt;47   0x00 0x00 0x00 0x00\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &gt;47   0x00 0x00 0x00 0x00\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: Failed to write, and not due to blocking: Broken pipe\nJul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47 connection closed.\n</code></pre></div>\n\n\n<p>memcached verbose logs show Broken pipe errors from time to time,<br>\nmight be related to this:</p>\n<p><a href=\"https://github.com/memcached/memcached/issues/458\">https://github.com/memcached/memcached/issues/458</a></p>",
+        "id": 966230,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596179850
+    },
+    {
+        "content": "<p>from </p>\n<div class=\"codehilite\"><pre><span></span><code>netstat -s\n\n[...]\n    127 times the listen queue of a socket overflowed\n    127 SYNs to LISTEN sockets dropped\n</code></pre></div>",
+        "id": 966964,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596189464
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16455\">@Adam Benesh</span> Hmm. This seems like it’s going to be complicated to debug, but there’s still some chance that taking libmemcached and pylibmc out of the equation might help. If you’d like to try out the patch that replaces pylibmc with python-binary-memcached, I’ve pushed a branch that has this patch on 3.1 with no other changes, so you should be able to try it with</p>\n<div class=\"codehilite\"><pre><span></span><code>/home/zulip/deployments/current/scripts/upgrade-zulip-from-git 3.1-with-bmemcached\n</code></pre></div>\n\n\n<p>and safely go back to 3.1 if it doesn’t work.</p>\n<p>(If you’re still on 2.1.7, the <a href=\"https://zulip.readthedocs.io/en/stable/overview/changelog.html#upgrade-notes-for-3-0\">upgrade notes for 3.0</a> will apply, and downgrades from 3.1 to 2.1.7 won’t work, as usual.)</p>",
+        "id": 967936,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1596250503
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span>  I installed your branch yesterday evening on our production server. The Upgrade went without a Problem. There is maybe one permissions issue, we use the Apache SSO Backend Solution and after the upgrade the apache User was lacking the permissions for <code>/home/zulip/deployments/current/zproject/</code> I guess that has to be added to the puppet config? </p>\n<p>But other than that I am very satisfied, no more memcached errors <span aria-label=\"tada\" class=\"emoji emoji-1f389\" role=\"img\" title=\"tada\">:tada:</span> , chat is now realtime (before we had 5-15s send times in peak hours).<br>\nThanks a lot! <span aria-label=\"heart\" class=\"emoji emoji-2764\" role=\"img\" title=\"heart\">:heart:</span></p>",
+        "id": 971577,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596524471
+    },
+    {
+        "content": "<p>Nice! I’m guessing the permission problem is the one that we already fixed in <a href=\"https://github.com/zulip/zulip/pull/15264\">#15264</a>, but it still affected you because the upgrade you just did was launched from the previous version’s upgrade script.</p>",
+        "id": 971578,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1596524921
+    },
+    {
+        "content": "<p>Since the Upgrade one of our colleagues can't login via SSO anymore (for all the others it works)</p>\n<div class=\"codehilite\"><pre><span></span><code>2020-08-04 07:38:41.505 ERR  [django.request] Internal Server Error: /accounts/login/sso/\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/zulip-py3-venv/lib/python3.7/site-packages/django/core/handlers/exception.py&quot;, line 34, in inner\n    response = get_response(request)\n  File &quot;/home/zulip/deployments/current/zulip-py3-venv/lib/python3.7/site-packages/django/core/handlers/base.py&quot;, line 115, in _get_response\n    response = self.process_exception_by_middleware(e, request)\n  File &quot;/home/zulip/deployments/current/zulip-py3-venv/lib/python3.7/site-packages/django/core/handlers/base.py&quot;, line 113, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File &quot;/home/zulip/deployments/current/zerver/decorator.py&quot;, line 439, in _wrapped_view_func\n    return view_func(request, *args, **kwargs)\n  File &quot;/home/zulip/deployments/current/zerver/lib/request.py&quot;, line 366, in _wrapped_view_func\n    return view_func(request, *args, **kwargs)\n  File &quot;/home/zulip/deployments/current/zerver/views/auth.py&quot;, line 392, in remote_user_sso\n    result = ExternalAuthResult(user_profile=user_profile, data_dict=data_dict)\n  File &quot;/home/zulip/deployments/current/zproject/backends.py&quot;, line 991, in __init__\n    assert &#39;email&#39; not in data_dict or data_dict[&#39;email&#39;] == self.user_profile.delivery_email\nAssertionError\n</code></pre></div>\n\n\n<p>Any Idea where the problem could be? The LDAP E-Mail is the Same as in the management console</p>\n<p><code>user_profile = get_user_profile_by_email(\"email@domain.com\")</code></p>",
+        "id": 971583,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596526916
+    },
+    {
+        "content": "<p>Nevermind, found it the issue myself, it seems that django/zulip is now case-sensitive in the User E-Mail , there was a mismatch in one letter between ldap and zulip user db. i used the manage.py change-user-email script :)</p>",
+        "id": 971585,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596527240
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16455\">@Adam Benesh</span> these are intended to be case-insensitive, so this is still a bug.  <span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> can you take this one?</p>",
+        "id": 971989,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596560452
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16455\">@Adam Benesh</span> thanks for reporting this! <a href=\"https://github.com/zulip/zulip/pull/16042\">#16042</a></p>",
+        "id": 973826,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1596639011
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> thank you for fixing it <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 974008,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596651949
+    },
+    {
+        "content": "<p>Merged and backported to the 3.x branch, so this will be in the zulip 3.2 release.</p>",
+        "id": 974072,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596652890
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16455\">@Adam Benesh</span> thanks again for the report; were you to not have resolved this via editing LDAP, you could now get the fix via <code>upgrade-zulip-from-git 3.x</code>.  (<code>3.x</code> being the branch that will become the next 3.x release)</p>",
+        "id": 974074,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596652953
+    },
+    {
+        "content": "<p>Will the memcached fixes from <span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span>  branch <code>3.1-with-bmemcached</code> also be included in 3.2? Because so far it's working flawlessly</p>",
+        "id": 974742,
+        "sender_full_name": "Adam Benesh",
+        "timestamp": 1596694087
+    },
+    {
+        "content": "<p>We're going to do some more testing but assuming that goes well, yes.</p>",
+        "id": 974830,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596696633
+    },
+    {
+        "content": "<p>We were seeing the error 47 from memcached_set in 3.1 every now and then. We have now upgraded to 3.2 and the error seems to be gone. Thanks!</p>",
+        "id": 1024999,
+        "sender_full_name": "mouk",
+        "timestamp": 1601029953
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16223\">@mouk</span> awesome, thanks for the confirmation.</p>",
+        "id": 1025183,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601056582
+    }
+]

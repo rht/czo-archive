@@ -1,0 +1,464 @@
+[
+    {
+        "content": "<p>So, a few weeks ago, in <a href=\"https://github.com/zulip/zulip/commit/11c37bca8f8b9ee4942567903b45ac7b908f9c4c\">11c37bca8f8b9ee4942567903b45ac7b908f9c4c</a>, we changed things to have the mention typeahead open without typing any characters.  A quirk of that implementation is that if you haven't typed any characters, the wildcard mentions appear at the top:</p>\n<p><a href=\"/user_uploads/2/58/Do5RvdWmltkNzxnRwyFhW4NA/image.png\">image.png</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/58/Do5RvdWmltkNzxnRwyFhW4NA/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/58/Do5RvdWmltkNzxnRwyFhW4NA/image.png\"></a></div><p><span class=\"user-mention\" data-user-id=\"17026\">@Akshat (akshatdalton)</span> <span class=\"user-mention\" data-user-id=\"1406\">@Rohitt Vashishtha</span> FYI as folks who may have ideas here.</p>",
+        "id": 1234295,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626717797
+    },
+    {
+        "content": "<p>I feel like we definitely want the actual people who've participated in a conversation to be the top options, so that <code>@+Enter</code> is reasonably likely to mention the last other person to post in the current topic.</p>",
+        "id": 1234297,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626717846
+    },
+    {
+        "content": "<p>I think probably the right answer is to just adjust the general sort order to make wildcard mentions sorted similarly to user groups, which clearly aren't appearing on top just because they exist?</p>",
+        "id": 1234300,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626717900
+    },
+    {
+        "content": "<p>Yeah, I agree that we don't want the wildcard mentions at the top. What does \"similarly to user groups\" imply? What's the best way to learn about our sort algorithm?</p>",
+        "id": 1234454,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1626721748
+    },
+    {
+        "content": "<p>As a side point, if anyone wants to redo the icon for wildcard mentions, I feel like it could be prettier. :)</p>",
+        "id": 1234456,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1626721784
+    },
+    {
+        "content": "<p>The sorting algorithm is complicated, but basically it prefers users who have participated in the topic, stream, and organization (or in PMs with you) over other users, but also prefers exact and prefix matches, and I don't recall how those are ordered with respect to each other.</p>",
+        "id": 1234459,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626721854
+    },
+    {
+        "content": "<p>But my theory here is that we seem to be doing something reasonable for user groups, so we should just make the wildcard mentions sort however user groups do.</p>",
+        "id": 1234461,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626721897
+    },
+    {
+        "content": "<p>Wildcard mentions appear on top. The reason can be found <a href=\"https://github.com/zulip/zulip/blob/b23fd2f1f3dedbc2591e94531b065c0fe57847a8/static/js/typeahead_helper.js#L173-L217\">here</a> which says:</p>\n<div class=\"codehilite\"><pre><span></span><code>give preference to &quot;all&quot;, &quot;everyone&quot; or &quot;stream&quot;\nWe use is_broadcast for a quick check.  It will\ntrue for all/everyone/stream and undefined (falsy)\nfor actual people.\n</code></pre></div>\n<p>The reason why user groups don't usually appear on top (in large streams) is because in our final list object we first concatenate active users in that stream/topic and then we concatenate user groups. User groups are usually not concatenated because of <a href=\"https://github.com/zulip/zulip/blob/b23fd2f1f3dedbc2591e94531b065c0fe57847a8/static/js/typeahead_helper.js#L316-L330\">this logic</a> - we stop concatenation as soon as we reach the <code>max_num_items</code> limit, so probably this is the reason why user groups don't appear on top when we type <code>@</code>.</p>",
+        "id": 1234470,
+        "sender_full_name": "Akshat",
+        "timestamp": 1626722516
+    },
+    {
+        "content": "<p>I don't recall if there was a web app conclusion on this since I think the behavior was different at the time, but ZT treats <code>@</code> -&gt; users+groups (in that order), <code>@*</code> -&gt; groups only, <code>@**</code> -&gt; users only - even though the middle case could also cover users. That enables finding groups other than through very specific name matches.</p>",
+        "id": 1234477,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1626722921
+    },
+    {
+        "content": "<p>Moreover, in the stream messages, we give the <a href=\"https://github.com/zulip/zulip/blob/b23fd2f1f3dedbc2591e94531b065c0fe57847a8/static/js/typeahead_helper.js#L216\">last preference</a> to the recent senders.</p>",
+        "id": 1234479,
+        "sender_full_name": "Akshat",
+        "timestamp": 1626722980
+    },
+    {
+        "content": "<p>Yeah, I think if you have <code>@*</code> only, we could reasonably make that complete user groups.</p>",
+        "id": 1234619,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626737107
+    },
+    {
+        "content": "<p>I suspect the motivation for having those at the top is to advertise that wildcard mentions exist, but I feel like that's probably not particularly important to advertise in that way.</p>",
+        "id": 1234622,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626737174
+    },
+    {
+        "content": "<p>I feel having the wildcard mentions exposed is more useful but just pressing <code>@+enter</code> should still mention the last participant.</p>\n<p>This gives a couple of options:</p>\n<ol>\n<li>\n<p>Highlight the 4th option (first person) in the typeahead by default. Since we have a very bold highlight color, it's hard to miss which option is selected. On typing any more characters, the default behavior of keeping the cursor at top would happen. I'm not sure how intuitive it would be, but it sounds like people could get confused with this behavior too.</p>\n</li>\n<li>\n<p>Put 5 people at the top, then put wildcard mentions and then put the rest of the people. This could make the sort order a bit funny, but it would solve the issue of the highlight jumping around when typing more characters.</p>\n</li>\n<li>\n<p>We could argue that <code>@all, @everyone and @stream</code> are rarely used. If we just put the WIP <code>@here</code> mention as the top choice (and maybe even hide the other wildcards), then <code>@+enter</code> would do something reasonable too.</p>\n</li>\n</ol>",
+        "id": 1234842,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1626764990
+    },
+    {
+        "content": "<p>After writing this, I like the 3rd idea more. It has a good balance of exposing wildcard mentions but not accidentally mentioning a lot of people.</p>",
+        "id": 1234844,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1626765038
+    },
+    {
+        "content": "<blockquote>\n<p>I feel like we definitely want the actual people who've participated in a conversation to be the top options</p>\n</blockquote>\n<p>I'm sure you don't want to mention yourself that much though. This might be another small bug in the sort/filter order that got exposed by this change.</p>\n<p><a href=\"/user_uploads/2/62/IUg74Wuxh-S4GMv3QNYq0mE2/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/62/IUg74Wuxh-S4GMv3QNYq0mE2/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/62/IUg74Wuxh-S4GMv3QNYq0mE2/image.png\"></a></div>",
+        "id": 1234845,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1626765483
+    },
+    {
+        "content": "<p>One consideration here is that we don't want to encourage people to be using things like <code>@all</code> all the time. If they're always there in the list, that makes it look like those are things you should consider using frequently.</p>",
+        "id": 1235242,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1626829625
+    },
+    {
+        "content": "<p>When I type an empty <code>@</code> in replying to this thread, I get the following list:<br>\n<a href=\"/user_uploads/2/27/MX1s8-nlCQMuPefn2IOoXidE/image.png\">image.png</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/27/MX1s8-nlCQMuPefn2IOoXidE/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/27/MX1s8-nlCQMuPefn2IOoXidE/image.png\"></a></div><p>That includes me (the bug Rohitt just mentioned). Another surprise there is that it includes two people who haven't talked in this thread, even while it leaves out several people who have.</p>",
+        "id": 1235243,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1626829775
+    },
+    {
+        "content": "<p>Right, Akshat isn't mentioned in your list but it is in mine. I would consider that a bug. I'll look into the sorting code later today.</p>",
+        "id": 1235458,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1626851649
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"1406\">@Rohitt Vashishtha</span> awesome!</p>",
+        "id": 1236012,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626905977
+    },
+    {
+        "content": "<p>So if I'm reading the code right, the priority is:</p>\n<ol>\n<li>prefer is_broadcast (<code>@all, @everyone, @stream</code>) over individuals</li>\n<li>prefer stream subscribers over people not subscribed</li>\n<li>prefer people you've PMed with over people you haven't PMed with</li>\n<li>prefer people who have sent messages to the topic; if both people have sent messages to the topic, prefer whoever did so more recently</li>\n<li>prefer people who have sent messages to the stream; if both people have sent messages to the sream, prefer whoever did so more recently</li>\n</ol>\n<p>Can someone clarify how groups are treated?</p>",
+        "id": 1236030,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1626907346
+    },
+    {
+        "content": "<p>From the discussion above, it sounds like we think this is not the right order of importance. Perhaps it should be something like: </p>\n<p>subscribers &gt;non-subscribers; sent to topic &gt; haven't sent; PMed &gt; haven't PMed; sent to stream &gt; haven't sent to stream</p>\n<p>Which group should broadcasts go after? Probably no higher than after subsribers who've sent to the topic.</p>",
+        "id": 1236035,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1626907733
+    },
+    {
+        "content": "<p>Plus we need a special case for the sender.</p>",
+        "id": 1236037,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1626907787
+    },
+    {
+        "content": "<p>That sounds correct.  I think the right order is for the non-wildcard mentions is probably 2 (which will have a lot of ties), 4 , 5 (actual participation in the topic and then stream I think is really strong signal for who you might want to mention), 3, 1.  </p>\n<p>I'm not totally sure about how wildcard mentions should relate to the rest, but I'm moving towards the opinion that we'd be better off making them a thing you have to type a prefix of to see.  They're a very small fraction of all mentions and I think it's pretty discoverable in other ways that they exist, in part because if anyone ever uses one in a stream, every user in that stream gets an email/mobile push about it, and it's a standard feature of this class of product.</p>",
+        "id": 1236752,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626990371
+    },
+    {
+        "content": "<p>That reorders \"PMed\" with \"sent to stream\" in what I suggested. Seems reasonable to me.</p>",
+        "id": 1236845,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1626993047
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17026\">@Akshat (akshatdalton)</span> do you want to take this issue, since you've been doing a bunch of other typeahead work this week?</p>",
+        "id": 1236943,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626997403
+    },
+    {
+        "content": "<p>I just want a confirmation that we prefer the following priority order, right? :</p>\n<ol>\n<li>subscribers &gt; non-subscribers</li>\n<li>sent to topic &gt; haven't sent</li>\n<li>sent to stream &gt; haven't sent to stream</li>\n<li>PMed &gt; haven't PMed.</li>\n</ol>\n<p>And then we want wildcard mentions.</p>",
+        "id": 1240740,
+        "sender_full_name": "Akshat",
+        "timestamp": 1627584404
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"2406\">Neil Pilgrim (neiljp)</span> <a href=\"#narrow/stream/101-design/topic/mention.20typeahead/near/1234477\">said</a>:</p>\n<blockquote>\n<p>I don't recall if there was a web app conclusion on this since I think the behavior was different at the time, but ZT treats <code>@</code> -&gt; users+groups (in that order), <code>@*</code> -&gt; groups only, <code>@**</code> -&gt; users only - even though the middle case could also cover users. That enables finding groups other than through very specific name matches.</p>\n</blockquote>\n<p>And also we want to follow the same logic as that of Zulip-Terminal, right?</p>",
+        "id": 1240741,
+        "sender_full_name": "Akshat",
+        "timestamp": 1627584485
+    },
+    {
+        "content": "<p>(I think there was earlier discussion of that with <span class=\"user-mention\" data-user-id=\"1406\">@Rohitt Vashishtha</span>?)</p>",
+        "id": 1240742,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1627584529
+    },
+    {
+        "content": "<p>1-4 look good to me.</p>\n<p>Perhaps wildcard shouldn't go at the <em>very</em> bottom? I'd be inclined to at least put them above the bottom bucket, i.e. non-subscribers who haven't sent to stream or topic and haven't PMed.</p>",
+        "id": 1240761,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1627585604
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"2406\">Neil Pilgrim (neiljp)</span> <a href=\"#narrow/stream/101-design/topic/mention.20typeahead/near/1240742\">said</a>:</p>\n<blockquote>\n<p>(I think there was earlier discussion of that with <span class=\"user-mention silent\" data-user-id=\"1406\">Rohitt Vashishtha</span>?)</p>\n</blockquote>\n<p>Yep, and we agreed that it was the right plan to deal with <code>@*</code> and <code>@**</code> separately but we didn't get agreement from others IG.</p>",
+        "id": 1240785,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1627587028
+    },
+    {
+        "content": "<p>I think we can reduce wildcards we show. Like I said a few messages up, @all and @everyone and even @stream are not that commonly used.</p>\n<p>When we add @here or @topic, having it visible more prominently might be helpful.</p>",
+        "id": 1240788,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1627587105
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"1406\">@Rohitt Vashishtha</span> <span class=\"user-mention\" data-user-id=\"10457\">@Sumanth Rao</span> what do you think about changing the wildcard mentions to use the aliases system we use for the programming languages typeahead, where we show at most one?  That would make it much nicer to have them sorted relatively high in the list.</p>",
+        "id": 1242409,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1627937929
+    },
+    {
+        "content": "<p>Using the alias system would help us show at most one, which is great. For the programming language aliases, we associated something like a priority for the aliases to sort them based on popularity. For the wildcards, they could be shown only when a prefix matches like <code>@he</code> -&gt; <code>@here</code>while prioritizing it higher than users starting with that prefix.</p>",
+        "id": 1242496,
+        "sender_full_name": "Sumanth Rao",
+        "timestamp": 1627952082
+    },
+    {
+        "content": "<p>I like the idea, but it would still take a hit in terms of visibility. If someone doesn't know about wildcard mentions already, they'd be less likely to find all of them.</p>",
+        "id": 1242571,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1627962131
+    },
+    {
+        "content": "<p>is there a consensus on what we're doing here, or who's going to be implementing this?</p>",
+        "id": 1250001,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1630012788
+    },
+    {
+        "content": "<p>It sounds like there's agreement on only showing at most one wildcard mention in the typeahead, which is relevant before the user has typed the first letter. We should make a call on which one we prefer.</p>",
+        "id": 1251016,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1630433622
+    },
+    {
+        "content": "<p>.</p>",
+        "id": 1251017,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1630433645
+    },
+    {
+        "content": "<p>/poll Which wildcard mention should be shown in typeahead for <code>@</code>?</p>",
+        "id": 1251019,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1630433698
+    },
+    {
+        "content": "<p>(Oops, typo-ed the first option!)</p>",
+        "id": 1251020,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1630433755
+    },
+    {
+        "content": "<p>And then given that change, we should re-decide where in the sorting we want to put the wildcard mentions. Should they go at the very top or lower than that?</p>",
+        "id": 1251021,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1630433835
+    },
+    {
+        "content": "<p>FWIW, Slack and Discord do put them first.</p>",
+        "id": 1251022,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1630433919
+    },
+    {
+        "content": "<p>Is there a difference in behavior between @-all, @-everyone, and @-stream? Or are they different names for the same thing?</p>\n<p>It looks like only one of them is documented:<br>\n<a href=\"https://zulip.com/help/mention-a-user-or-group\">https://zulip.com/help/mention-a-user-or-group</a></p>",
+        "id": 1251031,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1630434847
+    },
+    {
+        "content": "<p>My view on having them in the list when you haven't typed anything is:</p>\n<p><span class=\"user-mention silent\" data-user-id=\"2187\">Greg Price</span> <a href=\"#narrow/stream/101-design/topic/mention.20typeahead/near/1235242\">said</a>:</p>\n<blockquote>\n<p>One consideration here is that we don't want to encourage people to be using things like <code>@all</code> all the time. If they're always there in the list, that makes it look like those are things you should consider using frequently.</p>\n</blockquote>",
+        "id": 1251032,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1630434903
+    },
+    {
+        "content": "<p>I was assuming from the parenthetical description (\"(Notify stream)\") that they are all the same thing, but I could be mistaken.</p>\n<p>Slack and Discord also have <code>@here</code>, which only notifies users who are online.</p>",
+        "id": 1251063,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1630437384
+    },
+    {
+        "content": "<p>Yeah, @-here can be a very handy feature sometimes and would be neat to add.</p>",
+        "id": 1251064,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1630437468
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17945\">Wesley Aptekar-Cassels</span> <a href=\"#narrow/stream/101-design/topic/mention.20typeahead/near/1250001\">said</a>:</p>\n<blockquote>\n<p>is there a consensus on what we're doing here, or who's going to be implementing this?</p>\n</blockquote>\n<p>I opened <a href=\"https://github.com/zulip/zulip/pull/19554\">#19554</a> implementing new changes. Any feedback will be appreciated!</p>",
+        "id": 1251454,
+        "sender_full_name": "Akshat",
+        "timestamp": 1630490730
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"2187\">Greg Price</span> <a href=\"#narrow/stream/101-design/topic/mention.20typeahead/near/1251064\">said</a>:</p>\n<blockquote>\n<p>Yeah, @-here can be a very handy feature sometimes and would be neat to add.</p>\n</blockquote>\n<p>I was working on this feature <a href=\"https://github.com/zulip/zulip/pull/16964\">#16964</a>, in December.</p>",
+        "id": 1251455,
+        "sender_full_name": "Akshat",
+        "timestamp": 1630490932
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17026\">@Akshat</span> I think doing an update to that <code>@here</code> PR would be valuable, while you're thinking about this code path.</p>",
+        "id": 1251669,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1630534987
+    },
+    {
+        "content": "<p>It looks like CI didn't run on <a href=\"https://github.com/zulip/zulip/pull/19554\">#19554</a>; I just attempted to trigger a rerun on it.</p>",
+        "id": 1251670,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1630535025
+    },
+    {
+        "content": "<p>What's the status of <a href=\"https://github.com/zulip/zulip/pull/19554\">#19554</a>? Could we get it merged? <span class=\"user-mention\" data-user-id=\"17026\">@Akshat</span> <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span></p>",
+        "id": 1342341,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1646938753
+    },
+    {
+        "content": "<p>I have sometime for the next 15 days; I will update my PR, address the comments.<br>\nBut if someone wants to work on that issue they should feel free to use my code contribution.</p>",
+        "id": 1342352,
+        "sender_full_name": "Akshat",
+        "timestamp": 1646939166
+    },
+    {
+        "content": "<p>I was recently reminded of this in the context of discussing the typeahead/search algorithms for mobile. If you're up for working on it, that would be great!</p>",
+        "id": 1342359,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1646939507
+    },
+    {
+        "content": "<p>We also noticed that the suggestions are sorted differently for @-mentions (with no message recipient specified) vs. the addressee of a PM typeahead. Could someone explain what the differences between those algorithms are? The situations seem very similar.</p>",
+        "id": 1342362,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1646939724
+    },
+    {
+        "content": "<p>I was just reminded of this discussion; I guess <a href=\"https://github.com/zulip/zulip/pull/19554\">#19554</a> is still open. I actually can't quite tell from the PR description what exactly it does. <span class=\"user-mention\" data-user-id=\"17026\">@Akshat</span> if you're potentially interested in continuing work on this, I wonder if you could add some screenshots and/or additional explanation of the changes?</p>",
+        "id": 1428493,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1661931367
+    },
+    {
+        "content": "<p>I vaguely remember that change; I'm pretty sure that change was useful and would be excited to see <span class=\"user-mention\" data-user-id=\"17026\">@Akshat</span> revive it and also document it with explanation/reminders of the context.</p>",
+        "id": 1429796,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662150616
+    },
+    {
+        "content": "<p>We figured out that we need to work on two subjects: <a href=\"https://github.com/zulip/zulip/pull/19554\">#19554</a> and <a href=\"https://github.com/zulip/zulip/pull/16964\">#16964</a>.</p>\n<ul>\n<li><a href=\"https://github.com/zulip/zulip/pull/19554\">#19554</a> is about changing the sorting algorithm of typeahead mentions having the priority order mentioned <a href=\"#narrow/stream/101-design/topic/mention.20typeahead/near/1240740\">here</a>.</li>\n<li><a href=\"https://github.com/zulip/zulip/pull/16964\">#16964</a> is about implementing the new feature: <code>@here</code>.</li>\n</ul>\n<p>I'll take up the first task and then move to the second one.</p>",
+        "id": 1429821,
+        "sender_full_name": "Akshat",
+        "timestamp": 1662153255
+    },
+    {
+        "content": "<p>I'm noticing something weird behavior while debugging:<br>\nI'm noticing a change in the order of values while concatenating the arrays.<br>\nIt will be hard for me to explain what's going on so</p>\n<ul>\n<li>you can try the changes from: <a href=\"https://github.com/akshatdalton/zulip/commit/e07f8f7479062301c5d2220cda898bfae0393a0e\">https://github.com/akshatdalton/zulip/commit/e07f8f7479062301c5d2220cda898bfae0393a0e</a> and type <code>@</code> in the message box.</li>\n<li>console logs:</li>\n</ul>\n<div class=\"codehilite\"><pre><span></span><code>res1 =\n0: {email: &#39;user14@zulipdev.com&#39;, user_id: 14, avatar_version: 1, is_admin: false, is_owner: false, …}\n1: {email: &#39;default-bot@zulip.com&#39;, user_id: 16, avatar_version: 1, is_admin: false, is_owner: false, …}\n2: {email: &#39;user9@zulipdev.com&#39;, user_id: 9, avatar_version: 1, is_admin: true, is_owner: true, …}\n3: {email: &#39;user12@zulipdev.com&#39;, user_id: 12, avatar_version: 1, is_admin: false, is_owner: false, …}\n4: {email: &#39;user6@zulipdev.com&#39;, user_id: 6, avatar_version: 1, is_admin: false, is_owner: false, …}\n5: {email: &#39;user11@zulipdev.com&#39;, user_id: 11, avatar_version: 1, is_admin: true, is_owner: false, …}\n</code></pre></div>\n<div class=\"codehilite\"><pre><span></span><code>res2 =\n0: {special_item_text: &#39;all (Notify stream)&#39;, email: &#39;all&#39;, pm_recipient_count: Infinity, full_name: &#39;all&#39;, is_broadcast: true, …}\n1: {special_item_text: &#39;everyone (Notify stream)&#39;, email: &#39;everyone&#39;, pm_recipient_count: Infinity, full_name: &#39;everyone&#39;, is_broadcast: true, …}\n2: {special_item_text: &#39;stream (Notify stream)&#39;, email: &#39;stream&#39;, pm_recipient_count: Infinity, full_name: &#39;stream&#39;, is_broadcast: true, …}\n3: {email: &#39;user12@zulipdev.com&#39;, user_id: 12, avatar_version: 1, is_admin: false, is_owner: false, …}\n4: {email: &#39;user7@zulipdev.com&#39;, user_id: 7, avatar_version: 1, is_admin: false, is_owner: false, …}\n5: {email: &#39;user13@zulipdev.com&#39;, user_id: 13, avatar_version: 1, is_admin: false, is_owner: false, …}\n</code></pre></div>\n<div class=\"codehilite\"><pre><span></span><code>res3 =\n0: {email: &#39;user14@zulipdev.com&#39;, user_id: 14, avatar_version: 1, is_admin: false, is_owner: false, …}\n1: {email: &#39;default-bot@zulip.com&#39;, user_id: 16, avatar_version: 1, is_admin: false, is_owner: false, …}\n2: {email: &#39;user9@zulipdev.com&#39;, user_id: 9, avatar_version: 1, is_admin: true, is_owner: true, …}\n3: {email: &#39;user12@zulipdev.com&#39;, user_id: 12, avatar_version: 1, is_admin: false, is_owner: false, …}\n4: {email: &#39;user6@zulipdev.com&#39;, user_id: 6, avatar_version: 1, is_admin: false, is_owner: false, …}\n5: {email: &#39;user11@zulipdev.com&#39;, user_id: 11, avatar_version: 1, is_admin: true, is_owner: false, …}\n</code></pre></div>",
+        "id": 1430037,
+        "sender_full_name": "Akshat",
+        "timestamp": 1662204205
+    },
+    {
+        "content": "<p>In <a href=\"https://github.com/zulip/zulip/pull/25613\">#25613</a>, we plan on limiting the wildcard mentions to at most 1 suggestion for the typeahead. But I find that in the current typeahead there are a couple things that's a bit jarring. </p>\n<p>When we open the mention typeahead, we see that all the wildcard mentions are at the top and when we type it'll work just fine too. But let's say we attempt a fuzzy search with \"stream\" and just enter \"t\". Here we will start to notice that <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> is at the top with the stream mention in the middle of the pack. I personally find this messy as I kind of expect the wildcard mentions to always be at the top. </p>\n<p>This is my opinion on this but would love to hear other's opinions on this as well.</p>",
+        "id": 1573912,
+        "sender_full_name": "Joseph Ho",
+        "timestamp": 1684732693
+    },
+    {
+        "content": "<p>We should also consider if fuzzy search should be considered a \"match\" or not when dealing with wildcard mentions.</p>",
+        "id": 1573917,
+        "sender_full_name": "Joseph Ho",
+        "timestamp": 1684733933
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24937\">@Joseph Ho</span> Can you show this with a little screencast?</p>",
+        "id": 1574157,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1684777503
+    },
+    {
+        "content": "<p>I would not expect \"stream\" to be at the top for \"t\" -- typing \"t\" would be a very odd way for a user to attempt to create an <code>@stream</code> mention.</p>",
+        "id": 1574226,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1684781785
+    },
+    {
+        "content": "<p>The current behavior is that \"stream\" matches in the middle of the word in the same way as other mentions, so, e.g., for <code>@tr</code> in this stream, you get <code>@stream</code>, followed by <code>Sahil Ba*tr*a</code>, and then other users. That seems OK to me, but I don't feel super strongly about this detail.</p>",
+        "id": 1574233,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1684782003
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> I checked <a href=\"https://github.com/zulip/zulip/pull/25613\">#25613</a>; don't we want to go with the priority order we discussed <a href=\"#narrow/stream/101-design/topic/mention.20typeahead/near/1240740\">here</a>?</p>",
+        "id": 1608522,
+        "sender_full_name": "Akshat",
+        "timestamp": 1689187161
+    },
+    {
+        "content": "<p>I was considering reviving my old PR: <a href=\"https://github.com/zulip/zulip/pull/19554\">#19554</a> (Update typeahead priority order logic for recipients).</p>",
+        "id": 1608523,
+        "sender_full_name": "Akshat",
+        "timestamp": 1689187225
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17026\">@Akshat</span> I thought <a href=\"https://github.com/zulip/zulip/pull/25613\">#25613</a> was just about not showing all the duplicates -- I'm pretty sure we have a <code>aliases</code> feature in some other typeaheads for this exact problem.</p>",
+        "id": 1609105,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1689262520
+    },
+    {
+        "content": "<blockquote>\n<p>I'm pretty sure we have a aliases feature in some other typeaheads for this exact problem.</p>\n</blockquote>\n<p>I don't get it.</p>\n<p>I believe my old PR: <a href=\"https://github.com/zulip/zulip/pull/19554\">#19554</a> implements the priority order where it does not show the wildcard duplicates.</p>",
+        "id": 1612606,
+        "sender_full_name": "Akshat",
+        "timestamp": 1689794469
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17026\">@Akshat</span> can you spell out a bit more what you're proposing and why? Your plan is probably right but it'd really help if you wrote out the context to remind everyone.</p>",
+        "id": 1613454,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1689895544
+    },
+    {
+        "content": "<p>Sure! Here's what we decided to do to update the priority order of recipients in the typeahead:</p>\n<p>For stream messages, the order of priority is as follows:</p>\n<ol>\n<li>Subscribers over non-subscribers.</li>\n<li>Users who have sent messages to the current topic over those who haven't sent to the current topic.</li>\n<li>Users who have sent messages to the stream over those who haven't sent to the stream.</li>\n<li>Users have PMed with over users haven't PMed with.</li>\n</ol>\n<p>For PM conversations, the order of priority is as follows:</p>\n<ol>\n<li>Users who have PMed with each other over those who haven't.</li>\n<li>Recipients with higher counts.</li>\n<li>Normal users over bots.</li>\n<li>Users with shorter names over those with longer names.</li>\n</ol>",
+        "id": 1615785,
+        "sender_full_name": "Akshat",
+        "timestamp": 1690307810
+    },
+    {
+        "content": "<p>In this logic update, we also handle the wildcards where we don't show wildcards at the top anymore instead if the search text matches parts of the wildcard then only we put it higher in the priority order.</p>",
+        "id": 1615787,
+        "sender_full_name": "Akshat",
+        "timestamp": 1690308005
+    },
+    {
+        "content": "<p>But this doesn't mean we keep the wildcards at the bottom but the new priority order to sort wildcards in the typeahead is - Wildcards are given preference over:</p>\n<ul>\n<li>non-subscribers</li>\n<li>users who have not participated in topics </li>\n<li>and the users with whom the current user hasn't PMed.</li>\n</ul>",
+        "id": 1615788,
+        "sender_full_name": "Akshat",
+        "timestamp": 1690308221
+    },
+    {
+        "content": "<p>Because of this logic, I believe we do not need to specifically address: <a href=\"https://github.com/zulip/zulip/pull/25613\">#25613</a> but it will be resolved in <a href=\"https://github.com/zulip/zulip/pull/19554\">#19554</a>.</p>",
+        "id": 1615792,
+        "sender_full_name": "Akshat",
+        "timestamp": 1690308402
+    },
+    {
+        "content": "<p>I've updated my PR (<a href=\"https://github.com/zulip/zulip/pull/19554\">#19554</a>) along with feedback given by <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span>; it would be great if people can try out the changes and give feedback on the same.</p>",
+        "id": 1617925,
+        "sender_full_name": "Akshat",
+        "timestamp": 1690745129
+    },
+    {
+        "content": "<p>It might be helpful to deploy this to czo (<a class=\"stream-topic\" data-stream-id=\"415\" href=\"/#narrow/stream/415-chat.2Ezulip.2Eorg/topic/experiments\">#chat.zulip.org &gt; experiments</a> )</p>",
+        "id": 1620061,
+        "sender_full_name": "Dinesh Ch",
+        "timestamp": 1691224271
+    },
+    {
+        "content": "<p>I just filed <a href=\"https://github.com/zulip/zulip/pull/26838\">#26838</a> to help make sure we don't lose track of this project and <span class=\"user-mention\" data-user-id=\"17026\">@Akshat</span> 's PR (<a href=\"https://github.com/zulip/zulip/pull/19554\">#19554</a>).</p>",
+        "id": 1645873,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695428860
+    },
+    {
+        "content": "<p>I agree that it would be good to try it out on CZO.</p>",
+        "id": 1645874,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695428878
+    },
+    {
+        "content": "<p>I'm currently feeling uncertain about demoting wildcard mentions, because we're about to add an <code>@topic</code> feature, and putting it at the top of the typeahead is great for discoverability.</p>",
+        "id": 1645877,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695428936
+    },
+    {
+        "content": "<p>I guess we can treat it differently from the others... In general, <code>@all</code> or <code>@everyone</code> are probably familiar to users of other chat apps, but <code>@topic</code> would be very hard to guess.</p>",
+        "id": 1645878,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695429009
+    }
+]

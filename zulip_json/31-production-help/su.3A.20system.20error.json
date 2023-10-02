@@ -1,0 +1,134 @@
+[
+    {
+        "content": "<p>I've been working on deploying zulip on Render (<a href=\"https://render.com/\">https://render.com/</a>). Zulip fails configuring here: <a href=\"https://github.com/zulip/docker-zulip/blob/master/entrypoint.sh#L277\">https://github.com/zulip/docker-zulip/blob/master/entrypoint.sh#L277</a></p>\n<p>It's a little confusing since the user is set to zulip here (<a href=\"https://github.com/zulip/docker-zulip/blob/master/Dockerfile#L25\">https://github.com/zulip/docker-zulip/blob/master/Dockerfile#L25</a>) and the <a href=\"http://entrypoint.sh\">entrypoint.sh</a> script is run further down the Dockerfile here: <a href=\"https://github.com/zulip/docker-zulip/blob/master/Dockerfile#L85\">https://github.com/zulip/docker-zulip/blob/master/Dockerfile#L85</a></p>\n<p>Has anyone else run into this? I'm still investigating whether it's because a difference in Render's environment vs. other contexts. </p>\n<p>This is the full log:</p>\n<div class=\"codehilite\"><pre><span></span><code>Mar 9 04:00:56 PM  === Begin Initial Configuration Phase ===\nMar 9 04:00:56 PM  Preparing and linking the uploads folder ...\nMar 9 04:00:56 PM  Prepared and linked the uploads directory.\nMar 9 04:00:56 PM  Executing nginx configuration ...\nMar 9 04:00:56 PM  Nginx configuration succeeded.\nMar 9 04:00:56 PM  Certificates configuration succeeded.\nMar 9 04:00:56 PM  Setting database configuration ...\nMar 9 04:00:56 PM  Setting key &quot;REMOTE_POSTGRES_HOST&quot;, type &quot;string&quot; in file &quot;/etc/zulip/settings.py&quot;.\nMar 9 04:00:56 PM  Setting key &quot;REMOTE_POSTGRES_PORT&quot;, type &quot;string&quot; in file &quot;/etc/zulip/settings.py&quot;.\nMar 9 04:00:56 PM  Setting key &quot;REMOTE_POSTGRES_SSLMODE&quot;, type &quot;string&quot; in file &quot;/etc/zulip/settings.py&quot;.\nMar 9 04:00:56 PM  Database configuration succeeded.\nMar 9 04:00:56 PM  Setting Zulip secrets ...\nMar 9 04:00:56 PM  Generating Zulip secrets ...\nMar 9 04:00:56 PM  generate_secrets: No new secrets to generate.\nMar 9 04:00:56 PM  Secrets generation succeeded.\nMar 9 04:00:56 PM  Zulip secrets configuration succeeded.\nMar 9 04:00:56 PM  Activating authentication backends ...\nMar 9 04:00:56 PM  Setting key &quot;AUTHENTICATION_BACKENDS&quot;, type &quot;array&quot; in file &quot;/etc/zulip/settings.py&quot;.\nMar 9 04:00:56 PM  Adding authentication backend &quot;EmailAuthBackend&quot;.\nMar 9 04:00:56 PM  Authentication backend activation succeeded.\nMar 9 04:00:56 PM  Executing Zulip configuration ...\nMar 9 04:00:56 PM  Setting key &quot;EMAIL_HOST_USER&quot;, type &quot;string&quot; in file &quot;/etc/zulip/settings.py&quot;.\nMar 9 04:00:56 PM  Setting key &quot;EXTERNAL_HOST&quot;, type &quot;string&quot; in file &quot;/etc/zulip/settings.py&quot;.\nMar 9 04:00:56 PM  Setting key &quot;MEMCACHED_LOCATION&quot;, type &quot;string&quot; in file &quot;/etc/zulip/settings.py&quot;.\nMar 9 04:00:56 PM  Setting key &quot;RABBITMQ_HOST&quot;, type &quot;string&quot; in file &quot;/etc/zulip/settings.py&quot;.\nMar 9 04:00:56 PM  Setting key &quot;RABBITMQ_USER&quot;, type &quot;string&quot; in file &quot;/etc/zulip/settings.py&quot;.\nMar 9 04:00:56 PM  Setting key &quot;RATE_LIMITING&quot;, type &quot;bool&quot; in file &quot;/etc/zulip/settings.py&quot;.\nMar 9 04:00:56 PM  Setting key &quot;REDIS_HOST&quot;, type &quot;string&quot; in file &quot;/etc/zulip/settings.py&quot;.\nMar 9 04:00:56 PM  Setting key &quot;REDIS_PORT&quot;, type &quot;integer&quot; in file &quot;/etc/zulip/settings.py&quot;.\nMar 9 04:00:56 PM  Setting key &quot;ZULIP_ADMINISTRATOR&quot;, type &quot;string&quot; in file &quot;/etc/zulip/settings.py&quot;.\nMar 9 04:00:56 PM  su: System error\nMar 9 04:00:56 PM  Error in the Zulip configuration. Exiting.\n</code></pre></div>",
+        "id": 1129548,
+        "sender_full_name": "Jennifer Hwang",
+        "timestamp": 1615405186
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19148\">@Jennifer Hwang</span> hmm, I haven't seen that error, but googling finds this: <a href=\"https://github.com/cri-o/cri-o/issues/3803\">https://github.com/cri-o/cri-o/issues/3803</a></p>",
+        "id": 1129589,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615408713
+    },
+    {
+        "content": "<p>I believe that is trying to drop permissions from <code>root</code> to the <code>zulip</code> user inside the container; so you should be able to attach a shell and debug that.  I'd guess it's some security setting you have configured conflicting with doing so using <code>su</code>.</p>",
+        "id": 1129590,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615408768
+    },
+    {
+        "content": "<p>Thanks Tim! That link is really useful! I'll give that a shot</p>",
+        "id": 1129692,
+        "sender_full_name": "Jennifer Hwang",
+        "timestamp": 1615413799
+    },
+    {
+        "content": "<p>As a sidenote, I should mention we're not particularly proud of the <code>docker-zulip</code> implementation, as we adopted it from a community contributor and haven't fully modernized/adapted it, so certainly feel free to propose changes to how it works.</p>",
+        "id": 1129722,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615415488
+    },
+    {
+        "content": "<p>Thanks for letting me know! On that note <span aria-label=\"sweat smile\" class=\"emoji emoji-1f605\" role=\"img\" title=\"sweat smile\">:sweat_smile:</span> , I did figure out why the <code>su: system error</code> was happening! The link you sent was very relevant. We don't provide the CAP_AUDIT_WRITE capability in our docker run security contexts. This errors for zulip set up, since the user is the <code>root</code> user for most of the <a href=\"http://entrypoint.sh\">entrypoint.sh</a> script then drops to the <code>zulip</code> user for a handful of set up scripts.</p>\n<p>It would be nice if we could avoid adding that capability. I was wondering if it would be a good idea to restructure <code>entrypoint.sh</code>such that everything that requires the root is done in a separate script run from the Dockerfile and cached as part of the image. That way everything in <code>entrypoint.sh</code> can be run as the <code>zulip</code> user . I'm not very experienced with Dockerfiles (or bash scripts for that matter), so let me know if this makes sense or if there's a better approach!</p>",
+        "id": 1130646,
+        "sender_full_name": "Jennifer Hwang",
+        "timestamp": 1615532540
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19148\">@Jennifer Hwang</span> I think the challenge is that most of the steps that we need to do as the <code>zulip</code> user are things like initializing the database, which we can't do during container startup, because those need to run against the actual database container you're going to use.</p>",
+        "id": 1130778,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615541358
+    },
+    {
+        "content": "<p>Oh, I guess you're thinking about moving the non-<code>zulip</code> user pieces (aka the <code>root</code> pieces).  That's a bit harder to audit, since I can't just search for <code>sudo</code>.</p>",
+        "id": 1130781,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615541444
+    },
+    {
+        "content": "<p>Can you talk a bit about what CAP_AUDIT_WRITE does and why containers can't have it?  It'll be helpful for thinking about the design space.</p>",
+        "id": 1130783,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615541522
+    },
+    {
+        "content": "<p>One thing to be aware of is even if we could change <code>entrypoint.sh</code>, there may be other places where we make the assumption that code can drop permissions.  Possibly they're only in scripts that wouldn't run in a production docker instance, but I'm not sure -- e.g. our backup restore script does that.</p>",
+        "id": 1130785,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615541603
+    },
+    {
+        "content": "<blockquote>\n<p>Oh, I guess you're thinking about moving the non-zulip user pieces (aka the root pieces). That's a bit harder to audit, since I can't just search for sudo.</p>\n</blockquote>\n<p>Yes, this is what I was thinking! </p>\n<blockquote>\n<p>Can you talk a bit about what CAP_AUDIT_WRITE does and why containers can't have it? It'll be helpful for thinking about the design space.</p>\n</blockquote>\n<p>CAP_AUDIT_WRITE enables writing records to the kernel auditing log. The one reference I could find on potential security concerns is <code>CAP_AUDIT_WRITE may also allow the contained process to falsify logs or DOS the audit system</code> from <a href=\"https://blog.lizzie.io/linux-containers-in-500-loc.html\">https://blog.lizzie.io/linux-containers-in-500-loc.html</a> </p>\n<blockquote>\n<p>One thing to be aware of is even if we could change <a href=\"http://entrypoint.sh\">entrypoint.sh</a>, there may be other places where we make the assumption that code can drop permissions. Possibly they're only in scripts that wouldn't run in a production docker instance, but I'm not sure -- e.g. our backup restore script does that.</p>\n</blockquote>\n<p>This is a really good point! I hadn't thought of that. It sounds like changing <code>entrypoint.sh</code> might be an undertaking, and there might still be problems from executing other operational scripts. Are there other potential solutions that come to mind other than adding CAP_AUDIT_WRITE?</p>",
+        "id": 1131243,
+        "sender_full_name": "Jennifer Hwang",
+        "timestamp": 1615567416
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19148\">@Jennifer Hwang</span> I guess you can ask around with your team (which surely has more docker expertise than I do) as to whether there are other ways Docker systems offer for running scripts as a different user than using <code>su</code> inside the container.</p>",
+        "id": 1131485,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615583763
+    },
+    {
+        "content": "<p>Also, maybe it's possible to patch <code>su</code> or pass an option or something so as to not require <code>CAP_AUDIT_WRITE</code>?</p>",
+        "id": 1131486,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615583791
+    },
+    {
+        "content": "<p>Thanks <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> ! That's super helpful. I'll investigate those options.</p>",
+        "id": 1131550,
+        "sender_full_name": "Jennifer Hwang",
+        "timestamp": 1615588382
+    },
+    {
+        "content": "<p>This may be an Ubuntu 18.04 bug that was fixed in Ubuntu 20.04:</p>\n<div class=\"codehilite\" data-code-language=\"Bash Session\"><pre><span></span><code><span class=\"gp\">$ </span>docker run --cap-drop audit_write --rm -it ubuntu:18.04 su\n<span class=\"go\">su: System error</span>\n<span class=\"gp\">$ </span>docker run --cap-drop audit_write --rm -it ubuntu:20.04 su\n<span class=\"gp\">root@aaa5182b10c9:/#</span>\n</code></pre></div>",
+        "id": 1131552,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1615588648
+    },
+    {
+        "content": "<p>So see if changing <code>FROM ubuntu:18.04 as base</code> to <code>FROM ubuntu:20.04 as base</code> works. I haven’t tried this with docker-zulip so it will probably fail in some trivial way, but it should be possible to get this working since Zulip itself runs fine on Ubuntu 20.04.</p>",
+        "id": 1131553,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1615588758
+    },
+    {
+        "content": "<p>oh man! if this works, I will be so happy! Thanks for the suggestion <span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span></p>",
+        "id": 1131554,
+        "sender_full_name": "Jennifer Hwang",
+        "timestamp": 1615588822
+    },
+    {
+        "content": "<p>It's probably a good idea to just upgrade docker-zulip to 20.04 as the base image.</p>",
+        "id": 1131587,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615591062
+    },
+    {
+        "content": "<p>That just worked <span aria-label=\"joy\" class=\"emoji emoji-1f602\" role=\"img\" title=\"joy\">:joy:</span> <span aria-label=\"upside down\" class=\"emoji emoji-1f643\" role=\"img\" title=\"upside down\">:upside_down:</span> <span aria-label=\"grinning face with smiling eyes\" class=\"emoji emoji-1f601\" role=\"img\" title=\"grinning face with smiling eyes\">:grinning_face_with_smiling_eyes:</span> </p>\n<p>I'm happy to push a PR if that sounds good to you? I was going to test it out on docker compose as well and click around, but if there's anything in particular to look out for or do, let me know!</p>",
+        "id": 1131590,
+        "sender_full_name": "Jennifer Hwang",
+        "timestamp": 1615591792
+    },
+    {
+        "content": "<p>Also, <span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> , how did you think of it being an Ubuntu 18.04 bug as a possibility? I'm not sure I would have ever realized that myself, so I'd love to learn how I can figure that out in the future.</p>",
+        "id": 1131591,
+        "sender_full_name": "Jennifer Hwang",
+        "timestamp": 1615591846
+    },
+    {
+        "content": "<p>Sure a PR would be welcome.</p>\n<p>I noticed that the <a href=\"https://github.com/cri-o/cri-o/issues/3803#issuecomment-634872526\">resolution</a> in Tim’s bug link was “seems like a problem with the debian image as this doesn't happen in the latest image”, which suggested it must have been fixed at some point.</p>",
+        "id": 1131594,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1615592384
+    },
+    {
+        "content": "<p>Good eye! Thanks again for taking a look and finding that! <span aria-label=\"pray\" class=\"emoji emoji-1f64f\" role=\"img\" title=\"pray\">:pray:</span></p>",
+        "id": 1131595,
+        "sender_full_name": "Jennifer Hwang",
+        "timestamp": 1615592826
+    }
+]

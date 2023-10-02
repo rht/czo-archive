@@ -1,0 +1,110 @@
+[
+    {
+        "content": "<p>Was trying to move from 2.0.3 to master. Ran the command as root user and got the following traceback:</p>\n<div class=\"codehilite\"><pre><span></span>2019-06-16 16:57:10,331 upgrade-zulip-from-git: Fetching the latest commits\nTraceback (most recent call last):\n  File &quot;./deployments/current/scripts/lib/upgrade-zulip-from-git&quot;, line 55, in &lt;module&gt;\n    subprocess.check_call([&quot;git&quot;, &quot;remote&quot;, &quot;set-url&quot;, &quot;origin&quot;, remote_url], preexec_fn=su_to_zulip)\n  File &quot;/usr/lib/python3.5/subprocess.py&quot;, line 576, in check_call\n    retcode = call(*popenargs, **kwargs)\n  File &quot;/usr/lib/python3.5/subprocess.py&quot;, line 557, in call\n    with Popen(*popenargs, **kwargs) as p:\n  File &quot;/usr/lib/python3.5/subprocess.py&quot;, line 947, in __init__\n    restore_signals, start_new_session)\n  File &quot;/usr/lib/python3.5/subprocess.py&quot;, line 1552, in _execute_child\n    raise child_exception_type(err_msg)\nsubprocess.SubprocessError: Exception occurred in preexec_fn.\n</pre></div>\n\n\n<p>Wasn't able to debug this. So I downloaded the 2.0.4 tar and upgraded successfully with the regular upgrade-zulip script. But the upgrade-zulip-from-git command failed again with the same output</p>",
+        "id": 754526,
+        "sender_full_name": "guneet narula",
+        "timestamp": 1560705656
+    },
+    {
+        "content": "<p>Anyone faced this before?</p>",
+        "id": 754527,
+        "sender_full_name": "guneet narula",
+        "timestamp": 1560706114
+    },
+    {
+        "content": "<p>Apologies, scratch this one, I managed to solve it. But I am still unsuccessful in the upgrade. Here's the tail end of the log that shows the error when upgrading to master:</p>\n<div class=\"codehilite\"><pre><span></span>2019-06-16 18:09:32,215 upgrade-zulip-stage-2: Building static assets...\nUsing cached node modules from /srv/zulip-npm-cache/f4fcd30b5963c20da7eb5eb2d1947e2cc52adc05/node_modules\n+ rm -rf node_modules\n+ ln -nsf /srv/zulip-npm-cache/f4fcd30b5963c20da7eb5eb2d1947e2cc52adc05/node_modules node_modules\n+ ./tools/setup/emoji/build_emoji\n+ ./tools/inline-email-css\n+ ./tools/setup/generate_zulip_bots_static_files.py\n+ ./tools/setup/generate-custom-icon-webfont\n\nError running a subcommand of ./tools/update-prod-static: ./tools/setup/generate-custom-icon-webfont\nActual error output for the subcommand is just above this.\n\nTraceback (most recent call last):\n  File &quot;./tools/update-prod-static&quot;, line 50, in &lt;module&gt;\n    run([&#39;./tools/setup/generate-custom-icon-webfont&#39;], stdout=fp, stderr=fp)\n  File &quot;./tools/../scripts/lib/zulip_tools.py&quot;, line 204, in run\n    subprocess.check_call(args, **kwargs)\n  File &quot;/usr/lib/python3.5/subprocess.py&quot;, line 581, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./tools/setup/generate-custom-icon-webfont&#39;]&#39; returned non-zero exit status 7\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2019-06-16-23-39-24/scripts/lib/upgrade-zulip-stage-2&quot;, line 122, in &lt;module&gt;\n    preexec_fn=su_to_zulip)\n  File &quot;/usr/lib/python3.5/subprocess.py&quot;, line 581, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./tools/update-prod-static&#39;, &#39;--authors-not-required&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-from-git&quot;, line 68, in &lt;module&gt;\n    deploy_path, &quot;--from-git&quot;] + deploy_options)\n  File &quot;/usr/lib/python3.5/subprocess.py&quot;, line 581, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2019-06-16-23-39-24/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2019-06-16-23-39-24&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1\n</pre></div>\n\n\n<p>I'd be grateful for some help here!</p>",
+        "id": 754606,
+        "sender_full_name": "guneet narula",
+        "timestamp": 1560709387
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12649\">@guneet narula</span> I'm unsure what your first issue was: for the second, the output prints a path to <code>var/log/update-prod-static.log</code>, which will have the full error output.</p>",
+        "id": 754684,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1560728698
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> the first one was an issue of my server environment. the preexec_fn=su_to_zulip led me to which user could su and which couldn't.</p>\n<p>I looked up the log file. Strangely, it's not in <code>/var/log/</code> nor in <code>/var/log/zulip/</code></p>",
+        "id": 754724,
+        "sender_full_name": "guneet narula",
+        "timestamp": 1560738053
+    },
+    {
+        "content": "<p>If I'm not mistaken, the log file is inside the zulip git directory - <code>var/log/</code>. Note the missing <code>/</code> at the beginning.</p>",
+        "id": 754728,
+        "sender_full_name": "Puneeth Chaganti",
+        "timestamp": 1560739756
+    },
+    {
+        "content": "<p>Correct</p>",
+        "id": 754729,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1560739797
+    },
+    {
+        "content": "<p>It's from the zulip checkout</p>",
+        "id": 754730,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1560739804
+    },
+    {
+        "content": "<p>Ah okay, thanks! here we go:</p>\n<div class=\"codehilite\"><pre><span></span>Using cached emojis from /srv/zulip-emoji-cache/54f1fe9f2500dd20a3ee089389d9f309c4c2bf76/emoji\n/srv/zulip-npm-cache/f4fcd30b5963c20da7eb5eb2d1947e2cc52adc05/node_modules/ttf2woff2/jssrc/ttf2woff2.js:1\nvar Module;if(!Module)Module=(typeof Module!==&quot;undefined&quot;?Module:null)||{};var moduleOverrides={};for(var key in Module){if(Module.hasOwnProperty(key)){moduleOverrides[key]=Module[key]}}var ENVIRONMENT_IS_WEB=typeof window===&quot;object&quot;;var ENVIRONMENT_IS_WORKER=typeof importScripts===&quot;function&quot;;var ENVIRONMENT_IS_NODE=typeof process===&quot;object&quot;&amp;&amp;typeof require===&quot;function&quot;&amp;&amp;!ENVIRONMENT_IS_WEB&amp;&amp;!ENVIRONMENT_IS_WORKER;var ENVIRONMENT_IS_SHELL=!ENVIRONMENT_IS_WEB&amp;&amp;!ENVIRONMENT_IS_NODE&amp;&amp;!ENVIRONMENT_IS_WORKER;if(ENVIRONMENT_IS_NODE){if(!Module[&quot;print&quot;])Module[&quot;print&quot;]=function print(x){process[&quot;stdout&quot;].write(x+&quot;\\n&quot;)};if(!Module[&quot;printErr&quot;])Module[&quot;printErr&quot;]=function printErr(x){process[&quot;stderr&quot;].write(x+&quot;\\n&quot;)};var nodeFS=require(&quot;fs&quot;);var nodePath=require(&quot;path&quot;);Module[&quot;read&quot;]=function read(filename,binary){filename=nodePath[&quot;normalize&quot;](filename);var ret=nodeFS[&quot;readFileSync&quot;](filename);if(!ret&amp;&amp;filename!\n\nRangeError: Array buffer allocation failed\n    at new ArrayBuffer (&lt;anonymous&gt;)\n    at Object.&lt;anonymous&gt; (/srv/zulip-npm-cache/f4fcd30b5963c20da7eb5eb2d1947e2cc52adc05/node_modules/ttf2woff2/jssrc/ttf2woff2.js:1:23234)\n    at Module._compile (internal/modules/cjs/loader.js:774:30)\n    at Object.Module._extensions..js (internal/modules/cjs/loader.js:785:10)\n    at Module.load (internal/modules/cjs/loader.js:641:32)\n    at Function.Module._load (internal/modules/cjs/loader.js:556:12)\n    at Module.require (internal/modules/cjs/loader.js:681:19)\n    at require (internal/modules/cjs/helpers.js:16:16)\n    at Object.&lt;anonymous&gt; (/srv/zulip-npm-cache/f4fcd30b5963c20da7eb5eb2d1947e2cc52adc05/node_modules/ttf2woff2/jssrc/index.js:3:27)\n    at Module._compile (internal/modules/cjs/loader.js:774:30)\n</pre></div>",
+        "id": 754760,
+        "sender_full_name": "guneet narula",
+        "timestamp": 1560752768
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12649\">@guneet narula</span> that sounds a lot like a memory shortage issue.  How much RAM does your system have?</p>",
+        "id": 754998,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1560798201
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> 4GB RAM. There are other services running alongside, but the consumption is very low and I anyway need to stop some services while trying this upgrade.</p>",
+        "id": 755429,
+        "sender_full_name": "guneet narula",
+        "timestamp": 1560844430
+    },
+    {
+        "content": "<p>Maybe the issue is because of the system environment. So just in case: I am running zulip on a droplet that already had apache2 based services running on port 80 and 443. I setup zulip by configuring a proxy pass to the nginx ports. Things have been running pretty smoothly with optimal performance.</p>",
+        "id": 755430,
+        "sender_full_name": "guneet narula",
+        "timestamp": 1560844803
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12649\">@guneet narula</span> ok; given that you have other services, it seems likely this was an OOM issue.</p>",
+        "id": 755681,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1560880855
+    },
+    {
+        "content": "<p>In which case the solution is probably to just do a <code>supervisorctl stop all</code> before doing the upgrade.</p>",
+        "id": 755682,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1560880876
+    },
+    {
+        "content": "<p>Thanks Tim, I'll try that.</p>",
+        "id": 756171,
+        "sender_full_name": "guneet narula",
+        "timestamp": 1560920067
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12649\">@guneet narula</span> great, report back on whether it worked; we may want to adjust our upgrade instructions and/or tooling to handle this for users.</p>",
+        "id": 756543,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1560972858
+    },
+    {
+        "content": "<p>Hi <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> just wanted to report back on this. Finally got time to upgrade, and your suggestion did indeed work - this is an oom issue.</p>",
+        "id": 761885,
+        "sender_full_name": "guneet narula",
+        "timestamp": 1561918830
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12649\">@guneet narula</span> awesome, thanks so much for the follow-up.  I'll think about what we can do to avoid folks being confused by OOM issues of this form in the future.</p>",
+        "id": 762013,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1561959867
+    }
+]

@@ -1,0 +1,188 @@
+[
+    {
+        "content": "<p>Hi all.<br>\nSo i have 2 servers.<br>\n1 Only proxy nginx server to second<br>\nlocation / {             proxy_pass  <a href=\"https://10.10.2.9:8089\">https://10.10.2.9:8089</a>;    # Port that docker-zulip is listening on     }<br>\n2 On the second srv default configuration docker with mapping port 8089 to 80</p>\n<p>But i have error ERR_CONNECTION_TIMED_OUT (GET /new/0noxx8pqjm732ih7jrwsgszq HTTP/1.1\" 301)<br>\nPlease help me configure nginx config file on second srv )<br>\nMany thanks.</p>",
+        "id": 918277,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1593426876
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16256\">@Rostyslav Matiusha</span> have you read <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy\">https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy</a>?</p>",
+        "id": 918572,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593455846
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> <br>\nThanks Tim.<br>\nI read this and i do it<br>\nAdd the following block to /etc/zulip/zulip.conf:</p>\n<p>[application_server]<br>\nhttp_only = true<br>\nAs root, run /home/zulip/deployments/current/scripts/zulip-puppet-apply. This will convert Zulip’s main nginx configuration file to allow HTTP instead of HTTPS.</p>\n<p>Finally, restart the Zulip server, using /home/zulip/deployments/current/scripts/restart-server</p>\n<p>and i have a new nginx conf file<br>\nBUT ((( nothink  301 error</p>\n<p>any thoughts ?</p>",
+        "id": 918816,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1593460200
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16256\">@Rostyslav Matiusha</span>  Another place to check would be <code>docker-compose.yml</code>. I needed to do:</p>\n<div class=\"codehilite\"><pre><span></span><code>      SETTING_USE_X_FORWARDED_HOST: &#39;True&#39;\n      SETTING_ALLOWED_HOSTS: &quot;[&#39;*&#39;, &#39;0.0.0.0&#39;]\n      DISABLE_HTTPS: &quot;True&quot;\n</code></pre></div>\n\n\n<p>...in order to get it running. Mine runs on Apache, though.</p>",
+        "id": 924531,
+        "sender_full_name": "Roman Bannack",
+        "timestamp": 1593867621
+    },
+    {
+        "content": "<p>Thank. I fixed the this error. BUT<br>\nNext error 502<br>\n2020/07/04 16:23:04 [crit] 4248#0: *89 connect() to 10.10.2.11:8089 failed (13: Permission denied) while connecting to upstream, client: 10.10.8.69, server: <a href=\"http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai\">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>, request: \"GET / HTTP/2.0\", upstream: \"<a href=\"http://10.10.2.11:8089/\">http://10.10.2.11:8089/</a>\", host: \"<a href=\"http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai\">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>\"<br>\n2020/07/04 16:23:04 [crit] 4248#0: *89 connect() to 10.10.2.11:8089 failed (13: Permission denied) while connecting to upstream, client: 10.10.8.69, server: <a href=\"http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai\">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>, request: \"GET /favicon.ico HTTP/2.0\", upstream: \"<a href=\"http://10.10.2.11:8089/favicon.ico\">http://10.10.2.11:8089/favicon.ico</a>\", host: \"<a href=\"http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai\">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>\", referrer: \"<a href=\"https://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai/\">https://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai/</a>\"</p>",
+        "id": 924540,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1593869027
+    },
+    {
+        "content": "<p>Where can I see all the 'SETTING' for run docker-compose.yml ?</p>",
+        "id": 924579,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1593870595
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16256\">@Rostyslav Matiusha</span> </p>\n<p>Well, they are in <code>docker-compose.yml</code>in the <code>zulip</code>section. These are just the <a href=\"https://zulip.readthedocs.io/en/latest/production/settings.html\">same settings as in <code>/etc/zulip/settings.py</code> and <code>/etc/zulip/zulip-secrets.conf</code></a> on a non-docker install, only prefixed with <code>SETTINGS_</code>and <code>SECRETS_</code>respectively.</p>\n<p>From the <a href=\"https://github.com/zulip/docker-zulip\">zulip/docker-zulip docs</a>:</p>\n<blockquote>\n<p>Standard Zulip server settings are secrets are set using the following syntax:</p>\n<ul>\n<li><code>SETTING_MY_SETTING</code> will become <code>MY_SETTING</code> in <code>/etc/zulip/settings.py</code></li>\n<li><code>SECRETS_my_secret</code> will become <code>my_secret</code> in <code>/etc/zulip/zulip-secrets.conf</code>.</li>\n</ul>\n</blockquote>\n<p>You could look into a <code>/etc/zulip/settings.py</code>file, there's a lot to read about possible settings in there.</p>",
+        "id": 924952,
+        "sender_full_name": "Roman Bannack",
+        "timestamp": 1593887709
+    },
+    {
+        "content": "<p>Maybe something like:</p>\n<div class=\"codehilite\"><pre><span></span><code># If you need to access the server on a specific port, you should set\n# EXTERNAL_HOST to e.g. zulip.example.com:1234 here.\nEXTERNAL_HOST = &#39;example.com&#39;\n</code></pre></div>",
+        "id": 924956,
+        "sender_full_name": "Roman Bannack",
+        "timestamp": 1593887873
+    },
+    {
+        "content": "<p>For example, I did a</p>\n<div class=\"codehilite\"><pre><span></span><code>SETTING_EXTERNAL_HOST: &#39;abc.xyz.de&#39;\n</code></pre></div>\n\n\n<p>in the <code>docker-compose.yml</code>of my Zulip docker install.</p>",
+        "id": 924958,
+        "sender_full_name": "Roman Bannack",
+        "timestamp": 1593888025
+    },
+    {
+        "content": "<p>Thanks Roman.<br>\nmy /etc/zulip/settings.py<br>\nREMOTE_POSTGRES_HOST = '10.10.2.12'<br>\nREMOTE_POSTGRES_SSLMODE = 'prefer'<br>\nAUTHENTICATION_BACKENDS = ('zproject.backends.EmailAuthBackend',)<br>\nAUTHENTICATION_BACKENDS += ('zproject.backends.GoogleAuthBackend',)<br>\nAUTHENTICATION_BACKENDS += ('zproject.backends.GitHubAuthBackend',)<br>\nAUTHENTICATION_BACKENDS += ('zproject.backends.AzureADAuthBackend',)<br>\nAUTHENTICATION_BACKENDS += ('zproject.backends.LDAPAuthBackend',)<br>\nALLOWED_HOSTS = ['*', '0.0.0.0']<br>\nAUTH_LDAP_BIND_PASSWORD = '123'<br>\nAUTH_LDAP_SERVER_URI = 'ldap://ldap.avo.ru'<br>\nAUTH_LDAP_USER_SEARCH = LDAPSearch(\"cn=DigitalPlatformReader,ou=systemUsers,dc=avo,dc=ru\",ldap.SCOPE_SUBTREE, \"(mail=%(user)s)\")<br>\nEMAIL_HOST = '<a href=\"http://mail.avo.ru\">mail.avo.ru</a>'<br>\nEMAIL_HOST_USER = '<a href=\"mailto:noreply@avo.ru\">noreply@avo.ru</a>'<br>\nEMAIL_PORT = 465<br>\nEMAIL_USE_SSL = True<br>\nEMAIL_USE_TLS = True<br>\nEXTERNAL_HOST = '<a href=\"http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai\">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>'<br>\nMEMCACHED_LOCATION = 'memcached:11211'<br>\nRABBITMQ_HOST = 'rabbitmq'<br>\nRABBITMQ_USER = 'zulip'<br>\nRATE_LIMITING = True<br>\nREDIS_HOST = 'redis'<br>\nREDIS_PORT = 6379<br>\nUSE_X_FORWARDED_HOST = True<br>\nZULIP_ADMINISTRATOR = '<a href=\"mailto:msg@avo.ru\">msg@avo.ru</a>'</p>\n<p>but i still have error 502</p>\n<p>2020/07/05 16:59:25 [crit] 5298#0: *1 connect() to 10.10.2.11:8089 failed (13: Permission denied) while connecting to upstream, client: 10.10.8.69, server: <a href=\"http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai\">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>, request: \"GET / HTTP/2.0\", upstream: \"<a href=\"http://10.10.2.11:8089/\">http://10.10.2.11:8089/</a>\", host: \"<a href=\"http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai\">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>\"</p>\n<p>any ideas please and thanks ?</p>",
+        "id": 925357,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1593957663
+    },
+    {
+        "content": "<p>Hi <span class=\"user-mention\" data-user-id=\"16256\">@Rostyslav Matiusha</span> ,<br>\nif that's from the Docker install, I miss a <code>DISABLE_HTTPS: \"True\"</code> in there.</p>\n<p>But I don't think that causes a 502. You will want to look at your Nginx config.</p>\n<p>I did it with Apache, where it was as simple as:</p>\n<div class=\"codehilite\"><pre><span></span><code>ProxyPass / http://zulip.example.de:10080/\nProxyPassReverse / http://zulip.example.de:10080/\n</code></pre></div>\n\n\n<p>Docker/Zulip exposes Port 10080 and has DISABLE_HTTPS set to \"True\".</p>",
+        "id": 925415,
+        "sender_full_name": "Roman Bannack",
+        "timestamp": 1593961537
+    },
+    {
+        "content": "<p>ok Roman.<br>\nDISABLE_HTTPS: \"True\" - YES</p>\n<p>cat /etc/zulip/uwsgi.ini <br>\n[uwsgi]<br>\nsocket=/home/zulip/deployments/uwsgi-socket<br>\nmodule=zproject.wsgi:application<br>\nchdir=/home/zulip/deployments/current/<br>\nmaster=true<br>\nchmod-socket=700<br>\nchown-socket=zulip:zulip<br>\nprocesses=6<br>\nharakiri=20<br>\nbuffer-size=8192<br>\nlisten=128<br>\npost-buffering=4096<br>\nenv= LANG=en_US.UTF-8<br>\nuid=zulip<br>\ngid=zulip</p>\n<p>ls -la /home/zulip/deployments/uwsgi-socket<br>\nsrwx------ 1 zulip zulip 0 Jul  6 08:10 /home/zulip/deployments/uwsgi-socket</p>\n<p>ps axu | grep nginx<br>\nroot       287  0.0  0.0  85996  5596 ?        S    08:10   0:00 nginx: master process /usr/sbin/nginx -g daemon off;<br>\nzulip      317  0.0  0.0 102876 20172 ?        S    08:10   0:00 nginx: worker process<br>\nzulip      318  0.0  0.0 102876 19700 ?        S    08:10   0:00 nginx: worker process</p>\n<p>any ideas please and thanks ?</p>",
+        "id": 925705,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1594028382
+    },
+    {
+        "content": "<p>This seems all to be from inside the Docker container, where I have got exactly the same. Check the Nginx/Apache config of your server, not of the container.</p>\n<p>Espesially <code>site-confs</code>. You could create a site-conf for your Zulip Docker install like so:</p>\n<div class=\"codehilite\"><pre><span></span><code>server {\n    listen       443;\n    listen [::]:443;\n    server_name zulip.domain.com;\n\n    location / {\n        proxy_pass http://[server IP:exposed Docker container port number];\n        proxy_set_header Host $http_host;  # forward to HTTP only\n    }\n</code></pre></div>\n\n\n<p>See: <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#nginx-configuration\">https://zulip.readthedocs.io/en/latest/production/deployment.html#nginx-configuration</a></p>",
+        "id": 925709,
+        "sender_full_name": "Roman Bannack",
+        "timestamp": 1594031021
+    },
+    {
+        "content": "<p>Frontend NGINX<br>\nserver {<br>\n    listen 80;<br>\n    server_name <a href=\"http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai\">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>;<br>\n    return 301 https://$host$request_uri;  # redirect http to https<br>\n}</p>\n<p>server {<br>\n    listen 443 ssl http2;<br>\n    server_name <a href=\"http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai\">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>;</p>\n<div class=\"codehilite\"><pre><span></span><code>ssl_certificate      certs/xn--b1ayw2a_xn--p1ai.chained.crt;\nssl_certificate_key  certs/xn--b1ayw2a.xn--p1ai.key;\n\nport_in_redirect off;\nproxy_buffering off;\nproxy_http_version 1.1;     # Properly proxy websocket connections\nproxy_read_timeout 300s;    # terminate websockets afer 5min of inactivity\nproxy_set_header Host $host;\nproxy_set_header X-Real-IP $remote_addr;\nproxy_set_header X-Forwarded-Host $host;\nproxy_set_header X-Forwarded-Server $host;\nproxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\nproxy_set_header X-Forwarded-Protocol $scheme;\nproxy_set_header Upgrade $http_upgrade;\nproxy_set_header Connection &quot;upgrade&quot;;\n\n\nlocation / {\n        proxy_pass  http://10.10.2.11:8089;    # Port that docker-zulip is listening on\n}\n</code></pre></div>\n\n\n<p>}</p>",
+        "id": 925755,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1594035197
+    },
+    {
+        "content": "<p>chmod-socket = 664 <br>\ninstalled too<br>\nbut the result is one 502</p>",
+        "id": 925861,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1594040363
+    },
+    {
+        "content": "<p>I think you got it by now, now it's Zulip that needs to be configured right.</p>\n<p>What did you change to make it pass?</p>",
+        "id": 925886,
+        "sender_full_name": "Roman Bannack",
+        "timestamp": 1594042802
+    },
+    {
+        "content": "<p>so i fixed 502 error and site is up, but have another <br>\n\"Internal server error\"</p>",
+        "id": 925915,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1594047325
+    },
+    {
+        "content": "<p>Good. Now it's easy. <span aria-label=\"sunglasses\" class=\"emoji emoji-1f60e\" role=\"img\" title=\"sunglasses\">:sunglasses:</span> Configure Zulip.</p>",
+        "id": 925965,
+        "sender_full_name": "Roman Bannack",
+        "timestamp": 1594054917
+    },
+    {
+        "content": "<p>Thanks Roman.<br>\nBut i'm stumped (((<br>\nAttributeError: module 'zproject.backends' has no attribute ' GoogleAuthBackend'<br>\n<a href=\"/user_uploads/2/e/TChAhHZ1y621-qUjrP9ySi4J/2020-07-07_15-30-59.png\">2020-07-07_15-30-59.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/e/TChAhHZ1y621-qUjrP9ySi4J/2020-07-07_15-30-59.png\" title=\"2020-07-07_15-30-59.png\"><img src=\"/user_uploads/2/e/TChAhHZ1y621-qUjrP9ySi4J/2020-07-07_15-30-59.png\"></a></div>",
+        "id": 927135,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1594125091
+    },
+    {
+        "content": "<p>Hi Rostyslav, I don't think it has to do with GoogleAuthBackends. It's probably something in <code>settings.py</code> that you configure via Docker. Like<code>[SETTING_]EXTERNAL_HOST</code>.</p>\n<p>Can Zulip handle Internationalized Domain Names / Punycode in its settings for external host? (I don't know.) <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> <br>\nPerhaps you could try to replace the Punycode with the 'real cyrillic' domain name in settings.py:<br>\n<code>EXTERNAL_HOST = 'мессенджер.цэво.рф'</code></p>\n<p>Also, check if all the other containers from the Zulip Docker stack are running (Memcached, Redis, Postgresql, RabbitMQ), and their properties/ports.</p>",
+        "id": 927156,
+        "sender_full_name": "Roman Bannack",
+        "timestamp": 1594127109
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"14475\">@Roman Bannack</span> good question, I haven't dealt with i18n domain names much before but I'd expect it to work how you described without issues.</p>",
+        "id": 927256,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1594144594
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16256\">@Rostyslav Matiusha</span> to make sure you see this.</p>",
+        "id": 927259,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1594144603
+    },
+    {
+        "content": "<p>[root@localhost docker-zulip]# docker-compose ps<br>\n         Name                        Command               State                    Ports                 </p>\n<hr>\n<p>dockerzulip_memcached_1   <a href=\"http://docker-entrypoint.sh\">docker-entrypoint.sh</a> sh -e ...   Up      11211/tcp                              <br>\ndockerzulip_rabbitmq_1    <a href=\"http://docker-entrypoint.sh\">docker-entrypoint.sh</a> rabbi ...   Up      25672/tcp, 4369/tcp, 5671/tcp, 5672/tcp<br>\ndockerzulip_redis_1       <a href=\"http://docker-entrypoint.sh\">docker-entrypoint.sh</a> sh -e ...   Up      6379/tcp                               <br>\ndockerzulip_zulip_1       /sbin/entrypoint.sh app:run      Up      443/tcp, 0.0.0.0:8089-&gt;80/tcp</p>\n<p>settings.py</p>\n<p>REMOTE_POSTGRES_HOST = '10.10.2.12'<br>\nREMOTE_POSTGRES_SSLMODE = 'prefer'<br>\nAUTHENTICATION_BACKENDS = ('zproject.backends.EmailAuthBackend',)<br>\nAUTHENTICATION_BACKENDS += ('zproject.backends. GoogleAuthBackend',)<br>\nAUTHENTICATION_BACKENDS += ('zproject.backends. GitHubAuthBackend',)<br>\nAUTHENTICATION_BACKENDS += ('zproject.backends. GitLabAuthBackend',)<br>\nAUTHENTICATION_BACKENDS += ('zproject.backends. AzureADAuthBackend',)<br>\nAUTHENTICATION_BACKENDS += ('zproject.backends. LDAPAuthBackend',)<br>\nALLOWED_HOSTS = ['*', '0.0.0.0']<br>\nAUTH_LDAP_BIND_PASSWORD = 'Ljiflrf28@'<br>\nAUTH_LDAP_SERVER_URI = 'ldap://ldap.avo.ru'<br>\nAUTH_LDAP_USER_SEARCH = LDAPSearch(\"cn=DigitalPlatformReader,ou=systemUsers,dc=avo,dc=ru\",ldap.SCOPE_SUBTREE, \"(mail=%(user)s)\")<br>\nEMAIL_HOST = '<a href=\"http://mail.avo.ru\">mail.avo.ru</a>'<br>\nEMAIL_HOST_USER = '<a href=\"mailto:noreply@avo.ru\">noreply@avo.ru</a>'<br>\nEMAIL_PORT = 465<br>\nEMAIL_USE_TLS = True<br>\nEXTERNAL_HOST = '<a href=\"http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai\">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>'<br>\nMEMCACHED_LOCATION = 'memcached:11211'<br>\nRABBITMQ_HOST = 'rabbitmq'<br>\nRABBITMQ_USER = 'zulip'<br>\nRATE_LIMITING = True<br>\nREDIS_HOST = 'redis'<br>\nREDIS_PORT = 6379<br>\nUSE_X_FORWARDED_HOST = True<br>\nZULIP_ADMINISTRATOR = '<a href=\"mailto:msg@avo.ru\">msg@avo.ru</a>'</p>",
+        "id": 927362,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1594147578
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16256\">@Rostyslav Matiusha</span></p>\n<blockquote>\n<p>dockerzulip_memcached_1   <a href=\"http://docker-entrypoint.sh\">docker-entrypoint.sh</a> sh -e ...   Up      11211/tcp                              <br>\ndockerzulip_rabbitmq_1    <a href=\"http://docker-entrypoint.sh\">docker-entrypoint.sh</a> rabbi ...   Up      25672/tcp, 4369/tcp, 5671/tcp, 5672/tcp<br>\ndockerzulip_redis_1       <a href=\"http://docker-entrypoint.sh\">docker-entrypoint.sh</a> sh -e ...   Up      6379/tcp                               <br>\ndockerzulip_zulip_1       /sbin/entrypoint.sh app:run      Up      443/tcp, 0.0.0.0:8089-&gt;80/tcp</p>\n</blockquote>\n<p>Where's Postgresql? Try <code>docker-compose restart</code></p>",
+        "id": 927440,
+        "sender_full_name": "Roman Bannack",
+        "timestamp": 1594151806
+    },
+    {
+        "content": "<p>postgresql on remote host<br>\nREMOTE_POSTGRES_HOST = '10.10.2.12'</p>",
+        "id": 927967,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1594195117
+    },
+    {
+        "content": "<p>find error<br>\nImportError: Module \"zproject.backends\" does not define a \"GitLabAuthBackend\" attribute/class<br>\n2020-07-08 09:52:49.914 ERR  [django.request] Internal Server Error: /login/</p>\n<p>ZULIP_AUTH_BACKENDS: 'EmailAuthBackend,GitHubAuthBackend,GitLabAuthBackend,LDAPAuthBackend'</p>\n<p>AUTHENTICATION_BACKENDS = ('zproject.backends.EmailAuthBackend',)<br>\nAUTHENTICATION_BACKENDS += ('zproject.backends.GitHubAuthBackend',)<br>\nAUTHENTICATION_BACKENDS += ('zproject.backends.GitLabAuthBackend',)<br>\nAUTHENTICATION_BACKENDS += ('zproject.backends.LDAPAuthBackend',)</p>",
+        "id": 927987,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1594202245
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16256\">@Rostyslav Matiusha</span> Um, do you need Auth via GitLab, GitHub and so on? In <a href=\"#narrow/stream/31-production-help/topic/Problems.20nginx.20proxing.2E/near/927362\">your settings.py</a>, you only configure LDAP Auth. Try:</p>\n<div class=\"codehilite\"><pre><span></span><code>ZULIP_AUTH_BACKENDS: &#39;EmailAuthBackend,LDAPAuthBackend&#39;\n</code></pre></div>\n\n\n<p>And, as previously mentioned, replace the Punycode external hostname with the actual one.</p>",
+        "id": 927992,
+        "sender_full_name": "Roman Bannack",
+        "timestamp": 1594203465
+    },
+    {
+        "content": "<p>ok, I left only 'EmailAuthBackend' and i not have 500 error, but i nead LDAP</p>",
+        "id": 927993,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1594203491
+    },
+    {
+        "content": "<p>ZULIP_AUTH_BACKENDS: 'EmailAuthBackend,LDAPAuthBackend'<br>\n      SETTING_AUTH_LDAP_SERVER_URI: 'ldap://ldap.avo.ru'<br>\n      SETTING_AUTH_LDAP_BIND_PASSWORD: 'Ljiflrf28@'<br>\n      LDAP_APPEND_DOMAIN: '<a href=\"http://avo.ru\">avo.ru</a>'<br>\n      AUTH_LDAP_REVERSE_EMAIL_SEARCH: '%(email)s'<br>\n      SETTING_AUTH_LDAP_USER_SEARCH: 'LDAPSearch(\"cn=DigitalPlatformReader,ou=systemUsers,dc=avo,dc=ru\",ldap.SCOPE_SUBTREE, \"(mail=%(user)s)\")'</p>",
+        "id": 927995,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1594203878
+    },
+    {
+        "content": "<p>500 error (((<br>\nand<br>\nImportError: Module \"zproject.backends\" does not define a \"LDAPAuthBackend\" attribute/class</p>",
+        "id": 927997,
+        "sender_full_name": "Rostyslav Matiusha",
+        "timestamp": 1594204160
+    },
+    {
+        "content": "<p>This one: <code>SETTING_AUTH_LDAP_BIND_PASSWORD: 'Ljiflrf28@'</code> belongs into the <code>zulip-secrets.conf</code>, imho. So it would be <code>SECRETS_AUTH_LDAP_BIND_PASSWORD: xxxx</code> in docker-compose.yml. The rest seems to be in settings.py only, check <a href=\"https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#ldap-including-active-directory\">https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#ldap-including-active-directory</a></p>",
+        "id": 928000,
+        "sender_full_name": "Roman Bannack",
+        "timestamp": 1594204650
+    }
+]

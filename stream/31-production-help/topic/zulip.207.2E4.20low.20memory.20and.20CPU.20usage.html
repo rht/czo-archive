@@ -1,0 +1,83 @@
+<html>
+<head><meta charset="utf-8"><title>zulip 7.4 low memory and CPU usage · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.207.2E4.20low.20memory.20and.20CPU.20usage.html">zulip 7.4 low memory and CPU usage</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1649603"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%207.4%20low%20memory%20and%20CPU%20usage/near/1649603" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> shogo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.207.2E4.20low.20memory.20and.20CPU.20usage.html#1649603">(Sep 29 2023 at 01:08)</a>:</h4>
+<p>We are currently measuring the message processing performance of zulip7.4.<br>
+The environment is as follows.</p>
+<ul>
+<li>CPU: 4/8/16</li>
+<li>Memory: 8GB</li>
+<li>OS: ubuntu 22.04</li>
+<li>zulip: 7.4 (by installer)</li>
+</ul>
+<p>The measurement uses Apache Jmeter and sends messages to random topics in parallel using REST API.</p>
+<p>The following results are obtained for each number of cores.</p>
+<div class="codehilite"><pre><span></span><code>4core: 150/s
+8core: 280/s
+16core: 420/s
+</code></pre></div>
+<p>The number of uWSGI processes changes each time the number of CPUs increases.<br>
+I didn't make any changes to the memory as I had plenty of space.</p>
+<p>As a result, we found that increasing the number of CPU cores improves performance. However, in all patterns, the usage rate for each CPU core remains low at around 10-20%. There is plenty of memory, and the I/O wait is not high.</p>
+<p>I found that the processes that make up zulip have a nice lower priority, so I experimentally tried setting the priority to 0, but the situation does not change.</p>
+<p>I also adjusted some other parameters, such as uWSGI processes/threads and PostgreSQL memory, but there was no change.</p>
+<p>Is there any reason why zulip can't use up all the resources? Or is there a bottleneck somewhere?</p>
+
+
+
+<a name="1649836"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%207.4%20low%20memory%20and%20CPU%20usage/near/1649836" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.207.2E4.20low.20memory.20and.20CPU.20usage.html#1649836">(Sep 29 2023 at 14:41)</a>:</h4>
+<p><span class="user-mention" data-user-id="27912">@shogo</span>: If you're not hitting CPU or memory bottlenecks, then it stands to reason that you're hitting some other limits.  Can you share your JMeter test plan?</p>
+
+
+
+<a name="1649837"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%207.4%20low%20memory%20and%20CPU%20usage/near/1649837" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.207.2E4.20low.20memory.20and.20CPU.20usage.html#1649837">(Sep 29 2023 at 14:45)</a>:</h4>
+<p>Can you also explain how you set the number of uwsgi processes?  By default, zulip doesn't scale the number of uwsgi workers by processor count -- it sets up 4 of them in low-memory environments, or 6 when it has more than 3.5GB.</p>
+
+
+
+<a name="1649845"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%207.4%20low%20memory%20and%20CPU%20usage/near/1649845" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.207.2E4.20low.20memory.20and.20CPU.20usage.html#1649845">(Sep 29 2023 at 14:47)</a>:</h4>
+<p>My guess is either that you were saturating uwsgi processes, or nginx connections.</p>
+
+
+
+<a name="1649846"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%207.4%20low%20memory%20and%20CPU%20usage/near/1649846" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.207.2E4.20low.20memory.20and.20CPU.20usage.html#1649846">(Sep 29 2023 at 14:49)</a>:</h4>
+<p>Note that <em>just sending messages with no receivers</em> is not a good model for testing total capacity of the system -- the load also scales up by the number of people that the message has to be delivered to.  So any load-testing model which only hits the <code>POST /api/v1/messages</code> without any clients listening on Tornado is going to give a very skewed sense of capacity.</p>
+
+
+
+<a name="1651373"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%207.4%20low%20memory%20and%20CPU%20usage/near/1651373" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> shogo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.207.2E4.20low.20memory.20and.20CPU.20usage.html#1651373">(Oct 02 2023 at 00:04)</a>:</h4>
+<p>The uwsgi process has been increased to about the number of CPU cores minus 1.<br>
+nginx has worker_connections of 10000, so I don't think it will exceed this.</p>
+<p>And I understand that testing with a small number of recipients doesn't mean much. What I'm wondering now is, is it correct in my configuration to not exhaust CPU resources with mass delivery of messages?</p>
+<p>By the way, rate limits are also disabled.</p>
+
+
+
+<a name="1651420"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%207.4%20low%20memory%20and%20CPU%20usage/near/1651420" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.207.2E4.20low.20memory.20and.20CPU.20usage.html#1651420">(Oct 02 2023 at 00:45)</a>:</h4>
+<p><span class="user-mention" data-user-id="27912">@shogo</span> you generally will want significantly more uwsgi processes than cores.</p>
+
+
+
+<a name="1651421"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%207.4%20low%20memory%20and%20CPU%20usage/near/1651421" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.207.2E4.20low.20memory.20and.20CPU.20usage.html#1651421">(Oct 02 2023 at 00:46)</a>:</h4>
+<p>Try making that 4x as high.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

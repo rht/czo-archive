@@ -1,0 +1,86 @@
+<html>
+<head><meta charset="utf-8"><title>✔ can&#x27;t login with GenericOpenIdConnectBackend #20564 · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20can.27t.20login.20with.20GenericOpenIdConnectBackend.20.2320564.html">✔ can&#x27;t login with GenericOpenIdConnectBackend #20564</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1297430"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20can%27t%20login%20with%20GenericOpenIdConnectBackend%20%2320564/near/1297430" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20can.27t.20login.20with.20GenericOpenIdConnectBackend.20.2320564.html#1297430">(Dec 14 2021 at 18:02)</a>:</h4>
+<p>Filed as a GitHub issue; posting here for visibility: <a href="https://github.com/zulip/zulip/pull/20564">#20564</a></p>
+
+
+
+<a name="1297566"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20can%27t%20login%20with%20GenericOpenIdConnectBackend%20%2320564/near/1297566" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20can.27t.20login.20with.20GenericOpenIdConnectBackend.20.2320564.html#1297566">(Dec 14 2021 at 23:08)</a>:</h4>
+<p>I don't have an obvious thing to ask the user without reading some code; I'd always feel free to encourage the user to visit this thread and provide more detail.</p>
+
+
+
+<a name="1297567"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20can%27t%20login%20with%20GenericOpenIdConnectBackend%20%2320564/near/1297567" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20can.27t.20login.20with.20GenericOpenIdConnectBackend.20.2320564.html#1297567">(Dec 14 2021 at 23:08)</a>:</h4>
+<p>The fact that they're getting a redirect to /accounts/find seems like it should determine the code path that's happening, since that's not something we do in many places.</p>
+
+
+
+<a name="1297851"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20can%27t%20login%20with%20GenericOpenIdConnectBackend%20%2320564/near/1297851" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20can.27t.20login.20with.20GenericOpenIdConnectBackend.20.2320564.html#1297851">(Dec 15 2021 at 14:07)</a>:</h4>
+<p>Redirect to that page happens in the <code>invalid_realm</code> condition which is established here:</p>
+<div class="codehilite"><pre><span></span><code>def social_associate_user_helper(
+    backend: BaseAuth, return_data: Dict[str, Any], *args: Any, **kwargs: Any
+) -&gt; Union[HttpResponse, Optional[UserProfile]]:
+    &quot;&quot;&quot;Responsible for doing the Zulip account lookup and validation parts
+    of the Zulip social auth pipeline (similar to the authenticate()
+    methods in most other auth backends in this file).
+
+    Returns a UserProfile object for successful authentication, and None otherwise.
+    &quot;&quot;&quot;
+    subdomain = backend.strategy.session_get(&quot;subdomain&quot;)
+    try:
+        realm = get_realm(subdomain)
+    except Realm.DoesNotExist:
+        return_data[&quot;invalid_realm&quot;] = True
+        return None
+</code></pre></div>
+<p>and redirected a bit later in the codepath here:</p>
+<div class="codehilite"><pre><span></span><code>    if invalid_realm:
+        # User has passed an invalid subdomain param - this shouldn&#39;t happen in the normal flow,
+        # unless the user manually edits the param. In any case, it&#39;s most appropriate to just take
+        # them to find_account, as there isn&#39;t even an appropriate subdomain to take them to the login
+        # form on.
+        return HttpResponseRedirect(reverse(&quot;find_account&quot;))
+</code></pre></div>
+<p>but I'm failing to see how this would be triggered under natural conditions by going through the "Login in with ..." button. I posted on the issue for more information</p>
+
+
+
+<a name="1299327"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20can%27t%20login%20with%20GenericOpenIdConnectBackend%20%2320564/near/1299327" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20can.27t.20login.20with.20GenericOpenIdConnectBackend.20.2320564.html#1299327">(Dec 17 2021 at 18:06)</a>:</h4>
+<p>The issue was no realm existing on the subdomain after all</p>
+
+
+
+<a name="1299328"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20can%27t%20login%20with%20GenericOpenIdConnectBackend%20%2320564/near/1299328" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Notification Bot <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20can.27t.20login.20with.20GenericOpenIdConnectBackend.20.2320564.html#1299328">(Dec 17 2021 at 18:06)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="10349">Mateusz Mandera</span> has marked this topic as resolved.</p>
+
+
+
+<a name="1299329"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20can%27t%20login%20with%20GenericOpenIdConnectBackend%20%2320564/near/1299329" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20can.27t.20login.20with.20GenericOpenIdConnectBackend.20.2320564.html#1299329">(Dec 17 2021 at 18:07)</a>:</h4>
+<p>Hmm, would it be better to take them to a generic "There's no realm here" 404 page instead, with a link to "find account", given that context?</p>
+
+
+
+<a name="1299331"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20can%27t%20login%20with%20GenericOpenIdConnectBackend%20%2320564/near/1299331" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20can.27t.20login.20with.20GenericOpenIdConnectBackend.20.2320564.html#1299331">(Dec 17 2021 at 18:12)</a>:</h4>
+<p>I think this is another case of the bug where we show the login page on the root subdomain even if there's no realm there, that's addressed by <code>auth: Adjust behavior of /login/ on the root subdomain. </code> <a href="https://github.com/zulip/zulip/pull/13924">https://github.com/zulip/zulip/pull/13924</a>. This has been blocked on some decision being made regarding the complicated conditional logic in <code>should_redirect_away_from_login_page</code> iirc</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

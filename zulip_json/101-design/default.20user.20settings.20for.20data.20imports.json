@@ -1,0 +1,302 @@
+[
+    {
+        "content": "<p>I'd like to make a plan for improving how we set defaults of user personal preference settings for data import organizations. Currently, we have a \"default user settings\" feature that allows organization administrators to set the default values for personal preference settings based on what makes sense for how the organization works. (For important settings like email address visibility, we prompt during account creation).</p>\n<p>However, AFAIK, we don't currently use that code path at all for users imported from another chat platform -- the user accounts are created automatically by the import process (which is good, since then they're attached to their message history), including that of the organization administrators, which means there's no opportunity to set these defaults for users before their values are fixed by the user's account existing.</p>",
+        "id": 1531766,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1679600429
+    },
+    {
+        "content": "<p>We do have a bit of a special code path that runs when an imported user logs in for the first time -- there's a special form where we ask them to accept the terms of service. My thinking is that we probably want to use that form to (1) prompt about key privacy settings like email address visibility, as we do during account creation and (2) set all the values of settings managed by <code>RealmUserDefaults</code> to the value currently configured for the organization.</p>\n<p>This would mean that these users would get their settings set to match the organization's defaults when they first login, giving administrators the opportunity to <a href=\"https://zulip.com/help/configure-default-new-user-settings\">configure default new user settings</a> after the import is completed but before they invite everyone in their organization to join the imported organization. (And we can advertise this is a good idea in the data import guide).</p>\n<p>Thoughts?</p>",
+        "id": 1531776,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1679600640
+    },
+    {
+        "content": "<p>I think it might require a bit more engineering than the above hints, in that we probably need to store some state to keep track of whether a user was imported and has never logged in (The existing form appears if you haven't accepted the current major version of the ToS, and we don't want logic to reset your settings to the organization defaults again if a server ever changes their ToS version!).</p>",
+        "id": 1531782,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1679600733
+    },
+    {
+        "content": "<p>That plan makes sense to me.</p>",
+        "id": 1535510,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1680025099
+    },
+    {
+        "content": "<p>Yeah, that all sounds good. <span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> would you be up for adding this part to your to-do list?</p>\n<blockquote>\n<p>we probably need to store some state to keep track of whether a user was imported and has never logged in</p>\n</blockquote>\n<p>I think we can finalize the design of the form in parallel with that.</p>",
+        "id": 1535595,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1680031453
+    },
+    {
+        "content": "<p>Oh, and as noted on <a href=\"https://github.com/zulip/zulip/pull/24800\">#24800</a>, we don't currently have Welcome Bot send messages to imported users, and we probably should. So if it's not too hard, maybe sending Welcome Bot messages when an imported user first logs in can be part of the initial project to track that state.</p>",
+        "id": 1535757,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1680040385
+    },
+    {
+        "content": "<p>After discussion with <span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> , I am starting work on this. I am planning to first update the form to prompt about <code>email_address_visibility</code> setting. Do we want to add a new field to <code>UserProfile</code> model to keep track of whether user has logged in once after import? We can name the field something like <code>first_login_after_import</code>.</p>",
+        "id": 1545070,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1681205529
+    },
+    {
+        "content": "<p>Can't we key off of <code>tos_version</code> being None?</p>",
+        "id": 1545257,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681224199
+    },
+    {
+        "content": "<p>I was thinking whether it is possible that a self-hosted organization does not have any terms of service. The default value of <code>TERMS_OF_SERVICE_VERSION</code> setting is <code>None</code>.</p>",
+        "id": 1545270,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1681224824
+    },
+    {
+        "content": "<p>Ah, yeah.  Hm.  Is there no other field that we set (e.g. a nullable timestamp column) that we set upon first login?  It seems a bit silly to have a field which is only ever false for a trivial percentage of users, but we may need it.</p>",
+        "id": 1545271,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681224909
+    },
+    {
+        "content": "<p>I cannot find any other existing field which can be used here.</p>",
+        "id": 1545303,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1681230040
+    },
+    {
+        "content": "<p>Yeah, I thought about this for a while earlier, and we don't have an existing field to check this. I'm sure there's some sort of <code>RealmAuditLog</code> thing we could do (Check if there's an imported event and no \"activated\" event) if we really wanted to avoid extending the table.</p>",
+        "id": 1546539,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1681344826
+    },
+    {
+        "content": "<p>I suppose the other option is we could set <code>tos_version</code> to a special value like <code>-1</code> when importing an account. That feels a little hacky, but it is the case that the modal that we're trying to extend logically here is the \"Accept the ToS\" modal which is basically the only thing that looks at <code>tos_version</code>, so it'd be pretty easy to document.</p>",
+        "id": 1546540,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1681344862
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/default.20user.20settings.20for.20data.20imports/near/1546539\">said</a>:</p>\n<blockquote>\n<p>Yeah, I thought about this for a while earlier, and we don't have an existing field to check this. I'm sure there's some sort of <code>RealmAuditLog</code> thing we could do (Check if there's an imported event and no \"activated\" event) if we really wanted to avoid extending the table.</p>\n</blockquote>\n<p>I am not sure whether we have any kind of imported event, we only have a \"REALM_EXPORTED\" type <code>RealmAuditLog</code> object. While importing the realm, we just create a <code>REALM_CREATED</code> type <code>RealmAuditLog</code> object, only if it did not exist already.</p>",
+        "id": 1546673,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1681356940
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/default.20user.20settings.20for.20data.20imports/near/1546540\">said</a>:</p>\n<blockquote>\n<p>I suppose the other option is we could set <code>tos_version</code> to a special value like <code>-1</code> when importing an account. That feels a little hacky, but it is the case that the modal that we're trying to extend logically here is the \"Accept the ToS\" modal which is basically the only thing that looks at <code>tos_version</code>, so it'd be pretty easy to document.</p>\n</blockquote>\n<p>I am thinking whether we want to attach this case of checking first login after importing with <code>tos_version</code> field. As mentioned above, there might be case where there are no terms of service by the organization and user may not see the \"Accept the TOS\" modal during their first login.</p>",
+        "id": 1546676,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1681357068
+    },
+    {
+        "content": "<p>Well, from a logical standpoint, if we wanted to use that field, we could check for the special value of <code>-1</code>, and set it to <code>None</code> after completing this step if the organization doesn't have ToS configured.</p>",
+        "id": 1547633,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1681430436
+    },
+    {
+        "content": "<p>Hm. Yes, we can do this. Do we want to proceed with this then? Though it still feels a hacky solution, especially when we are using <code>tos_version</code> to check whether to show a page which allows setting <code>email_address_visibility</code> but does not have any \"TOS\" related thing (when organization doesn't have it configured).</p>",
+        "id": 1547731,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1681442938
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10242\">@Sahil Batra</span> I think conceptually the way I'd document it is that <code>tos_version=-1</code> means that this is an account that formally hasn't been created yet in Zulip, but has been prepared for creation. I think it's valid to think about that as a distinct from a ToS standpoint as different from <code>None</code>, which is that you implicitly accepted the nonexistent ToS.</p>",
+        "id": 1548104,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1681495909
+    },
+    {
+        "content": "<p>Thinking about this more, we'll probably end up wanting to tag accounts created via the API with <code>tos_version=-1</code> as well, since they're similarly a situation where the user has not actually accessed Zulip yet.</p>",
+        "id": 1548107,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1681495953
+    },
+    {
+        "content": "<p>I started some work on it. Any suggestions for the design to support setting <code>email_address_visibility</code> here.</p>\n<p>The current ToS page looks like -<br>\n<a href=\"/user_uploads/2/ec/cnjCBTH4-N5Lw5oQnFEuapj0/tos-page.png\">tos-page.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/ec/cnjCBTH4-N5Lw5oQnFEuapj0/tos-page.png\" title=\"tos-page.png\"><img src=\"/user_uploads/2/ec/cnjCBTH4-N5Lw5oQnFEuapj0/tos-page.png\"></a></div>",
+        "id": 1559027,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1682941971
+    },
+    {
+        "content": "<p>Do we want to show a modal like we do in user registration form. We can have a link or button to open the modal somewhere near the email field.</p>",
+        "id": 1559028,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1682942077
+    },
+    {
+        "content": "<p>I think in the context we're discussing (an imported account), that page should just show the ToS checkbox, not the \"they've changed\" notice, right?</p>",
+        "id": 1559093,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1682950269
+    },
+    {
+        "content": "<p>Yes.</p>",
+        "id": 1559094,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1682950362
+    },
+    {
+        "content": "<p>I think we can pose the question the same way we do on the registration page.</p>\n<p><a href=\"/user_uploads/2/ad/aR7PSbTUGxqj8i6WKQdPpqkv/Screen-Shot-2023-05-01-at-7.12.42-AM.png\">Screen-Shot-2023-05-01-at-7.12.42-AM.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/ad/aR7PSbTUGxqj8i6WKQdPpqkv/Screen-Shot-2023-05-01-at-7.12.42-AM.png\" title=\"Screen-Shot-2023-05-01-at-7.12.42-AM.png\"><img src=\"/user_uploads/2/ad/aR7PSbTUGxqj8i6WKQdPpqkv/Screen-Shot-2023-05-01-at-7.12.42-AM.png\"></a></div>",
+        "id": 1559095,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1682950409
+    },
+    {
+        "content": "<p>Can we style the text the same way as well?</p>",
+        "id": 1559096,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1682950419
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10242\">Sahil Batra</span> <a href=\"#narrow/stream/101-design/topic/default.20user.20settings.20for.20data.20imports/near/1559094\">said</a>:</p>\n<blockquote>\n<p>Yes.</p>\n</blockquote>\n<p>But, we can actually have a template file to show for an imported account which can be set in <code>zproject/default_settings.py</code>.</p>",
+        "id": 1559101,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1682950596
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/default.20user.20settings.20for.20data.20imports/near/1559095\">said</a>:</p>\n<blockquote>\n<p>I think we can pose the question the same way we do on the registration page.</p>\n<p><a href=\"/user_uploads/2/ad/aR7PSbTUGxqj8i6WKQdPpqkv/Screen-Shot-2023-05-01-at-7.12.42-AM.png\">Screen-Shot-2023-05-01-at-7.12.42-AM.png</a></p>\n</blockquote>\n<p>I was thinking of something similar too.</p>",
+        "id": 1559103,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1682950691
+    },
+    {
+        "content": "<p>Yeah, that design makes sense to me.</p>",
+        "id": 1559378,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682966802
+    },
+    {
+        "content": "<p>I have come up with this till now.<br>\n<a href=\"/user_uploads/2/72/mPdh6ORqG_QH43Lfhtp7TerB/Screenshot-from-2023-05-08-17-46-25.png\">Screenshot-from-2023-05-08-17-46-25.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/72/mPdh6ORqG_QH43Lfhtp7TerB/Screenshot-from-2023-05-08-17-46-25.png\" title=\"Screenshot-from-2023-05-08-17-46-25.png\"><img src=\"/user_uploads/2/72/mPdh6ORqG_QH43Lfhtp7TerB/Screenshot-from-2023-05-08-17-46-25.png\"></a></div>",
+        "id": 1563403,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1683548522
+    },
+    {
+        "content": "<p>We would also want to change the heading and button text in case the organization has not configured terms of service. Any suggestions for heading? We can update the button to be \"Submit\" and remove the checkbox.</p>",
+        "id": 1563404,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1683548535
+    },
+    {
+        "content": "<p>Hm, I'm having a hard time visually processing the top part. It's not clear that \"Email\", the actual email, and the note below it are all part of the same idea. Maybe we can try making \"Email\" look like a heading, and add more vertical space above the TOS checkbox?</p>",
+        "id": 1563473,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1683552966
+    },
+    {
+        "content": "<p>If we wanted to avoid conditionals for the title and button, maybe something like \"Welcome to Zulip\" and \"Continue\" would work fine either way?</p>",
+        "id": 1563479,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1683553253
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/default.20user.20settings.20for.20data.20imports/near/1563473\">said</a>:</p>\n<blockquote>\n<p>Hm, I'm having a hard time visually processing the top part. It's not clear that \"Email\", the actual email, and the note below it are all part of the same idea. Maybe we can try making \"Email\" look like a heading, and add more vertical space above the TOS checkbox?</p>\n</blockquote>\n<p>Yes. We can change it to be similar to what we have in user registration page and more space above the checkbox.<br>\n<a href=\"/user_uploads/2/ae/Y2Q6B0XRTrgI9A5VQypcthyu/Screenshot-from-2023-05-08-19-50-01.png\">Screenshot-from-2023-05-08-19-50-01.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/ae/Y2Q6B0XRTrgI9A5VQypcthyu/Screenshot-from-2023-05-08-19-50-01.png\" title=\"Screenshot-from-2023-05-08-19-50-01.png\"><img src=\"/user_uploads/2/ae/Y2Q6B0XRTrgI9A5VQypcthyu/Screenshot-from-2023-05-08-19-50-01.png\"></a></div>",
+        "id": 1563508,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1683555667
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/default.20user.20settings.20for.20data.20imports/near/1563479\">said</a>:</p>\n<blockquote>\n<p>If we wanted to avoid conditionals for the title and button, maybe something like \"Welcome to Zulip\" and \"Continue\" would work fine either way?</p>\n</blockquote>\n<p>Yes, this sounds good to me to avoid conditionals.</p>",
+        "id": 1563517,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1683555882
+    },
+    {
+        "content": "<p>Yeah, I like trying to match the registration page design with the organization heading.</p>",
+        "id": 1563769,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1683568942
+    },
+    {
+        "content": "<p>I did some changes and sharing the screenshots below for feedback.</p>\n<p><a href=\"/user_uploads/2/f5/_WY3TdPy-Z4HHOAUYFNpuOe1/tos-first-login.png\">tos-first-login.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/f5/_WY3TdPy-Z4HHOAUYFNpuOe1/tos-first-login.png\" title=\"tos-first-login.png\"><img src=\"/user_uploads/2/f5/_WY3TdPy-Z4HHOAUYFNpuOe1/tos-first-login.png\"></a></div><p>There can also be a case when there is a template to show the user when user is logging in for the first time. I had a doubt whether we want to limit the width of the email address visibility text above. If we do limit it like in the first screenshot, then it might look odd if we have the template set to show for the user logging in for first time.<br>\n<a href=\"/user_uploads/2/16/QtNF-8KrdgetEOMU7ALGWJBs/tos_with_first_time_template.png\">tos_with_first_time_template.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/16/QtNF-8KrdgetEOMU7ALGWJBs/tos_with_first_time_template.png\" title=\"tos_with_first_time_template.png\"><img src=\"/user_uploads/2/16/QtNF-8KrdgetEOMU7ALGWJBs/tos_with_first_time_template.png\"></a></div>",
+        "id": 1568005,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1683903751
+    },
+    {
+        "content": "<p>Also sharing the screenshots, when user is not logging in for the first time and hence cannot set email address visibility as we have changed the email field styling as well.<br>\n<a href=\"/user_uploads/2/ab/o0XCx7ez0U4_tMadfWGmXYKH/TOS-changes.png\">TOS-changes.png</a><br>\n<a href=\"/user_uploads/2/c3/nUiW2aaMf8j7gfafm0JYt_61/TOS-changes-without-description.png\">TOS-changes-without-description.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/ab/o0XCx7ez0U4_tMadfWGmXYKH/TOS-changes.png\" title=\"TOS-changes.png\"><img src=\"/user_uploads/2/ab/o0XCx7ez0U4_tMadfWGmXYKH/TOS-changes.png\"></a></div><div class=\"message_inline_image\"><a href=\"/user_uploads/2/c3/nUiW2aaMf8j7gfafm0JYt_61/TOS-changes-without-description.png\" title=\"TOS-changes-without-description.png\"><img src=\"/user_uploads/2/c3/nUiW2aaMf8j7gfafm0JYt_61/TOS-changes-without-description.png\"></a></div>",
+        "id": 1568006,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1683903836
+    },
+    {
+        "content": "<p>Thanks! I think these generally look reasonable. </p>\n<blockquote>\n<p>I had a doubt whether we want to limit the width of the email address visibility text above.</p>\n</blockquote>\n<p>Yeah, that looks odd. The email visibility text should probably have the same max width as the other text. The other one actually looks rather wide to me, so we could try limiting it to the same width as the email visibility text, or else something in the middle for both.</p>",
+        "id": 1568028,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1683906444
+    },
+    {
+        "content": "<p>I guess the title still needs to be changed.</p>",
+        "id": 1568029,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1683906456
+    },
+    {
+        "content": "<p>Yeah, I agree with that feedback.</p>",
+        "id": 1568549,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1683934506
+    },
+    {
+        "content": "<p>I'm not sure what the right answer is for the page titles.</p>",
+        "id": 1568551,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1683934561
+    },
+    {
+        "content": "<p>This is what I proposed above:</p>\n<blockquote>\n<p>If we wanted to avoid conditionals for the title and button, maybe something like \"Welcome to Zulip\" and \"Continue\" would work fine either way?</p>\n</blockquote>",
+        "id": 1568923,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1684045993
+    },
+    {
+        "content": "<p>Yeah that plan works for me and I think nicely solves this problem.</p>",
+        "id": 1569044,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684107873
+    },
+    {
+        "content": "<p>This is how it looks when we restrict the width of other text to be same as that of email visibility text. We actually allow to set a template here instead of text to be shown for users accepting the TOS first time and there can be anything inside that template. So, not sure whether it will be a good idea to restrict width here. <br>\n<a href=\"/user_uploads/2/e3/h-wnPPUmPPML2kRjKOoNTuFs/limited-width-tos.png\">limited-width-tos.png</a>.</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/e3/h-wnPPUmPPML2kRjKOoNTuFs/limited-width-tos.png\" title=\"limited-width-tos.png\"><img src=\"/user_uploads/2/e3/h-wnPPUmPPML2kRjKOoNTuFs/limited-width-tos.png\"></a></div><p>And when we do not restrict the width -<br>\n<a href=\"/user_uploads/2/29/KfUVyiP5O1cdrsFBuVJ3Ogq6/no-width-limit.png\">no-width-limit.png</a><br>\n<a href=\"/user_uploads/2/9b/hnBk8lHXNDkHDErNTv4XZwWe/no-width-limit-without-TOS-template.png\">no-width-limit-without-TOS-template.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/29/KfUVyiP5O1cdrsFBuVJ3Ogq6/no-width-limit.png\" title=\"no-width-limit.png\"><img src=\"/user_uploads/2/29/KfUVyiP5O1cdrsFBuVJ3Ogq6/no-width-limit.png\"></a></div><div class=\"message_inline_image\"><a href=\"/user_uploads/2/9b/hnBk8lHXNDkHDErNTv4XZwWe/no-width-limit-without-TOS-template.png\" title=\"no-width-limit-without-TOS-template.png\"><img src=\"/user_uploads/2/9b/hnBk8lHXNDkHDErNTv4XZwWe/no-width-limit-without-TOS-template.png\"></a></div>",
+        "id": 1569153,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1684121223
+    },
+    {
+        "content": "<blockquote>\n<p>We actually allow to set a template here instead of text to be shown for users accepting the TOS first time and there can be anything inside that template.</p>\n</blockquote>\n<p>I'm not sure what setting a template entails. Does this mean that self-hosters could theoretically have images in there? And custom formatting for text?</p>",
+        "id": 1569513,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1684172717
+    },
+    {
+        "content": "<p>This is the comment with the field in <code>default_setings.py</code>. It mentions html template file, so could possibly be anything I think.</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"c1\"># HTML template path (e.g. \"corporate/zulipchat_migration_tos.html\")</span>\n<span class=\"c1\"># displayed to users when increasing TERMS_OF_SERVICE_VERSION when a</span>\n<span class=\"c1\"># user is to accept the terms of service for the first time, but</span>\n<span class=\"c1\"># already has an account. This primarily comes up when doing a data</span>\n<span class=\"c1\"># import.</span>\n<span class=\"n\">FIRST_TIME_TERMS_OF_SERVICE_TEMPLATE</span><span class=\"p\">:</span> <span class=\"n\">Optional</span><span class=\"p\">[</span><span class=\"nb\">str</span><span class=\"p\">]</span> <span class=\"o\">=</span> <span class=\"kc\">None</span>\n</code></pre></div>",
+        "id": 1569515,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1684172805
+    },
+    {
+        "content": "<p>Hm, OK. Would it be easy to restrict the width for Zulip Cloud (where we know what the content is going to be) but not for self-hosted orgs?</p>",
+        "id": 1569519,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1684173393
+    },
+    {
+        "content": "<p>That is a setting that is not documented because it's purpose is to just allow us to set the Zulip Cloud language at all, without that language appearing for self-hosted servers. I expect no self-hosted organizations set something there, and the styling needs should be based on what will look good with the Zulip Cloud language.</p>",
+        "id": 1569703,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684188102
+    },
+    {
+        "content": "<p>So I think we should proceed with the width-limiting CSS that looks good with that language. We can always change it if we get feedback with a real use case from self-hosting options, but right now that's designed as an internal setting and I don't think we need to consider potential other values for it.</p>",
+        "id": 1569709,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684188169
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10242\">@Sahil Batra</span> it'd be great if you can get a draft PR up for this tomorrow, so I can do an initial review before taking Wednesday off.</p>",
+        "id": 1569710,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684188194
+    }
+]

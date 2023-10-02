@@ -1,0 +1,170 @@
+[
+    {
+        "content": "<p>Posting <a href=\"https://github.com/zulip/zulip/pull/24016\">#24016</a> here for visibility. (The user found a workaround.) See issue for details.</p>",
+        "id": 1488519,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1673336867
+    },
+    {
+        "content": "<p>Thanks <span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span></p>",
+        "id": 1488563,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673350270
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"25451\">@Vishal Menon</span>: <code>chmod -R 777 /home/zulip</code> is a huge (and insecure) hammer, and <code>chmod -R 700 /home/zulip</code> almost certainly broke something (like the ability to resotre from backups going forward, at very least).</p>\n<p>And I cannot replicate this with my own install -- had you previously changed the permissions on <code>/home/zulip</code>?</p>",
+        "id": 1488613,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1673362648
+    },
+    {
+        "content": "<p>hey  <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span>  I had not previously changed any permissions on /home/zulip previously or on this fresh install where i attemtped recovery either.</p>",
+        "id": 1488617,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673363204
+    },
+    {
+        "content": "<p>ahh sorry, youre right. i did change permissions previously through an ansible script</p>",
+        "id": 1488619,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673363470
+    },
+    {
+        "content": "<p>i made it it 700</p>",
+        "id": 1488620,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673363486
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>    - file:\n        path: /home/zulip\n        state: directory\n        owner: zulip\n        mode: u+rwx,g-rwx,o-rwx\n        recurse: yes\n</code></pre></div>\n<p>This happened</p>",
+        "id": 1488621,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673363601
+    },
+    {
+        "content": "<p>i suppose I could manually attempt to replicate the permissions from a fresh installation?</p>",
+        "id": 1488622,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673363658
+    },
+    {
+        "content": "<p>or install it on a different box and via ansible copy the permission table from local to remote via</p>\n<p><code>chmod -R --reference=/home/zulip /home/zulip</code></p>",
+        "id": 1488623,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673364101
+    },
+    {
+        "content": "<p>You have removed every window, door, and probably several walls, in the house, and then fixed it by encasing the whole building in concrete.  For future reference, those are probably <em>never</em> commands you want to run. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>\n<p>Your best bet is probably to take a backup, install on a clean server without that ansible rule, and restore from the new backup on that host.</p>",
+        "id": 1488625,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1673365197
+    },
+    {
+        "content": "<p>hahaha :P</p>",
+        "id": 1488638,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673366614
+    },
+    {
+        "content": "<p>if i backup now though, i will have the same problem right?</p>",
+        "id": 1488640,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673366780
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"25451\">Vishal Menon</span> <a href=\"#narrow/stream/31-production-help/topic/restore-backup.20PermissionError.20.2324016/near/1488623\">said</a>:</p>\n<blockquote>\n<p>or install it on a different box and via ansible copy the permission table from local to remote via</p>\n<p><code>chmod -R --reference=/home/zulip /home/zulip</code></p>\n</blockquote>\n<p>I am attempting this</p>",
+        "id": 1488641,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673366793
+    },
+    {
+        "content": "<p>the fact that the original backup has the 700 rule has now made all successive backups locked down, if i understand this correctly.</p>",
+        "id": 1488642,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673366848
+    },
+    {
+        "content": "<p>i will be back with the same PermissionError from PostGres</p>",
+        "id": 1488643,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673366938
+    },
+    {
+        "content": "<p>The only files included in the backup (which yes, will have the wrong permissions) are file, avatar, and emoji uploads.  We can fix those (either before or after restoring) by:</p>\n<div class=\"codehilite\"><pre><span></span><code>chmod -R 755 ~zulip/uploads\nfind ~zulip/uploads -type f | xargs chmod 644\n</code></pre></div>",
+        "id": 1488645,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1673367363
+    },
+    {
+        "content": "<p>(to clarify, there is other <em>data</em> in the backups other than \"file, avatar, and emoji uploads\" -- those are just the only pieces which are pulled out of the filesystem verbatim.  The database, for example, is exported and written as a <em>new</em> file in the backup so the currently-wrong permissions don't matter for that)</p>",
+        "id": 1488648,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1673367525
+    },
+    {
+        "content": "<p>yes, only the files in <code>/home/zulip</code> are affected, other config files in/etc/ and db files should be okay</p>",
+        "id": 1488650,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673367675
+    },
+    {
+        "content": "<p>So to clarify this was the sequence of events that happened:</p>\n<ul>\n<li>created a fresh install of zulip on box A</li>\n<li>configured box A with mail etc, and carelessly modified /home/zulip with 700 perms</li>\n<li>invited core team to box A and created some message history</li>\n<li>took a backup of box A</li>\n<li>to test recovery, created a fresh box B</li>\n<li>attempted recovery and got PermissionError</li>\n<li>ran chmod 777 on /home/zulip on box B (after an hour of inspection and desperation) - and recovery was successful</li>\n<li>ran chmod 700 on /home/zulip on box B - in hopes of doing some kind of damage control </li>\n</ul>\n<p>Now if i take another backup from box B i will run into the same problem of PermissionError if i try recover on a new box C</p>\n<p>So should I :</p>\n<ol>\n<li>Backup B and recover on C without changing permissions to 777 </li>\n<li>Attempt to fix permissions on box B itself</li>\n</ol>",
+        "id": 1488655,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673368535
+    },
+    {
+        "content": "<p>i realized the <code>chmod --reference</code> solution won't entirely work because there are some directories named by date and other tokens. although, it can help with the bulk of files, other i will have to manually change.</p>",
+        "id": 1488656,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673368622
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"25451\">Vishal Menon</span> <a href=\"#narrow/stream/31-production-help/topic/restore-backup.20PermissionError.20.2324016/near/1488655\">said</a>:</p>\n<blockquote>\n<ul>\n<li>to test recovery, created a fresh box B</li>\n<li>attempted recovery and got PermissionError</li>\n</ul>\n</blockquote>\n<p>The reason why you got a PermissionError is because, as I understand it, box B also had the ansible rule applied to it.  Which is what prevented the PostgreSQL user on box B from reading <code>/home/zulip/deployments/2023-01-09-07-05-49/scripts/setup/terminate-psql-sessions</code> as it needed to.</p>\n<blockquote>\n<p>Now if i take another backup from box B i will run into the same problem of PermissionError if i try recover on a new box C</p>\n</blockquote>\n<p>I don't believe that to be correct.  The main problem is in the permissions of <code>/home/zulip/deployments</code> and that is not part of the backup.</p>\n<blockquote>\n<p>So should I :</p>\n<ol>\n<li>Backup B and recover on C without changing permissions to 777 </li>\n<li>Attempt to fix permissions on box B itself</li>\n</ol>\n</blockquote>\n<p>Option 1, as I suggested above.</p>",
+        "id": 1488659,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1673368762
+    },
+    {
+        "content": "<p>ahhhhh<br>\nthe reason why i got that error was because on box B as well i ran that darn ansible script</p>",
+        "id": 1488664,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673369120
+    },
+    {
+        "content": "<p>it works now</p>",
+        "id": 1488665,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673369125
+    },
+    {
+        "content": "<p>Thanks for taking the time <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> !</p>",
+        "id": 1488666,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673369135
+    },
+    {
+        "content": "<p><span aria-label=\"peace sign\" class=\"emoji emoji-270c\" role=\"img\" title=\"peace sign\">:peace_sign:</span></p>",
+        "id": 1488667,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673369146
+    },
+    {
+        "content": "<p>I think my gentle suggestion is to think very carefully about <code>chmod -R</code>, be it in an Ansible script, or by hand.  It's <em>destroying information</em> when you do it, since one pieces of the information for a file is its permissions.  It may be just as destructive as <code>rm -r</code>.</p>",
+        "id": 1488670,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1673369230
+    },
+    {
+        "content": "<p>yes 100%, its something i am very aware of but out of bad habit end up doing it.</p>\n<p>youre right, it is as destroying information.</p>",
+        "id": 1488671,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673369347
+    },
+    {
+        "content": "<p>how can I buy you a coffee for the help?</p>",
+        "id": 1488676,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1673369420
+    }
+]

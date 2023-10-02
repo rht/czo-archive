@@ -1,0 +1,170 @@
+<html>
+<head><meta charset="utf-8"><title>Problem with initial install Debian bookworm (sid) and node · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html">Problem with initial install Debian bookworm (sid) and node</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1583257"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583257" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jim Penny <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583257">(Jun 01 2023 at 19:21)</a>:</h4>
+<p>I am having a rather strange problem with installing on Debian bookworm (sid) updated today.</p>
+<p>It is actually a problem with node, and I don't understand it.</p>
+<p>This is a snippet:</p>
+<ul>
+<li>
+<p>/tmp/tmp.SxW1Wuwaum/zulip-server-7.0/scripts/lib/install-node<br>
+++ mktemp -d</p>
+</li>
+<li>
+<p>tmpdir=/tmp/tmp.pbgamuzMZS</p>
+</li>
+<li>trap 'rm -r "$tmpdir"' EXIT</li>
+<li>cd /tmp/tmp.pbgamuzMZS</li>
+<li>curl_opts=(-fLO --retry 3)</li>
+<li>'[' -n '' ']'</li>
+<li>
+<p>curl -fLO --retry 3 <a href="https://nodejs.org/dist/v18.16.0/node-v18.16.0-linux-x64.tar.xz">https://nodejs.org/dist/v18.16.0/node-v18.16.0-linux-x64.tar.xz</a><br>
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current<br>
+                                 Dload  Upload   Total   Spent    Left  Speed<br>
+100 22.6M  100 22.6M    0     0   131M      0 --:--:-- --:--:-- --:--:--  133M</p>
+</li>
+<li>
+<p>sha256sum -c<br>
+node-v18.16.0-linux-x64.tar.xz: OK</p>
+</li>
+<li>
+<p>rm -rf /srv/zulip-node</p>
+</li>
+<li>mkdir -p /srv/zulip-node</li>
+<li>tar -xJf node-v18.16.0-linux-x64.tar.xz --no-same-owner --strip-components=1 -C /srv/zulip-node</li>
+<li>ln -sf /srv/zulip-node/bin/corepack /srv/zulip-node/bin/node /srv/zulip-node/bin/npm /srv/zulip-node/bin/npx /usr/local/bin</li>
+<li>COREPACK_DEFAULT_TO_LATEST=0</li>
+<li>/usr/local/bin/corepack enable</li>
+<li>rm -rf /srv/zulip-yarn /usr/bin/yarn /usr/local/nvm</li>
+<li>check_version<br>
+++ node --version<br>
+/tmp/tmp.SxW1Wuwaum/zulip-server-7.0/scripts/lib/install-node: line 20: /usr/local/bin/node: cannot execute: required file not found</li>
+</ul>
+<p>line 20 is an invocation of node --version</p>
+<p>/srv/zulip-node/bin/node exists, and ls -l shows:<br>
+-rwxr-xr-x 1 root root 90940576 Apr 12 05:31 node</p>
+<p>file shows: </p>
+<p>file /srv/zulip-node/bin/node<br>
+/srv/zulip-node/bin/node: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=ea1ea7c2d0aeb35866046ffa3fc8bfc053a55e26, with debug_info, not stripped, too many notes (256)</p>
+<p>but, it does not appear to be a dynamically linked file:</p>
+<p>ldd /srv/zulip-node/bin/node<br>
+    not a dynamic executable</p>
+<p>Can somebody hit me with a cluestick?</p>
+
+
+
+<a name="1583258"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583258" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583258">(Jun 01 2023 at 19:23)</a>:</h4>
+<p>Hmm, it's a bit puzzling -- I see it literally installing <code>node</code> 5 lines before failing to find it. <span class="user-mention" data-user-id="699">@Anders Kaseorg</span> do you have ideas?</p>
+
+
+
+<a name="1583264"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583264" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jim Penny <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583264">(Jun 01 2023 at 19:26)</a>:</h4>
+<p>OK, further info.  I did an upgrade on an ubuntu yesterday.  Node has same size there, and ldd works as I would expect.</p>
+
+
+
+<a name="1583265"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583265" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583265">(Jun 01 2023 at 19:26)</a>:</h4>
+<p>I suspect you are missing your <code>/lib64</code> symlink. Can you run <code>dpkg --verify libc6</code>?</p>
+
+
+
+<a name="1583268"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583268" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jim Penny <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583268">(Jun 01 2023 at 19:27)</a>:</h4>
+<p>dpkg --verify libc6 is silent.</p>
+
+
+
+<a name="1583272"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583272" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jim Penny <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583272">(Jun 01 2023 at 19:30)</a>:</h4>
+<p>I think you are right, though, link exists, but /usr/lib64 appears to be empty.</p>
+
+
+
+<a name="1583277"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583277" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583277">(Jun 01 2023 at 19:32)</a>:</h4>
+<p>By the way, bookworm (testing) is not sid (unstable); it’s been in freeze for a few months.</p>
+
+
+
+<a name="1583278"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583278" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jim Penny <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583278">(Jun 01 2023 at 19:32)</a>:</h4>
+<p>gcc is 32 bit.</p>
+
+
+
+<a name="1583279"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583279" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jim Penny <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583279">(Jun 01 2023 at 19:33)</a>:</h4>
+<p>Yes, but uname reported it as bookworm, which also confused me.</p>
+
+
+
+<a name="1583280"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583280" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583280">(Jun 01 2023 at 19:33)</a>:</h4>
+<p>Oh, yeah, we require a 64-bit system.</p>
+
+
+
+<a name="1583282"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583282" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jim Penny <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583282">(Jun 01 2023 at 19:34)</a>:</h4>
+<p>That is reasonable, the kernel is 64-bit, but it looks like some of the rest is not.</p>
+
+
+
+<a name="1583285"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583285" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jim Penny <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583285">(Jun 01 2023 at 19:35)</a>:</h4>
+<p>So, thanks....</p>
+
+
+
+<a name="1583286"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583286" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jim Penny <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583286">(Jun 01 2023 at 19:35)</a>:</h4>
+<p>I have enough clues, I think.</p>
+
+
+
+<a name="1583287"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583287" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583287">(Jun 01 2023 at 19:35)</a>:</h4>
+<p>What does <code>dpkg --print-architecture</code> say on your system? We should try adding a check for this.</p>
+
+
+
+<a name="1583289"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583289" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jim Penny <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583289">(Jun 01 2023 at 19:37)</a>:</h4>
+<p>i386</p>
+
+
+
+<a name="1583291"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583291" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jim Penny <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583291">(Jun 01 2023 at 19:38)</a>:</h4>
+<p>starting to crossgrade</p>
+
+
+
+<a name="1583389"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583389" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583389">(Jun 01 2023 at 20:43)</a>:</h4>
+<p>(Adding this check in <a href="https://github.com/zulip/zulip/pull/25868">#25868</a>.)</p>
+
+
+
+<a name="1583575"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problem%20with%20initial%20install%20Debian%20bookworm%20%28sid%29%20and%20node/near/1583575" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jim Penny <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problem.20with.20initial.20install.20Debian.20bookworm.20.28sid.29.20and.20node.html#1583575">(Jun 01 2023 at 22:44)</a>:</h4>
+<p>OK, that was "fun".  Debian wiki on crossgrading was not helpful, it looks like apt is much more paranoid than when the wiki was written; so I spent a lot of time copying libraries from a working system to get the dpkg, apt, et al working in amd64.  Then it was just a matter of upgrading all i386 packages to amd64.  essential packages are more painful than the rest.  postgres had to be dumped in 32 bit, the cluster had to be dropped, the 64 bit version installed, the cluster recreated and the dump loaded.  I then had some 32bit remnants, so I ran "find / -name "<em>zulip</em>" -exec rm -R {} \;<br>
+The install script then nearly finished.  I had to create /home/zulip by hand (which makes send to me, the install script probably saw that the user existed and didn't check for home).  After that was done, restarted the install script, and I think it finished on that run.<br>
+Thanks.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

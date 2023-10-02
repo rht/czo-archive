@@ -1,0 +1,122 @@
+[
+    {
+        "content": "<p>I am currently working on <a href=\"https://github.com/zulip/zulip/issues/16473#issue-714394849\">Improving the way to ban users · Issue #16473</a> and have a few queries related to this:</p>\n<ol>\n<li>\n<p>When we refer to \"providing information to the admins,\" do we mean sending an email regarding the deactivation of a user along with the reason, or posting a message in the All Messages channel that says \"xyz has deactivated abc due to spamming\" (subject to change), which will only be visible to admins?</p>\n</li>\n<li>\n<p>As suggested by <span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"https://github.com/zulip/zulip/issues/16473#issuecomment-1328798251\">here</a>, I have come up with two possible approaches regarding whether to include a reason column or not:</p>\n</li>\n</ol>\n<ul>\n<li>Include a checkbox that asks \"Notify admins?\" when deactivating a user. This would enable a dropdown menu with options such as Unspecified, Spammer, User Request, or Other.</li>\n<li>Add an option in the Organization settings called \"Add reasons while deactivating users.\" </li>\n</ul>\n<p>FYI <span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span></p>",
+        "id": 1538365,
+        "sender_full_name": "Sahil Singh",
+        "timestamp": 1680273143
+    },
+    {
+        "content": "<p>It appears that the second point in the issue suggests adding an extra column titled \"Reason\" to the Deactivated Users table in the organization settings.</p>",
+        "id": 1538380,
+        "sender_full_name": "Sahil Singh",
+        "timestamp": 1680274035
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"137\" href=\"/#narrow/stream/137-feedback/topic/Improving.20the.20way.20to.20ban.20users.2E\">#feedback &gt; Improving the way to ban users.</a> by <span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span>.</p>",
+        "id": 1538426,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1680281076
+    },
+    {
+        "content": "<blockquote>\n<p>It appears that the second point in the issue suggests adding an extra column titled \"Reason\" to the Deactivated Users table in the organization settings.</p>\n</blockquote>\n<p>Yeah, that's what I was thinking. So the Deactivated users table could have 2 new columns:</p>\n<ul>\n<li>Deactivated by</li>\n<li>Reason</li>\n</ul>",
+        "id": 1538433,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1680281358
+    },
+    {
+        "content": "<p>Maybe the best way to manage the \"Reason\" input field in the deactivation modal would be the same way we manage the pronouns custom profile field: there is typeahead for some common options, but the user can type whatever they want (up to a character limit).</p>",
+        "id": 1538434,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1680281440
+    },
+    {
+        "content": "<blockquote>\n<p>When we refer to \"providing information to the admins,\" do we mean sending an email regarding the deactivation of a user along with the reason, or posting a message in the All Messages channel that says \"xyz has deactivated abc due to spamming\" (subject to change), which will only be visible to admins?</p>\n</blockquote>\n<p>My original motivation behind that point in the issue was to keep track of deactivations in the long run, not about immediate notifications. For a notification like you're describing, I'd prefer it to go into a configurable stream (e.g. a private one used by the admins).</p>\n<p>But the notification shouldn't replace the reason from being listed in the deactivated users list (or somewhere else) imo.</p>",
+        "id": 1539075,
+        "sender_full_name": "Sascha Mann",
+        "timestamp": 1680338022
+    },
+    {
+        "content": "<p>In my opinion, it would be best to implement the \"reason\" column part first before adding the notification feature. Moreover, <a href=\"https://github.com/zulip/zulip/issues/20047\">Make it possible to flag problematic messages · Issue #20047 </a> is closely aligned with the notification feature, as all reported messages will be directed to a stream that is only accessible by administrators. Therefore, it would be ideal to consider the notification feature as a follow-up to that issue.</p>",
+        "id": 1539176,
+        "sender_full_name": "Sahil Singh",
+        "timestamp": 1680355408
+    },
+    {
+        "content": "<p>After some brainstorming, I came up with this technical approach for the \"reason\" column:</p>\n<ol>\n<li>Retrieve the user's input from the Reason text field and and submit it to the backend using the following code:</li>\n</ol>\n<div class=\"codehilite\"><pre><span></span><code>data = { deactivation_reason: $(&quot;#deactivation_reason&quot;).val()}\ndialog_widget.submit_api_request(channel.del, url, data);\n</code></pre></div>\n<ol start=\"2\">\n<li>Create a <code>deactivation_reason</code> field within <code>UserProfile</code>.</li>\n</ol>\n<div class=\"codehilite\"><pre><span></span><code>    deactivate_reason = models.CharField(max_length=MAX_NAME_LENGTH,null=True)\n</code></pre></div>\n<ol start=\"3\">\n<li>Similar to how <code>deactivation_notification_comment</code> works, we can include an additional parameter <code>deactivation_reason</code> in the <code>deactivate_user_backend</code> function within <code>users.py</code> in the backend.<br>\nIf the value of <code>deactivation_reason</code> is not <code>None</code>, assign it to the <code>deactivation_reason</code> field in the <code>UserProfile</code> and the update the <code>UserProfile</code>.</li>\n</ol>\n<div class=\"codehilite\"><pre><span></span><code>    user_profile.deactivation_reason = deactivation_reason\n    user_profile.save(update_fields=[&quot;deactivation_reason&quot;])\n</code></pre></div>\n<ol start=\"4\">\n<li>If the user is reactivated, the <code>deactivation_reason</code> field will be reset to <code>NULL</code>.</li>\n</ol>\n<p>I would like to confirm whether my approach is correct or if there are any alternative methods that could be more effective.</p>",
+        "id": 1540154,
+        "sender_full_name": "Sahil Singh",
+        "timestamp": 1680533530
+    },
+    {
+        "content": "<p>I have implemented the approach mentioned above, and I am currently writing tests for the backend.<br>\nMeanwhile, here are few screenshots of the UI:<br>\n<a href=\"/user_uploads/2/97/zROq5TRDrK6G3-H8DRJLUnk2/deactivation_reason.png\">deactivation_reason.png</a> <a href=\"/user_uploads/2/b3/B4CzI0ajevvUw5MQVtY6Evch/deactivation_reason2.png\">deactivation_reason2.png</a> <a href=\"/user_uploads/2/e9/IuPOSr34k8-JRryJo0VKqMZB/deactivated_users_table.png\">deactivated_users_table.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/97/zROq5TRDrK6G3-H8DRJLUnk2/deactivation_reason.png\" title=\"deactivation_reason.png\"><img src=\"/user_uploads/2/97/zROq5TRDrK6G3-H8DRJLUnk2/deactivation_reason.png\"></a></div><div class=\"message_inline_image\"><a href=\"/user_uploads/2/b3/B4CzI0ajevvUw5MQVtY6Evch/deactivation_reason2.png\" title=\"deactivation_reason2.png\"><img src=\"/user_uploads/2/b3/B4CzI0ajevvUw5MQVtY6Evch/deactivation_reason2.png\"></a></div><div class=\"message_inline_image\"><a href=\"/user_uploads/2/e9/IuPOSr34k8-JRryJo0VKqMZB/deactivated_users_table.png\" title=\"deactivated_users_table.png\"><img src=\"/user_uploads/2/e9/IuPOSr34k8-JRryJo0VKqMZB/deactivated_users_table.png\"></a></div><p>Does the current ui looks good or are any changes needed?</p>",
+        "id": 1541667,
+        "sender_full_name": "Sahil Singh",
+        "timestamp": 1680689164
+    },
+    {
+        "content": "<p>I have raised a draft PR for this issue: <a href=\"https://github.com/zulip/zulip/pull/25001\">#25001</a>.<br>\n<span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>, Could you please review the approach mentioned above along with its code in the PR.</p>",
+        "id": 1542123,
+        "sender_full_name": "Sahil Singh",
+        "timestamp": 1680727043
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"25499\">@Sahil Singh</span> I think that's a pretty reasonable design. I think we'll probably end up wanting to call that field something like <code>deactivation_comment</code>, if it's a comment by the administrator at the time that they deactivated the user, and not something machine-readable.</p>",
+        "id": 1543223,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1680890683
+    },
+    {
+        "content": "<p>I think probably before doing too much more we'll need to discuss with <span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> the precise design for how we want to store these -- the model that you have is that the reason is a short string we can display in a table; I think that's helpful, but what I don't know is whether it makes sense to have a longer comment as a separate field, in which case it might be that we want multiple fields.</p>",
+        "id": 1543225,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1680890847
+    },
+    {
+        "content": "<p>The other thing that I'm not sure about is whether we need these to be new fields on <code>UserProfile</code> or whether just storing them in the <code>RealmAuditLog</code> entry for the user being deactivated is a better model; that depends largely on whether we want to display them in the table like this.</p>",
+        "id": 1543227,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1680890898
+    },
+    {
+        "content": "<p>Adding another field for longer comments could be beneficial, but there is a concern that it may clutter the table further since we would also  add another field for \"deactivated by\". <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>",
+        "id": 1543270,
+        "sender_full_name": "Sahil Singh",
+        "timestamp": 1680893650
+    },
+    {
+        "content": "<p>Yeah, I don't think longer comments can go in the table, they'd need to be displayed elsewhere.</p>",
+        "id": 1543290,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1680894371
+    },
+    {
+        "content": "<p>So maybe this is a fine model, but I haven't thought about the UX design of this much so we should wait for Alya to comment.</p>",
+        "id": 1543292,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1680894394
+    },
+    {
+        "content": "<blockquote>\n<p>Does the current ui looks good or are any changes needed?</p>\n</blockquote>\n<p><span class=\"user-mention\" data-user-id=\"25499\">@Sahil Singh</span>  Is there a reason you went with this approach, rather than the one suggested above?</p>\n<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/Improving.20the.20way.20to.20ban.20users.2E/near/1538434\">said</a>:</p>\n<blockquote>\n<p>Maybe the best way to manage the \"Reason\" input field in the deactivation modal would be the same way we manage the pronouns custom profile field: there is typeahead for some common options, but the user can type whatever they want (up to a character limit).</p>\n</blockquote>",
+        "id": 1544326,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1681144716
+    },
+    {
+        "content": "<p>I like the typeahead approach because I feel like we don't have a great sense right now of what users will want to put for the reason (and it might vary by organization), and it feels like a softer suggestion than having a dropdown with an \"other\" option.</p>",
+        "id": 1544327,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1681144802
+    },
+    {
+        "content": "<p>Due to the presence of issues such as <a href=\"https://github.com/zulip/zulip/issues/18941\">#18941</a>, which requires adding an option to label a user as a spammer, and <a href=\"https://github.com/zulip/zulip/issues/9172\"> #9172</a>, where users must be marked as spammers, I decided to adopt the dropdown method. Instead of creating a separate checkbox for \"mark user as spammer\" in the future, I believed it would be more practical to include a dropdown menu with common deactivation reasons.</p>\n<p>However, if we opt for the typeahead approach, I have a few questions:</p>\n<ul>\n<li>Is it necessary to fill in the reason field or can it be left blank?</li>\n<li>If leaving the reason field blank is allowed, should we display \"unspecified\" in the deactivated user's table?</li>\n</ul>",
+        "id": 1544544,
+        "sender_full_name": "Sahil Singh",
+        "timestamp": 1681158649
+    },
+    {
+        "content": "<p>Hm, thanks for bringing up <a href=\"https://github.com/zulip/zulip/pull/18941\">#18941</a>. I think we can keep the two designs we discussed so far, and automatically fill in \"Spammer\" in the reason field when the spammer checkbox is checked (which the user could still edit if they like). But curious if folks have other suggestions.</p>",
+        "id": 1544579,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1681159301
+    }
+]

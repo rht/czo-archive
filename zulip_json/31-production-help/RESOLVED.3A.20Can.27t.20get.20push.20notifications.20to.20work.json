@@ -1,0 +1,176 @@
+[
+    {
+        "content": "<p>I've followed the instructions here:  <a href=\"https://zulip.readthedocs.io/en/stable/production/mobile-push-notifications.html\">https://zulip.readthedocs.io/en/stable/production/mobile-push-notifications.html</a></p>\n<p>Have restarted the server, everything seems like it worked but, no notifications happen.</p>",
+        "id": 1091118,
+        "sender_full_name": "Jonathan van Clute",
+        "timestamp": 1609534787
+    },
+    {
+        "content": "<p>Hang on... might have just found the issue</p>",
+        "id": 1091121,
+        "sender_full_name": "Jonathan van Clute",
+        "timestamp": 1609534854
+    },
+    {
+        "content": "<p>Nope I was wrong.  They just don't work.  I am logged in on desktop under one user, and sending PMs to my other user which is logged in on my iPhone.  No notifications come through at all unless I go into the app, then of course I see them.</p>",
+        "id": 1091122,
+        "sender_full_name": "Jonathan van Clute",
+        "timestamp": 1609534956
+    },
+    {
+        "content": "<p>Mobile notifications on PMs are enabled on the desktop, both are set to notify if logged in.</p>",
+        "id": 1091123,
+        "sender_full_name": "Jonathan van Clute",
+        "timestamp": 1609535060
+    },
+    {
+        "content": "<p>I've confirmed that with both Android and iOS, no push notifications happen.</p>",
+        "id": 1091141,
+        "sender_full_name": "Jonathan van Clute",
+        "timestamp": 1609541959
+    },
+    {
+        "content": "<p>despite this...</p>\n<p>root@TRG-Zulip:/etc/zulip# su zulip -c '/home/zulip/deployments/current/manage.py register_server'<br>\nThe following data will be submitted to the push notification service:<br>\ncontact_email: <a href=\"http://REDACTED.com\">REDACTED.com</a><br>\nhostname: <a href=\"http://REDACTED.com\">REDACTED.com</a><br>\nzulip_org_id: REDACTED<br>\nzulip_org_key: REDACTED</p>\n<p>To register, you must agree to the Zulipchat Terms of Service: <a href=\"https://zulip.com/terms/\">https://zulip.com/terms/</a><br>\nDo you agree to the Terms of Service? [Y/n] y</p>\n<p>You've successfully registered for the Mobile Push Notification Service!<br>\nTo finish setup for sending push notifications:</p>\n<p>Restart the server, using /home/zulip/deployments/current/scripts/restart-server<br>\nReturn to the documentation to learn how to test push notifications</p>",
+        "id": 1091142,
+        "sender_full_name": "Jonathan van Clute",
+        "timestamp": 1609542008
+    },
+    {
+        "content": "<p>I've tested this more this morning, and still absolutely no dice with push notifications.  To be clear and in addition to the above:</p>\n<ol>\n<li>I think if the client is open anywhere else (desktop app, browser) it causes the notification to not happen, so I've been careful to shut down all other instances outside my phone.</li>\n<li>The iOS app can be in the background and I will get no notification or alert of any kind, nor badge on the app icon. But as soon as I focus the app, the messages appear there.</li>\n<li>I'm on iOS 12.2.  Maybe some kind of odd OS version issue?</li>\n</ol>",
+        "id": 1091499,
+        "sender_full_name": "Jonathan van Clute",
+        "timestamp": 1609614502
+    },
+    {
+        "content": "<p>Got them working, I had to log out/in to the app on my phone a second time.  I did it previously but somehow it didn't \"take\" until now.</p>",
+        "id": 1091528,
+        "sender_full_name": "Jonathan van Clute",
+        "timestamp": 1609616980
+    },
+    {
+        "content": "<p>I think our documentation is pretty clear about needing to login/logout.  But probably the best thing we could do here is add a \"Send test notification\" button in settings, similar to the existing one for testing desktop notifications.  <span class=\"user-group-mention\" data-user-group-id=\"21\">@mobile</span> is that something that'd be simple to implement on the mobile app side?  In any case I imagine we should open an issue for that, if there isn't one already.</p>",
+        "id": 1098287,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1610583849
+    },
+    {
+        "content": "<p>Yeah, it is already mentioned on that page:</p>\n<blockquote>\n<p>If you were already logged in before configuring the server, you’ll need to logout first, since the app only registers for push notifications on login.</p>\n</blockquote>",
+        "id": 1098297,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610584553
+    },
+    {
+        "content": "<p>It's a bit confusingly formatted because that comes as part of a bullet that starts \"On an Android device, …\". So if you're on iOS you might just skip the rest of that bullet and not see it, and even if you see it it sounds like it only applies to Android.</p>",
+        "id": 1098298,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610584554
+    },
+    {
+        "content": "<p>Probably should get pulled out as its own item, and get some key words in bold just like the \"another user … private message\" in the next bullet.</p>",
+        "id": 1098299,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610584594
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/RESOLVED.3A.20Can't.20get.20push.20notifications.20to.20work/near/1098287\">said</a>:</p>\n<blockquote>\n<p>But probably the best thing we could do here is add a \"Send test notification\" button in settings, similar to the existing one for testing desktop notifications.  <span class=\"user-group-mention\" data-user-group-id=\"21\">@mobile</span> is that something that'd be simple to implement on the mobile app side?</p>\n</blockquote>\n<p>Hmm. It wouldn't be hard to add a function in <code>zerver/lib/push_notifications.py</code> that will send a notification with some fake message data. The fake data would get the app somewhat confused if the user tried to open the notification, though.</p>\n<p>If we wanted a distinct \"test notification\" category of notification, that'd require writing some new code in the app to support it specifically. Could do that but I'd want to understand the use case more clearly.</p>\n<p>I think probably a better direction would be to send an actual message to the user, like a PM from one of the system bots. Then the only special-casing it'd need is to override the usual presence check, and send the notification even though the user is active on web/desktop.</p>",
+        "id": 1098301,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610584969
+    },
+    {
+        "content": "<p>Yeah that'd be a fine option.  Might require a bit of plumbing but nothing difficult.</p>",
+        "id": 1098302,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1610585023
+    },
+    {
+        "content": "<p>(Oh hey, bug report in compose: that quote-reply contained a live mention of <code>@mobile</code>, rather than a quiet mention like we do for normal @-mentions.)</p>",
+        "id": 1098303,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610585034
+    },
+    {
+        "content": "<p>That'd also provide the opportunity to check some settings for the user: like if they don't have mobile notifications enabled for PMs, give them an alert explaining that instead of sending the message.</p>",
+        "id": 1098304,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610585077
+    },
+    {
+        "content": "<p>Yeah that's a good idea.</p>",
+        "id": 1098306,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1610585093
+    },
+    {
+        "content": "<p>Want to write up an issue?  On my phone right now so can't myself.</p>",
+        "id": 1098307,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1610585107
+    },
+    {
+        "content": "<p>Sure</p>",
+        "id": 1098308,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610585113
+    },
+    {
+        "content": "<p>I'm not sure that would in itself have helped <span class=\"user-mention silent\" data-user-id=\"18203\">Jonathan van Clute</span> out on this. It'd simplify the testing a bit, but the conclusion would still have been that it apparently just wasn't working.</p>\n<p>I guess one tweak we could add is that the \"send a test notification\" flow could highlight this gotcha.</p>",
+        "id": 1098310,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610585168
+    },
+    {
+        "content": "<p>Filed as <a href=\"https://github.com/zulip/zulip/pull/17059\">#17059</a>.</p>",
+        "id": 1098316,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610586449
+    },
+    {
+        "content": "<p>As I started writing up the bit about that last tweak, I realized we don't actually want it -- or only if we can add some logic I'm not sure how to define accurately, to narrowly target it.</p>\n<p>The issue is that we don't want to give this advice where it's not needed, which it isn't for most users. If we did, it would cause confusion about how notifications work, and could cause users to pass on that advice to colleagues and make a more frustrating experience.</p>\n<p>Specifically, this advice is needed if the Zulip server wasn't yet configured for mobile push notifications when the user originally logged in on mobile.</p>\n<p>Hmm, I guess one thing we could do is check that they actually have a notifications token. I think if they fall into this case, they won't. Though there could of course be other causes, like they haven't successfully logged in on mobile, or haven't installed the app in the first place.</p>",
+        "id": 1098317,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610586672
+    },
+    {
+        "content": "<p>In any case probably the most effective thing we can do for that aspect is <a href=\"https://github.com/zulip/zulip-mobile/pull/1507\">#M1507</a>: we should show a warning banner within the app itself.</p>",
+        "id": 1098318,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610586716
+    },
+    {
+        "content": "<p>... Huh. Alternatively, we could solve the underlying problem.</p>\n<p>I think the root of this problem -- the problem that when you set up push notifications on a server after you've already installed the mobile app and logged in, you never get notifications until you log out and back in again -- is that when the app sends the server a notifications token, the server cheerfully accepts it successfully, even when it doesn't have configuration to do anything useful with it.</p>",
+        "id": 1098319,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610587133
+    },
+    {
+        "content": "<p>Specifically, <code>add_push_device_token</code> in <code>zerver/lib/push_notifications.py</code> has a conditional for <code>if uses_notification_bouncer()</code>, in which case it sends the token on to the bouncer... but then if not, it effectively assumes that it <em>is</em> the bouncer (more generally, that it is itself prepared to talk directly to Google and Apple), and just cheerfully stows the token away in its database, and returns success.</p>",
+        "id": 1098320,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610587203
+    },
+    {
+        "content": "<p>The app already has logic to retry sending the token to the server. It will retry that every time the app is started.</p>\n<p>But it remembers the last token that it already told the server about, and got a success response for. It won't resend that.</p>\n<p>So when the server returns that inappropriate success response... it effectively disables that retry.</p>",
+        "id": 1098323,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610587314
+    },
+    {
+        "content": "<p>Instead, before even checking <code>uses_notification_bouncer</code>, that function should check <code>push_notifications_enabled</code>. If false, it should raise an error.</p>",
+        "id": 1098325,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610587437
+    },
+    {
+        "content": "<p>On the client side, it looks like we should add a try/catch around where we make that request, so that it doesn't send us spam in Sentry. But it already should have no effect on behavior if we get an error there. (Sending these is the last thing that happens in an async function, which nothing is awaiting on, so it's an unhandled promise exception.)</p>",
+        "id": 1098327,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1610587776
+    },
+    {
+        "content": "<p>BTW, I did indeed think it applied to Android only but I tried it anyway just to see if it helped.  In my case it required more than one log out/in for the notifications to begin working, but they did eventually.  <span aria-label=\"thumbs up\" class=\"emoji emoji-1f44d\" role=\"img\" title=\"thumbs up\">:thumbs_up:</span></p>",
+        "id": 1098974,
+        "sender_full_name": "Jonathan van Clute",
+        "timestamp": 1610656813
+    }
+]

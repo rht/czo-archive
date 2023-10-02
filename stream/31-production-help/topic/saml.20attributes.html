@@ -1,0 +1,117 @@
+<html>
+<head><meta charset="utf-8"><title>saml attributes · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html">saml attributes</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="852944"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/852944" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jeremy Bascom <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#852944">(Apr 13 2020 at 22:00)</a>:</h4>
+<p>The example settings.py has 5 attributes listed for mapping.  Email,first and last name are all self explanatory.  What are user_permanent_id and username used for with zulip and are they visible in the gui and/or database? I'm trying to determine best practices for user creation and attribute mapping with saml sso.</p>
+
+
+
+<a name="852949"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/852949" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jeremy Bascom <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#852949">(Apr 13 2020 at 22:05)</a>:</h4>
+<p>I see short_name in the db... is that where username maps to?</p>
+
+
+
+<a name="852976"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/852976" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#852976">(Apr 13 2020 at 22:33)</a>:</h4>
+<p><span class="user-mention" data-user-id="15619">@Jeremy Bascom</span> I assume you're looking at this block:</p>
+<div class="codehilite"><pre><span></span>        <span class="c1"># The part below corresponds to what&#39;s likely referred to as something like</span>
+        <span class="c1"># &quot;Attribute Statements&quot; (with Okta as your IdP) or &quot;Attribute Mapping&quot; (with G Suite).</span>
+        <span class="c1"># The names on the right side need to correspond to the names under which</span>
+        <span class="c1"># the IdP will send the user attributes. With these defaults, it&#39;s expected</span>
+        <span class="c1"># that the user&#39;s email will be sent with the &quot;email&quot; attribute name,</span>
+        <span class="c1"># the first name and the last name with the &quot;first_name&quot;, &quot;last_name&quot; attribute names.</span>
+        <span class="s2">&quot;attr_user_permanent_id&quot;</span><span class="p">:</span> <span class="s2">&quot;email&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;attr_first_name&quot;</span><span class="p">:</span> <span class="s2">&quot;first_name&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;attr_last_name&quot;</span><span class="p">:</span> <span class="s2">&quot;last_name&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;attr_username&quot;</span><span class="p">:</span> <span class="s2">&quot;email&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;attr_email&quot;</span><span class="p">:</span> <span class="s2">&quot;email&quot;</span><span class="p">,</span>
+</pre></div>
+
+
+
+<a name="852977"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/852977" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#852977">(Apr 13 2020 at 22:34)</a>:</h4>
+<p>Generally that layout is how we expect things -- those field names are picked by the third-party library we use.</p>
+
+
+
+<a name="852981"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/852981" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#852981">(Apr 13 2020 at 22:35)</a>:</h4>
+<p>Zulip only stores a "Full Name" and Email constructed from these attributes ("Full Name" is better than "First" + "Last" for i18n reasons, why is why it's our data model).  We don't do anything with the <code>short_name</code> field in the database today, but someday it might become a username for organizations where we've set email addresses to be private.</p>
+
+
+
+<a name="852982"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/852982" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#852982">(Apr 13 2020 at 22:35)</a>:</h4>
+<p>So our intent is <code>attr_username</code> and <code>attr_email</code> and <code>attr_user_permanent_id</code> should always all be the same, the user's email address.</p>
+
+
+
+<a name="853000"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/853000" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jeremy Bascom <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#853000">(Apr 13 2020 at 22:47)</a>:</h4>
+<p>That clarifies it perfectly, thank you.</p>
+
+
+
+<a name="854315"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/854315" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jeremy Bascom <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#854315">(Apr 15 2020 at 19:09)</a>:</h4>
+<p>We're testing login flows.<br>
+When a user starts by authenticating to Okta and then clicking the zulip app icon, it takes them to the login screen.  I can see the post to /complete/saml/ , though the response headers look different than if I had initiated the login process from the zulip login page.  Is there additional setup required to enable this other login method to work?</p>
+
+
+
+<a name="854317"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/854317" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#854317">(Apr 15 2020 at 19:11)</a>:</h4>
+<p>Hmm, yeah, my guess is that post from Okta isn't formatted properly.</p>
+
+
+
+<a name="854318"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/854318" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#854318">(Apr 15 2020 at 19:11)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> can you look into how to make the "Okta auth button" integration work properly?  We might need to add some documentation details or code changes to support it.</p>
+
+
+
+<a name="854319"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/854319" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#854319">(Apr 15 2020 at 19:12)</a>:</h4>
+<p><span class="user-mention" data-user-id="15619">@Jeremy Bascom</span> if you have other thoughts on how we can improve the documentation for integrating with Okta, BTW, we'd appreciate it!</p>
+
+
+
+<a name="854384"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/854384" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#854384">(Apr 15 2020 at 19:48)</a>:</h4>
+<p>The core detail that makes coming from Okta impossible currently is <a href="#narrow/stream/31-production-help/topic/GSuite.20SAML/near/854080" title="#narrow/stream/31-production-help/topic/GSuite.20SAML/near/854080">https://chat.zulip.org/#narrow/stream/31-production-help/topic/GSuite.20SAML/near/854080</a></p>
+<p>One of the details that are stored under the token in <code>RelayState</code> is what organization this auth attempt is for. With multiple organization setup, we do <code>/complete/...</code> step of authentication on the <code>auth.</code> subdomain - it'll be ambiguous to which organization to take the user from there if using the "Okta auth button" unless the IdP is enabled only for a single organization <span aria-label="thinking" class="emoji emoji-1f914" role="img" title="thinking">:thinking:</span></p>
+
+
+
+<a name="854386"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/854386" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#854386">(Apr 15 2020 at 19:51)</a>:</h4>
+<p>Yeah, and I guess the problem is that Okta only has the one URL for the <code>auth</code> subdomain configured?</p>
+
+
+
+<a name="854390"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/854390" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#854390">(Apr 15 2020 at 19:52)</a>:</h4>
+<p>If we can use separate URLs, we could have the Okta/Google link go to the target subdomain start URL.</p>
+
+
+
+<a name="854391"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/saml%20attributes/near/854391" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/saml.20attributes.html#854391">(Apr 15 2020 at 19:53)</a>:</h4>
+<p>Not sure if that made sense, but in theory the "Login to Zulip" button on Okta doesn't need to go to the same URL as the Okta redirect URL back to Zulip after a Zulip-initiated authentication request.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

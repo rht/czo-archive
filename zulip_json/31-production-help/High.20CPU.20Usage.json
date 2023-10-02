@@ -1,0 +1,80 @@
+[
+    {
+        "content": "<p>Anyone had an issue where zulip is using 100% CPU on a Digital Ocean 2VCPU 4GB RAM 80GB SSD Server? Mine is brand new , only 1 users and it is maxing the CPU.</p>",
+        "id": 1132291,
+        "sender_full_name": "Adam Birds",
+        "timestamp": 1615681743
+    },
+    {
+        "content": "<p>This my result from docker stats:</p>\n<p>CONTAINER ID   NAME                       CPU %     MEM USAGE / LIMIT     MEM %     NET I/O           BLOCK I/O         PIDS<br>\n9df20cfaa62f   docker-zulip_database_1    0.00%     28.99MiB / 3.844GiB   0.74%     1.2MB / 1.27MB    14.7GB / 46.7MB   14<br>\n6fe03fe09c7f   docker-zulip_memcached_1   0.08%     3.535MiB / 3.844GiB   0.09%     674kB / 341kB     3.4GB / 8.19kB    10<br>\neacf0b2da73c   docker-zulip_redis_1       0.32%     1.969MiB / 3.844GiB   0.05%     14.3kB / 6.61kB   16.9GB / 4.1kB    5<br>\n6e977c9e3b86   docker-zulip_rabbitmq_1    0.11%     57.71MiB / 3.844GiB   1.47%     1.63MB / 2.02MB   41.5GB / 119kB    87<br>\nd931c674cabf   docker-zulip_zulip_1       191.02%   2.274GiB / 3.844GiB   59.16%    3.79MB / 4.7MB    88.1GB / 3.43MB   31</p>",
+        "id": 1132292,
+        "sender_full_name": "Adam Birds",
+        "timestamp": 1615682436
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"3715\">@Adam Birds</span> can you try checking <code>supervisorctl status</code> inside the container?</p>",
+        "id": 1132508,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615766119
+    },
+    {
+        "content": "<p>The most likely situation is that something is failing when starting up processes, and they're taking long enough to restart that supervisord doesn't detect that and is restarting them in an infinite loop.</p>",
+        "id": 1132509,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615766151
+    },
+    {
+        "content": "<p>weirdly it did it for an hour when I first built it, and then has been fine since. sitting at about 6% usage since.</p>",
+        "id": 1132511,
+        "sender_full_name": "Adam Birds",
+        "timestamp": 1615766191
+    },
+    {
+        "content": "<p>Well, that sounds more normal, at least.</p>",
+        "id": 1132513,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615766218
+    },
+    {
+        "content": "<p>It'd be nice to figure out what was going on, but I'm not sure it'll be easy to see; maybe <code>/var/log/zulip/errors.log</code> or <code>/var/log/zulip/manage.log</code>  around that time might provide some insight.</p>",
+        "id": 1132514,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615766248
+    },
+    {
+        "content": "<p>I'll do some digging on it. I'll see if it happens tomorrow if I restart all the containers. And try and have a look in the logs. Actually ended up forcefully limiting the docker instance to 1.5 CPUS as I was struggling to SSH it was using that much CPU.</p>",
+        "id": 1132523,
+        "sender_full_name": "Adam Birds",
+        "timestamp": 1615766601
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"3715\">@Adam Birds</span> I had the same issue. For me, I looked under /var/log/zulip/manage.log and there was a log line indicating that the Tornado client couldn't talk to the rabbitmq service, because I had misconfigured the rabbitmq host variable.</p>\n<p>When I fixed that cpu usage immediately dropped.</p>\n<p><a href=\"/user_uploads/2/4a/-eSUw3nZtQLF5brnqsEbeKl4/Screen-Shot-2021-03-16-at-3.07.54-PM.png\">Screen-Shot-2021-03-16-at-3.07.54-PM.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/4a/-eSUw3nZtQLF5brnqsEbeKl4/Screen-Shot-2021-03-16-at-3.07.54-PM.png\" title=\"Screen-Shot-2021-03-16-at-3.07.54-PM.png\"><img src=\"/user_uploads/2/4a/-eSUw3nZtQLF5brnqsEbeKl4/Screen-Shot-2021-03-16-at-3.07.54-PM.png\"></a></div>",
+        "id": 1133965,
+        "sender_full_name": "Jennifer Hwang",
+        "timestamp": 1615932553
+    },
+    {
+        "content": "<p>And where you using the docker install? <span class=\"user-mention\" data-user-id=\"19148\">@Jennifer Hwang</span></p>\n<p>What exactly was wrong with the rabitmq host variable? I just want to see if I have the same error in my docker-compose.yml file as my CPU issues resolved themselves after a while.</p>",
+        "id": 1133970,
+        "sender_full_name": "Adam Birds",
+        "timestamp": 1615933633
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"3715\">@Adam Birds</span> I'm working on converting the docker-compose.yaml file to a render.yaml file to run it on render (<a href=\"https://render.com/\">https://render.com/</a>), so it won't be helpful for you unfortunately. For me, the rabbitmq variable was hard-coded to <code>rabbitmq</code> as it is here: <a href=\"https://github.com/zulip/docker-zulip/blob/master/docker-compose.yml#L69\">https://github.com/zulip/docker-zulip/blob/master/docker-compose.yml#L69</a> . If your rabbitmq service is not named the same exact value here: <a href=\"https://github.com/zulip/docker-zulip/blob/master/docker-compose.yml#L29\">https://github.com/zulip/docker-zulip/blob/master/docker-compose.yml#L29</a>, then it will have connection issues to rabbitmq.</p>\n<p>Tim's suggestion of running <code>supervisorctl status</code> is key. When I ran it in my container, I had very short-lived processes. This is the current output showing they're all working:</p>\n<div class=\"codehilite\"><pre><span></span><code># supervisorctl status\ncron                                                            RUNNING   pid 41, uptime 0:33:55\nnginx                                                           RUNNING   pid 42, uptime 0:33:55\nprocess-fts-updates                                             RUNNING   pid 40, uptime 0:33:55\nzulip-django                                                    RUNNING   pid 38, uptime 0:33:55\nzulip-tornado                                                   RUNNING   pid 39, uptime 0:33:55\nzulip-workers:zulip_deliver_enqueued_emails                     RUNNING   pid 43, uptime 0:33:55\nzulip-workers:zulip_deliver_scheduled_messages                  RUNNING   pid 44, uptime 0:33:55\nzulip-workers:zulip_events_deferred_work                        RUNNING   pid 45, uptime 0:33:55\nzulip-workers:zulip_events_digest_emails                        RUNNING   pid 46, uptime 0:33:55\nzulip-workers:zulip_events_email_mirror                         RUNNING   pid 47, uptime 0:33:55\nzulip-workers:zulip_events_email_senders                        RUNNING   pid 52, uptime 0:33:55\nzulip-workers:zulip_events_embed_links                          RUNNING   pid 48, uptime 0:33:55\nzulip-workers:zulip_events_embedded_bots                        RUNNING   pid 49, uptime 0:33:55\nzulip-workers:zulip_events_error_reports                        RUNNING   pid 50, uptime 0:33:55\nzulip-workers:zulip_events_invites                              RUNNING   pid 51, uptime 0:33:55\nzulip-workers:zulip_events_missedmessage_emails                 RUNNING   pid 53, uptime 0:33:55\nzulip-workers:zulip_events_missedmessage_mobile_notifications   RUNNING   pid 54, uptime 0:33:55\nzulip-workers:zulip_events_outgoing_webhooks                    RUNNING   pid 55, uptime 0:33:55\nzulip-workers:zulip_events_signups                              RUNNING   pid 56, uptime 0:33:55\nzulip-workers:zulip_events_user_activity                        RUNNING   pid 57, uptime 0:33:55\nzulip-workers:zulip_events_user_activity_interval               RUNNING   pid 58, uptime 0:33:55\nzulip-workers:zulip_events_user_presence                        RUNNING   pid 59, uptime 0:33:55\n</code></pre></div>",
+        "id": 1133982,
+        "sender_full_name": "Jennifer Hwang",
+        "timestamp": 1615934497
+    },
+    {
+        "content": "<p>In fact now I think of it I did change the rabbitmq name and did notice that error in the log and did change it back. Didn't link the two till you now mentioned it. <span class=\"user-mention\" data-user-id=\"19148\">@Jennifer Hwang</span>. Whats render, not heard of that before.</p>",
+        "id": 1133998,
+        "sender_full_name": "Adam Birds",
+        "timestamp": 1615935253
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"3715\">@Adam Birds</span> I work at Render actually! I've been working on creating a 1-click button to deploy zulip on Render. To answer your question, Render is a PAAS that seeks to make it as easy as possible for people to deploy and manage their infra. We try to do this with good UX and sane defaults (free SSL, etc.). Render's free for static sites and there's a 7-day free trial if you want to check it out!</p>",
+        "id": 1134037,
+        "sender_full_name": "Jennifer Hwang",
+        "timestamp": 1615936857
+    }
+]

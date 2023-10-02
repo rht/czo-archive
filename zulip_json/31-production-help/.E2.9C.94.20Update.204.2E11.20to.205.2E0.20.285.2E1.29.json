@@ -1,0 +1,122 @@
+[
+    {
+        "content": "<p>Good day!</p>\n<p>I have Zulip 4.11 at the moment<br>\nWhen updating to version 5.0 or 5.1, the update script crashes on an error</p>\n<div class=\"codehilite\"><pre><span></span><code>connection to server at &quot;localhost&quot; (::1), port 5432 failed: FATAL:  password authentication failed for user &quot;zulip&quot;\n\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2022-04-04-12-11-31/scripts/lib/upgrade-zulip-stage-2&quot;, line 222, in &lt;module&gt;\n    subprocess.check_call(\n  File &quot;/usr/lib/python3.8/subprocess.py&quot;, line 364, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2022-04-04-12-11-31/scripts/lib/check-database-compatibility.py&#39;]&#39; returned non-zero exit status 1.\n\nZulip upgrade failed (exit code 1)!\n</code></pre></div>\n<p>I looked for solutions on the Internet and in the documentation, but I didn't find anything.<br>\nHelp solve the problem</p>",
+        "id": 1359464,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1649065322
+    },
+    {
+        "content": "<p>previously, updates inside version 4 were installed without problems, the error came out only when switching to version 5</p>",
+        "id": 1359466,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1649065385
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/Update.204.2E11.20to.205.2E0.20.285.2E1.29\">#issues &gt; Update 4.11 to 5.0 (5.1)</a> by <span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span>.</p>",
+        "id": 1359808,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1649103259
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"23869\">@Сергей Грищенко</span>: That implies it's having problems connecting to the database.</p>\n<p>Is there anything interesting about the connection between Zulip and its PostgreSQL database?</p>",
+        "id": 1359812,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649103545
+    },
+    {
+        "content": "<p>Does:</p>\n<div class=\"codehilite\"><pre><span></span><code>cd /home/zulip/deployments/2022-04-04-12-11-31/\n./manage.py dbshell\n</code></pre></div>\n<p>...work?</p>",
+        "id": 1359814,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649103590
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> </p>\n<div class=\"codehilite\"><pre><span></span><code>su zulip -c &#39;./manage.py dbshell&#39;\npsql: ошибка: подключиться к серверу &quot;localhost&quot; (::1), порту 5432 не удалось: FATAL:  password authentication failed for user &quot;zulip&quot;\nподключиться к серверу &quot;localhost&quot; (::1), порту 5432 не удалось: FATAL:  password authentication failed for user &quot;zulip&quot;\n&quot;psql -U zulip -h localhost zulip&quot; returned non-zero exit status 2.\n</code></pre></div>\n<p>Yes, it looks like it.<br>\nBut then how does my server work?<br>\nDo I have to change the password for the Zulip user and register a new password in the secrets file? Are they written there in plain text? Or is there some other way to solve the problem?</p>",
+        "id": 1360305,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1649147030
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"23869\">@Сергей Грищенко</span>: My best guess is that the server is still working because it hasn't been restarted, and anything which makes the serving processes and workers disconnect from PostgreSQL will make everything fall over.</p>\n<p>By default, Zulip uses peer authentication for local connections, which means it's connecting without a password, and authenticating by dint of being the Unix <code>zulip</code> user.</p>\n<p>But that only works if it's connecting over UNIX sockets, not TCP.  It looks like, from your error message, that it's trying to use TCP (<code>-h localhost</code>).  Did you set <code>REMOTE_POSTGRES_HOST</code> in <code>/etc/zulip/setting.py</code>, or alter the database connection settings in any other way?</p>",
+        "id": 1362146,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649360691
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span>  Hello!<br>\nmy settings.py file:</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip_node:~# grep &quot;^[^#*/;]&quot; /etc/zulip/settings.py\nfrom typing import Optional\nEXTERNAL_HOST = &#39;chat.*****.**&#39;\nZULIP_ADMINISTRATOR = &#39;chat@tech.*****.**&#39;\nEMAIL_HOST = &#39;smsmail.*****.**&#39;\nEMAIL_HOST_USER = &#39;chat@tech.*****.**&#39;\nEMAIL_USE_TLS = True\nAUTHENTICATION_BACKENDS = (\n    # &#39;zproject.backends.EmailAuthBackend&#39;,  # Email and password; just requires SMTP setup\n    # &#39;zproject.backends.GoogleMobileOauth2Backend&#39;,  # Google Apps, setup below\n    # &#39;zproject.backends.GitHubAuthBackend&#39;,  # GitHub auth, setup below\n    &#39;zproject.backends.ZulipLDAPAuthBackend&#39;,  # LDAP, setup below\n    # &#39;zproject.backends.ZulipRemoteUserBackend&#39;,  # Local SSO, setup docs on readthedocs\n)\nSSO_APPEND_DOMAIN = None  # type: Optional[str]\nPUSH_NOTIFICATION_BOUNCER_URL = &#39;https://push.zulipchat.com&#39;\nSESSION_EXPIRE_AT_BROWSER_CLOSE = False\nSESSION_COOKIE_AGE = 60 * 60 * 24 * 7 * 2  # 2 weeks\nENABLE_FEEDBACK = False\nFEEDBACK_EMAIL = ZULIP_ADMINISTRATOR\nENABLE_FILE_LINKS = False\nLOCAL_UPLOADS_DIR = &quot;/home/zulip/uploads&quot;\nMAX_FILE_UPLOAD_SIZE = 25\nNAME_CHANGES_DISABLED = False\nENABLE_GRAVATAR = True\nEMAIL_GATEWAY_PATTERN = &quot;&quot;\nEMAIL_GATEWAY_LOGIN = &quot;&quot;\nEMAIL_GATEWAY_IMAP_SERVER = &quot;&quot;\nEMAIL_GATEWAY_IMAP_PORT = 993\nEMAIL_GATEWAY_IMAP_FOLDER = &quot;INBOX&quot;\nimport ldap\nfrom django_auth_ldap.config import LDAPSearch, GroupOfNamesType\nAUTH_LDAP_SERVER_URI = &quot;ldap://*****.**&quot;\nAUTH_LDAP_BIND_DN = &quot;CN=zulip,CN=Users,DC=*****,DC=**&quot;\nAUTH_LDAP_CONNECTION_OPTIONS = {\n    ldap.OPT_REFERRALS: 0,\n}\nAUTH_LDAP_USER_SEARCH = LDAPSearch(&quot;dc=*****,dc=**&quot;,\n                                   ldap.SCOPE_SUBTREE, &quot;(sAMAccountName=%(user)s)&quot;)\nAUTH_LDAP_REVERSE_EMAIL_SEARCH = LDAPSearch(&quot;dc=*****,dc=**&quot;,\n                                            ldap.SCOPE_SUBTREE, &quot;(mail=%(email)s)&quot;)\nAUTH_LDAP_USERNAME_ATTR = &quot;sAMAccountName&quot;\nLDAP_APPEND_DOMAIN = None  # type: Optional[str]\nLDAP_EMAIL_ATTR = &quot;mail&quot;  # type: Optional[str]\nAUTH_LDAP_USER_ATTR_MAP = {\n    # full_name is required; common values include &quot;cn&quot; or &quot;displayName&quot;.\n    &quot;full_name&quot;:&quot;cn&quot;,\n    &quot;short_name&quot;:&quot;sAMAccountName&quot;,\n    &quot;login&quot;:&quot;sAMAccountName&quot;\n}\nAUTH_LDAP_CACHE_TIMEOUT = 600\nCAMO_URI = &#39;/external_content/&#39;\n</code></pre></div>\n<p>The server was restarted several times completely.<br>\nEverything continues to work ... <br>\nI can prove it by restarting the server, showing uptime and logs what you say. but I don't see any problems with the server. But I can't update ((</p>\n<p>There is an attempt to connect to a remote database in the config, but these lines have been commented out for a long time and are not used</p>",
+        "id": 1362533,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1649415670
+    },
+    {
+        "content": "<p>Oh!  OK, I think I have a better guess now.  The failure from <code>cd /home/zulip/deployments/2022-04-04-12-11-31/; ./manage.py dbshell</code> makes sense in that that's the 5.1 install which was failing to start -- I bet that <code>cd /home/zulip/deployments/current/; ./manage.py dbshell</code> <em>does</em> work fine.  So this is just some difference in how Zulip Server 5.x connects, not anything more mysterious.</p>\n<p><span class=\"user-mention\" data-user-id=\"23869\">@Сергей Грищенко</span>: Can you show <code>/etc/zulip/zulip.conf</code>?  And is there a <code>postgres_password</code> secret set in <code>/etc/zulip/zulip-secrets.conf</code>?</p>",
+        "id": 1362699,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649437344
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> </p>\n<div class=\"codehilite\"><pre><span></span><code>su zulip -c &#39;cd /home/zulip/deployments/current/; ./manage.py dbshell&#39;\npsql (14.1 (Ubuntu 14.1-2.pgdg20.04+1), сервер 12.9 (Ubuntu 12.9-2.pgdg20.04+1))\nВведите &quot;help&quot;, чтобы получить справку.\n\nzulip=&gt;\n</code></pre></div>\n<p>It's OK!<br>\nmy zulip.conf:</p>\n<div class=\"codehilite\"><pre><span></span><code>cat /etc/zulip/zulip.conf\n[machine]\npuppet_classes = zulip::profile::standalone\ndeploy_type = voyager\n\n[certbot]\nauto_renew = yes\n\n[postgresql]\nversion = 12\n</code></pre></div>\n<p>and secrets.conf i have postgres_password:</p>\n<div class=\"codehilite\"><pre><span></span><code>cat /etc/zulip/zulip-secrets.conf |grep postgres_password\npostgres_password = ********************\n</code></pre></div>\n<p>I understand that there is no point in changing the password from the zulip user in postgresql? <br>\nWhat about version 5 then?</p>",
+        "id": 1363517,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1649496458
+    },
+    {
+        "content": "<p>Aha!  I figured it out.</p>\n<p><span class=\"user-mention\" data-user-id=\"23869\">@Serg  Grishchenko</span>: The quick fix for you is to remove the <code>postgres_password</code> setting in your <code>/etc/zulip/zulip-secrets.conf</code></p>",
+        "id": 1364444,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649700063
+    },
+    {
+        "content": "<p>That should let you upgrade.</p>",
+        "id": 1364445,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649700110
+    },
+    {
+        "content": "<p>And we need to fix this:</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"k\">elif</span> <span class=\"n\">get_config</span><span class=\"p\">(</span><span class=\"s2\">\"postgresql\"</span><span class=\"p\">,</span> <span class=\"s2\">\"database_user\"</span><span class=\"p\">)</span> <span class=\"o\">!=</span> <span class=\"s2\">\"zulip\"</span><span class=\"p\">:</span>\n    <span class=\"k\">if</span> <span class=\"n\">get_secret</span><span class=\"p\">(</span><span class=\"s2\">\"postgres_password\"</span><span class=\"p\">)</span> <span class=\"ow\">is</span> <span class=\"ow\">not</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n        <span class=\"n\">DATABASES</span><span class=\"p\">[</span><span class=\"s2\">\"default\"</span><span class=\"p\">]</span><span class=\"o\">.</span><span class=\"n\">update</span><span class=\"p\">(</span>\n            <span class=\"n\">PASSWORD</span><span class=\"o\">=</span><span class=\"n\">get_secret</span><span class=\"p\">(</span><span class=\"s2\">\"postgres_password\"</span><span class=\"p\">),</span>\n            <span class=\"n\">HOST</span><span class=\"o\">=</span><span class=\"s2\">\"localhost\"</span><span class=\"p\">,</span>\n        <span class=\"p\">)</span>\n</code></pre></div>\n<p>...to add a default to that <code>get_config</code>.</p>",
+        "id": 1364446,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649700132
+    },
+    {
+        "content": "<p>There's potentially an argument that, alternately, we should make that:</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"k\">elif</span> <span class=\"n\">get_secret</span><span class=\"p\">(</span><span class=\"s2\">\"postgres_password\"</span><span class=\"p\">)</span> <span class=\"ow\">is</span> <span class=\"ow\">not</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n    <span class=\"n\">DATABASES</span><span class=\"p\">[</span><span class=\"s2\">\"default\"</span><span class=\"p\">]</span><span class=\"o\">.</span><span class=\"n\">update</span><span class=\"p\">(</span>\n        <span class=\"n\">PASSWORD</span><span class=\"o\">=</span><span class=\"n\">get_secret</span><span class=\"p\">(</span><span class=\"s2\">\"postgres_password\"</span><span class=\"p\">),</span>\n        <span class=\"n\">HOST</span><span class=\"o\">=</span><span class=\"s2\">\"localhost\"</span><span class=\"p\">,</span>\n    <span class=\"p\">)</span>\n</code></pre></div>",
+        "id": 1364449,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649700364
+    },
+    {
+        "content": "<p>Which allows folks to use password auth and not ident for local hosts -- but that'd be an unusual config.</p>",
+        "id": 1364451,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649700441
+    },
+    {
+        "content": "<p>Pushed <a href=\"https://github.com/zulip/zulip/pull/21760\">#21760</a>.</p>",
+        "id": 1364502,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649703288
+    },
+    {
+        "content": "<p>Merged that fix; it's probably reasonable to backport as well.</p>",
+        "id": 1364672,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1649718908
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/86/-kDjxaLY5kqaEbBvYACj0yNX/image.png\">image.png</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/86/-kDjxaLY5kqaEbBvYACj0yNX/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/86/-kDjxaLY5kqaEbBvYACj0yNX/image.png\"></a></div><p>Thank you very much! I've upgraded<br>\nProblem solved</p>",
+        "id": 1365687,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1649832620
+    },
+    {
+        "content": "<p>Glad to hear it!</p>",
+        "id": 1365688,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649832904
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> has marked this topic as resolved.</p>",
+        "id": 1365689,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1649832910
+    }
+]

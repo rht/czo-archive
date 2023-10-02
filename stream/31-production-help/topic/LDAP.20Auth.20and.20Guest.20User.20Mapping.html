@@ -1,0 +1,204 @@
+<html>
+<head><meta charset="utf-8"><title>LDAP Auth and Guest User Mapping · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20Auth.20and.20Guest.20User.20Mapping.html">LDAP Auth and Guest User Mapping</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1054428"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20Auth%20and%20Guest%20User%20Mapping/near/1054428" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Martin Huber <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20Auth.20and.20Guest.20User.20Mapping.html#1054428">(Nov 02 2020 at 17:59)</a>:</h4>
+<p>Hi, I am trying to accomplish the following:<br>
+we have an LDAP user tree, that consists of 2 subtrees, one for internal and one for external users.<br>
+We also have 2 groups that both are allowed to login to our on premise Zulip server.<br>
+I got everything to work, such that internal and external users can log in, using the AUTH_LDAP_USER_SEARCH to define the user search base, AUTH_LDAP_GROUP_SEARCH to prepare the list of groups, that are referenced, AUTH_LDAP_GROUP_TYPE to "groupOfUniqueNames" what we are using, and the AUTH_LDAP_REQUIRE_GROUP as a union of 2 LDAPGroupQueries to allow users of the both groups to log in.</p>
+<p>Now I tried to map the users of one of these groups (the "guest" group) to a Zulip guest user.<br>
+I tried, by configuring</p>
+<div class="codehilite" data-code-language="Python"><pre><span></span><code><span class="n">AUTH_LDAP_USER_FLAGS_BY_GROUP</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"is_guest"</span><span class="p">:</span> <span class="s2">"cn=guest,ou=zulip,ou=groups,dc=example,dc=com"</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>but it does not map these users.</p>
+<p>Does anyone has another idea, how I could reach the goal, to define the Zulip guest users in LDAP ?</p>
+
+
+
+<a name="1054729"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20Auth%20and%20Guest%20User%20Mapping/near/1054729" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20Auth.20and.20Guest.20User.20Mapping.html#1054729">(Nov 02 2020 at 20:19)</a>:</h4>
+<p><span class="user-mention" data-user-id="17720">@Martin Huber</span> Can you check <code>/var/log/zulip/ldap.log</code> for any hints? I wonder if the double <code>out</code>s and <code>dc</code>s could be causing an issue</p>
+
+
+
+<a name="1055521"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20Auth%20and%20Guest%20User%20Mapping/near/1055521" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Martin Huber <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20Auth.20and.20Guest.20User.20Mapping.html#1055521">(Nov 03 2020 at 07:40)</a>:</h4>
+<p>Thanks! I will check. But I also found some discussion and tickets regarding the fact, that the setters for is_guest, is_realm_admin, ... have been removed from the model in exchange for the "role" property ... And I think there are plans to re-introduce these setters. I even found a fork or PR on github that should fix it and I probably will that one give a try:<br>
+<a href="https://github.com/YashRE42/zulip/commit/704b3125f28d2cba5cdb12ff86479a1c690933b0">https://github.com/YashRE42/zulip/commit/704b3125f28d2cba5cdb12ff86479a1c690933b0</a></p>
+
+
+
+<a name="1055591"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20Auth%20and%20Guest%20User%20Mapping/near/1055591" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Martin Huber <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20Auth.20and.20Guest.20User.20Mapping.html#1055591">(Nov 03 2020 at 10:34)</a>:</h4>
+<p>No, this is not the reason - the model in our installed version has all setters and is setting the right roles in these setters</p>
+
+
+
+<a name="1055597"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20Auth%20and%20Guest%20User%20Mapping/near/1055597" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Martin Huber <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20Auth.20and.20Guest.20User.20Mapping.html#1055597">(Nov 03 2020 at 10:50)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span>  in ldap.log I see:</p>
+<div class="codehilite" data-code-language="Bash"><pre><span></span><code><span class="m">2020</span>-11-03 <span class="m">10</span>:48:36.497 WARN <span class="o">[</span>django_auth_ldap<span class="o">]</span> <span class="s1">'user'</span> <span class="k">while</span> authenticating test.external
+</code></pre></div>
+<p>In server.log:</p>
+<div class="codehilite" data-code-language="Bash"><pre><span></span><code><span class="m">2020</span>-11-03 <span class="m">10</span>:48:36.498 ERR  <span class="o">[</span>django.request<span class="o">]</span> Internal Server Error: /accounts/login/
+Traceback <span class="o">(</span>most recent call last<span class="o">)</span>:
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/core/handlers/exception.py"</span>, line <span class="m">41</span>, in inner
+    <span class="nv">response</span> <span class="o">=</span> get_response<span class="o">(</span>request<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/core/handlers/base.py"</span>, line <span class="m">187</span>, in _get_response
+    <span class="nv">response</span> <span class="o">=</span> self.process_exception_by_middleware<span class="o">(</span>e, request<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/core/handlers/base.py"</span>, line <span class="m">185</span>, in _get_response
+    <span class="nv">response</span> <span class="o">=</span> wrapped_callback<span class="o">(</span>request, *callback_args, **callback_kwargs<span class="o">)</span>
+  File <span class="s2">"./zerver/views/auth.py"</span>, line <span class="m">657</span>, in login_page
+    <span class="nv">extra_context</span><span class="o">=</span>extra_context, **kwargs<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/contrib/auth/views.py"</span>, line <span class="m">54</span>, in inner
+    <span class="k">return</span> func<span class="o">(</span>*args, **kwargs<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/contrib/auth/views.py"</span>, line <span class="m">150</span>, in login
+    <span class="o">)(</span>request<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/views/generic/base.py"</span>, line <span class="m">68</span>, in view
+    <span class="k">return</span> self.dispatch<span class="o">(</span>request, *args, **kwargs<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/utils/decorators.py"</span>, line <span class="m">67</span>, in _wrapper
+    <span class="k">return</span> bound_func<span class="o">(</span>*args, **kwargs<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/views/decorators/debug.py"</span>, line <span class="m">76</span>, in sensitive_post_parameters_wrapper
+    <span class="k">return</span> view<span class="o">(</span>request, *args, **kwargs<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/utils/decorators.py"</span>, line <span class="m">63</span>, in bound_func
+    <span class="k">return</span> func.__get__<span class="o">(</span>self, type<span class="o">(</span>self<span class="o">))(</span>*args2, **kwargs2<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/utils/decorators.py"</span>, line <span class="m">67</span>, in _wrapper
+    <span class="k">return</span> bound_func<span class="o">(</span>*args, **kwargs<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/utils/decorators.py"</span>, line <span class="m">149</span>, in _wrapped_view
+    <span class="nv">response</span> <span class="o">=</span> view_func<span class="o">(</span>request, *args, **kwargs<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/utils/decorators.py"</span>, line <span class="m">63</span>, in bound_func
+    <span class="k">return</span> func.__get__<span class="o">(</span>self, type<span class="o">(</span>self<span class="o">))(</span>*args2, **kwargs2<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/utils/decorators.py"</span>, line <span class="m">67</span>, in _wrapper
+    <span class="k">return</span> bound_func<span class="o">(</span>*args, **kwargs<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/views/decorators/cache.py"</span>, line <span class="m">57</span>, in _wrapped_view_func
+    <span class="nv">response</span> <span class="o">=</span> view_func<span class="o">(</span>request, *args, **kwargs<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/utils/decorators.py"</span>, line <span class="m">63</span>, in bound_func
+    <span class="k">return</span> func.__get__<span class="o">(</span>self, type<span class="o">(</span>self<span class="o">))(</span>*args2, **kwargs2<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/contrib/auth/views.py"</span>, line <span class="m">90</span>, in dispatch
+    <span class="k">return</span> super<span class="o">(</span>LoginView, self<span class="o">)</span>.dispatch<span class="o">(</span>request, *args, **kwargs<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/views/generic/base.py"</span>, line <span class="m">88</span>, in dispatch
+    <span class="k">return</span> handler<span class="o">(</span>request, *args, **kwargs<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/views/generic/edit.py"</span>, line <span class="m">182</span>, in post
+    <span class="k">if</span> form.is_valid<span class="o">()</span>:
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/forms/forms.py"</span>, line <span class="m">183</span>, in is_valid
+    <span class="k">return</span> self.is_bound and not self.errors
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/forms/forms.py"</span>, line <span class="m">175</span>, in errors
+    self.full_clean<span class="o">()</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/forms/forms.py"</span>, line <span class="m">385</span>, in full_clean
+    self._clean_form<span class="o">()</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/forms/forms.py"</span>, line <span class="m">412</span>, in _clean_form
+    <span class="nv">cleaned_data</span> <span class="o">=</span> self.clean<span class="o">()</span>
+  File <span class="s2">"./zerver/forms.py"</span>, line <span class="m">309</span>, in clean
+    <span class="nv">realm</span><span class="o">=</span>realm, <span class="nv">return_data</span><span class="o">=</span>return_data<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/contrib/auth/__init__.py"</span>, line <span class="m">70</span>, in authenticate
+    <span class="nv">user</span> <span class="o">=</span> _authenticate_with_backend<span class="o">(</span>backend, backend_path, request, credentials<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django/contrib/auth/__init__.py"</span>, line <span class="m">116</span>, in _authenticate_with_backend
+    <span class="k">return</span> backend.authenticate<span class="o">(</span>*args, **credentials<span class="o">)</span>
+  File <span class="s2">"./zproject/backends.py"</span>, line <span class="m">558</span>, in authenticate
+    <span class="k">return</span> super<span class="o">()</span>.authenticate<span class="o">(</span><span class="nv">request</span><span class="o">=</span>None, <span class="nv">username</span><span class="o">=</span>username, <span class="nv">password</span><span class="o">=</span>password<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django_auth_ldap/backend.py"</span>, line <span class="m">151</span>, in authenticate
+    <span class="nv">user</span> <span class="o">=</span> self.authenticate_ldap_user<span class="o">(</span>ldap_user, password<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django_auth_ldap/backend.py"</span>, line <span class="m">209</span>, in authenticate_ldap_user
+    <span class="k">return</span> ldap_user.authenticate<span class="o">(</span>password<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django_auth_ldap/backend.py"</span>, line <span class="m">459</span>, in authenticate
+    self._get_or_create_user<span class="o">()</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django_auth_ldap/backend.py"</span>, line <span class="m">703</span>, in _get_or_create_user
+    self._user, <span class="nv">built</span> <span class="o">=</span> self.backend.get_or_build_user<span class="o">(</span>username, self<span class="o">)</span>
+  File <span class="s2">"./zproject/backends.py"</span>, line <span class="m">639</span>, in get_or_build_user
+    <span class="nv">user_profile</span> <span class="o">=</span> do_create_user<span class="o">(</span>username, None, self._realm, full_name, short_name, **opts<span class="o">)</span>
+  File <span class="s2">"./zerver/lib/actions.py"</span>, line <span class="m">543</span>, in do_create_user
+    <span class="nv">realm_creation</span><span class="o">=</span>realm_creation<span class="o">)</span>
+  File <span class="s2">"./zerver/lib/actions.py"</span>, line <span class="m">416</span>, in process_new_human_user
+    enqueue_welcome_emails<span class="o">(</span>user_profile, realm_creation<span class="o">)</span>
+  File <span class="s2">"./zerver/lib/email_notifications.py"</span>, line <span class="m">572</span>, in enqueue_welcome_emails
+    <span class="k">if</span> email_belongs_to_ldap<span class="o">(</span>user.realm, user.delivery_email<span class="o">)</span>:
+  File <span class="s2">"./zproject/backends.py"</span>, line <span class="m">284</span>, in email_belongs_to_ldap
+    <span class="k">if</span> find_ldap_users_by_email<span class="o">(</span>email<span class="o">)</span>:
+  File <span class="s2">"./zproject/backends.py"</span>, line <span class="m">265</span>, in find_ldap_users_by_email
+    <span class="k">return</span> email_search.search_for_users<span class="o">(</span><span class="nv">should_populate</span><span class="o">=</span>False<span class="o">)</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django_auth_ldap/backend.py"</span>, line <span class="m">342</span>, in search_for_users
+    <span class="nv">results</span> <span class="o">=</span> search.execute<span class="o">(</span>self.connection, <span class="o">{</span><span class="s2">"email"</span>: self._email<span class="o">})</span>
+  File <span class="s2">"/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.5/site-packages/django_auth_ldap/config.py"</span>, line <span class="m">150</span>, in execute
+    <span class="nv">filterstr</span> <span class="o">=</span> self.filterstr % filterargs
+KeyError: <span class="s1">'user'</span>
+</code></pre></div>
+
+
+
+<a name="1055676"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20Auth%20and%20Guest%20User%20Mapping/near/1055676" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Martin Huber <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20Auth.20and.20Guest.20User.20Mapping.html#1055676">(Nov 03 2020 at 11:36)</a>:</h4>
+<p>Ok, could solve that one:<br>
+had a wrong AUTH_LDAP_REVERSE_EMAIL_SEARCH, therefore the user could not be found by email (what Zulip obviously tried at that moment of user creation)</p>
+
+
+
+<a name="1055684"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20Auth%20and%20Guest%20User%20Mapping/near/1055684" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Martin Huber <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20Auth.20and.20Guest.20User.20Mapping.html#1055684">(Nov 03 2020 at 11:38)</a>:</h4>
+<p>Now everyhting goes through w/o exception, - and the user successfuly is assigned the role "Guest" !<br>
+In ldap.log I see the successful checks:</p>
+<div class="codehilite" data-code-language="Bash"><pre><span></span><code><span class="m">2020</span>-11-03 <span class="m">11</span>:31:53.302 DEBG <span class="o">[</span>django_auth_ldap<span class="o">]</span> search_s<span class="o">(</span><span class="s1">'ou=accounts,dc=example,dc=com'</span>, <span class="m">2</span>, <span class="s1">'(mail=%(email)s)'</span><span class="o">)</span> returned <span class="m">1</span> objects: <span class="nv">uid</span><span class="o">=</span>test.external,ou<span class="o">=</span>external,ou<span class="o">=</span>accounts,dc<span class="o">=</span>example,dc<span class="o">=</span>com
+<span class="m">2020</span>-11-03 <span class="m">11</span>:31:53.480 DEBG <span class="o">[</span>django_auth_ldap<span class="o">]</span> Creating Django user test.external
+<span class="m">2020</span>-11-03 <span class="m">11</span>:31:53.481 DEBG <span class="o">[</span>django_auth_ldap<span class="o">]</span> Populating Django user test.external
+<span class="m">2020</span>-11-03 <span class="m">11</span>:31:53.483 DEBG <span class="o">[</span>django_auth_ldap<span class="o">]</span> <span class="nv">uid</span><span class="o">=</span>test.external,ou<span class="o">=</span>external,ou<span class="o">=</span>accounts,dc<span class="o">=</span>example,dc<span class="o">=</span>com is a member of <span class="nv">cn</span><span class="o">=</span>guest,ou<span class="o">=</span>zulip,ou<span class="o">=</span>groups,dc<span class="o">=</span>example,dc<span class="o">=</span>com
+<span class="m">2020</span>-11-03 <span class="m">11</span>:31:53.483 DEBG <span class="o">[</span>django_auth_ldap<span class="o">]</span> <span class="nv">uid</span><span class="o">=</span>test.external,ou<span class="o">=</span>external,ou<span class="o">=</span>accounts,dc<span class="o">=</span>example,dc<span class="o">=</span>com is not a member of <span class="nv">cn</span><span class="o">=</span>admin,ou<span class="o">=</span>zulip,ou<span class="o">=</span>groups,dc<span class="o">=</span>example,dc<span class="o">=</span>com
+</code></pre></div>
+
+
+
+<a name="1055687"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20Auth%20and%20Guest%20User%20Mapping/near/1055687" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Martin Huber <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20Auth.20and.20Guest.20User.20Mapping.html#1055687">(Nov 03 2020 at 11:39)</a>:</h4>
+<p>so now everyhting seems to be working fine, it just was hard to figure out all configuration in settings.py to support these usecases.</p>
+
+
+
+<a name="1056202"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20Auth%20and%20Guest%20User%20Mapping/near/1056202" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20Auth.20and.20Guest.20User.20Mapping.html#1056202">(Nov 03 2020 at 22:44)</a>:</h4>
+<p><span class="user-mention" data-user-id="17720">@Martin Huber</span>  Good to hear things work now! Have you used the <code>manage.py query_ldap</code> tool in the process? It tends to quite useful in debugging these kinds of issues. Configuring ldap feels more fiddly than should be necessary to me as well <span aria-label="sad" class="emoji emoji-2639" role="img" title="sad">:sad:</span> But I'm not sure how it can be simplified without sacrificing a lot of functionality.</p>
+
+
+
+<a name="1056312"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20Auth%20and%20Guest%20User%20Mapping/near/1056312" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20Auth.20and.20Guest.20User.20Mapping.html#1056312">(Nov 03 2020 at 23:38)</a>:</h4>
+<p>Yeah, if you have any tips you think we should add to the documentation that would have helped you, please let us know!</p>
+
+
+
+<a name="1056804"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20Auth%20and%20Guest%20User%20Mapping/near/1056804" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Martin Huber <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20Auth.20and.20Guest.20User.20Mapping.html#1056804">(Nov 04 2020 at 12:30)</a>:</h4>
+<p>No, I didn't know about the  <code>manage.py query_ldap</code> - I just found out things by looking at the exception stacktrace and browsing the source code ...</p>
+<p>What really would help is, if there were a couple of LDAP recipes, like default LDAP configs for common use cases:</p>
+<ul>
+<li>Authentication and role mapping with groupOfUniqueNames in OpenLDAP</li>
+<li>Authentication and role mapping with AD</li>
+<li>Authentication and role mapping with OpenLDAP and "memberOf" group definitions</li>
+</ul>
+<p>I think these are the most common ones ?</p>
+<p>The documentation already is very good, principally everything is explained, but it still is hard to puzzle the details together.<br>
+Maybe you even could import ldap-settings.py in the settings.py and have 3 ldap-settings-templates for these 3 scenarios ?</p>
+<p>Now that I have everything running as intended, there only is 1 use case remaining that I do not see covered. <br>
+I did all the config changes, to also be able to authorize guest users in our LDAP (who also use the LDAP accounts to login).<br>
+Usually such a user then immediatly should be added to one particular stream or a couple of streams.<br>
+Unfortunately the user is not created in the beginning, only after he logged in the first time, we could add him to the streams.</p>
+<p>I experimented with guests invitations before, but I am not sure how good this works together with LDAP auth, because on the page from the invitation link only the email address is asked, and I am not sure, if it is ok, if the address then already belongs to an LDAP user (who did never log in before) ?</p>
+
+
+
+<a name="1057665"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20Auth%20and%20Guest%20User%20Mapping/near/1057665" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20Auth.20and.20Guest.20User.20Mapping.html#1057665">(Nov 05 2020 at 18:44)</a>:</h4>
+<p>We do have plans to make it possible to create LDAP accounts via the management shell synchronization job, rather than on login, which might support what you're trying to do.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

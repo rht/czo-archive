@@ -1,0 +1,212 @@
+[
+    {
+        "content": "<p>I'll dig into this in a moment, but maybe somebody else has already encountered this… I get the following stack trace and error message when upgrading (from the latest 6.1 bugfix release) to 6.2:</p>\n<div class=\"codehilite\"><pre><span></span><code>2023-05-22 20:26:58,089 upgrade-zulip-stage-2: Installing static assets...\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2023-05-22-22-24-48/scripts/lib/upgrade-zulip-stage-2&quot;, line 367, in &lt;module&gt;\n    subprocess.check_call([&quot;./manage.py&quot;, &quot;check&quot;, &quot;--database&quot;, &quot;default&quot;], preexec_fn=su_to_zulip)\n  File &quot;/usr/lib/python3.9/subprocess.py&quot;, line 373, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./manage.py&#39;, &#39;check&#39;, &#39;--database&#39;, &#39;default&#39;]&#39; died with &lt;Signals.SIGILL: 4&gt;.\n\nZulip upgrade failed (exit code 1)!\n\nThe upgrade process is designed to be idempotent, so you can retry after resolving whatever issue caused the failure (there should be a traceback above). A log of this installation is available in /var/log/zulip/upgrade.log\n</code></pre></div>\n<p>Any help?</p>",
+        "id": 1574369,
+        "sender_full_name": "hop",
+        "timestamp": 1684788153
+    },
+    {
+        "content": "<p>Doesn't happen when I run <code>./manage.py check --database default</code> manually`</p>",
+        "id": 1574380,
+        "sender_full_name": "hop",
+        "timestamp": 1684788705
+    },
+    {
+        "content": "<p>If I run the whole <code>subprocess.check_call([\"./manage.py\", \"check\", \"--database\", \"default\"], preexec_fn=su_to_zulip)</code> call in the current environement, I don't get the error, either</p>",
+        "id": 1574398,
+        "sender_full_name": "hop",
+        "timestamp": 1684790590
+    },
+    {
+        "content": "<p>Is there a way to skip this step? I can' t reproduce it and I don't think it has a relevant impact</p>",
+        "id": 1574467,
+        "sender_full_name": "hop",
+        "timestamp": 1684794435
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24577\">@hop</span> I would guess the actual problem is an OOM kill -- how much memory does the system have?</p>",
+        "id": 1574609,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684804263
+    },
+    {
+        "content": "<p>SIGILL, not SIGKILL</p>\n<p>Here's the log line from the kernel:</p>\n<div class=\"codehilite\"><pre><span></span><code>[754721.084618] traps: python3[732481] trap invalid opcode ip:7faaf2aab103 sp:7ffc71725770 error:0 in orjson.cpython-39-x86_64-linux-gnu.so[7faaf2a92000+2d000]\n</code></pre></div>",
+        "id": 1574815,
+        "sender_full_name": "hop",
+        "timestamp": 1684846171
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> it is definitely the <code>orjson</code> package. Running its test suite in the venv created by the upgrade results in a SIGILL as well.</p>",
+        "id": 1574857,
+        "sender_full_name": "hop",
+        "timestamp": 1684854492
+    },
+    {
+        "content": "<p>I don't think that wheel is cached somewhere, is it?</p>",
+        "id": 1574859,
+        "sender_full_name": "hop",
+        "timestamp": 1684854571
+    },
+    {
+        "content": "<p>The same error occurs with orjson 3.8.12 (the one used by the updater) and 3.8.11. The problem seems not to occur with 3.8.10.</p>",
+        "id": 1574864,
+        "sender_full_name": "hop",
+        "timestamp": 1684855681
+    },
+    {
+        "content": "<p>I can't yet recreate the problem outside of /srv/zulip-venv-cache, though</p>",
+        "id": 1574867,
+        "sender_full_name": "hop",
+        "timestamp": 1684855801
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24577\">@hop</span> Is this Debian 11? Can you share the output of the <code>lscpu</code> command?</p>",
+        "id": 1574920,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1684860533
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> the <code>orjson</code> wheel is incompatible with my cpu</p>",
+        "id": 1575012,
+        "sender_full_name": "hop",
+        "timestamp": 1684863780
+    },
+    {
+        "content": "<p>There is no need to @-mention core contributors. Can you provide the data I requested, or other information that you’ve found?</p>",
+        "id": 1575014,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1684863868
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>Vendor ID:                       GenuineIntel\nCPU family:                      15\nModel:                           4\nModel name:                      Intel(R) Xeon(TM) CPU 3.00GHz\nStepping:                        10\n</code></pre></div>",
+        "id": 1575023,
+        "sender_full_name": "hop",
+        "timestamp": 1684863975
+    },
+    {
+        "content": "<p>If you’re not willing to provide the full output, you can say so, but we’re going to have a hard time helping you if you edit things out without telling us.</p>",
+        "id": 1575036,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1684864454
+    },
+    {
+        "content": "<p>I don't understand</p>",
+        "id": 1575039,
+        "sender_full_name": "hop",
+        "timestamp": 1684864492
+    },
+    {
+        "content": "<p>What is your goal?</p>",
+        "id": 1575041,
+        "sender_full_name": "hop",
+        "timestamp": 1684864496
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>Architecture:                    x86_64\nCPU op-mode(s):                  32-bit, 64-bit\nByte Order:                      Little Endian\nAddress sizes:                   36 bits physical, 48 bits virtual\nCPU(s):                          3\nOn-line CPU(s) list:             0-2\nThread(s) per core:              3\nCore(s) per socket:              1\nSocket(s):                       1\nNUMA node(s):                    1\nVendor ID:                       GenuineIntel\nCPU family:                      15\nModel:                           4\nModel name:                      Intel(R) Xeon(TM) CPU 3.00GHz\nStepping:                        10\nCPU MHz:                         3000.152\nBogoMIPS:                        6000.30\nHypervisor vendor:               Xen\nVirtualization type:             para\nL1d cache:                       16 KiB\nL2 cache:                        2 MiB\nNUMA node0 CPU(s):               0-2\nVulnerability Itlb multihit:     KVM: Mitigation: VMX unsupported\nVulnerability L1tf:              Mitigation; PTE Inversion\nVulnerability Mds:               Vulnerable: Clear CPU buffers attempted, no microcode; SMT Host state unknown\nVulnerability Meltdown:          Unknown (XEN PV detected, hypervisor mitigation required)\nVulnerability Mmio stale data:   Unknown: No mitigations\nVulnerability Retbleed:          Not affected\nVulnerability Spec store bypass: Vulnerable\nVulnerability Spectre v1:        Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:        Mitigation; Retpolines, STIBP disabled, RSB filling, PBRSB-eIBRS Not affected\nVulnerability Srbds:             Not affected\nVulnerability Tsx async abort:   Not affected\nFlags:                           fpu de tsc msr pae mce cx8 apic sep mca cmov pat clflush mmx fxsr sse sse2 ss ht syscall nx lm cons\n                                 tant_tsc nopl cpuid tsc_known_freq pni cx16 hypervisor lahf_lm\n</code></pre></div>",
+        "id": 1575044,
+        "sender_full_name": "hop",
+        "timestamp": 1684864538
+    },
+    {
+        "content": "<p>Hmm. Unless you’re actually running this on a CPU manufactured 18 years ago, I suspect your Xen VM has a misconfigured CPUID setting.</p>",
+        "id": 1575070,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1684865780
+    },
+    {
+        "content": "<p>I'm actually running this on a CPU manufactured 18 years ago.</p>",
+        "id": 1575072,
+        "sender_full_name": "hop",
+        "timestamp": 1684865911
+    },
+    {
+        "content": "<p>Oh. Well that’s probably not going to work: <a href=\"https://github.com/ijl/orjson/issues/383\">https://github.com/ijl/orjson/issues/383</a></p>",
+        "id": 1575075,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1684865938
+    },
+    {
+        "content": "<p>Yes, I know</p>",
+        "id": 1575076,
+        "sender_full_name": "hop",
+        "timestamp": 1684865986
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"24577\">hop</span> <a href=\"#narrow/stream/31-production-help/topic/SIGILL.20on.20Upgrade.20to.206.2E2/near/1575012\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> the <code>orjson</code> wheel is incompatible with my cpu</p>\n</blockquote>\n<p>Wait! Where did the link go? I thought, I had included this exact Issus in this comment?!</p>",
+        "id": 1575086,
+        "sender_full_name": "hop",
+        "timestamp": 1684866209
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"24577\">hop</span> has marked this topic as resolved.</p>",
+        "id": 1575208,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1684870655
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24577\">@hop</span> just FYI, we've worked around the <code>orjson</code> upgrade for the <code>6.x</code> branch, and you can <code>upgrade-zulip-from-git 6.x</code> to be able to upgrade to 6.2 with your existing ancient CPU.</p>",
+        "id": 1576825,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685046016
+    },
+    {
+        "content": "<p>More details in <a class=\"stream-topic\" data-stream-id=\"31\" href=\"/#narrow/stream/31-production-help/topic/Upgrade.206.2E1.20to.206.2E2\">#production help &gt; Upgrade 6.1 to 6.2</a>.</p>",
+        "id": 1576826,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685046024
+    },
+    {
+        "content": "<p>Thank you!</p>",
+        "id": 1578159,
+        "sender_full_name": "hop",
+        "timestamp": 1685144142
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> quick update: it seems <code>orjason</code> \"repented\" a day later. <a href=\"https://github.com/ijl/orjson/issues/383\">https://github.com/ijl/orjson/issues/383</a></p>",
+        "id": 1599883,
+        "sender_full_name": "hop",
+        "timestamp": 1687905935
+    },
+    {
+        "content": "<p>There’s <a href=\"https://zulip.com/development-community/#getting-help\">no need</a> to @-mention core contributors unless you need their timely attention. This was resolved a month ago (at our own request).</p>",
+        "id": 1599896,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1687906582
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> resolved in a way that is not a long term solution.</p>\n<p>sorry for \"@-mentioning\" anybody, but i'm no zulip user and I chose to err on the side of being annoying over succumbing to paralysis out of fear of breaking some arbitrary social norm</p>",
+        "id": 1599916,
+        "sender_full_name": "hop",
+        "timestamp": 1687908469
+    },
+    {
+        "content": "<p>tim was so kind to fix my stupid little problem and they @-mentioned me, so I just responded in kind</p>",
+        "id": 1599917,
+        "sender_full_name": "hop",
+        "timestamp": 1687908525
+    },
+    {
+        "content": "<p>I fixed it both short-term (<a href=\"https://github.com/zulip/zulip/pull/25752\">#25752</a>) and long-term (<a href=\"https://github.com/zulip/zulip/pull/25790\">#25790</a>).</p>",
+        "id": 1599920,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1687908690
+    },
+    {
+        "content": "<p>Great, thank you</p>",
+        "id": 1599923,
+        "sender_full_name": "hop",
+        "timestamp": 1687909566
+    },
+    {
+        "content": "<p>I'll make sure to not report any problems in the future</p>",
+        "id": 1599924,
+        "sender_full_name": "hop",
+        "timestamp": 1687909602
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24577\">@hop</span> we do appreciate the report! Anders was just making a mild suggestion; please don't feel like anyone is upset with you or we don't appreciate bug reports.</p>",
+        "id": 1600716,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1688012331
+    }
+]

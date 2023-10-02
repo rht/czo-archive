@@ -1,0 +1,458 @@
+[
+    {
+        "content": "<p>Hey!</p>\n<p>I've been trying to upgrade an old 3.3 version of Zulip for awhile now and I keep running into issues. <br>\nZulip is running on Ubuntu 18.04 and I've tried to upgrade to a few different newer versions of Zulip. <br>\nOn all of the versions I have tried to upgrade to (4.x, 5.x, and 6.x with OS updates when required), I seem to always end up with the same issue.</p>\n<p>Once the server  starts and I go to my URL, I get a page that is rendered with basic HTML: <br>\n<a href=\"/user_uploads/2/44/gCSOYHGF0Z3R6-JrUlxGYJee/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/44/gCSOYHGF0Z3R6-JrUlxGYJee/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/44/gCSOYHGF0Z3R6-JrUlxGYJee/image.png\"></a></div><p>Ignoring this, when I try to login, I am forwarded to this page, where I hang indefinitely:<br>\n<a href=\"/user_uploads/2/f8/y_mc4TLozcYyG7Edf0wrVfHg/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/f8/y_mc4TLozcYyG7Edf0wrVfHg/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/f8/y_mc4TLozcYyG7Edf0wrVfHg/image.png\"></a></div><p>Reloading does not progress anything. <br>\nI've explored every service in <code>/var/log/zulip</code> and nothing seems to be throwing errors. Suffice to say I am a bit stuck. I've read all the upgrade guides and there are no caveats that highlight a similar issue to what I am experiencing. </p>\n<p>Any help or insights would be greatly appreciated.</p>",
+        "id": 1557117,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682619368
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26887\">@Mitchell</span> is your server behind a reverse proxy or something?</p>",
+        "id": 1557168,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682621731
+    },
+    {
+        "content": "<p>The issue you're seeing is definitely in that flavor -- secondary assets like CSS and JavaScript are not loading. You might have something informative in <code>/var/log/nginx/errors.log</code>.</p>",
+        "id": 1557170,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682621783
+    },
+    {
+        "content": "<p>That is a good insight. Let me take a look.</p>",
+        "id": 1557173,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682621851
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> as per your suggestion, I am seeing a slew of errors in NGINX logs of the pattern:</p>\n<div class=\"codehilite\"><pre><span></span><code>2023/04/27 17:18:01 [error] 9575#9575: *470 connect() to unix:/home/zulip/deployments/uwsgi-socket failed (111: Connection refused) while connecting to upstream, client: xxx.xxx.xxx.xxx, server: , request: &quot;GET / HTTP/1.1&quot;, upstream: &quot;uwsgi://unix:/home/zulip/deployments/uwsgi-socket:&quot;, host: &quot;yyy.yyy.yyy.yyy:443&quot;\n2023/04/27 17:18:04 [crit] 9575#9575: *477 SSL_do_handshake() failed (SSL: error:14209102:SSL routines:tls_early_post_process_client_hello:unsupported protocol) while SSL handshaking, client: xxx.xxx.xxx.xxx, server: 0.0.0.0:443\n</code></pre></div>\n<p>Certificates are in order on the webpage, so I don't think it has to do with that SSL handshake. Perhaps some port numbers changed in a backend service?</p>",
+        "id": 1557196,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682622572
+    },
+    {
+        "content": "<p>The upstream it is referring to is django as per the nginx config:</p>\n<div class=\"codehilite\"><pre><span></span><code>upstream django {\n    server unix:/home/zulip/deployments/uwsgi-socket;\n}\n</code></pre></div>",
+        "id": 1557203,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682622784
+    },
+    {
+        "content": "<p>What does <code>supervisorctl status</code> show?</p>",
+        "id": 1557211,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682623040
+    },
+    {
+        "content": "<p>All  running:</p>\n<div class=\"codehilite\"><pre><span></span><code>process-fts-updates                                             RUNNING   pid 26584, uptime 1:23:10\nzulip-django                                                    RUNNING   pid 26599, uptime 1:23:04\nzulip-tornado                                                   RUNNING   pid 26591, uptime 1:23:08\nzulip-workers:zulip_deliver_scheduled_emails                    RUNNING   pid 26453, uptime 1:23:38\nzulip-workers:zulip_deliver_scheduled_messages                  RUNNING   pid 26458, uptime 1:23:37\nzulip-workers:zulip_events_deferred_work                        RUNNING   pid 26465, uptime 1:23:35\nzulip-workers:zulip_events_digest_emails                        RUNNING   pid 26473, uptime 1:23:33\nzulip-workers:zulip_events_email_mirror                         RUNNING   pid 26483, uptime 1:23:32\nzulip-workers:zulip_events_email_senders                        RUNNING   pid 26493, uptime 1:23:30\nzulip-workers:zulip_events_embed_links                          RUNNING   pid 26500, uptime 1:23:28\nzulip-workers:zulip_events_embedded_bots                        RUNNING   pid 26507, uptime 1:23:26\nzulip-workers:zulip_events_error_reports                        RUNNING   pid 26517, uptime 1:23:24\nzulip-workers:zulip_events_invites                              RUNNING   pid 26525, uptime 1:23:22\nzulip-workers:zulip_events_missedmessage_emails                 RUNNING   pid 26533, uptime 1:23:21\nzulip-workers:zulip_events_missedmessage_mobile_notifications   RUNNING   pid 26542, uptime 1:23:19\nzulip-workers:zulip_events_outgoing_webhooks                    RUNNING   pid 26552, uptime 1:23:16\nzulip-workers:zulip_events_user_activity                        RUNNING   pid 26558, uptime 1:23:15\nzulip-workers:zulip_events_user_activity_interval               RUNNING   pid 26568, uptime 1:23:13\nzulip-workers:zulip_events_user_presence                        RUNNING   pid 26579, uptime 1:23:11\n</code></pre></div>",
+        "id": 1557212,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682623080
+    },
+    {
+        "content": "<p>Then I don't understand why nginx would be failing to push requests to it.</p>\n<p>What's the system this is running on?  Is it virtualized, have restrictive socket ulimits, or anything like that?</p>",
+        "id": 1557219,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682623271
+    },
+    {
+        "content": "<p>It is running on Digital Ocean. It is a preconfigured droplet (which we are looking to move away from). It isn't virtualized or anything as far as I can tell. It just looks like a regular service.</p>",
+        "id": 1557222,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682623329
+    },
+    {
+        "content": "<p>Hmmm.</p>",
+        "id": 1557226,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682623642
+    },
+    {
+        "content": "<p>And it's working fine when it's on 3.3?</p>",
+        "id": 1557228,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682623670
+    },
+    {
+        "content": "<p>Yes. I have taken a disk snapshot of 3.3 and updated it away from production. Only thing I have done other than the upgrade to 4.0 (which to me is the path with the fewest changes) is change the domain name for testing as per the documentstion.</p>\n<p>SSL certs have been updated, <code>settings.py</code> has been changed to reflect the new domain. <code>change_realm_subdomain</code> has been run.</p>",
+        "id": 1557234,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682623791
+    },
+    {
+        "content": "<p>Except for the django socket error, I'd agree that this is something with static assets not getting loaded right.</p>\n<p>If you open the network inspector in your browser, what does it say is happening?</p>",
+        "id": 1557239,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682623965
+    },
+    {
+        "content": "<p>Getting a lot of 404s, that is about it.</p>",
+        "id": 1557242,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682624098
+    },
+    {
+        "content": "<p>OK, that's notable.  Can you show the upgrade log?</p>",
+        "id": 1557245,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682624155
+    },
+    {
+        "content": "<p><code>/var/log/zulip/upgrade.log</code></p>",
+        "id": 1557246,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682624161
+    },
+    {
+        "content": "<p>sure thing</p>",
+        "id": 1557247,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682624167
+    },
+    {
+        "content": "<p>It may be long, because it's inclusive of every upgrade since you installed the host</p>",
+        "id": 1557248,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682624186
+    },
+    {
+        "content": "<p>We only care about the last upgrade, to 4.0.  Feel free to use s gist or pastebin if it's long.</p>",
+        "id": 1557250,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682624214
+    },
+    {
+        "content": "<p>Fortunatly, this is the first upgrade</p>",
+        "id": 1557252,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682624231
+    },
+    {
+        "content": "<p>This may be the only point of interest. Everything else looks nominal:</p>\n<div class=\"codehilite\"><pre><span></span><code>2023-04-26 12:58:55,534 upgrade-zulip-stage-2: Restarting Zulip...\n2023-04-26 12:58:58,956 restart-server: Filling memcached caches\n2023-04-26 12:59:01.981 INFO [] Successfully populated user cache!  Consumed 1 remote cache queries (0.0 time)\n2023-04-26 12:59:01.992 INFO [] Successfully populated client cache!  Consumed 1 remote cache queries (0.01 time)\n2023-04-26 12:59:01.998 INFO [] Successfully populated stream cache!  Consumed 1 remote cache queries (0.0 time)\n2023-04-26 12:59:02.035 INFO [] Successfully populated huddle cache!  Consumed 1 remote cache queries (0.03 time)\n2023-04-26 12:59:02.042 INFO [] Successfully populated session cache!  Consumed 1 remote cache queries (0.0 time)\n2023-04-26 12:59:02,552 restart-server: Restarting zulip-workers:zulip_deliver_scheduled_emails\n2023-04-26 12:59:03,730 restart-server: Restarting zulip-workers:zulip_deliver_scheduled_messages\n2023-04-26 12:59:04,890 restart-server: Restarting zulip-workers:zulip_events_deferred_work\n2023-04-26 12:59:06,393 restart-server: Restarting zulip-workers:zulip_events_digest_emails\n2023-04-26 12:59:07,882 restart-server: Restarting zulip-workers:zulip_events_email_mirror\n2023-04-26 12:59:09,511 restart-server: Restarting zulip-workers:zulip_events_email_senders\n2023-04-26 12:59:11,007 restart-server: Restarting zulip-workers:zulip_events_embed_links\n2023-04-26 12:59:13,141 restart-server: Restarting zulip-workers:zulip_events_embedded_bots\n2023-04-26 12:59:14,651 restart-server: Restarting zulip-workers:zulip_events_error_reports\n2023-04-26 12:59:16,157 restart-server: Restarting zulip-workers:zulip_events_invites\n2023-04-26 12:59:17,710 restart-server: Restarting zulip-workers:zulip_events_missedmessage_emails\n2023-04-26 12:59:19,269 restart-server: Restarting zulip-workers:zulip_events_missedmessage_mobile_notifications\n2023-04-26 12:59:20,862 restart-server: Restarting zulip-workers:zulip_events_outgoing_webhooks\n2023-04-26 12:59:22,360 restart-server: Restarting zulip-workers:zulip_events_user_activity\n2023-04-26 12:59:23,808 restart-server: Restarting zulip-workers:zulip_events_user_activity_interval\n2023-04-26 12:59:25,357 restart-server: Restarting zulip-workers:zulip_events_user_presence\n2023-04-26 12:59:26,869 restart-server: Restarting process-fts-updates\n2023-04-26 12:59:28,429 restart-server: Restarting Tornado process\n2023-04-26 12:59:29,933 restart-server: Restarting django server\n2023-04-26 12:59:33,597 restart-server: Done!\n2023-04-26 12:59:33,612 upgrade-zulip-stage-2: Upgrade complete!\n2023-04-26 12:59:33,612 upgrade-zulip-stage-2: Purging old deployments...\n+ rm -rf /home/zulip/deployments/2020-12-02-07-42-25\nTraceback (most recent call last):\n  File &quot;./scripts/purge-old-deployments&quot;, line 93, in &lt;module&gt;\n    main()\n  File &quot;./scripts/purge-old-deployments&quot;, line 79, in main\n    [&quot;git&quot;, &quot;worktree&quot;, &quot;prune&quot;], cwd=&quot;/srv/zulip.git&quot;, preexec_fn=su_to_zulip\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 306, in check_call\n    retcode = call(*popenargs, **kwargs)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 287, in call\n    with Popen(*popenargs, **kwargs) as p:\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 729, in __init__\n    restore_signals, start_new_session)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 1364, in _execute_child\n    raise child_exception_type(errno_num, err_msg, err_filename)\nFileNotFoundError: [Errno 2] No such file or directory: &#39;/srv/zulip.git&#39;: &#39;/srv/zulip.git&#39;\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2023-04-26-12-51-57/scripts/lib/upgrade-zulip-stage-2&quot;, line 324, in &lt;module&gt;\n    subprocess.check_call([&quot;./scripts/purge-old-deployments&quot;])\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 311, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./scripts/purge-old-deployments&#39;]&#39; returned non-zero exit status 1.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip&quot;, line 69, in &lt;module&gt;\n    subprocess.check_call(\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 311, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2023-04-26-12-51-57/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2023-04-26-12-51-57&#39;]&#39; returned non-zero exit status 1.\n</code></pre></div>",
+        "id": 1557253,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682624287
+    },
+    {
+        "content": "<p>Right at the end after the <code>upgrade complete</code> it looks like it doesn't clean up properly</p>",
+        "id": 1557255,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682624317
+    },
+    {
+        "content": "<p>For reference, 4.11 is probably the right thing to be upgrading to, not 4.0 -- it's got the same OS support, and will solve a bunch of minor tooling bugs, probably including things like that.</p>\n<p>If you pull one of the <code>static/</code> requests your browser is making, do you see the equivalent file in <code>~zulip/prod-static/</code>?  Can you list the request paths, so we can see if they match up with the ones we expect to be in the 4.0 tarball?</p>",
+        "id": 1557263,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682624717
+    },
+    {
+        "content": "<p>I believe I went through the same logic of trying 4.11 first. Since I don't know enough about the internals at this point I figured 4.0 has a smaller scope of changes to cause problems. In future  attempts I will use 4.11 though.</p>",
+        "id": 1557268,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682624797
+    },
+    {
+        "content": "<p>Not quite sure what you mean by <code>static/</code> requests I am seeing no such (what I assume is a) path:<br>\n<a href=\"/user_uploads/2/4d/pasqeeHyFII7S0BAjs-mLB0i/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/4d/pasqeeHyFII7S0BAjs-mLB0i/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/4d/pasqeeHyFII7S0BAjs-mLB0i/image.png\"></a></div>",
+        "id": 1557276,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682624918
+    },
+    {
+        "content": "<p>If you mouseover those (like your first image) you'll see those are requests to <code>/static/webpack-bundles/57b8f91b429ec60d1622.css</code></p>",
+        "id": 1557278,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682624989
+    },
+    {
+        "content": "<p>Which is the right URL for it to be looking for on 4.0, so the bug is that it's not finding them.</p>",
+        "id": 1557279,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682625013
+    },
+    {
+        "content": "<p>What does <code>ls -l ~zulip/prod-static/webpack-bundles/57b8f91b429ec60d1622.css</code> show?</p>",
+        "id": 1557280,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682625052
+    },
+    {
+        "content": "<p>Ah I see.</p>",
+        "id": 1557281,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625065
+    },
+    {
+        "content": "<p>She exists.</p>",
+        "id": 1557282,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625083
+    },
+    {
+        "content": "<p>OK, so something in nginx-land (or a proxy ahead of it) is causing those to 404.</p>",
+        "id": 1557283,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682625099
+    },
+    {
+        "content": "<p>If you click on the 404 rows, and show the webserver's response, can you show a screenshot of that?  It should include full headers, which may help here.</p>",
+        "id": 1557284,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682625123
+    },
+    {
+        "content": "<p>I think I may see the issue. <br>\nOn mouseover I am seeing <code>domain-name.network</code> instead of <code>subdomain.domain-name.network</code></p>",
+        "id": 1557285,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625134
+    },
+    {
+        "content": "<p>Aha</p>",
+        "id": 1557286,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682625140
+    },
+    {
+        "content": "<p>Time to check your <code>settings.py</code> configuration.  Do you have more than one organization (\"realm\") configured on this server?</p>",
+        "id": 1557289,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682625179
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/81/Yl3XZHO-rFNZA9hXUXu1hApz/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/81/Yl3XZHO-rFNZA9hXUXu1hApz/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/81/Yl3XZHO-rFNZA9hXUXu1hApz/image.png\"></a></div>",
+        "id": 1557292,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625243
+    },
+    {
+        "content": "<p>the grey boxes hide the differences I described</p>",
+        "id": 1557293,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625258
+    },
+    {
+        "content": "<p>I shouldn't but I will double check.</p>",
+        "id": 1557294,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625272
+    },
+    {
+        "content": "<p>As <code>zulip</code>:</p>\n<div class=\"codehilite\"><pre><span></span><code>cd ~/deployments/current\n./manage.py list_realms\n</code></pre></div>",
+        "id": 1557295,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682625319
+    },
+    {
+        "content": "<p>so the configuration is:</p>\n<div class=\"codehilite\"><pre><span></span><code>EXTERNAL_HOST = &#39;domain.network&#39;\nALLOWED_HOSTS = [&#39;subdomain.domain.network&#39;]\n</code></pre></div>",
+        "id": 1557297,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625346
+    },
+    {
+        "content": "<p>And what hostname points to the Zulip server in DNS?</p>",
+        "id": 1557298,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682625381
+    },
+    {
+        "content": "<p>I suspect <code>EXTERNAL_HOST</code> just needs to be adjusted</p>",
+        "id": 1557299,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682625411
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>id    string_id            name                           domain\n--    ---------            ----                           ------\n2     internal-alt         internal                       https://subdomain.domain.network\n1     zulipinternal        None                           https://zulipinternal.domain.network\n</code></pre></div>",
+        "id": 1557300,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625417
+    },
+    {
+        "content": "<p>DNS is configured to point to <code>subdomain.domain.network</code></p>",
+        "id": 1557302,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625441
+    },
+    {
+        "content": "<p>OK, try adjusting <code>EXTERNAL_HOST</code> to <code>subdomain.domain.network</code>?</p>",
+        "id": 1557303,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682625471
+    },
+    {
+        "content": "<p>can do</p>",
+        "id": 1557304,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625487
+    },
+    {
+        "content": "<p>Though most of the time thr <code>string_id</code> on the realm is <code>\"\"</code>, for just one realm</p>",
+        "id": 1557305,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682625495
+    },
+    {
+        "content": "<p>Yeah. I am not entirely sure how this was configured (was before my time) but I think since it was on a preconfigured image things might be a touch different.</p>",
+        "id": 1557308,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625543
+    },
+    {
+        "content": "<p>Just restarting.</p>",
+        "id": 1557309,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625562
+    },
+    {
+        "content": "<p>Well. I thought I had tried every permutation of messing with the DNS names but apparently I missed this. <br>\nI am getting a proper login screen. Logging in gives me a 500, but hey that's progress.</p>",
+        "id": 1557310,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625665
+    },
+    {
+        "content": "<p>That'll give us something in the error logs, at least. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1557311,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682625679
+    },
+    {
+        "content": "<p>Yep a big fat</p>\n<div class=\"codehilite\"><pre><span></span><code>zerver.models.Realm.DoesNotExist: Realm matching query does not exist.\n</code></pre></div>",
+        "id": 1557313,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625763
+    },
+    {
+        "content": "<p>on login</p>",
+        "id": 1557314,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625769
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>./manage.py change_realm_subdomain -r &#39;internal-alt&#39; &#39;&#39;\n</code></pre></div>",
+        "id": 1557316,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682625837
+    },
+    {
+        "content": "<p>Should it need a restart after that?</p>",
+        "id": 1557323,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682625989
+    },
+    {
+        "content": "<p>Shouldn't need one.</p>",
+        "id": 1557325,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682626006
+    },
+    {
+        "content": "<p>Correct. it did not need one. I can now see my messages.</p>",
+        "id": 1557327,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682626025
+    },
+    {
+        "content": "<p>I think this is the end of my problems.</p>",
+        "id": 1557328,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682626039
+    },
+    {
+        "content": "<p><span aria-label=\"fingers crossed\" class=\"emoji emoji-1f91e\" role=\"img\" title=\"fingers crossed\">:fingers_crossed:</span></p>",
+        "id": 1557329,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682626044
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> <br>\nThank ya. You've made my week.</p>",
+        "id": 1557330,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682626201
+    },
+    {
+        "content": "<p>I think your upgrade path should be:</p>\n<ol>\n<li>Upgrade to Zulip Server 4.11</li>\n<li><a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade.html#upgrading-from-ubuntu-18-04-bionic-to-20-04-focal\">Upgrade to Ubuntu 20.04</a></li>\n<li>Upgrade to Zulip Server 6.1</li>\n<li>Optionally <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade.html#upgrading-from-ubuntu-20-04-focal-to-22-04-jammy\">upgrade to Ubuntu 22.04</a></li>\n</ol>",
+        "id": 1557332,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682626325
+    },
+    {
+        "content": "<p>Note the last step in the 20.04 upgrade steps -- the glibc version upgrade causes silent database index corruption unless you complete that.</p>",
+        "id": 1557334,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682626431
+    },
+    {
+        "content": "<p>That is great. I was avoiding later versions because I assumed that there might be more migration steps, but I am willing to try it out now that I think we have honed in on the issue.</p>\n<p>Thanks again!</p>",
+        "id": 1557350,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682627469
+    },
+    {
+        "content": "<p>We try very hard to keep upgrades painless - so do report back if you have any issues with that upgrade path.</p>",
+        "id": 1557352,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682627826
+    },
+    {
+        "content": "<p>Roger that. Will keep you posted.</p>",
+        "id": 1557401,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682630381
+    },
+    {
+        "content": "<p>As per your request <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> , in trying to upgrade to 4.11 instead of 4.0 and it is throwing errors on the upgrade step:</p>\n<div class=\"codehilite\"><pre><span></span><code>devops@zulip:~$ sudo /home/zulip/deployments/current/scripts/upgrade-zulip ./zulip-server-4.11.tar.gz\n2023-04-28 12:56:26,557 upgrade-zulip: Archiving the tarball under /home/zulip/archives\n2023-04-28 12:56:26,741 upgrade-zulip: Unpacking the tarball\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2023-04-28-12-56-26/scripts/lib/upgrade-zulip-stage-2&quot;, line 106, in &lt;module&gt;\n    rabbitmq_dist_listen = listening_publicly(25672)\n  File &quot;/home/zulip/deployments/2023-04-28-12-56-26/scripts/lib/../../scripts/lib/zulip_tools.py&quot;, line 638, in listening_publicly\n    stderr=subprocess.DEVNULL,\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 356, in check_output\n    **kwargs).stdout\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 438, in run\n    output=stdout, stderr=stderr)\nsubprocess.CalledProcessError: Command &#39;[&#39;/bin/ss&#39;, &#39;-Hnl&#39;, &#39;sport = :25672 and not src 127.0.0.1:25672 and not src [::1]:25672&#39;]&#39; died with &lt;Signals.SIGSEGV: 11&gt;.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip&quot;, line 69, in &lt;module&gt;\n    + deploy_options)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 311, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2023-04-28-12-56-26/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2023-04-28-12-56-26&#39;]&#39; returned non-zero exit status 1.\n</code></pre></div>",
+        "id": 1557739,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682686620
+    },
+    {
+        "content": "<p>Walking down the versions, I get the same error until version 4.8, where the upgrade is currently running</p>",
+        "id": 1557746,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682687704
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>Command &#39;[&#39;/bin/ss&#39;, &#39;-Hnl&#39;, &#39;sport = :25672 and not src 127.0.0.1:25672 and not src [::1]:25672&#39;]&#39; died with &lt;Signals.SIGSEGV: 11&gt;.\n</code></pre></div>\n<p>...getting a SEGV doesn't seem promising for the system.</p>",
+        "id": 1557749,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682688128
+    },
+    {
+        "content": "<p>Can you try running it by hand?</p>\n<div class=\"codehilite\"><pre><span></span><code>/bin/ss -Hnl &#39;sport = :25672 and not src 127.0.0.1:25672 and not src [::1]:25672&#39;\n</code></pre></div>",
+        "id": 1557750,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682688161
+    },
+    {
+        "content": "<p>Also, that code is closing an arbitrary remote execution of code from RabbitMQ:<br>\n<a href=\"https://blog.zulip.com/2022/01/25/zulip-server-4-9-security-release/#cve-2021-43799-remote-code-execution-vulnerability-involving-rabbitmq\">https://blog.zulip.com/2022/01/25/zulip-server-4-9-security-release/#cve-2021-43799-remote-code-execution-vulnerability-involving-rabbitmq</a></p>\n<p>So kinda important. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1557751,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682688233
+    },
+    {
+        "content": "<p>My only guess is a bad interaction with the IPv6 address in there, but that still shouldn't segv.</p>",
+        "id": 1557754,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682688579
+    },
+    {
+        "content": "<p>I may have moved a bit beyond that point right now. But for reference, doing 3.3 -&gt; 4.8 -&gt; 4.11 gets around the problem</p>",
+        "id": 1557758,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682688921
+    },
+    {
+        "content": "<p>Huh.  I have no theories why that'd be, as the crash you showed was in the 4.11 upgrade code, in a part which I don't expect to be at all dependent on the version you're coming from.</p>",
+        "id": 1557759,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1682688974
+    },
+    {
+        "content": "<p>Interesting. If I end up working back at 3.3 in the future I will run the command you posted above and send you the output.</p>",
+        "id": 1557760,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682689014
+    },
+    {
+        "content": "<p>It might happen later today if I want another practice run</p>",
+        "id": 1557761,
+        "sender_full_name": "Mitchell",
+        "timestamp": 1682689040
+    }
+]

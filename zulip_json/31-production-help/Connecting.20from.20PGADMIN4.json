@@ -1,0 +1,104 @@
+[
+    {
+        "content": "<p>Having an issue setting up PGADMIN4 to connect to our Zulip server.  Getting password authentication failures even though we know the DB user password has not changed. We can telnet to the correct port on the server. Logging into postgres on the server itself via psql also fails with \"Peer Authentication Failed\".  Zulip Server version 1.9.2 running on Ubuntu 18 in a VM.</p>",
+        "id": 799335,
+        "sender_full_name": "hb-it",
+        "timestamp": 1574781135
+    },
+    {
+        "content": "<p>If the db user account has indeed somehow changed/corrupted, if I change the zulip database user via the postgres user, where do I need to update it in the Zulip server config?</p>",
+        "id": 799367,
+        "sender_full_name": "hb-it",
+        "timestamp": 1574792838
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"3275\">@hb-it</span> I'm on my phone but our readthedocs has a section on database configuration that should answer your question</p>",
+        "id": 799445,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1574800322
+    },
+    {
+        "content": "<p>Will have a look again, had done some reading before I came here.</p>",
+        "id": 799448,
+        "sender_full_name": "hb-it",
+        "timestamp": 1574800421
+    },
+    {
+        "content": "<p>So <a href=\"https://zulip.readthedocs.io/en/latest/production/postgres.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/postgres.html\">https://zulip.readthedocs.io/en/latest/production/postgres.html</a> does not seem to match up with what we have on our 1.9.2 server. The doc at <a href=\"http://zulip.readthedocs.io/en/latest/production/postgres.html\" target=\"_blank\" title=\"http://zulip.readthedocs.io/en/latest/production/postgres.html\">zulip.readthedocs.io/en/latest/production/postgres.html</a> says in /etc/zulip/zulip-secrets.conf we should find \"postgres_password\", but our server says \"local_database_password\", and that appears to be a hash of the password. So I'm still unclear as to how to reset the zulip DB user password.</p>",
+        "id": 799558,
+        "sender_full_name": "hb-it",
+        "timestamp": 1574861117
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"3275\">@hb-it</span> the <code>local_database_password</code> isn't used in production, it's for development environment setup (indeed seems pretty confusing to have that in the secrets file in production when it's not used). <code>postgres_password</code> is for configurations where you want postgres running on a remote server.<br>\nIn the default case, postgres runs on the same server with zulip, so peer authentication is used by zulip to connect - <a href=\"https://www.postgresql.org/docs/9.1/auth-methods.html#AUTH-PEER\" target=\"_blank\" title=\"https://www.postgresql.org/docs/9.1/auth-methods.html#AUTH-PEER\">https://www.postgresql.org/docs/9.1/auth-methods.html#AUTH-PEER</a> So with that you  won't be usable to connect to postgres remotely. So I think you'll have to add some configuraiton to allow remote authentication with password - this could be useful - <a href=\"https://www.postgresql.org/docs/9.1/auth-pg-hba-conf.html\" target=\"_blank\" title=\"https://www.postgresql.org/docs/9.1/auth-pg-hba-conf.html\">https://www.postgresql.org/docs/9.1/auth-pg-hba-conf.html</a></p>\n<p>And to set a password for the zulip user in postgres, you can <code>su</code> to the <code>zulip</code> user on the server and connect using peer auth <code>psql -U zulip</code> and do whatever you need in the shell that way.</p>",
+        "id": 799560,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1574863354
+    },
+    {
+        "content": "<p>As a sidenote, you guys should consider upgrading to <code>2.0.7</code> - you're missing a couple security releases on <code>1.9.2</code>.</p>",
+        "id": 799561,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1574863467
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> if you have time later, can you check if what i said about the postgres setup here sounds correct?</p>",
+        "id": 799562,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1574863599
+    },
+    {
+        "content": "<p>Ok thanks, will investigate this avenue. When we had out server at 1.6 we were able to connect from PGADMIN remotely, so somehow that must have been broken when we did a manual migration to 1.9.2 on a new OS/VM this spring. Yes we are due for an upgrade but sadly that is task number 653 in my job jar currently - will try to make time for this. Appreciate the help as always.</p>",
+        "id": 799563,
+        "sender_full_name": "hb-it",
+        "timestamp": 1574863857
+    },
+    {
+        "content": "<p>Have temporarily added \"host  all  all x.x.x.x md5\" to the pg_hba.conf, still getting authentication errors from PGADMIN. Something must be different in 1.9.2 from 1.6 as this did work previously.  (where x.x.x.x is the IP of the PC PGADMIN is running on)</p>",
+        "id": 799566,
+        "sender_full_name": "hb-it",
+        "timestamp": 1574866920
+    },
+    {
+        "content": "<p>Did you set a password for the zulip user?</p>",
+        "id": 799569,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1574867037
+    },
+    {
+        "content": "<p>Via psql I mean</p>",
+        "id": 799570,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1574867243
+    },
+    {
+        "content": "<p>Did not try to change that yet, will that stop the server from working?</p>",
+        "id": 799571,
+        "sender_full_name": "hb-it",
+        "timestamp": 1574867401
+    },
+    {
+        "content": "<p>Changed the hb_pga.conf from MD5 to Trust, which when I clone and sandbox this VM, will work. I think I have a way forward now. Thanks again for the help.</p>",
+        "id": 799572,
+        "sender_full_name": "hb-it",
+        "timestamp": 1574867670
+    },
+    {
+        "content": "<p>Great!</p>",
+        "id": 799573,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1574867732
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> thanks for investigating.  <code>local_database_password</code> is indeed only used in the development environment (we use <code>peer</code> authentication by default in production, which doesn't involve a password at all).</p>",
+        "id": 799932,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1575268758
+    },
+    {
+        "content": "<p>Opened <a href=\"https://github.com/zulip/zulip/issues/13464\" target=\"_blank\" title=\"https://github.com/zulip/zulip/issues/13464\">https://github.com/zulip/zulip/issues/13464</a> for making that secret not be generated in production, since it's confusing.</p>",
+        "id": 799933,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1575268945
+    }
+]

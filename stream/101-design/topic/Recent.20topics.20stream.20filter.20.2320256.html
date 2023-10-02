@@ -1,0 +1,132 @@
+<html>
+<head><meta charset="utf-8"><title>Recent topics stream filter #20256 · design · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/101-design/index.html">design</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html">Recent topics stream filter #20256</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1281787"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Recent%20topics%20stream%20filter%20%2320256/near/1281787" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aman (amanagr) <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html#1281787">(Nov 15 2021 at 17:18)</a>:</h4>
+<p>So, this PR (WIP) adds a stream filter and upon activation of the stream filter, shows all the topics in the stream by fetching a message (max_msg_id) for every topic in the stream. The idea is to support full history of a stream. I can complete this PR if the idea is worth investing in.</p>
+<p><a href="/user_uploads/2/29/Fe9daIeH-Ega_Ac1Wm7OFSG2/RT-stream_filter.gif">RT-stream_filter.gif</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/29/Fe9daIeH-Ega_Ac1Wm7OFSG2/RT-stream_filter.gif" title="RT-stream_filter.gif"><img src="/user_uploads/2/29/Fe9daIeH-Ega_Ac1Wm7OFSG2/RT-stream_filter.gif"></a></div>
+
+
+
+<a name="1281811"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Recent%20topics%20stream%20filter%20%2320256/near/1281811" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aman (amanagr) <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html#1281811">(Nov 15 2021 at 17:35)</a>:</h4>
+<p>Since the fetching happens in background, and user gets rendered an immediate version of the filter which shows the topics already fetched, the time taken to process the query is not a factor.</p>
+
+
+
+<a name="1281812"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Recent%20topics%20stream%20filter%20%2320256/near/1281812" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aman (amanagr) <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html#1281812">(Nov 15 2021 at 17:36)</a>:</h4>
+<p>So, we can possibly do something for the <code>Participated</code> filter here too.</p>
+
+
+
+<a name="1282004"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Recent%20topics%20stream%20filter%20%2320256/near/1282004" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html#1282004">(Nov 15 2021 at 21:00)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="5140">Aman Agrawal (amanagr)</span> <a href="#narrow/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256/near/1281812">said</a>:</p>
+<blockquote>
+<p>So, we can possibly do something for the <code>Participated</code> filter here too.</p>
+</blockquote>
+<p>I don't think we have the data to do that easily, but we could likely extend the "fetch topics for a stream" endpoint to offer a way to get that.</p>
+
+
+
+<a name="1282006"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Recent%20topics%20stream%20filter%20%2320256/near/1282006" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html#1282006">(Nov 15 2021 at 21:01)</a>:</h4>
+<p>I assume this is using the same topic-fetching endpoint that we use for populating the left sidebar?</p>
+
+
+
+<a name="1282008"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Recent%20topics%20stream%20filter%20%2320256/near/1282008" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html#1282008">(Nov 15 2021 at 21:03)</a>:</h4>
+<p>I guess here's the query that endpoint does:</p>
+<div class="codehilite"><pre><span></span><code>    SELECT
+        &quot;zerver_message&quot;.&quot;subject&quot; as topic,
+        max(&quot;zerver_message&quot;.id) as max_message_id
+    FROM &quot;zerver_message&quot;
+    INNER JOIN &quot;zerver_usermessage&quot; ON (
+        &quot;zerver_usermessage&quot;.&quot;message_id&quot; = &quot;zerver_message&quot;.&quot;id&quot;
+    )
+    WHERE (
+        &quot;zerver_usermessage&quot;.&quot;user_profile_id&quot; = %s AND
+        &quot;zerver_message&quot;.&quot;recipient_id&quot; = %s
+    )
+    GROUP BY (
+        &quot;zerver_message&quot;.&quot;subject&quot;
+    )
+    ORDER BY max(&quot;zerver_message&quot;.id) DESC
+</code></pre></div>
+<p>I think it'd be possible to extend that to return the set of <code>sender_id</code> values for each, but I'm not sure I know how to do that without it being much more expensive.</p>
+
+
+
+<a name="1282009"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Recent%20topics%20stream%20filter%20%2320256/near/1282009" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html#1282009">(Nov 15 2021 at 21:03)</a>:</h4>
+<p>The other option is to just have the stream-filtered view not support the "Participated" column and filter in its initial version.  I wouldn't want to do that if it was a ton of work to make happen, but Recent Topics would still certainly be useful without it.</p>
+
+
+
+<a name="1282012"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Recent%20topics%20stream%20filter%20%2320256/near/1282012" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html#1282012">(Nov 15 2021 at 21:04)</a>:</h4>
+<p>The other approach we can take is using the data from just fetching all recent message history on the stream, which would be more in the direction of having working "Load more" logic for the main "Recent topics" view, which I think was just blocked on scrolling UI issues.</p>
+
+
+
+<a name="1282153"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Recent%20topics%20stream%20filter%20%2320256/near/1282153" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html#1282153">(Nov 16 2021 at 00:08)</a>:</h4>
+<p>If we complete this PR, would there be any blockers for adding an option to display this type of view instead of an interleaved stream view?</p>
+
+
+
+<a name="1282225"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Recent%20topics%20stream%20filter%20%2320256/near/1282225" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aman (amanagr) <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html#1282225">(Nov 16 2021 at 02:43)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256/near/1282012">said</a>:</p>
+<blockquote>
+<p>The other approach we can take is using the data from just fetching all recent message history on the stream, which would be more in the direction of having working "Load more" logic for the main "Recent topics" view, which I think was just blocked on scrolling UI issues.</p>
+</blockquote>
+<p>Okay.</p>
+
+
+
+<a name="1282226"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Recent%20topics%20stream%20filter%20%2320256/near/1282226" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aman (amanagr) <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html#1282226">(Nov 16 2021 at 02:43)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="19257">Alya Abbott</span> <a href="#narrow/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256/near/1282153">said</a>:</p>
+<blockquote>
+<p>If we complete this PR, would there be any blockers for adding an option to display this type of view instead of an interleaved stream view?</p>
+</blockquote>
+<p>I think the prep work for both will be same.</p>
+
+
+
+<a name="1282714"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Recent%20topics%20stream%20filter%20%2320256/near/1282714" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html#1282714">(Nov 17 2021 at 00:49)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="19257">Alya Abbott</span> <a href="#narrow/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256/near/1282153">said</a>:</p>
+<blockquote>
+<p>If we complete this PR, would there be any blockers for adding an option to display this type of view instead of an interleaved stream view?</p>
+</blockquote>
+<p>It might require more work on performance and completeness considerations, but yeah, we'd want to start from this for that work.</p>
+
+
+
+<a name="1283340"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Recent%20topics%20stream%20filter%20%2320256/near/1283340" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html#1283340">(Nov 17 2021 at 19:09)</a>:</h4>
+<p>Cool, that would be great. I'm not sure if there are any UX decisions we need to make at this point?</p>
+
+
+
+<a name="1283654"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Recent%20topics%20stream%20filter%20%2320256/near/1283654" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aman (amanagr) <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256.html#1283654">(Nov 18 2021 at 09:22)</a>:</h4>
+<p>I will let you know when the PR is ready to play with. I am not making any massive UI changes, so we can tweak the things later too.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

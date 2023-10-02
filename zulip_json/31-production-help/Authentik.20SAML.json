@@ -1,0 +1,122 @@
+[
+    {
+        "content": "<p>Hi - testing a new server install using Authentik as auth provider. After authenticating with Authentik it redirects back to the Zulip register page. The Django log shows:</p>\n<p>2022-03-18 15:39:06.748 WARN [zulip.auth.saml] SAML got invalid email argument.<br>\n2022-03-18 15:39:06.753 INFO [zr] 10.200.70.1     POST    302  31ms (db: 3ms/3q) (+start: 5ms) /complete/saml/ (unauth@root via Mozilla)<br>\n[pid: 366736|app: 0|req: 82/143] 10.200.70.1 () {50 vars in 969 bytes} [Fri Mar 18 15:39:06 2022] POST /complete/saml/ =&gt; generated 0 bytes in 39 msecs (HTTP/2.0 302) 8 headers in 450 bytes (1 switches on core 0)</p>\n<p>I <em>think</em> I followed the docs correctly but it's likely I missed something as this is my first rodeo with SAML as well as Authentik.</p>",
+        "id": 1347753,
+        "sender_full_name": "Pat Roam",
+        "timestamp": 1647618952
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"18975\">@Pat Roam</span> I believe that error message indicates your third-party provider claimed that a user's email address was something that is not a valid email address (E.g. doesn't contain an <code>@</code>).</p>",
+        "id": 1347819,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647624938
+    },
+    {
+        "content": "<p>Thanks Tim. Are there any further logs available on the Zulip side that show additional detail for SAML requests?</p>",
+        "id": 1348005,
+        "sender_full_name": "Pat Roam",
+        "timestamp": 1647632950
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"18975\">@Pat Roam</span> not readily but you can potentially add some print statements to debug. This is the right file:</p>\n<div class=\"codehilite\"><pre><span></span><code>zproject/backends.py:            &quot;%s got invalid email argument.&quot;,\n</code></pre></div>",
+        "id": 1348007,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647633056
+    },
+    {
+        "content": "<p>But you need to look at where <code>invalid_email</code> is set to print out what email address it received from the SAML provider.</p>",
+        "id": 1348008,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647633070
+    },
+    {
+        "content": "<p>Simplest may be just printing <code>result</code> in this function:</p>\n<div class=\"codehilite\"><pre><span></span><code>class ZulipSAMLIdentityProvider(SAMLIdentityProvider):\n    def get_user_details(self, attributes: Dict[str, Any]) -&gt; Dict[str, Any]:\n        &quot;&quot;&quot;\n        Overridden to support plumbing of additional Attributes\n        from the SAMLResponse.\n        &quot;&quot;&quot;\n        result = super().get_user_details(attributes)\n\n        extra_attr_names = self.conf.get(&quot;extra_attrs&quot;, [])\n        result[&quot;extra_attrs&quot;] = {}\n        for extra_attr_name in extra_attr_names:\n            result[&quot;extra_attrs&quot;][extra_attr_name] = self.get_attr(\n                attributes=attributes, conf_key=None, default_attribute=extra_attr_name\n            )\n\n        return result\n</code></pre></div>",
+        "id": 1348009,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647633184
+    },
+    {
+        "content": "<p>And then reading <code>django.log</code>, since that's where <code>print()</code> output goes.</p>",
+        "id": 1348010,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647633194
+    },
+    {
+        "content": "<p>Thank you! I’ll dig into this tonight.</p>",
+        "id": 1348090,
+        "sender_full_name": "Pat Roam",
+        "timestamp": 1647639318
+    },
+    {
+        "content": "<p>So it doesn't look to be receiving  any of the attributes.<br>\n{'fullname': None, 'first_name': None, 'last_name': None, 'username': None, 'email': None}</p>",
+        "id": 1348278,
+        "sender_full_name": "Pat Roam",
+        "timestamp": 1647657820
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"18975\">@Pat Roam</span> Is your \"Property Mappings\" configured properly on the zulip provider you created in authentik?</p>",
+        "id": 1348511,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1647762287
+    },
+    {
+        "content": "<p>I have the default SAML scopes for User ID, Username, Groups, Email and Name selected</p>",
+        "id": 1348512,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1647762333
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"4703\">@Oktay X</span>    Yes I believe so. I have attached a screenshot of that page. <a href=\"/user_uploads/2/f/8wBg-_vYTv97RVTWoNIMqR4D/auth.png\">auth.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/f/8wBg-_vYTv97RVTWoNIMqR4D/auth.png\" title=\"auth.png\"><img src=\"/user_uploads/2/f/8wBg-_vYTv97RVTWoNIMqR4D/auth.png\"></a></div>",
+        "id": 1348568,
+        "sender_full_name": "Pat Roam",
+        "timestamp": 1647791511
+    },
+    {
+        "content": "<p>Finally got some traction on this. <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> <span class=\"user-mention\" data-user-id=\"4703\">@Oktay X</span>   Tim I saw a little further up in the backend.py was the raw SAML and when I printed that variable print(attributes) out it showed what I needed:</p>\n<p>'<a href=\"http://schemas.goauthentik.io/2021/02/saml/username\">http://schemas.goauthentik.io/2021/02/saml/username</a>': ['akadmin'], <br>\n'<a href=\"http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn\">http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn</a>': ['xxxx@gmail.com'],<br>\n'<a href=\"http://schemas.microsoft.com/ws/2008/06/identity/claims/windowsaccountname\">http://schemas.microsoft.com/ws/2008/06/identity/claims/windowsaccountname</a>': ['akadmin'],<br>\n'<a href=\"http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name\">http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name</a>': ['authentik Default Admin'], <br>\n'<a href=\"http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress\">http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress</a>': ['xxxx@gmail.com'],<br>\n'<a href=\"http://schemas.goauthentik.io/2021/02/saml/uid\">http://schemas.goauthentik.io/2021/02/saml/uid</a>': ['1'], <br>\n'<a href=\"http://schemas.xmlsoap.org/claims/Group\">http://schemas.xmlsoap.org/claims/Group</a>': ['authentik Admins'], 'name_id': 'xxxx@gmail.com'}</p>\n<p>I changed the attribute mappings in the settings.py to match and it started working. Example:</p>\n<p>\"attr_username\": \"<a href=\"http://schemas.goauthentik.io/2021/02/saml/username\">http://schemas.goauthentik.io/2021/02/saml/username</a>\",<br>\n\"attr_email\": \"<a href=\"http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress\">http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress</a>\",</p>\n<p>I'll probably now try to learn what I need to do to have the attribute come over from Authentik with a more friendly name as is indicated in the documentation.</p>",
+        "id": 1348646,
+        "sender_full_name": "Pat Roam",
+        "timestamp": 1647808955
+    },
+    {
+        "content": "<p>It looks like I missed documenting this scope mapping config thinking it was what was there by default.</p>",
+        "id": 1348841,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1647844489
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>    ## the first name and the last name with the &quot;first_name&quot;, &quot;last_name&quot; attribute names.\n    &quot;attr_user_permanent_id&quot;: &quot;http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress&quot;,\n    &quot;attr_first_name&quot;: &quot;http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name&quot;,\n    &quot;attr_last_name&quot;: &quot;http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name&quot;,\n    &quot;attr_username&quot;: &quot;http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress&quot;,\n    #&quot;attr_email&quot;: &quot;email&quot;,\n    &quot;attr_email&quot;: &quot;http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress&quot;,\n</code></pre></div>",
+        "id": 1348842,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1647844493
+    },
+    {
+        "content": "<p>this is what i have too</p>",
+        "id": 1348843,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1647844497
+    },
+    {
+        "content": "<p>It doesn't match one to one because authentik does not have separate first and last names, but it works ok.</p>",
+        "id": 1348844,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1647844557
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"4703\">@Oktay X</span> Do you want to add a commit about that to <a href=\"https://github.com/zulip/zulip/pull/20841\">#20841</a>?</p>",
+        "id": 1353908,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1648461874
+    },
+    {
+        "content": "<p>Yes i would like that.</p>",
+        "id": 1355937,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1648625110
+    },
+    {
+        "content": "<p>It might take a bit of time though. Thanks.</p>",
+        "id": 1355938,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1648625121
+    }
+]

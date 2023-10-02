@@ -1,0 +1,284 @@
+[
+    {
+        "content": "<p>Every time, I have been encountering errors whenever I run the <code>upgrade-zulip-from-git</code> script. One is that sometimes <code>/srv</code> is not writable by the user <code>zulip</code>, which is fixed by <code>mkdir -p /srv/zulip-npm-cache</code> as root then <code>chown -R</code> it. Then there is this error (every time! !#$@!#$!$):</p>\n<div class=\"codehilite\"><pre><span></span>168968 error TypeError: Object.keys called on non-object\n168968 error     at Function.keys (native)\n168968 error     at installTargetsError (/usr/share/npm/lib/cache.js:708:24)\n168968 error     at /usr/share/npm/lib/cache.js:638:10\n168968 error     at saved (/usr/share/npm/node_modules/npm-registry-client/lib/get.js:142:7)\n168968 error     at /usr/lib/nodejs/graceful-fs/polyfills.js:133:7\n168968 error     at Object.oncomplete (fs.js:107:15)\n168969 error If you need help, you may report this log at:\n168969 error     &lt;http://github.com/isaacs/npm/issues&gt;\n168969 error or email it to:\n168969 error     &lt;npm-@googlegroups.com&gt;\n168970 error System Linux 4.4.0-78-generic\n168971 error command &quot;/usr/bin/nodejs&quot; &quot;/usr/bin/npm&quot; &quot;install&quot; &quot;--production&quot; &quot;--prefix&quot; &quot;/srv/zulip-npm-cache/8d1c7e825d241d0994641383a40d523135b9a342&quot;\n168972 error cwd /home/zulip/deployments/2017-07-18-10-10-04\n168973 error node -v v0.10.25\n168974 error npm -v 1.3.10\n168975 error type called_on_non_object\n</pre></div>\n\n\n<p>I suspect this is due to some chmod permission issues that I am too exhausted to figure. I side-stepped the problem by rebasing the branch I am testing on (rht:dev-py3-021) on <code>yarn</code>.</p>\n<p>Then I encountered this error (which was quickly duct-taped by purging the old version version of node/nvm -- the actual fix, I think, is to check whether the existing node has strict mode enabled?):</p>\n<div class=\"codehilite\"><pre><span></span>2017-07-18 10:39:13,457 upgrade-zulip-stage-2: Building static assets...\n\n/srv/zulip-npm-cache/yarn/lib/v8-compile-cache.js:3\nconst Module = require(&#39;module&#39;);\n^^^^^\nSyntaxError: Use of const in strict mode.\n    at Module._compile (module.js:439:25)\n    at Object.Module._extensions..js (module.js:474:10)\n    at Module.load (module.js:356:32)\n    at Function.Module._load (module.js:312:12)\n    at Module.require (module.js:364:17)\n    at require (module.js:380:17)\n    at Object.&lt;anonymous&gt; (/srv/zulip-npm-cache/yarn/bin/yarn.js:6:1)\n    at Module._compile (module.js:456:26)\n    at Object.Module._extensions..js (module.js:474:10)\n    at Module.load (module.js:356:32)\nTraceback (most recent call last):\n  File &quot;./tools/update-prod-static&quot;, line 38, in &lt;module&gt;\n    setup_node_modules(yarn_args=[&#39;--prod&#39;], stdout=fp, stderr=fp)\n  File &quot;./tools/../scripts/lib/node_cache.py&quot;, line 36, in setup_node_modules\n    sha1sum = generate_sha1sum_node_modules(yarn_args)\n  File &quot;./tools/../scripts/lib/node_cache.py&quot;, line 26, in generate_sha1sum_node_modules\n    sha1sum.update(subprocess_text_output([YARN_BIN, &#39;--version&#39;]).encode(&#39;utf8&#39;))\n  File &quot;./tools/../scripts/lib/zulip_tools.py&quot;, line 57, in subprocess_text_output\n    return subprocess.check_output(args, universal_newlines=True).strip()\n  File &quot;/usr/lib/python3.4/subprocess.py&quot;, line 620, in check_output\n    raise CalledProcessError(retcode, process.args, output=output)\nsubprocess.CalledProcessError: Command &#39;[&#39;/srv/zulip-npm-cache/yarn/bin/yarn&#39;, &#39;--version&#39;]&#39; returned non-zero exit status 8\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2017-07-18-10-38-57/scripts/lib/upgrade-zulip-stage-2&quot;, line 82, in &lt;module&gt;\n    preexec_fn=su_to_zulip)\n  File &quot;/usr/lib/python3.4/subprocess.py&quot;, line 561, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;python3&#39;, &#39;./tools/update-prod-static&#39;, &#39;--authors-not-required&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/upgrade-zulip-from-git&quot;, line 81, in &lt;module&gt;\n    deploy_path, &quot;--from-git&quot;] + deploy_options)\n  File &quot;/usr/lib/python2.7/subprocess.py&quot;, line 540, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;sudo&#39;, &#39;/home/zulip/deployments/2017-07-18-10-38-57/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2017-07-18-10-38-57&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1\n</pre></div>\n\n\n<p>The action sets are either:<br>\n1. Figure out how to fix the npm permission bug.<br>\n2. Sidestep the problem with <code>yarn</code>.</p>\n<p>cc: <span class=\"user-mention\" data-user-email=\"zulip@feorlen.org\" data-user-id=\"397\">@Andrea  Longo</span> <span class=\"user-mention\" data-user-email=\"psniffler@gmail.com\" data-user-id=\"656\">@Paul Weaver</span></p>",
+        "id": 252550,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1500378398
+    },
+    {
+        "content": "<p>I guess you are also testing on another machine, as I only saw what looked like one try at upgrading on mine. I did zulip-puppet-apply and then upgrade  from your branch (as configured, and both dev-py3-021 and master.) I'm getting similar errors, although not with the yarn stuff.</p>",
+        "id": 252652,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500393495
+    },
+    {
+        "content": "<p>I will look at this again this afternoon, as I need to head out for something. I'm seeing /srv/zulip-npm-cache owned by zulip:zulip</p>",
+        "id": 252653,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500393558
+    },
+    {
+        "content": "<p>Here's the error I got when I tried:</p>\n<div class=\"codehilite\"><pre><span></span>/home/zulip/deployments/current/scripts/upgrade-zulip-from-git master\n\n+ npm install --production --prefix /srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922\n\nError running a subcommand of ./tools/update-prod-static: npm install --production --prefix /srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922\nActual error output for the subcommand is just above this.\n\nTraceback (most recent call last):\n  File &quot;./tools/update-prod-static&quot;, line 38, in &lt;module&gt;\n    setup_node_modules(npm_args=[&#39;--production&#39;], stdout=fp, stderr=fp)\n  File &quot;./tools/../scripts/lib/node_cache.py&quot;, line 43, in setup_node_modules\n    copy_modules=copy_modules)\n  File &quot;./tools/../scripts/lib/node_cache.py&quot;, line 71, in do_npm_install\n    run(cmd, stdout=stdout, stderr=stderr)\n  File &quot;./tools/../scripts/lib/zulip_tools.py&quot;, line 125, in run\n    subprocess.check_call(args, **kwargs)\n  File &quot;/usr/lib/python2.7/subprocess.py&quot;, line 540, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;npm&#39;, &#39;install&#39;, &#39;--production&#39;, &#39;--prefix&#39;, &#39;/srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922&#39;]&#39; returned non-zero exit status 1\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2017-07-18-15-42-48/scripts/lib/upgrade-zulip-stage-2&quot;, line 82, in &lt;module&gt;\n    preexec_fn=su_to_zulip)\n  File &quot;/usr/lib/python3.4/subprocess.py&quot;, line 561, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./tools/update-prod-static&#39;, &#39;--authors-not-required&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/upgrade-zulip-from-git&quot;, line 81, in &lt;module&gt;\n    deploy_path, &quot;--from-git&quot;] + deploy_options)\n  File &quot;/usr/lib/python3.4/subprocess.py&quot;, line 561, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;sudo&#39;, &#39;python3&#39;, &#39;/home/zulip/deployments/2017-07-18-15-42-48/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2017-07-18-15-42-48&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1\n</pre></div>",
+        "id": 252657,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500393600
+    },
+    {
+        "content": "<p>I haven't looked at the version of the script from your branch yet, I'm presuming master is where you rebased? Anyway, need to run.</p>",
+        "id": 252658,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500393662
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"zulip@feorlen.org\" data-user-id=\"397\">@Andrea  Longo</span> I think you didn't actually include the real traceback; notice:<br>\n<code>Actual error output for the subcommand is just above this.</code></p>",
+        "id": 252698,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500398039
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"rhtbot@protonmail.com\" data-user-id=\"2328\">@Rein Zustand</span> can you explain more about how you're doing testing?  In production, <code>zulip-npm-cache</code> is created and its permissions set by Puppet.</p>",
+        "id": 252699,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500398089
+    },
+    {
+        "content": "<p>I tested on a fresh system from scratch, and the problem still persists:</p>\n<p>1. On a fresh system, from an unpacked tarball (1.6.0) , run <code>/root/zulip/scripts/setup/install</code> (I checked the permission of <code>/srv/zulip-npm-cache</code> and found it to be zulip:zulip) and  <code>su zulip -c /home/zulip/deployments/current/scripts/setup/initialize-database</code>. <code>npm install</code> should complete just fine in this first run<br>\n2. <code>/home/zulip/deployments/current/scripts/upgrade-zulip-from-git master</code><br>\n3. ???<br>\n4. \"npm install --production --prefix /srv/zulip-npm-cache/...\" error <a href=\"https://chat.zulip.org/#narrow/stream/production.20help/subject/npm.20mess/near/252657\" target=\"_blank\" title=\"https://chat.zulip.org/#narrow/stream/production.20help/subject/npm.20mess/near/252657\">https://chat.zulip.org/#narrow/stream/production.20help/subject/npm.20mess/near/252657</a>, which detail can be found in /home/zulip/deployments/2017-07-18-17-35-11/npm-debug.log</p>\n<div class=\"codehilite\"><pre><span></span>165681 silly lockFile a1ff7e0f-unitbezier-0-0-0 unitbezier@0.0.0\n165682 silly lockFile 75c0545c-unassertify-2-0-4 unassertify@2.0.4\n165683 silly lockFile 75c0545c-unassertify-2-0-4 unassertify@2.0.4\n165684 verbose readDependencies using package.json deps\n165685 silly lockFile 0b0010b0-unitbezier-0-0-0 unitbezier@^0.0.0\n165686 silly lockFile 0b0010b0-unitbezier-0-0-0 unitbezier@^0.0.0\n165687 silly lockFile 31263c96-unassertify-2-0-0 unassertify@^2.0.0\n165688 silly lockFile 31263c96-unassertify-2-0-0 unassertify@^2.0.0\n165689 verbose readDependencies using package.json deps\n165690 silly resolved []\n165691 verbose about to build /srv/zulip-npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1/node_modules/plotly.js/node_modules/gl-plot2d/node_modules/gl-select-static/node_modules/cwise/node_modules/static-module/node_modules/falafel/node_modules/isarray\n165692 info build /srv/zulip-npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1/node_modules/plotly.js/node_modules/gl-plot2d/node_modules/gl-select-static/node_modules/cwise/node_modules/static-module/node_modules/falafel/node_modules/isarray\n165693 verbose linkStuff [ false,\n165693 verbose linkStuff   false,\n165693 verbose linkStuff   false,\n165693 verbose linkStuff   &#39;/srv/zulip-npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1/node_modules/plotly.js/node_modules/gl-plot2d/node_modules/gl-select-static/node_modules/cwise/node_modules/static-module/node_modules/falafel/node_modules&#39; ]\n165694 info linkStuff isarray@0.0.1\n165695 verbose linkBins isarray@0.0.1\n165696 verbose linkMans isarray@0.0.1\n165697 verbose rebuildBundles isarray@0.0.1\n165698 info install isarray@0.0.1\n165699 silly lockFile e5e6b41a-vector-tile-1-3-0 vector-tile@1.3.0\n165700 silly lockFile e5e6b41a-vector-tile-1-3-0 vector-tile@1.3.0\n165701 error TypeError: Object.keys called on non-object\n165701 error     at Function.keys (native)\n165701 error     at installTargetsError (/usr/share/npm/lib/cache.js:708:24)\n165701 error     at /usr/share/npm/lib/cache.js:638:10\n165701 error     at saved (/usr/share/npm/node_modules/npm-registry-client/lib/get.js:142:7)\n165701 error     at /usr/lib/nodejs/graceful-fs/polyfills.js:133:7\n165701 error     at Object.oncomplete (fs.js:107:15)\n165702 error If you need help, you may report this log at:\n165702 error     &lt;http://github.com/isaacs/npm/issues&gt;\n165702 error or email it to:\n165702 error     &lt;npm-@googlegroups.com&gt;\n165703 error System Linux 4.4.0-78-generic\n165704 error command &quot;/usr/bin/nodejs&quot; &quot;/usr/bin/npm&quot; &quot;install&quot; &quot;--production&quot; &quot;--prefix&quot; &quot;/srv/zulip-npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1&quot;\n165705 error cwd /home/zulip/deployments/2017-07-18-17-35-11\n165706 error node -v v0.10.25\n165707 error npm -v 1.3.10\n165708 error type called_on_non_object\n165709 verbose exit [ 1, true ]\n</pre></div>",
+        "id": 252761,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1500399682
+    },
+    {
+        "content": "<p>This suggests it's using a super ancient version of these packages:</p>\n<div class=\"codehilite\"><pre><span></span>165706 error node -v v0.10.25\n165707 error npm -v 1.3.10\n</pre></div>",
+        "id": 252809,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500401037
+    },
+    {
+        "content": "<p>Is <code>scripts/lib/install-node</code> not being run?  Check <code>install.log</code> and <code>upgrade.log</code>.</p>",
+        "id": 252812,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500401085
+    },
+    {
+        "content": "<p>Whoops yup, thanks for catching that <span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> ! It's not very exciting tho</p>\n<div class=\"codehilite\"><pre><span></span>Cached version not found! Installing node modules.\n+ rm -rf /srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922\n+ mkdir -p /srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922\n+ cp package.json /srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922\n+ npm install --production --prefix /srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922\n\nError running a subcommand of ./tools/update-prod-static: npm install --production --prefix /srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922\n</pre></div>",
+        "id": 252959,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500406153
+    },
+    {
+        "content": "<p>There should be an <code>update-prod-static.log</code> file in maybe <code>var/log/</code> that has more details.</p>",
+        "id": 252970,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500406467
+    },
+    {
+        "content": "<p>(deleted)</p>",
+        "id": 252973,
+        "sender_full_name": "Paul Weaver",
+        "timestamp": 1500406594
+    },
+    {
+        "content": "<p>and in it is this:</p>\n<div class=\"codehilite\"><pre><span></span>npm ERR! TypeError: Object.keys called on non-object\nnpm ERR!     at Function.keys (native)\nnpm ERR!     at installTargetsError (/usr/share/npm/lib/cache.js:708:24)\nnpm ERR!     at /usr/share/npm/lib/cache.js:638:10\nnpm ERR!     at saved (/usr/share/npm/node_modules/npm-registry-client/lib/get.js:142:7)\nnpm ERR!     at /usr/lib/nodejs/graceful-fs/polyfills.js:133:7\nnpm ERR!     at Object.oncomplete (fs.js:107:15)\nnpm ERR! If you need help, you may report this log at:\nnpm ERR!     &lt;http://github.com/isaacs/npm/issues&gt;\nnpm ERR! or email it to:\nnpm ERR!     &lt;npm-@googlegroups.com&gt;\n\nnpm ERR! System Linux 4.4.0-78-generic\nnpm ERR! command &quot;/usr/bin/nodejs&quot; &quot;/usr/bin/npm&quot; &quot;install&quot; &quot;--production&quot; &quot;--prefix&quot; &quot;/srv/zulip-n\\\npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1&quot;\nnpm ERR! cwd /home/zulip/deployments/2017-07-18-17-35-11\nnpm ERR! node -v v0.10.25\nnpm ERR! npm -v 1.3.10\nnpm ERR! type called_on_non_object\n</pre></div>",
+        "id": 252975,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500406625
+    },
+    {
+        "content": "<p>npm-debug.log:</p>\n<div class=\"codehilite\"><pre><span></span>165698 info install isarray@0.0.1\n165699 silly lockFile e5e6b41a-vector-tile-1-3-0 vector-tile@1.3.0\n165700 silly lockFile e5e6b41a-vector-tile-1-3-0 vector-tile@1.3.0\n165701 error TypeError: Object.keys called on non-object\n165701 error     at Function.keys (native)\n165701 error     at installTargetsError (/usr/share/npm/lib/cache.js:708:24)\n165701 error     at /usr/share/npm/lib/cache.js:638:10\n165701 error     at saved (/usr/share/npm/node_modules/npm-registry-client/lib/get.js:142:7)\n165701 error     at /usr/lib/nodejs/graceful-fs/polyfills.js:133:7\n165701 error     at Object.oncomplete (fs.js:107:15)\n165702 error If you need help, you may report this log at:\n165702 error     &lt;http://github.com/isaacs/npm/issues&gt;\n165702 error or email it to:\n165702 error     &lt;npm-@googlegroups.com&gt;\n165703 error System Linux 4.4.0-78-generic\n165704 error command &quot;/usr/bin/nodejs&quot; &quot;/usr/bin/npm&quot; &quot;install&quot; &quot;--production&quot; &quot;--prefix&quot; &quot;/srv/zul\\\nip-npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1&quot;\n165705 error cwd /home/zulip/deployments/2017-07-18-17-35-11\n165706 error node -v v0.10.25\n165707 error npm -v 1.3.10\n165708 error type called_on_non_object\n165709 verbose exit [ 1, true ]\n</pre></div>",
+        "id": 252977,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500406666
+    },
+    {
+        "content": "<p>OK, the problem here is definitely that you're not running the newer <code>node</code> and <code>npm</code> that <code>scripts/lib/install-node</code> are supposed to install for you.</p>",
+        "id": 252981,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500406779
+    },
+    {
+        "content": "<p>So that's the thing to debug.  Can you look in <code>install.log</code> for where that script got run?</p>",
+        "id": 252982,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500406795
+    },
+    {
+        "content": "<p>We did modify it recently, so it's possible we broke it in production somehow.</p>",
+        "id": 252983,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500406804
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>+ sudo chmod -R a+rX /srv/zulip-venv-cache/82d52a88465eb7cc794a3467a56f256631c6a311/zulip-venv\n+ touch /srv/zulip-venv-cache/82d52a88465eb7cc794a3467a56f256631c6a311/zulip-venv/success-stamp\nUsing cached Python venv from /srv/zulip-venv-cache/82d52a88465eb7cc794a3467a56f256631c6a311/zulip-\\\nvenv\n+ sudo ln -nsf /srv/zulip-venv-cache/82d52a88465eb7cc794a3467a56f256631c6a311/zulip-venv /root/zuli\\\np/zulip-venv\n+ ln -nsf zulip-venv /root/zulip/zulip-current-venv\n+ /root/zulip/scripts/lib/install-node\nv6.6.0 is already installed.\nNow using node v6.6.0 (npm v3.10.3)\n</pre></div>",
+        "id": 252985,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500406871
+    },
+    {
+        "content": "<p>Can you run <code>which node</code>?</p>",
+        "id": 252986,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500406920
+    },
+    {
+        "content": "<p>I've done this before and it was fine, but if something changed recently maybe that is indeed the problem.</p>",
+        "id": 252987,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500406950
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>minmi[root]:/var/log/zulip$ which node\n/usr/local/nvm/versions/node/v6.6.0/bin/node\n</pre></div>\n\n\n<div class=\"codehilite\"><pre><span></span>zulip@minmi:/var/log/zulip$ which node\n/usr/local/bin/node\n</pre></div>",
+        "id": 252988,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500406981
+    },
+    {
+        "content": "<p>The paths are different between root and zulip users?</p>",
+        "id": 252989,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500407012
+    },
+    {
+        "content": "<p>that's weird but probably not the cause of our problem</p>",
+        "id": 252990,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500407030
+    },
+    {
+        "content": "<p>Run both with <code>/path/to/node --version</code>?</p>",
+        "id": 252991,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500407048
+    },
+    {
+        "content": "<p>Oh!  It's running <code>/usr/bin/nodejs</code></p>",
+        "id": 252992,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500407074
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>minmi[root]:/var/log/zulip$ which node\n/usr/local/nvm/versions/node/v6.6.0/bin/node\nminmi[root]:/var/log/zulip$ /usr/local/nvm/versions/node/v6.6.0/bin/node --version\nv6.6.0\nminmi[root]:/var/log/zulip$ su zulip\nzulip@minmi:/var/log/zulip$ which node\n/usr/local/bin/node\nzulip@minmi:/var/log/zulip$ /usr/local/bin/node --version\nv6.6.0\n</pre></div>",
+        "id": 252993,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500407104
+    },
+    {
+        "content": "<p>From your output:<br>\n<code>command \"/usr/bin/nodejs\" \"/usr/bin/npm\" \"install\" \"--production\" \"--prefix\" \"/srv/zulip-npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1\"</code></p>",
+        "id": 252994,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500407109
+    },
+    {
+        "content": "<p>They claim to be the same version, at any rate.</p>",
+        "id": 252996,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500407115
+    },
+    {
+        "content": "<p>Running <code>git grep nodejs</code>, I don't see any references to <code>/usr/bin/nodejs</code> in our codebase.</p>",
+        "id": 252998,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500407147
+    },
+    {
+        "content": "<p>That's weird.</p>",
+        "id": 252999,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500407159
+    },
+    {
+        "content": "<p>What branch are you testing?</p>",
+        "id": 253000,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500407168
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>[deployment]\ngit_repo_url = https://github.com/rht/zulip.git\n</pre></div>",
+        "id": 253001,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500407200
+    },
+    {
+        "content": "<p>since <span class=\"user-mention\" data-user-email=\"rhtbot@protonmail.com\" data-user-id=\"2328\">@Rein Zustand</span> was working on something. I tried git upgrade to both his master and dev-py3-021 with similar results. I think his earlier post was from a different machine tho.</p>",
+        "id": 253005,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500407275
+    },
+    {
+        "content": "<p>I haven't looked at his changes</p>",
+        "id": 253007,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500407303
+    },
+    {
+        "content": "<p>He's been using my machine for testing while I've been away.</p>",
+        "id": 253009,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500407352
+    },
+    {
+        "content": "<p>OK, my guess is that his branch makes a change that is causing <code>/usr/bin/nodejs</code> to be used incorrectly.</p>",
+        "id": 253010,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500407363
+    },
+    {
+        "content": "<p>I'm not finding it right off, we'll see what <span class=\"user-mention\" data-user-email=\"rhtbot@protonmail.com\" data-user-id=\"2328\">@Rein Zustand</span> thinks when he's back online. If I come across it I'll let you know.</p>",
+        "id": 253030,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500407907
+    },
+    {
+        "content": "<p>The problem has been identified as the <code>NPM_BIN</code> not being <code>/usr/local/bin/npm</code> when <a href=\"https://github.com/zulip/zulip/blob/240f37e8c4e89384d24741a6be0184c9b457f5ef/scripts/lib/node_cache.py#L67\" target=\"_blank\" title=\"https://github.com/zulip/zulip/blob/240f37e8c4e89384d24741a6be0184c9b457f5ef/scripts/lib/node_cache.py#L67\">https://github.com/zulip/zulip/blob/240f37e8c4e89384d24741a6be0184c9b457f5ef/scripts/lib/node_cache.py#L67</a> is invoked, as evident from</p>\n<div class=\"codehilite\"><pre><span></span>su zulip -c &#39;which npm&#39;\n/usr/bin/npm\n</pre></div>\n\n\n<p>and<br>\nwhen I slipped <code>subprocess_text_output(['which', 'npm'])</code> into the else clause of <code>do_npm_install</code> in <code>scripts/lib/node_cache.py</code>, it returns <code>/usr/bin/npm</code>.</p>\n<p>The error persists even when the <code>git_repo_url</code> isn't set, when I run <code>upgrade-zulip-from-git</code> from 1.6.0 to zulip/master.</p>",
+        "id": 253390,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1500450705
+    },
+    {
+        "content": "<p>The fix to this particular problem is to set <a href=\"https://github.com/zulip/zulip/blob/240f37e8c4e89384d24741a6be0184c9b457f5ef/scripts/lib/node_cache.py#L67\" target=\"_blank\" title=\"https://github.com/zulip/zulip/blob/240f37e8c4e89384d24741a6be0184c9b457f5ef/scripts/lib/node_cache.py#L67\">https://github.com/zulip/zulip/blob/240f37e8c4e89384d24741a6be0184c9b457f5ef/scripts/lib/node_cache.py#L67</a> as <code>NPM_BIN</code> where <code>NPM_BIN = '/usr/local/bin/npm'</code>, and when I did this, I ran into permission problem, which I had to fix by <code>chmod +rx /usr/local/bin/npm</code>, then</p>\n<div class=\"codehilite\"><pre><span></span>2017-07-19 07:48:56,287 upgrade-zulip-stage-2: Upgrade complete!\n2017-07-19 07:48:56,329 purge-deployments: No old deployment directories to purge\n</pre></div>\n\n\n<p>.</p>",
+        "id": 253391,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1500451445
+    },
+    {
+        "content": "<p>The reason why this is not present in <code>yarn</code>:  npm is bundled with node, but <code>yarn</code> is not, so it defaults to the <code>/usr/local/bin/yarn</code> path  unless it is installed as a system package.</p>",
+        "id": 253392,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1500452269
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"rhtbot@protonmail.com\" data-user-id=\"2328\">@Rein Zustand</span> So node was not installed correctly for the zulip user? It looks like you manually fixed it on my server and Zulip is running again.</p>",
+        "id": 253501,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500479530
+    },
+    {
+        "content": "<p>Is this what fixed it? (From zulip user shell history)<br>\n<code>/usr/local/bin/npm install --production --prefix /srv/zulip-npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1</code></p>",
+        "id": 253502,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500479565
+    },
+    {
+        "content": "<p>Note for everybody else: this is a test production system, so much of what we are talking about would not apply to a full production system with real users.</p>",
+        "id": 253505,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500479678
+    },
+    {
+        "content": "<p>So, I'm not sure I follow.  We should be running <code>npm</code> from <code>PATH</code>, and <code>/usr/local/bin/npm</code> should be ahead of <code>/usr/bin/npm</code> in PATH.  </p>\n<p>For the permissions problem, I wonder whether <code>sed</code> is messing that up?</p>",
+        "id": 253727,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500488174
+    },
+    {
+        "content": "<p>Nope, just tested that.  Yeah, I guess I don't see why <code>su zulip -c 'which npm'</code> isn't preferring the <code>/usr/local/bin/</code> version.</p>",
+        "id": 253735,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500488401
+    },
+    {
+        "content": "<p>Reproduced the <code>upgrade-zulip-from-git</code> problem on Travis, which is run from rht:master branch to pweaver:yarn.<br>\n<a href=\"https://travis-ci.org/rht/zulip/jobs/255549494\" target=\"_blank\" title=\"https://travis-ci.org/rht/zulip/jobs/255549494\">https://travis-ci.org/rht/zulip/jobs/255549494</a>, via <a href=\"https://github.com/rht/zulip/commit/85a032627c340e160d0c5796512671a2fd586708\" target=\"_blank\" title=\"https://github.com/rht/zulip/commit/85a032627c340e160d0c5796512671a2fd586708\">https://github.com/rht/zulip/commit/85a032627c340e160d0c5796512671a2fd586708</a>.</p>\n<div class=\"codehilite\"><pre><span></span>Jul 20 07:15:55 Error running a subcommand of ./tools/update-prod-static: mkdir -p /home/travis/zulip-npm-cache/63fea5b0dd9caee27d347841cda6b2e777e6b008\nJul 20 07:15:55 Actual error output for the subcommand is just above this.\nJul 20 07:15:55\n</pre></div>\n\n\n<p>This always can be fixed with manual intervention. Currently, I'm figuring a hotfix to make the <code>upgrade-zulip-from-git</code> robust.</p>",
+        "id": 254120,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1500537482
+    }
+]

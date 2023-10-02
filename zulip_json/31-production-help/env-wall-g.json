@@ -1,0 +1,236 @@
+[
+    {
+        "content": "<p>I'm getting a lot of these in postgresql-*.log</p>\n<p>2022-04-30 12:45:47.805 UTC [626d24ec.1f8db0]: [107-1] LOG:  archiver process (PID 2086106) exited with exit code 1<br>\n2022-04-30 12:45:49.680 UTC [626d24ee.1f8dc3]: [18-1] LOG:  checkpoint complete: wrote 19 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.910 s, sync=0.022 s, total=1.950 s; sync files=16, longest=0.018 s, average=0.002 s; distance=49 kB, estimate=373 kB<br>\n/usr/bin/timeout: failed to run command â€˜/usr/local/bin/env-wal-gâ€™: No such file or directory<br>\n2022-04-30 12:46:17.852 UTC [626d2f99.1fd4e9]: [1-1] FATAL:  archive command failed with exit code 127<br>\n2022-04-30 12:46:17.852 UTC [626d2f99.1fd4e9]: [2-1] DETAIL:  The failed archive command was: /usr/bin/timeout 10m /usr/local/bin/env-wal-g wal-push pg_wal/000000010000000300000080</p>\n<p>I see that at some point env-wal-e was renamed to env-wal-g according to a search here but that's not the case on my install.<br>\nIf I rename, I have permissions problems, and didn't check further.<br>\nI see it might be related to S3 buckets but to my knowledge we are not using this.<br>\nMy Version 5.1 and has been upgraded from previous versions (not fresh).<br>\nI don't know what else to check/do.</p>",
+        "id": 1376420,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651323758
+    },
+    {
+        "content": "<p>What version of Zulip are you using?</p>",
+        "id": 1376445,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651340075
+    },
+    {
+        "content": "<blockquote>\n<p>My Version 5.1 and has been upgraded from previous versions (not fresh).</p>\n</blockquote>",
+        "id": 1376446,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651340157
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15498\">@Scotty T.</span> so, <code>wal-e</code> was replaced by a rewrite, <code>wal-g</code>; I think that happened before we provided any documentation for setting <code>wal-g</code> up for backups.</p>",
+        "id": 1376481,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651349120
+    },
+    {
+        "content": "<p>So I think the most likely story is that you should configure <code>wal-g</code> as documented here: <a href=\"https://zulip.readthedocs.io/en/latest/production/export-and-import.html#database-only-backup-tools\">https://zulip.readthedocs.io/en/latest/production/export-and-import.html#database-only-backup-tools</a></p>",
+        "id": 1376482,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651349162
+    },
+    {
+        "content": "<p>And then remove your <code>wal-e</code> system entirely, which was probably setup manually (we did briefly mention one could do it in older versions, I'm pretty sure).</p>",
+        "id": 1376483,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651349168
+    },
+    {
+        "content": "<p>Thanks for the guidance.  I'll dig around in there.  FYI I never setup wal-e, wal-g, or S3 backups before.  Not sure why it's trying.  Nothing in /etc/zulip/zulip-secrets.conf or cron that would initiate these attempts.  Nothing's really wrong or broken as far as system operations go ..  just getting a lot of log entries on it.</p>",
+        "id": 1376519,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651363022
+    },
+    {
+        "content": "<p>In  /etc/zulip/zulip-secrets.conf, none of this appears now (or ever did to my knowledge):</p>\n<p>s3_region = # region to write to S3; defaults to EC2 host's region<br>\ns3_backups_key = # aws public key; optional, if access not through role<br>\ns3_backups_secret_key =  # aws secret key; optional, if access not through role<br>\ns3_backups_bucket = # name of S3 backup bucket</p>\n<p>Just in case, I did this:<br>\nRun /home/zulip/deployments/current/scripts/zulip-puppet-apply</p>\n<p>I still get <br>\nLOG:  archiver process (PID 14771) exited with exit code 1 every 30s.</p>\n<p>I'm not sure how to \"turn this off\" ..</p>",
+        "id": 1376596,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651418654
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15498\">@Scotty T.</span>: Setting <code>s3_backups_bucket</code> in <code>/etc/zulip/zulip-secrets.conf</code> is what \"enables\" it.  It writes out a setting in your <code>postgres.conf</code>:</p>\n<div class=\"codehilite\"><pre><span></span><code>grep archive_command /etc/postgresql/*/main/postgresql.conf\n</code></pre></div>\n<p>if you don't have <code>s3_backups_bucket</code> set, run <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code> which should reconfigure your Postgres configuration file to remove the line.</p>",
+        "id": 1376602,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651422340
+    },
+    {
+        "content": "<p>Thank you .. I found this ..</p>\n<p>root@zulip:/var/log/postgresql# grep archive_command /etc/postgresql/*/main/postgresql.conf<br>\n/etc/postgresql/10/main/postgresql.conf:#archive_command = ''           # command to use to archive a logfile segment<br>\n/etc/postgresql/10/main/postgresql.conf:archive_command = '/usr/bin/timeout 10m /usr/local/bin/env-wal-g wal-push %p'<br>\n/etc/postgresql/14/main/postgresql.conf:#archive_command = ''           # command to use to archive a logfile segment</p>\n<p>Sorry my knowledge here is lacking .. do I have two versions running?  <br>\nThis box is zulip only.</p>\n<p>I appear to have processes for 10 and 14 running.</p>",
+        "id": 1376620,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651439212
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/env-wall-g\">#issues &gt; env-wall-g</a> by <span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span>.</p>",
+        "id": 1376659,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1651450126
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15498\">@Scotty T.</span>: Can you show the output of <code>pg_lsclusters</code>, run as root?</p>\n<p>And it's helpful if you use <a href=\"https://zulip.com/help/format-your-message-using-markdown#code\">code blocks</a> to paste in any output you're trying to share:</p>\n<div class=\"codehilite\"><pre><span></span><code>```\npasted output goes here\n```\n</code></pre></div>",
+        "id": 1376661,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651450220
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>root@zulip:/var/log/postgresql# pg_lsclusters\nVer Cluster Port Status Owner    Data directory              Log file\n10  main    5432 online postgres /var/lib/postgresql/10/main /var/log/postgresql/postgresql-%Y-%m-%d_%H%M%S.log\n14  main    5433 online postgres /var/lib/postgresql/14/main /var/log/postgresql/postgresql-14-main.log\n</code></pre></div>",
+        "id": 1376663,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651450278
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>root@zulip:/var/log/postgresql# pg_lsclusters\nVer Cluster Port Status Owner    Data directory              Log file\n10  main    5432 online postgres /var/lib/postgresql/10/main /var/log/postgresql/postgresql-%Y-%m-%d_%H%M%S.log\n14  main    5433 online postgres /var/lib/postgresql/14/main /var/log/postgresql/postgresql-14-main.log\n</code></pre></div>",
+        "id": 1376664,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651450294
+    },
+    {
+        "content": "<p>OK, and in <code>/etc/zulip/zulip.conf</code> there may be a <code>[postgresql]</code> section.  What is in that?</p>",
+        "id": 1376665,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651450331
+    },
+    {
+        "content": "<p>I feel like 14 should be in use and somehow 10 has carried over unintentionally</p>",
+        "id": 1376666,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651450334
+    },
+    {
+        "content": "<p>ok checking</p>",
+        "id": 1376667,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651450339
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>[postgresql]\nversion = 10\n</code></pre></div>",
+        "id": 1376668,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651450362
+    },
+    {
+        "content": "<p>Mmm.  So it looks like postgresql 14 is installed, but Zulip is still using 10.  Which we can deal with after this, using these steps: <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-postgresql\">https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-postgresql</a></p>\n<p>But for now let's focus on those error messages about wal-g.</p>\n<p>Do you have <code>s3_backups_bucket</code> set in <code>/etc/zulip/zulip-secrets.conf</code> ?</p>",
+        "id": 1376669,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651450434
+    },
+    {
+        "content": "<p>no</p>",
+        "id": 1376670,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651450461
+    },
+    {
+        "content": "<p>What happens when you run, as root:</p>\n<div class=\"codehilite\"><pre><span></span><code>/home/zulip/deployments/current/scripts/zulip-puppet-apply --noop\n</code></pre></div>",
+        "id": 1376671,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651450482
+    },
+    {
+        "content": "<p>(just paste in the output from there)</p>",
+        "id": 1376672,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651450498
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>root@zulip:/var/log/postgresql# /home/zulip/deployments/current/scripts/zulip-puppet-apply\nNotice: Compiled catalog for zulip.hsd1.fl.comcast.net in environment production in 4.08 seconds\nNotice: /Stage[main]/Zulip::Profile::Postgresql/File[/etc/postgresql/10/main/postgresql.conf]/content:\n--- /etc/postgresql/10/main/postgresql.conf     2022-05-01 21:03:03.950546729 +0000\n+++ /tmp/puppet-file20220502-50372-te4275       2022-05-02 00:15:07.046566668 +0000\n@@ -687,8 +687,8 @@\n # Primary replication settings (ignored on replica)\n wal_level = hot_standby\n max_wal_senders = 5\n-#archive_mode = on\n-#archive_command = &#39;/usr/bin/timeout 10m /usr/local/bin/env-wal-g wal-push %p&#39;\n+archive_mode = on\n+archive_command = &#39;/usr/bin/timeout 10m /usr/local/bin/env-wal-g wal-push %p&#39;\n\n # Replica settings (ignored on primary)\n hot_standby = on\n\nNotice: /Stage[main]/Zulip::Profile::Postgresql/File[/etc/postgresql/10/main/postgresql.conf]/content: current_value &#39;{md5}df6c8952a6c13e61fd8ca3868675f8d3&#39;, should be &#39;{md5}a0ad2fccca7922f7722682e58747dfa2&#39; (noop)\nNotice: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 10 main restart]: Would have triggered &#39;refresh&#39; from 1 event\nNotice: Class[Zulip::Profile::Postgresql]: Would have triggered &#39;refresh&#39; from 2 events\nNotice: Stage[main]: Would have triggered &#39;refresh&#39; from 1 event\nNotice: Applied catalog in 0.98 seconds\nApply changes? [y/N]\n</code></pre></div>",
+        "id": 1376673,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651450520
+    },
+    {
+        "content": "<p>sorry about that first paste, thank you for fixing</p>",
+        "id": 1376676,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651450548
+    },
+    {
+        "content": "<p>That's why zulip has the feature, no worries. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1376677,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651450561
+    },
+    {
+        "content": "<p>Did you recently comment those lines out by hand?</p>",
+        "id": 1376678,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651450608
+    },
+    {
+        "content": "<p>Yes</p>",
+        "id": 1376679,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651450630
+    },
+    {
+        "content": "<p>I was in the middle of trying to 'turn it off' but I only commented them out and didn't restart any processes</p>",
+        "id": 1376680,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651450695
+    },
+    {
+        "content": "<p>Totally reasonable.  You'll need to restart postgres to pick those changes up -- but there's clearly also some bug that's causing the Zulip config to write those, which we should track and and fix so you don't get into a fight with Zulip about if they should b set.</p>\n<p>Give me sec to stare at the code some more.</p>",
+        "id": 1376681,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651450695
+    },
+    {
+        "content": "<p>ok great thank you</p>",
+        "id": 1376682,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651450711
+    },
+    {
+        "content": "<p>it's a great product and I wish I could contribute more but my knowledge isn't there .. I can donate though !  :)</p>",
+        "id": 1376683,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651450753
+    },
+    {
+        "content": "<p>I see the documentation for the sql version and it seems clear to me so I will work on that soon, thank you for linking</p>",
+        "id": 1376684,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651450835
+    },
+    {
+        "content": "<p>Ahhh, OK, I see the issue now.  This is a bug with PostgreSQL &lt;= 11 and Zulip &gt;= 5.0.</p>\n<p>Upgrading PostgreSQL is the quickest fix for you, and will also resolve this issue for you -- we'll fix it for 5.2, but upgrading to PostgreSQL 14 and up is what you should do to resolve it now.</p>",
+        "id": 1376687,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651451030
+    },
+    {
+        "content": "<p>OK, great!  I see the docs for that so will get to it. Thank you again for your valuable time.</p>",
+        "id": 1376688,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651451094
+    },
+    {
+        "content": "<p>Welcome!  And thanks for reporting the bug.</p>\n<p>Let us know if you have any problems with the PostgreSQL upgrade.</p>",
+        "id": 1376689,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651451126
+    },
+    {
+        "content": "<p>Pushed <a href=\"https://github.com/zulip/zulip/pull/21982\">#21982</a> to address this.</p>",
+        "id": 1377003,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651518567
+    },
+    {
+        "content": "<p>I wanted to follow up with you to let you know the upgrade from pg 10 to 14 was very easy and fixed my issue.  I'm not sure how I missed that step to go from 10&gt;14 in the zulip upgrade.  For some reason I thought it happened.  (It didn't, but I did have 14 and 10 running on the box).   Probably rushed in the docs reading on my part.  Thank you again for all you do and I really appreciate the help.</p>",
+        "id": 1377112,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651544467
+    },
+    {
+        "content": "<p>These docs and procedure worked 100% great .. <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-postgresql\">https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-postgresql</a></p>",
+        "id": 1377113,
+        "sender_full_name": "Scotty T.",
+        "timestamp": 1651544522
+    },
+    {
+        "content": "<p>Glad to hear it!</p>\n<p>The postgres upgrade steps may not be as visibly documented as they should be.</p>",
+        "id": 1377116,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651546777
+    }
+]

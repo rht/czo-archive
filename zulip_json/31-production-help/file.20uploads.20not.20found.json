@@ -1,0 +1,626 @@
+[
+    {
+        "content": "<p>Okay, everything on the new install seems to be working except that file uploads, while they appear to be happening (i.e. if I attach a file to a post, the uploaded file shows up in <code>/home/zulip/var/uploads/files/</code>), are 404'ing on the site. Any ideas?</p>",
+        "id": 20170,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472417726
+    },
+    {
+        "content": "<p>Can you look into your settings.py to see how you are saving uploaded files?  We have an S3 option and a local option.</p>",
+        "id": 20171,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472418660
+    },
+    {
+        "content": "<p>I guess you're saving locally, reading what you just sent more carefully.</p>",
+        "id": 20172,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472418694
+    },
+    {
+        "content": "<p>What is the URL for the uploads?  Are you using DNS or serving up via IP?</p>",
+        "id": 20173,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472418871
+    },
+    {
+        "content": "<p>just to get a quick data point, can you upload a file to test/uploads on this instance?</p>",
+        "id": 20175,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472419011
+    },
+    {
+        "content": "<p>Once you do the upload, you can hover over the link to see that this Zulip instance is configured to use a \"user_uploads\" directory.</p>",
+        "id": 20176,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472419086
+    },
+    {
+        "content": "<p>There is a setting in <code>settings.py</code> called <code>LOCAL_UPLOADS_DIR</code> that sets the upload path.</p>",
+        "id": 20177,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472419182
+    },
+    {
+        "content": "<p>In settings: <code>LOCAL_UPLOADS_DIR = \"/home/zulip/var/uploads\"</code></p>",
+        "id": 20182,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472419242
+    },
+    {
+        "content": "<p>The link in the post where the file was attached is generated to be at, for example, <code>user_uploads/2/bd/iPXzacvbCUuVp84MsGxoSU7H/image.jpg</code></p>",
+        "id": 20187,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472419362
+    },
+    {
+        "content": "<p>Can you try changing to relative paths as a troubleshooting experiment?</p>",
+        "id": 20188,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472419453
+    },
+    {
+        "content": "<p>files definitely seem to be uploading. Like, there will be a corresponding <code>/home/zulip/var/uploads/files/2/bd/iPXzacvbCUuVp84MsGxoSU7H/image.jpg</code></p>",
+        "id": 20189,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472419473
+    },
+    {
+        "content": "<p>In the post itself?</p>",
+        "id": 20190,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472419478
+    },
+    {
+        "content": "<p>in settings.py</p>",
+        "id": 20191,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472419487
+    },
+    {
+        "content": "<p>I'm thinking maybe we were assuming relative paths when we wrote this code, so that the \"get\" side of things is a relative path that the webserver knows it controls?  I don't know, I'm just guessing.</p>",
+        "id": 20192,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472419548
+    },
+    {
+        "content": "<p>Hm...tried changing it to <code>LOCAL_UPLOADS_DIR = \"/test/uploads\"</code> but having a little trouble navigating around for directory structure to figure out what's going on, if that's uploading.</p>",
+        "id": 20193,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472419740
+    },
+    {
+        "content": "<p>That's not a relative path. :)</p>",
+        "id": 20194,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472419815
+    },
+    {
+        "content": "<p>Hmmmm. Just looked at the code, and we actually do want an absolute path.  There's a long comment in prod_settings_template.py that you should probably read.</p>",
+        "id": 20195,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472419929
+    },
+    {
+        "content": "<p>looks like some kind of nginx thing</p>",
+        "id": 20196,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472419976
+    },
+    {
+        "content": "<p>line?</p>",
+        "id": 20197,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472420094
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/blob/master/zproject/prod_settings_template.py#L153\" target=\"_blank\" title=\"https://github.com/zulip/zulip/blob/master/zproject/prod_settings_template.py#L153\">https://github.com/zulip/zulip/blob/master/zproject/prod_settings_template.py#L153</a></p>",
+        "id": 20198,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472420098
+    },
+    {
+        "content": "<p>I think that comment is for S3, though.  Hmmmm, kinda stumped here.</p>",
+        "id": 20199,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472420300
+    },
+    {
+        "content": "<p>For these things I'm always inclined to look at permissions, but it sounds like the webserver can write to the directory, so it seem improbable to me that it couldn't read from the same directory.</p>",
+        "id": 20200,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472420371
+    },
+    {
+        "content": "<p>I think this may be generally over my head. I've almost never tried setting up an app outside an environment like Heroku, so I don't have any instincts for how things work or where to look</p>",
+        "id": 20201,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472420497
+    },
+    {
+        "content": "<p>Yeah, unfortunately, I'm not an expert on our prod installs.  But I think this may have something to do with the nginx configuration, if you can track that down somehow.  There's probably an nginx log somewhere.</p>",
+        "id": 20202,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472420564
+    },
+    {
+        "content": "<p>/var/log/nginx/access.log may be interesting to look at</p>",
+        "id": 20203,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472420633
+    },
+    {
+        "content": "<p>If you've never encountered nginx in your travels, it's basically a highly optimized web server/proxy that sits in front of web servers to do things like really quickly serve up static content like uploaded images and such.</p>",
+        "id": 20204,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472420816
+    },
+    {
+        "content": "<p>waaaait...here's something maybe:</p>\n<p>In <code>/etc/nginx/sites-available/zulip-enterprise</code> I see a line that says (if I'm reading it right) to alias the user_uploads path to the <code>/home/zulip/uploads/files</code> directory. That directory doesn't seem to exist, but LOCAL_UPLOADS_DIR is set to <code>/home/zulip/var/uploads</code>, which does.</p>",
+        "id": 20205,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472421315
+    },
+    {
+        "content": "<p>How would I best restart the application after changing something like that?</p>",
+        "id": 20206,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472421420
+    },
+    {
+        "content": "<p>Hm. Doesn't seem to make a different changing  <code>alias /home/zulip/uploads/files</code> to <code>alias /home/zulip/var/uploads/files</code> in <code>/etc/nginx/sites-available/zulip-enterprise</code></p>",
+        "id": 20207,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472422454
+    },
+    {
+        "content": "<p>Using <code>su zulip -c /home/zulip/deployments/current/scripts/restart-server</code> to restart afterward.</p>",
+        "id": 20208,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472422591
+    },
+    {
+        "content": "<p>You may need to restart nginx itself.</p>",
+        "id": 20209,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472423387
+    },
+    {
+        "content": "<p>See the very bottom of this page: <a href=\"http://zulip.readthedocs.io/en/latest/prod-troubleshooting.html\" target=\"_blank\" title=\"http://zulip.readthedocs.io/en/latest/prod-troubleshooting.html\">http://zulip.readthedocs.io/en/latest/prod-troubleshooting.html</a></p>",
+        "id": 20210,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472423472
+    },
+    {
+        "content": "<p>The troubleshooting page is talking about restarting nginx in a different context than what you're encountering, but <code>service nginx restart</code> might be your answer?</p>",
+        "id": 20211,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472423528
+    },
+    {
+        "content": "<p>You may need to sudo that command.</p>",
+        "id": 20212,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472423577
+    },
+    {
+        "content": "<p>!!!</p>",
+        "id": 20213,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472423687
+    },
+    {
+        "content": "<p>The var thing worked!!</p>",
+        "id": 20214,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472423692
+    },
+    {
+        "content": "<p>After your restart suggestion :)</p>",
+        "id": 20215,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472423705
+    },
+    {
+        "content": "<p>Images seem to be all working fine, now.</p>",
+        "id": 20216,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472423734
+    },
+    {
+        "content": "<p>Should I submit this change to the nginx config as a pull request or submit an issue? Not sure if my fix is actually where that change should be happening or if maybe the reverse where var is removed from <code>LOCAL_UPLOADS_DIR</code> is the desired solution? I'm not sure what things might be depending on either structure.</p>",
+        "id": 20217,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472423867
+    },
+    {
+        "content": "<p>I think for this problem submitting an issue may be the thing to do.</p>",
+        "id": 20218,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472424272
+    },
+    {
+        "content": "<p>Pinging <span class=\"user-mention\" data-user-email=\"tabbott@gmail.com\">@Tim Abbott</span> and <span class=\"user-mention\" data-user-email=\"christie@authenticengine.com\">@Christie Koehler</span> who know more about the prod install than I do.</p>",
+        "id": 20219,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472424307
+    },
+    {
+        "content": "<p>The more details you can put in the issue, the better, of course, but I also think a brief description and a link to this Zulip thread will suffice.</p>",
+        "id": 20220,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472424376
+    },
+    {
+        "content": "<p>Link to convo: <a href=\"https://zulip.tabbott.net/#narrow/near/20217/stream/installation.20help/topic/file.20uploads.20not.20found\" target=\"_blank\" title=\"https://zulip.tabbott.net/#narrow/near/20217/stream/installation.20help/topic/file.20uploads.20not.20found\">https://zulip.tabbott.net/#narrow/near/20217/stream/installation.20help/topic/file.20uploads.20not.20found</a></p>",
+        "id": 20221,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1472424417
+    },
+    {
+        "content": "<p>Issue created here: <a href=\"https://github.com/zulip/zulip/issues/1732\" target=\"_blank\" title=\"https://github.com/zulip/zulip/issues/1732\">https://github.com/zulip/zulip/issues/1732</a></p>",
+        "id": 20259,
+        "sender_full_name": "Mark Stewart",
+        "timestamp": 1472472770
+    },
+    {
+        "content": "<p>Thanks for working on this, <span class=\"user-mention\" data-user-email=\"neurodynamicdev@gmail.com\">@Mark Stewart</span>!</p>",
+        "id": 20321,
+        "sender_full_name": "Sumana Harihareswara",
+        "timestamp": 1472499920
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"showell30@yahoo.com\">@Steve Howell</span> <span class=\"user-mention\" data-user-email=\"rishig@zulipchat.com\">@Rishi Gupta</span> has this been resolved yet?</p>",
+        "id": 21935,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1473185223
+    },
+    {
+        "content": "<p>I noticed the issue is still open</p>",
+        "id": 21936,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1473185229
+    },
+    {
+        "content": "<p>in 1.4.1 the default LOCAL_UPLOADS_DIR is changed to /home/zulip/uploads</p>",
+        "id": 21940,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1473185317
+    },
+    {
+        "content": "<p>I think we weren't confident enough in that being the right thing to close the issue</p>",
+        "id": 21943,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1473185373
+    },
+    {
+        "content": "<p>I feel 99% confident now that we addressed the issue in code, but I dropped out of the process once it came time to put up the tarball and stuff.</p>",
+        "id": 22001,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473186702
+    },
+    {
+        "content": "<p>(I assume all that went fine; I just can't vouch first hand for it.)</p>",
+        "id": 22002,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473186724
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/1757\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/1757\">#1757</a> is from a user who needs instructions on how to fix this.  <span class=\"user-mention\" data-user-email=\"rishig@zulipchat.com\">@Rishi Gupta</span>, when you get a chance, can you post to Zulip what the communication should be to these kind of users?</p>",
+        "id": 22011,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473188039
+    },
+    {
+        "content": "<p>I pointed them to here for now.</p>",
+        "id": 22012,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473188110
+    },
+    {
+        "content": "<p>fyi I focused entirely on the prod_settings issue and didn't test the uploads thing at all. </p>",
+        "id": 22013,
+        "sender_full_name": "Christie Koehler",
+        "timestamp": 1473188143
+    },
+    {
+        "content": "<p>I can if it would be helpful.</p>",
+        "id": 22014,
+        "sender_full_name": "Christie Koehler",
+        "timestamp": 1473188152
+    },
+    {
+        "content": "<p>I think they're just running 1.4.0 and need to upgrade</p>",
+        "id": 22015,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1473188189
+    },
+    {
+        "content": "<p>Yeah, but that's a good reminder...we may see folks posting issues on that as well if they install off the tarball.</p>",
+        "id": 22016,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473188192
+    },
+    {
+        "content": "<p>Posted a comment to that effect on the issue</p>",
+        "id": 22017,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1473188194
+    },
+    {
+        "content": "<p>Oh, <a href=\"https://zulip.org/server.html\" target=\"_blank\" title=\"https://zulip.org/server.html\">https://zulip.org/server.html</a> wasn't updated with the 1.4.1 release</p>",
+        "id": 22018,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1473188213
+    },
+    {
+        "content": "<p>That's probably the problem here</p>",
+        "id": 22019,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1473188216
+    },
+    {
+        "content": "<p>I can deal</p>",
+        "id": 22020,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1473188229
+    },
+    {
+        "content": "<p>Yeah, also folks who did the 1.4.0 install may have some files dropped in the wrong directory that they need to move.</p>",
+        "id": 22021,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473188259
+    },
+    {
+        "content": "<p>yeah, can you post a comment to that effect on the issues opened about this so it's easy for people to find?</p>",
+        "id": 22023,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1473188397
+    },
+    {
+        "content": "<p>I think we should open an issue that says something along the lines of \"How to fix problems with 1.4.0\" and then we can link everybody there.  I want to avoid having to reply to each individual one, especially if we find nuances later.  I think <span class=\"user-mention\" data-user-email=\"rishig@zulipchat.com\">@Rishi Gupta</span> sent something to zulip-announce or something?  Do you have a link handy?</p>",
+        "id": 22027,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473188723
+    },
+    {
+        "content": "<p>I think the message goes along the lines of...we found two bugs in 1.4.0, one with prod_settings.py and one with 1.4.1.</p>\n<p>If you tried to install 1.4.0 but backed out to an earlier version, you should be able to just install 1.4.1.</p>\n<p>If you managed to install 1.4.0 and are on that version now but encountering problems with uploads, you need to upgrade and possibly move some files.</p>\n<p>If you have not yet tried 1.4.0, go directly to 1.4.1 and do no pass \"go\".</p>",
+        "id": 22028,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473188923
+    },
+    {
+        "content": "<p>Is there a reason we still have the 1.4.0 tarball here?</p>\n<p><a href=\"https://www.zulip.com/dist/releases/\" target=\"_blank\" title=\"https://www.zulip.com/dist/releases/\">https://www.zulip.com/dist/releases/</a></p>\n<p>I guess there's not an easy way to annotate that it's broken, but this is the page people will hit from the upgrade docs.</p>",
+        "id": 22029,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473189103
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/1758\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/1758\">#1758</a> is where I'm going to point folks.</p>",
+        "id": 22030,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473189175
+    },
+    {
+        "content": "<p>Ended up not having bits to zulip-announce, so had just sent a quick note to zulip-devel:</p>\n<div class=\"codehilite\"><pre>Hi everyone,\n\nOne more update: 1.4.0 had two issues, one of which affected the upgrade\npath from 1.3.13, and one of which affected file uploads and attachments.\n\nAn updated build is available at\n  https://dl.dropboxusercontent.com/u/23782125/zulip-server-1.4.1.tar.gz,\nand should be on the release server soon.\n\nThank you to Steve Howell and Christie Koehler for debugging and\nsubmitting patches!\n</pre></div>",
+        "id": 22039,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1473195276
+    },
+    {
+        "content": "<p>Sounds good.  <span class=\"user-mention\" data-user-email=\"rishig@zulipchat.com\">@Rishi Gupta</span> <span class=\"user-mention\" data-user-email=\"tabbott@gmail.com\">@Tim Abbott</span> If there's anything else you want to add to <a href=\"https://github.com/zulip/zulip/pull/1758\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/1758\">#1758</a> beyond what I wrote, please update the ticket, as that's where I'll be pointing people.  Is there anything else we can do in terms of updating docs or other channels that had previous communication?</p>",
+        "id": 22041,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473195527
+    },
+    {
+        "content": "<p>I'm sorta opposed to the idea of taking down old release tarballs philosophically; the problem right now is that the <a href=\"http://zulip.org\" target=\"_blank\" title=\"http://zulip.org\">zulip.org</a> website still tells you to download the old one</p>",
+        "id": 22042,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1473195586
+    },
+    {
+        "content": "<p>Working on getting Luke to do a <a href=\"http://zulip.org\" target=\"_blank\" title=\"http://zulip.org\">zulip.org</a> deploy to fix that</p>",
+        "id": 22043,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1473195595
+    },
+    {
+        "content": "<p>OK <a href=\"http://zulip.org\" target=\"_blank\" title=\"http://zulip.org\">zulip.org</a> is updated with the 1.4.1 release</p>",
+        "id": 22084,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1473201974
+    },
+    {
+        "content": "<p>I upgraded to the latest version of zulip by following the instructions mentioned here <a href=\"http://zulip.readthedocs.io/en/latest/prod-maintain-secure-upgrade.html#upgrading\" target=\"_blank\" title=\"http://zulip.readthedocs.io/en/latest/prod-maintain-secure-upgrade.html#upgrading\">docs</a> <br>\nI downloaded the tarball from <a href=\"https://www.zulip.com/dist/releases/\" target=\"_blank\" title=\"https://www.zulip.com/dist/releases/\">zulip</a> and then ran <code>/home/zulip/deployments/current/scripts/upgrade-zulip zulip-server-lastest.tar.gz</code>.<br>\nAfter that I tried to upload an image to a stream but the same issue still persists. I attached the upgrade log.<br>\n<a href=\"/user_uploads/2/f6/T1N-ogfoGjbbtimv8xGjAzsc/upgrade.log\" target=\"_blank\" title=\"upgrade.log\">upgrade.log</a> </p>",
+        "id": 22118,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473238542
+    },
+    {
+        "content": "<p>I fixed the issue by changing one line in <code>/etc/nginx/sites-available/zulip-enterprise</code> <br>\nThe line was <code>alias /home/zulip/uploads/files;</code> Now it is <code>alias /home/zulip/var/uploads/files;</code><br>\nrestarted ngnix and it worked correctly.</p>",
+        "id": 22122,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473240913
+    },
+    {
+        "content": "<p>I think that the install script <code>/root/zulip/scripts/setup/install</code> installs this file right?<br>\nWe should modify it to correct the issue.</p>",
+        "id": 22123,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473241086
+    },
+    {
+        "content": "<p>In 1.4.1 we did sort of the opposite.  We put the uploaded files back in <code>/home/zulip/uploads/files</code>.</p>",
+        "id": 22124,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473241197
+    },
+    {
+        "content": "<p>I think this path<code>/home/zulip/uploads/files/</code> no longer exists.</p>",
+        "id": 22125,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473241365
+    },
+    {
+        "content": "<p>I believe it will exist in 1.4.1.</p>",
+        "id": 22126,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473241410
+    },
+    {
+        "content": "<p>What version of the tarball are you working with currently?</p>",
+        "id": 22127,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473241479
+    },
+    {
+        "content": "<p>The latest, and I do not have it.</p>",
+        "id": 22128,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473241680
+    },
+    {
+        "content": "<p>The same issue is for the avatars by the way.</p>",
+        "id": 22129,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473241719
+    },
+    {
+        "content": "<p>What does line 158 of zproject/prod_settings_template.py say in your install?</p>",
+        "id": 22130,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473241981
+    },
+    {
+        "content": "<p>It says <code># (2) Edit /etc/nginx/sites-available/zulip-enterprise to comment out</code></p>",
+        "id": 22131,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473242066
+    },
+    {
+        "content": "<p>What does it say a few lines down, for LOCAL_UPLOADS_DIR?</p>",
+        "id": 22132,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473242100
+    },
+    {
+        "content": "<p>Lines 154 to 158</p>\n<div class=\"codehilite\"><pre># the nginx configuration for /user_uploads and /user_avatars (see\n# https://github.com/zulip/zulip/issues/291 for discussion of a better\n# solution that won&#39;t be automatically reverted by the Zulip upgrade\n# script), and then restart nginx.\nLOCAL_UPLOADS_DIR = &quot;/home/zulip/uploads&quot;\n</pre></div>",
+        "id": 22133,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473242145
+    },
+    {
+        "content": "<p>Ok, so you have the correct version of that.  What does your <code>prod_settings.py</code> say? </p>",
+        "id": 22134,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473242217
+    },
+    {
+        "content": "<p>It says</p>\n<div class=\"codehilite\"><pre># (2) Edit /etc/nginx/sites-available/zulip-enterprise to comment out\n# the nginx configuration for /user_uploads and /user_avatars (see\n# https://github.com/zulip/zulip/issues/291 for discussion of a better\n# solution that won&#39;t be automatically reverted by the Zulip upgrade\n# script), and then restart nginx.\nLOCAL_UPLOADS_DIR = &quot;/home/zulip/var/uploads&quot;\n</pre></div>\n\n\n<p>But before you should now that I manually modified <code>zproject/settings.py</code> and changed the value of <code>LOCAL_UPLOADS_DIR</code> to <code>/home/zulip/var/uploads</code>.</p>",
+        "id": 22135,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473242377
+    },
+    {
+        "content": "<p>Then restarted the server.</p>",
+        "id": 22136,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473242399
+    },
+    {
+        "content": "<p>Yeah, I am trying to say that you should back out the \"var\" change, and then I think your problem will go away.</p>",
+        "id": 22137,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473242432
+    },
+    {
+        "content": "<p>We introduced \"var\" for both development and production in 1.4.0.   In retrospect it made sense for development, but not production, so we backed it out in 1.4.1.</p>",
+        "id": 22138,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473242515
+    },
+    {
+        "content": "<p>(sorry, wrong channel, edited)</p>",
+        "id": 22140,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473242983
+    },
+    {
+        "content": "<p>I added <code>var</code> in nginx config file and it worked.</p>",
+        "id": 22142,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473243003
+    },
+    {
+        "content": "<p>Yeah, but you want to remove \"var\" from the nginx config and your prod_settings.py, because otherwise the next time you upgrade nginx will get overwritten.</p>",
+        "id": 22143,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473243066
+    },
+    {
+        "content": "<p>So, adding \"var\" was a mistake in 1.4.0.  In 1.4.1 we fixed the template to not have \"var.\"  But if you already had your own settings, you probably ignored the template, understandably.  I think that's the source of confusion.  But you don't want \"var\" going forward.</p>",
+        "id": 22144,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473243154
+    },
+    {
+        "content": "<p>If I do that now, I won't be able to open uploaded images right?</p>",
+        "id": 22145,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473243192
+    },
+    {
+        "content": "<p>If you change the nginx config and the settings.py and restart Zulip, everything should be in sync going forward.  You may need to manually create the directory and move any files from the last few days into it, I suppose.</p>",
+        "id": 22146,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473243250
+    },
+    {
+        "content": "<p>I will try to do this, thanks. <img alt=\":smile:\" class=\"emoji\" src=\"/static/third/gemoji/images/emoji/smile.png\" title=\":smile:\"> </p>",
+        "id": 22147,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473243303
+    },
+    {
+        "content": "<p>I did as you said and created the uploads folder, manually copied data from <code>var</code> it worked as expected.</p>",
+        "id": 22148,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473243477
+    },
+    {
+        "content": "<p>great!  sorry about all the confusion</p>",
+        "id": 22149,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473243522
+    },
+    {
+        "content": "<p>I really love zulip and hope to be able to contribute to it when I have some free time and learn about django.<br>\nIt is tooo bad that my boss refused to use it as our chat system.</p>",
+        "id": 22150,
+        "sender_full_name": "Mohsen Ibrahim",
+        "timestamp": 1473243624
+    },
+    {
+        "content": "<p>What was your boss's objection to Zulip?</p>",
+        "id": 22151,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473243730
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"mohsen47@hotmail.co.uk\">@Mohsen Ibrahim</span> Thanks for letting us know what worked! I second Steve's question. :)</p>",
+        "id": 23259,
+        "sender_full_name": "Sumana Harihareswara",
+        "timestamp": 1473645803
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"mohsen47@hotmail.co.uk\">@Mohsen Ibrahim</span> responded to me privately about the boss's objections.  I don't think I'll be revealing anything too private to paraphrase that his boss basically liked another tool due to inertia.</p>",
+        "id": 23265,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473646421
+    },
+    {
+        "content": "<p>Got it! Thanks Steve.</p>",
+        "id": 23266,
+        "sender_full_name": "Sumana Harihareswara",
+        "timestamp": 1473646475
+    }
+]

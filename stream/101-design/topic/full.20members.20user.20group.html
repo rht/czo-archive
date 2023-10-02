@@ -1,0 +1,416 @@
+<html>
+<head><meta charset="utf-8"><title>full members user group · design · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/101-design/index.html">design</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html">full members user group</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1268632"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1268632" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1268632">(Oct 20 2021 at 00:45)</a>:</h4>
+<p>One question to fork off from the <a href="#narrow/stream/101-design/topic/New.20permissions.20model/near/1268620">new permissions model discussion</a> is how we want the "Members" and "Full Members" user groups to work.  For context, the current model is we have a hierarchy of system groups:</p>
+<ul>
+<li>"Moderators" contains "Administrators" as a group plus individual users whose role is Moderator.</li>
+<li>"Administrators" contains "Owners" as a group plus individual users whose role is Administrator.</li>
+</ul>
+<p>This is nice for the default roles, but the "Full Member" permission is different, because that's determined by <a href="https://zulip.com/help/restrict-permissions-of-new-members">when the member joined</a> and thus changes dynamically with time.  </p>
+<p>So if one wants to arrange so that a user is in exactly one of these system groups, one will end up with the user being removed from direct membership in the Members group and added to the Full Members group (or the opposite) as the account ages and the cutoff setting is changed.</p>
+<p>The alternative model is that users should be in exactly one of the Owners/Administrators/Moderators/Members/Guests groups, and additionally users in the Members group may also be direct members of the Full Members group.  I think that latter model feels more natural/simpler as a way to think about things.  </p>
+<p>I think it's a design question because UI that lists all the groups a user is a member of will either show both "Full Members" and "Members" or just one of them, depending on what we decide here.</p>
+
+
+
+<a name="1268646"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1268646" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1268646">(Oct 20 2021 at 00:55)</a>:</h4>
+<p>We could have the relationship between "Full Members" and "Members" be the same as "Owners" to "Admins" and "Admins" to "Moderators", right? "Members" would contain "Full Members" as a group, plus individuals. I'm not sure if that's what you're suggesting above.</p>
+
+
+
+<a name="1268649"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1268649" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1268649">(Oct 20 2021 at 00:58)</a>:</h4>
+<p>Yes, we could do that; that's what the prototype in <a href="https://github.com/zulip/zulip/pull/19654">#19654</a> currently does.  What's weird about that choice is that we need logic to remove the Member group from the user and add the Full Member group, and vice versa, which may not be intuitive.  We can use transactions to make bugs where a user somehow ends up in neither, so the question is primarily one about what feels more clear/complex, but to me it feels simpler if the user's direct membership in the "Members" group doesn't change due to the day changing or the organization-level settings changing.</p>
+
+
+
+<a name="1268653"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1268653" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1268653">(Oct 20 2021 at 01:00)</a>:</h4>
+<p>OK, for the @-mention reason I brought up on the other thread, I think @members should include all full members + non-full members. But the product difference for whether people are included directly or as a group seems very minor.</p>
+
+
+
+<a name="1268656"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1268656" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1268656">(Oct 20 2021 at 01:03)</a>:</h4>
+<p>Right, this question will primarily affect what appears in the profile or other UI when presenting the user's direct group memberships:</p>
+<p><a href="/user_uploads/2/2d/Qf7vlr7r-5jNDjVk1gpxL7pE/image.png">image.png</a> </p>
+<div class="message_inline_image"><a href="/user_uploads/2/2d/Qf7vlr7r-5jNDjVk1gpxL7pE/image.png" title="image.png"><img src="/user_uploads/2/2d/Qf7vlr7r-5jNDjVk1gpxL7pE/image.png"></a></div><p>Presumably in some settings we'll show the recursive group memberships anyway.</p>
+
+
+
+<a name="1268688"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1268688" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Dehnert <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1268688">(Oct 20 2021 at 03:16)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/101-design/topic/full.20members.20user.20group/near/1268649">said</a>:</p>
+<blockquote>
+<p>Yes, we could do that; that's what the prototype in <a href="https://github.com/zulip/zulip/pull/19654">#19654</a> currently does.  What's weird about that choice is that we need logic to remove the Member group from the user and add the Full Member group, and vice versa, which may not be intuitive.  We can use transactions to make bugs where a user somehow ends up in neither, so the question is primarily one about what feels more clear/complex, but to me it feels simpler if the user's direct membership in the "Members" group doesn't change due to the day changing or the organization-level settings changing.</p>
+</blockquote>
+<p>I agree, I think it makes more sense for ~everyone to be directly in "Members", and some people to additionally be in "Full members", than to be adding and removing people from "Members" as time passes.</p>
+
+
+
+<a name="1268693"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1268693" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1268693">(Oct 20 2021 at 04:03)</a>:</h4>
+<p>I don't think it makes a big difference whether the profile lists "Member" in addition to "Full member". I suppose we could special-case removing "Member" from the list if it confuses people.</p>
+
+
+
+<a name="1268696"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1268696" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Dehnert <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1268696">(Oct 20 2021 at 04:20)</a>:</h4>
+<p>Speaking of special-casing system groups... are the names going to be internationalized at all?</p>
+
+
+
+<a name="1268697"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1268697" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1268697">(Oct 20 2021 at 04:24)</a>:</h4>
+<p>I think ideally the names would appear in the user's chosen UI language. I don't know if how the current prototype works agrees with that, or makes it straightforward to do that.</p>
+
+
+
+<a name="1268698"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1268698" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1268698">(Oct 20 2021 at 04:28)</a>:</h4>
+<p>That points at a related question: will these groups live indexed by the same kind of string names as groups that users create? So e.g. I can't go create a group called "Administrators" (maybe I'm using Zulip at… a K-12 school or something, where there's a set of people called "administrators" unrelated to the Zulip concept by that name), because it would conflict with the system group.</p>
+<p>If so, then that would make it hard to internationalize the names. It'd also make it hard to introduce additional system groups in the future, as the names may already be taken in some orgs.</p>
+
+
+
+<a name="1269034"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269034" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269034">(Oct 20 2021 at 16:56)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/101-design/topic/full.20members.20user.20group/near/1268656">said</a>:</p>
+<blockquote>
+<p>Right, this question will primarily affect what appears in the profile or other UI when presenting the user's direct group memberships:</p>
+<p><a href="/user_uploads/2/2d/Qf7vlr7r-5jNDjVk1gpxL7pE/image.png">image.png</a> </p>
+<p>Presumably in some settings we'll show the recursive group memberships anyway.</p>
+</blockquote>
+<p>If we keep all users (including full members) as direct members of Members group, then also it should be easy to just make an exception in UI to show both (Members and Full members) group or one. We can do this if we want to avoid the backend logic of removing user from <code>Members</code> group.</p>
+
+
+
+<a name="1269036"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269036" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269036">(Oct 20 2021 at 16:58)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="2187">Greg Price</span> <a href="#narrow/stream/101-design/topic/full.20members.20user.20group/near/1268698">said</a>:</p>
+<blockquote>
+<p>That points at a related question: will these groups live indexed by the same kind of string names as groups that users create? So e.g. I can't go create a group called "Administrators" (maybe I'm using Zulip at… a K-12 school or something, where there's a set of people called "administrators" unrelated to the Zulip concept by that name), because it would conflict with the system group.</p>
+<p>If so, then that would make it hard to internationalize the names. It'd also make it hard to introduce additional system groups in the future, as the names may already be taken in some orgs.</p>
+</blockquote>
+<p>Yes, this is a problem currently as there is a constraint for names to be unique. So, if there is already a group named <code>Administrators</code> in an existing realm, then we cannot create the system group and for the other case as well that is mentioned above in quoted message.</p>
+
+
+
+<a name="1269041"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269041" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269041">(Oct 20 2021 at 17:05)</a>:</h4>
+<p>Got it, yeah.</p>
+<p>I think it's best if we find a way to have these groups be identified internally in a way that can't collide with user-created groups. And then when the groups are shown in the UI, we'd turn those internal identifiers into a corresponding UI string, which would get translated in the usual way.</p>
+
+
+
+<a name="1269042"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269042" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269042">(Oct 20 2021 at 17:06)</a>:</h4>
+<p>One way to do this while still having the key for identifying a group consist of just a string would be to pick some delimiter character, or similar bit of formatting, that we'd forbid in the user-chosen names of groups. And then we'd use that delimiter in the internal names for the system groups.</p>
+
+
+
+<a name="1269044"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269044" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269044">(Oct 20 2021 at 17:07)</a>:</h4>
+<p>For example: we could call them <code>system|administrators</code>, <code>system|full-members</code>, etc., so long as we declare that the character <code>|</code> can't appear in user-created groups.</p>
+
+
+
+<a name="1269046"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269046" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269046">(Oct 20 2021 at 17:08)</a>:</h4>
+<p>(I'm inspired here partly by AFS, with its groups like <code>system:anyuser</code>, which some of the other folks in this thread will remember.)</p>
+
+
+
+<a name="1269051"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269051" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269051">(Oct 20 2021 at 17:17)</a>:</h4>
+<p>One other option can be we can change current constraint of <code>(name, realm)</code> to be unique to <code>(name, realm, is_system_group)</code> to be unique since user cannot create system groups.</p>
+
+
+
+<a name="1269071"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269071" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269071">(Oct 20 2021 at 18:11)</a>:</h4>
+<p>From our design discussions, I think the desired end point is one where “system groups” are not special and the concept can eventually disappear. For example, if the user tries to create a stream, the code won’t implicitly look up the system group named moderators; it will look up the group that’s configured to manage the permissions for creating a stream, which will have been initialized to the moderators group but can be reconfigured to an arbitrary group.</p>
+<p>I don’t think we explicitly addressed the members and full members groups in that discussion, but one way they could be addressed is with configuration options along the lines of</p>
+<ul>
+<li>Automatically add new members to this group: [members]</li>
+<li>[x] After the new member waiting period, automatically add members to this group: [full members]<ul>
+<li>New member waiting period: [3 days]</li>
+</ul>
+</li>
+</ul>
+<p>We’re only introducing the “system groups” concept as a transitional mechanism, so that we don’t have to introduce all those configuration options all at once. That suggests we should try to introduce it in a way that won’t prevent us from removing it later.</p>
+
+
+
+<a name="1269079"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269079" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269079">(Oct 20 2021 at 18:21)</a>:</h4>
+<p>That's helpful, thanks.</p>
+<p><span class="user-mention silent" data-user-id="699">Anders Kaseorg</span> <a href="#narrow/stream/101-design/topic/full.20members.20user.20group/near/1269071">said</a>:</p>
+<blockquote>
+<p>I don’t think we explicitly addressed the members and full members groups in that discussion, but one way they could be addressed is with configuration options along the lines of</p>
+<ul>
+<li>Automatically add new members to this group: [members]</li>
+<li>[x] After the new member waiting period, automatically add members to this group: [full members]<ul>
+<li>New member waiting period: [3 days]</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p>I feel like this might point, though, to a design where we keep these two system groups even in a future where we've turned owners/admins/moderators into ordinary user-managed groups.</p>
+<p>One thing pushing me in that direction is that when I think about having a pair of groups like that, as an admin (and particularly if I'm not the only admin in the org)… I don't really want to also be potentially adding and removing users from those groups manually. I want to be able to use them as "all members" and "all full members", and not have to think about whether there are some accumulated discrepancies lying around from when someone removed someone from one of those groups because they didn't realize that wasn't how it's supposed to work.</p>
+
+
+
+<a name="1269085"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269085" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269085">(Oct 20 2021 at 18:26)</a>:</h4>
+<p>The UI could prevent you from removing qualified users from the groups configured by these options. I can see it being potentially useful to be able to manually add a new user to full members (that discrepancy will disappear with time).</p>
+
+
+
+<a name="1269097"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269097" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269097">(Oct 20 2021 at 18:31)</a>:</h4>
+<p>Although, given that we also have guests, perhaps these options are really somehow properties of invitations, rather than properties of the organization.</p>
+
+
+
+<a name="1269139"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269139" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Dehnert <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269139">(Oct 20 2021 at 19:51)</a>:</h4>
+<p>One other category of "special groups" would be the groups like "owners of #adehnert" -- I'm not sure if we'd want those cluttering up lists of groups, or potentially colliding with manually-created groups.</p>
+
+
+
+<a name="1269156"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269156" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269156">(Oct 20 2021 at 21:04)</a>:</h4>
+<p>The proposed design doesn’t have groups like that. You can configure each stream-level permission to use any group, and multiple permissions per stream or across streams can point to the same group. I expect most organizations will just have a small handful of groups that are reused for everything.</p>
+
+
+
+<a name="1269157"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269157" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Dehnert <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269157">(Oct 20 2021 at 21:22)</a>:</h4>
+<p>I thought that was the proposed mechanism to handle making an owner an individual or multiple groups -- the system would transparently create a new group with the people specified?</p>
+
+
+
+<a name="1269159"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269159" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Dehnert <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269159">(Oct 20 2021 at 21:23)</a>:</h4>
+<p>(viz <a href="#narrow/stream/101-design/topic/New.20permissions.20model/near/1267313">https://chat.zulip.org/#narrow/stream/101-design/topic/New.20permissions.20model/near/1267313</a>)</p>
+
+
+
+<a name="1269167"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1269167" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1269167">(Oct 20 2021 at 21:30)</a>:</h4>
+<p>We will make it easy to create a new group as needed: we let you do it directly in the dropdown, and perhaps automatically suggest a name that you can change. But we will not obscure the fact that group creation is happening. There are both UX reasons and performance reasons that we don't want to encourage the proliferation of thousands of tiny groups.</p>
+
+
+
+<a name="1270391"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270391" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270391">(Oct 22 2021 at 22:22)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="2187">Greg Price</span> <a href="#narrow/stream/101-design/topic/full.20members.20user.20group/near/1269041">said</a>:</p>
+<blockquote>
+<p>Got it, yeah.</p>
+<p>I think it's best if we find a way to have these groups be identified internally in a way that can't collide with user-created groups. And then when the groups are shown in the UI, we'd turn those internal identifiers into a corresponding UI string, which would get translated in the usual way.</p>
+</blockquote>
+<p>As long as we have the <code>is_system_group</code> flag, we can of course distinguish the system groups from non-system groups for purposes like internationalizing their names.</p>
+
+
+
+<a name="1270393"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270393" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270393">(Oct 22 2021 at 22:25)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="699">Anders Kaseorg</span> <a href="#narrow/stream/101-design/topic/full.20members.20user.20group/near/1269071">said</a>:</p>
+<blockquote>
+<p>From our design discussions, I think the desired end point is one where “system groups” are not special and the concept can eventually disappear. For example, if the user tries to create a stream, the code won’t implicitly look up the system group named moderators; it will look up the group that’s configured to manage the permissions for creating a stream, which will have been initialized to the moderators group but can be reconfigured to an arbitrary group.</p>
+</blockquote>
+<p>I want to add that I think we're only 50-80% confident that we will want to remove system groups after the end of the migration process. They're clearly a necessary crutch for migrating the permissions model without regressions.  </p>
+<p>It seems possible that we may find it's useful to keep them as a long-term concept for onboarding reasons or to simplify documentation or because it makes LDAP data synchronization workflows cleaner.  But from a design perspective, we certainly want to preserve the option to eliminate them.</p>
+
+
+
+<a name="1270396"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270396" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270396">(Oct 22 2021 at 22:28)</a>:</h4>
+<p>So this doesn't disagree with Anders' point about the strategy at all; just want to make clear that I at least haven't thought about all the implications of removing the system groups concept.</p>
+
+
+
+<a name="1270398"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270398" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270398">(Oct 22 2021 at 22:30)</a>:</h4>
+<p>I think it is reasonable to name the system groups with names that users are unlikely to be using (or to want!) for existing groups, since that would prevent us from needing to do complex migration code to rename existing groups that conflict.</p>
+
+
+
+<a name="1270422"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270422" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270422">(Oct 22 2021 at 22:34)</a>:</h4>
+<p>I think we should decorate groups names with an <code>@</code> since that is likely to be how they appear in the UI.  So here's some ideas with that in mind for machine-readable names:</p>
+<ul>
+<li><code>@Moderators</code> (Side question: Should group names be case-insensitive, like stream and topic names?).</li>
+<li><code>@system:moderators</code> as Greg suggested above.</li>
+<li><code>@role:moderators</code> (since these values do presently correspond to "roles" for users in the model).</li>
+<li><code>@permission:moderators</code> (might hint more clearly that this includes everyone who has at least the "moderator" permission).</li>
+</ul>
+
+
+
+<a name="1270424"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270424" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270424">(Oct 22 2021 at 22:34)</a>:</h4>
+<p>Special-casing system group names for internationalization sounds confusing—what happens when someone tries to @-mention an internationalized group name in a message? We could internationalize them once at creation time to the default language of the organization, to avoid the need to special-case them later.</p>
+
+
+
+<a name="1270425"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270425" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270425">(Oct 22 2021 at 22:35)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="10242">Sahil Batra</span> <a href="#narrow/stream/101-design/topic/full.20members.20user.20group/near/1269051">said</a>:</p>
+<blockquote>
+<p>One other option can be we can change current constraint of <code>(name, realm)</code> to be unique to <code>(name, realm, is_system_group)</code> to be unique since user cannot create system groups.</p>
+</blockquote>
+<p>This option works at the data model level, but one kinda still ends up stuck with a display problem of how to show the groups to users, represent its name in the API, etc.  I think I prefer the models that use more of a namespace for the group name.</p>
+
+
+
+<a name="1270428"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270428" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270428">(Oct 22 2021 at 22:39)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="699">Anders Kaseorg</span> <a href="#narrow/stream/101-design/topic/full.20members.20user.20group/near/1270424">said</a>:</p>
+<blockquote>
+<p>We could internationalize them once at creation time to the default language of the organization, to avoid the need to special-case them later.</p>
+</blockquote>
+<p>I think it kinda depends on what the human-readable name/descriptions look like, and maybe we need to make a prototype toy UI for selecting a group (or displaying the current group) for a permission to have the right intuition here.</p>
+<p>If we had names and descriptions for groups, for example, I could imagine display the group as e.g. <code>@permission:moderator</code> in a bubble (and that value is just fixed), and maybe when you mouse over it, we should a translated-into-your-personal-UI-language description that's "Group containing all users who have at least the moderator role", or something.</p>
+
+
+
+<a name="1270429"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270429" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270429">(Oct 22 2021 at 22:40)</a>:</h4>
+<p>Also, I should note that at present, we are able to find these special groups with effectively "Find the UserGroup in the realm with name "permission:moderator" and <code>is_system_group=True</code>" -- we'd need some other way to keep track of which is which if the names in the database are internationalized.</p>
+
+
+
+<a name="1270430"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270430" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270430">(Oct 22 2021 at 22:41)</a>:</h4>
+<p>I don't really like the idea of translating the name of the group for each viewing user, in that it'd make it hard for two users with different UI languages in the same organization to talk about the group with each other at all.</p>
+
+
+
+<a name="1270432"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270432" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270432">(Oct 22 2021 at 22:41)</a>:</h4>
+<p>Yeah. And I want to eventually get to a place where it becomes totally supported to, say, rename the Moderators group to TAs, depending on the needs of the organization.</p>
+
+
+
+<a name="1270436"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270436" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270436">(Oct 22 2021 at 22:44)</a>:</h4>
+<p>Yeah, I mean you could just make a new group called "TAs" that contains just the "permission:moderators" group and go from there, but that does seem off for how you'd want to do things.</p>
+
+
+
+<a name="1270442"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270442" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270442">(Oct 22 2021 at 22:45)</a>:</h4>
+<p>I guess I'm trying to not need to decide the question of "Could we remove the concept of 'roles' entirely at the end?".</p>
+
+
+
+<a name="1270445"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270445" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270445">(Oct 22 2021 at 22:47)</a>:</h4>
+<p>Why would there be a reason to keep roles around in a world where permissions are assigned to groups?</p>
+
+
+
+<a name="1270448"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270448" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270448">(Oct 22 2021 at 22:52)</a>:</h4>
+<p>There are some small issues to think through, but I don’t think this question is nearly so complicated that we need to drive early design decisions by the goal of avoiding it.</p>
+
+
+
+<a name="1270449"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270449" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270449">(Oct 22 2021 at 22:52)</a>:</h4>
+<p>Well, I guess there's a range of possible reasons involving backwards-compatibility or convenience, and also around the Owner/Administrator roles specifically that would need to be thought about (E.g. we have probably 1-2 dozen things that administrators/owners can do exclusively that aren't controllable by a settings dropdown, and all of them would require some care in migrating to a groups-based world, and I don't know how urgent migrating those will feel).  I guess maybe I should have removed "at the end" from that sentence -- it does seem like whatever set of things we have should be implement in terms of groups.</p>
+
+
+
+<a name="1270452"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270452" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270452">(Oct 22 2021 at 22:54)</a>:</h4>
+<p>As a random example: Currently we prevent you from removing the last organization owner or deactivating their account, and administrators (Who have the "deactivate account" permission in general) cannot deactivate owners.  This can become "users with the 'owner' permission are a group that can't have no active users in it" -- but it's probably a somewhat involved migration for each feature of this form.</p>
+
+
+
+<a name="1270456"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270456" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270456">(Oct 22 2021 at 22:58)</a>:</h4>
+<p>Yeah, that’s the example I thought of as well, other than the issue of automatic time-based addition to the full-members group discussed above. We’ll need to write some code to enforce this invariant on group membership updates, which we can do. (How random was this example actually?)</p>
+
+
+
+<a name="1270515"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270515" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270515">(Oct 22 2021 at 23:56)</a>:</h4>
+<p>Well, there's plenty of others that are tired to a role, like "who can do an organization data export", and how access to messages in public streams is tied to <code>is_guest</code>.</p>
+
+
+
+<a name="1270552"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270552" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270552">(Oct 23 2021 at 00:27)</a>:</h4>
+<p>Yeah but there are no particular complications in retying those to group-based permissions, and we can think later about exactly how fine we want them to be (“can do data export” or “can do this large bucket of owner-related things”).</p>
+
+
+
+<a name="1270560"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270560" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270560">(Oct 23 2021 at 00:33)</a>:</h4>
+<p>Yeah, I agree with that.</p>
+
+
+
+<a name="1270567"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270567" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270567">(Oct 23 2021 at 00:38)</a>:</h4>
+<p>Further thoughts on naming for the system groups?</p>
+
+
+
+<a name="1270568"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270568" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270568">(Oct 23 2021 at 00:39)</a>:</h4>
+<p>Or maybe we really want to have that discussion in <a class="stream-topic" data-stream-id="101" href="/#narrow/stream/101-design/topic/New.20permissions.20model">#design &gt; New permissions model</a>?</p>
+
+
+
+<a name="1270569"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270569" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270569">(Oct 23 2021 at 00:41)</a>:</h4>
+<p>Back the specific question of the maintenance mechanics for <code>full_members</code>, I'm leaning towards the model where we only toggle direct membership in the "full members" group and not the "members" group; that seems to me like just a simpler model.</p>
+<p>I guess perhaps a case study of whether that's a good idea is what will happen when you change a user's role from "Member" to "Guest": It'd unconditionally remove the user from the "Members" group, and remove them from the "Full members" group if present?  I guess that's about as reasonable as removing from either if present.</p>
+
+
+
+<a name="1270570"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270570" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270570">(Oct 23 2021 at 00:49)</a>:</h4>
+<p>Yeah, leaving full members in members is simpler.</p>
+
+
+
+<a name="1270571"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1270571" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1270571">(Oct 23 2021 at 00:51)</a>:</h4>
+<p>Perhaps someday we’ll generalize this mechanism to give you the ability to populate an arbitrary target group with the time-delayed membership of an arbitrary source group, and if you do that multiple times to the same source group, you certainly wouldn’t want it to delete from the source group.</p>
+
+
+
+<a name="1271665"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1271665" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1271665">(Oct 25 2021 at 22:07)</a>:</h4>
+<p>Yeah, might be overkill but certainly that's how one would generalize this. OK, <span class="user-mention" data-user-id="10242">@Sahil Batra</span>, I think you should feel free to tweak your PR with that decision.</p>
+
+
+
+<a name="1273635"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/full%20members%20user%20group/near/1273635" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/full.20members.20user.20group.html#1273635">(Oct 28 2021 at 21:24)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/101-design/topic/full.20members.20user.20group/near/1270568">said</a>:</p>
+<blockquote>
+<p>Or maybe we really want to have that discussion in <a class="stream-topic" data-stream-id="101" href="/#narrow/stream/101-design/topic/New.20permissions.20model">#design &gt; New permissions model</a>?</p>
+</blockquote>
+<p>(That seems right.)</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

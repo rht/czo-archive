@@ -1,0 +1,140 @@
+[
+    {
+        "content": "<p>Since upgrading to 2.1.2, my end users are essentially unanimous in the feeling that Zulip isn't as responsive as it use to be<br>\nParticularly, users have noted an uptick in the frequency of:</p>\n<ul>\n<li>messages waiting to send (with the \"Sending....\" note)</li>\n<li>waiting for messages to be edit-able </li>\n<li>having messages re-order (e.g. A, B, C, D on client turns into D, A, B, C after a time)</li>\n</ul>\n<p>I believe all of these have a root in server performance (i.e. the server is slower to respond to clients)</p>\n<p>I do not have any error messages in the error log and the host itself seems to be OK with CPU/RAM (though if there are concrete measurements to perform, I would appreciate that)</p>\n<p>Any idea on how to identify the bottleneck?</p>",
+        "id": 832724,
+        "sender_full_name": "Mike Ray",
+        "timestamp": 1584467203
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9893\">@Mike Ray</span> strange.  Just to be clear, what was the previous version?</p>",
+        "id": 832765,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1584471590
+    },
+    {
+        "content": "<p>Those are all symptoms of the Tornado server being overloaded; the first thing I'd look at is <code>grep Tornado /var/log/zulip/server.log</code> and look at what sort of percentages you're seeing there.</p>",
+        "id": 832766,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1584471635
+    },
+    {
+        "content": "<p>We have significant work in progress to improve the scalability of that in master since 2.1.2 (and more coming soon into master), so it's possible the near-term solution would be to upgrade that.  There's a few other ideas we can discuss as well.</p>",
+        "id": 832767,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1584471679
+    },
+    {
+        "content": "<p>2.0.8 was the previous version</p>",
+        "id": 832775,
+        "sender_full_name": "Mike Ray",
+        "timestamp": 1584471940
+    },
+    {
+        "content": "<p>And to be clear -- it's not that we didn't have those symptoms before, but user feedback is suggesting it just happens more on this version</p>",
+        "id": 832776,
+        "sender_full_name": "Mike Ray",
+        "timestamp": 1584471965
+    },
+    {
+        "content": "<p>Here are the last 5 minutes or so of tornado entries in the log:</p>\n<div class=\"codehilite\"><pre><span></span>2020-03-17 19:05:37.677 INFO [] Tornado 9993  73.5% busy over the past 41.5 seconds\n2020-03-17 19:05:58.491 INFO [] Tornado 9993  82.5% busy over the past 59.8 seconds\n2020-03-17 19:06:11.566 INFO [] Tornado 9993  91.0% busy over the past 59.8 seconds\n2020-03-17 19:06:18.013 INFO [] Tornado 9993 removed 0 expired event queues owned by 0 users in 0.001s.  Now 454 active queues, 384 handlers, latest ID 5772933\n2020-03-17 19:06:18.740 INFO [] Tornado 9993  88.6% busy over the past 41.1 seconds\n2020-03-17 19:06:23.946 INFO [] Tornado 9993  81.1% busy over the past 46.3 seconds\n2020-03-17 19:06:37.963 INFO [] Tornado 9993  78.2% busy over the past 60.0 seconds\n2020-03-17 19:06:48.464 INFO [] Tornado 9993  74.1% busy over the past 50.0 seconds\n2020-03-17 19:06:53.716 INFO [] Tornado 9993  69.0% busy over the past 55.2 seconds\n2020-03-17 19:06:58.717 INFO [] Tornado 9993  64.1% busy over the past 60.0 seconds\n2020-03-17 19:07:13.983 INFO [] Tornado 9993  66.6% busy over the past 55.3 seconds\n2020-03-17 19:07:15.933 INFO [] Tornado 9993 removed 0 expired event queues owned by 0 users in 0.002s.  Now 454 active queues, 453 handlers, latest ID 5776714\n2020-03-17 19:07:19.136 INFO [] Tornado 9993  61.5% busy over the past 59.8 seconds\n2020-03-17 19:07:43.557 INFO [] Tornado 9993  71.6% busy over the past 55.1 seconds\n2020-03-17 19:08:04.665 INFO [] Tornado 9993  82.3% busy over the past 50.7 seconds\n2020-03-17 19:08:17.443 INFO [] Tornado 9993 removed 1 expired event queues owned by 1 users in 0.002s.  Now 453 active queues, 1 handlers, latest ID 5782072\n2020-03-17 19:08:39.374 INFO [] Tornado 9993  91.5% busy over the past 55.8 seconds\n2020-03-17 19:08:44.383 INFO [] Tornado 9993  85.7% busy over the past 60.0 seconds\n2020-03-17 19:09:04.511 INFO [] Tornado 9993  86.1% busy over the past 59.8 seconds\n2020-03-17 19:09:16.077 INFO [] Tornado 9993 removed 0 expired event queues owned by 0 users in 0.001s.  Now 453 active queues, 446 handlers, latest ID 5787477\n2020-03-17 19:09:16.108 INFO [] Tornado 9993  80.2% busy over the past 36.7 seconds\n2020-03-17 19:09:21.328 INFO [] Tornado 9993  71.4% busy over the past 42.0 seconds\n2020-03-17 19:09:27.652 INFO [] Tornado 9993  71.8% busy over the past 48.3 seconds\n</pre></div>",
+        "id": 832779,
+        "sender_full_name": "Mike Ray",
+        "timestamp": 1584472250
+    },
+    {
+        "content": "<p>The percents are certainly higher than other times, e.g. around 6 AM it was only hitting 10 to 20 %</p>",
+        "id": 832780,
+        "sender_full_name": "Mike Ray",
+        "timestamp": 1584472291
+    },
+    {
+        "content": "<p>But is 60%-90% problematic? It seems to me like it shouldn't be</p>",
+        "id": 832782,
+        "sender_full_name": "Mike Ray",
+        "timestamp": 1584472391
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9893\">@Mike Ray</span> yes, hitting 90% is problematic in that it never logs 100% (it just stop logging when overloaded, due to a design bug in the logging).</p>",
+        "id": 832791,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1584472777
+    },
+    {
+        "content": "<p>So great, we understand the cause.  My guess is you could fix it by upgrading to master, where we've done some performance work impacting Tornado.</p>",
+        "id": 832793,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1584472945
+    },
+    {
+        "content": "<p>And simpler workaround would be to modify <code>send_presence_changed</code> to immediately return; we have a few folks doing that to lower Tornado load.  The user-facing impact is that when a user comes online, they won't appear green in the right sidebar for an extra minute.</p>",
+        "id": 832795,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1584472992
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/2.2E1.2E2.20performance/near/832795\" title=\"#narrow/stream/31-production-help/topic/2.2E1.2E2.20performance/near/832795\">said</a>:</p>\n<blockquote>\n<p>And simpler workaround would be to modify <code>send_presence_changed</code> to immediately return; we have a few folks doing that to lower Tornado load.  The user-facing impact is that when a user comes online, they won't appear green in the right sidebar for an extra minute.</p>\n</blockquote>\n<p>Is that the only known side-effect?</p>",
+        "id": 832797,
+        "sender_full_name": "Mike Ray",
+        "timestamp": 1584473019
+    },
+    {
+        "content": "<p>That's the only effect of <code>send_presence_changed</code>; it makes the presence UI update immediately for just-logged-in users; they'll get the update in any case in the every-minute poll of new presence data (presence has its own independent sync system, and we use Tornado for presence just for these instant updates).</p>",
+        "id": 832800,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1584473108
+    },
+    {
+        "content": "<p>Gotcha, so that may keep tornado less busy.<br>\nI'll go over the options with my colleagues<br>\nAs a note (because I am sure they will ask) -- is there any hint of a 2.2 release or is 2.1.2 likely to be the latest tagged release for some time?</p>\n<p>Also -- thank you very much for your assistance!</p>",
+        "id": 832807,
+        "sender_full_name": "Mike Ray",
+        "timestamp": 1584473232
+    },
+    {
+        "content": "<p>Yeah, I'd guess it'll reduce Tornado load like 2x given the details you've shared.</p>",
+        "id": 832813,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1584473478
+    },
+    {
+        "content": "<p>Well there will likely be a 2.1.3 release soon, though with coronavirus affecting things like my childcare I'm not going to make timing promises, and it'll be just bugfixes.</p>\n<p>And of course a 2.2 is coming; we were aiming for about a month from now but again with the coronavirus situation who knows.  We run off master on <a href=\"http://zulipchat.com\" target=\"_blank\" title=\"http://zulipchat.com\">zulipchat.com</a> FWIW, so it's a viable option in production.</p>",
+        "id": 832815,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1584473529
+    },
+    {
+        "content": "<p>Fantastic information as always -- thank you</p>",
+        "id": 832827,
+        "sender_full_name": "Mike Ray",
+        "timestamp": 1584473807
+    },
+    {
+        "content": "<p>Also, I completely understand the pandemic throwing things into disarray -- stay safe and take care of yourself and your family first!</p>",
+        "id": 832829,
+        "sender_full_name": "Mike Ray",
+        "timestamp": 1584473854
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"9893\">Mike Ray</span> <a href=\"#narrow/stream/31-production-help/topic/2.2E1.2E2.20performance/near/832829\" title=\"#narrow/stream/31-production-help/topic/2.2E1.2E2.20performance/near/832829\">said</a>:</p>\n<blockquote>\n<p>Also, I completely understand the pandemic throwing things into disarray -- stay safe and take care of yourself and your family first!</p>\n</blockquote>\n<p>Yeah, it's also resulting in a ton of support tickets, as a lot of organizations are becoming distributed teams.</p>",
+        "id": 832888,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1584475630
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  - after discussion, we are electing to first try modifying <code>send_presence_changed</code> . Do I just add a <code>return None</code> as the first line of that function or are the changes more involved?</p>",
+        "id": 833075,
+        "sender_full_name": "Mike Ray",
+        "timestamp": 1584485587
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9893\">@Mike Ray</span> yep, and then restart the server.</p>",
+        "id": 833119,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1584487964
+    },
+    {
+        "content": "<p>Initial results show positive results. Thanks again!</p>",
+        "id": 833627,
+        "sender_full_name": "Mike Ray",
+        "timestamp": 1584553566
+    }
+]

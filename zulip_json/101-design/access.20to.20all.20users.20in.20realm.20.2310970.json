@@ -1,0 +1,158 @@
+[
+    {
+        "content": "<p>We are planning to start work on <a href=\"https://github.com/zulip/zulip/pull/10970\">#10970</a>,  which requests a feature to not allow guest users to access all users in the organization.</p>\n<p>We discussed to have this implemented as a group based setting <code>Who can access all users in the organization</code>. The user who would not be able to access all other users, would be able to access a user, if they can see a message sent by them.</p>\n<p>There was also some discussion on <a class=\"stream-topic\" data-stream-id=\"3\" href=\"/#narrow/stream/3-backend/topic/limited.20guests.20feature.20.2310970\">#backend &gt; limited guests feature #10970</a> . I am starting this topic to have some discussion around how we want to design this feature. I have a couple of questions/opinions in my mind which I would be sharing in further messages.</p>",
+        "id": 1528426,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1679331150
+    },
+    {
+        "content": "<p>I think we would want the setting to be group-based setting with only role-based options for the start like <code>Guests</code>. <code>Members</code>, <code>Full members</code>, <code>Moderators</code>, etc.</p>\n<p>If we do the above and we want to allow access to others based on whether the user can see a message sent by them, then users other than <code>Guests</code> can see messages in unsubscribed public streams as well. So, technically, if we set the setting to be <code>Moderators</code>or above option, then the members would be able to access almost all users.</p>",
+        "id": 1528429,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1679331453
+    },
+    {
+        "content": "<p>Also, suppose we set the setting to <code>Members and above</code> which means guests cannot access all users in the org.</p>\n<p>Now, if there is a user (A) who is subscribed to some streams which the guest (B) is also subscribed to but did not send any message to any of them. Do we still show that user A in the subscribers list of the streams to B?</p>\n<p>We might not show because A did not send any message, but we might also want that B should be able to see who will read the messages or we consider that it is not necessary for B to be able to know who all will read the messages because they can anyways cannot access all users.</p>",
+        "id": 1528437,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1679332320
+    },
+    {
+        "content": "<p>Also, how we would handle the case where a user A is mentioned in a message recieved by B but B cannot access user A since A has not sent any messages which are recieved by B?</p>",
+        "id": 1528471,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1679333805
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10242\">Sahil Batra</span> <a href=\"#narrow/stream/101-design/topic/access.20to.20all.20users.20in.20realm.20.2310970/near/1528429\">said</a>:</p>\n<blockquote>\n<p>I think we would want the setting to be group-based setting with only role-based options for the start like <code>Guests</code>. <code>Members</code>, <code>Full members</code>, <code>Moderators</code>, etc.</p>\n</blockquote>\n<p>Hm, I was imagining a different design -- something along the lines of a new \"limited guest\" system group, rather than an additional permission for existing groups. This group would have the same permissions as guests, but with the additional restriction on which users they can see.</p>\n<p>I guess that would automatically address the unsubscribed public streams question, though maybe there's still a question about web-public streams.</p>\n<p>I think this approach would cover the \"limited guest = external customer invited to the organization\" use case well. I'm not sure if it would somehow be more limiting than we'd like for an educational organization, where you might not want students who are in different classes to be able to see each other.</p>",
+        "id": 1528604,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1679340601
+    },
+    {
+        "content": "<p>I like group-based setting design. My understanding of what we've heard from users is that 95% of organizations will want all of their guests to have the same behavior \"Who can see all other users in the organization\" -- either they want that to be \"Everyone\", or they want it to be \"Members\", and that's true for all their guests, so they can pick one of those system groups.</p>\n<p>Having a group-based setting provides the flexibility that if an organization wants to have some guests also have this access, they can implement that in a straightforward way, by making a new group that contains Members and also whichever subset of Guests that need this access. This feels to me like a 5% case, but having a group-based setting would mean we have the flexibility to handle this -- without all the extra work that comes with a separate \"Limited guest\" role.</p>",
+        "id": 1528847,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1679355995
+    },
+    {
+        "content": "<p>We can always add a \"Limited guest\" role later, which would mainly make it easier to see in a user's profile whether they have this permission in an organization that chooses to have both types of guests, but I think we should think of that as basically an extension to the core design.</p>",
+        "id": 1528848,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1679356058
+    },
+    {
+        "content": "<p>I also agree that using a new group based setting instead of a new role would be better in terms of flexibility that it provides.</p>",
+        "id": 1529350,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1679420227
+    },
+    {
+        "content": "<p>OK, after chatting with <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> some more offline, I agree that we should move forward with the Everyone or Members+ options for who can see all other users for now. And the next step would be to make it possible to restrict the permission to any group, but we'll have to figure out the UI for that.</p>",
+        "id": 1529989,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1679445271
+    },
+    {
+        "content": "<blockquote>\n<p>Now, if there is a user (A) who is subscribed to some streams which the guest (B) is also subscribed to but did not send any message to any of them. Do we still show that user A in the subscribers list of the streams to B?</p>\n</blockquote>\n<blockquote>\n<p>We might not show because A did not send any message, but we might also want that B should be able to see who will read the messages or we consider that it is not necessary for B to be able to know who all will read the messages because they can anyways cannot access all users.</p>\n</blockquote>\n<p>Yeah, it makes sense to me to show user A to user B in the subscribers, both because (as you note) this way B knows who they are sending messages to, and also because I can't really think of a scenario where org admins would specifically want to hide A from B in this case.</p>",
+        "id": 1529990,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1679445418
+    },
+    {
+        "content": "<blockquote>\n<p>Also, how we would handle the case where a user A is mentioned in a message recieved by B but B cannot access user A since A has not sent any messages which are recieved by B?</p>\n</blockquote>\n<p>Hm, good question. Maybe we show the pill but make it not clickable? The other alternative that comes to mind is to show the abbreviated user card we display to in the logged out view:</p>\n<p><a href=\"/user_uploads/2/3d/I097INopWjJRYypRWAo8LDD4/Screen-Shot-2023-03-21-at-5.38.57-PM.png\">Screen-Shot-2023-03-21-at-5.38.57-PM.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/3d/I097INopWjJRYypRWAo8LDD4/Screen-Shot-2023-03-21-at-5.38.57-PM.png\" title=\"Screen-Shot-2023-03-21-at-5.38.57-PM.png\"><img src=\"/user_uploads/2/3d/I097INopWjJRYypRWAo8LDD4/Screen-Shot-2023-03-21-at-5.38.57-PM.png\"></a></div>",
+        "id": 1529996,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1679445560
+    },
+    {
+        "content": "<blockquote>\n<p>Yeah, it makes sense to me to show user A to user B in the subscribers, both because (as you note) this way B knows who they are sending messages to, and also because I can't really think of a scenario where org admins would specifically want to hide A from B in this case.</p>\n</blockquote>\n<p>This basically means that a user can access another user if they have sent a message received by them or they are subscribed to atleast one common stream.</p>",
+        "id": 1530335,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1679493051
+    },
+    {
+        "content": "<p>Regarding mention pill, I think just making them not clickable is fine. Also, would most probably be the case the a mentioned user will be subscribed to that stream.</p>",
+        "id": 1530339,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1679493209
+    },
+    {
+        "content": "<p>I think not clickable seems fine and simplest to do engineering-wise, so that plan works for me.</p>",
+        "id": 1531832,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1679602455
+    },
+    {
+        "content": "<p>I think we would also need to add a restriction on which users can be accessed by spectators. We can either restrict if the setting is set to \"members or above\" or just restrict it in all cases. We can probably only show the subscribers of the web-public streams for spectators.</p>\n<p>For other users, we would also show also include the sender of messages recieved by that user. But we cannot do that for spectators. If we include all users who have sent messages in the web-public streams, then spectator might be able to access more users than guests which we should not do.</p>",
+        "id": 1644685,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1695313129
+    },
+    {
+        "content": "<p>Hm, I'm not sure we need to change anything for spectators. They get very limited access to the user -- there's no presence information, and a highly abbreviated profile.</p>\n<p><a href=\"/user_uploads/2/e1/a5ldYtwwtkhMwo15ImyYava_/Screen-Shot-2023-09-21-at-11.54.20-AM.png\">Screen-Shot-2023-09-21-at-11.54.20-AM.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/e1/a5ldYtwwtkhMwo15ImyYava_/Screen-Shot-2023-09-21-at-11.54.20-AM.png\" title=\"Screen-Shot-2023-09-21-at-11.54.20-AM.png\"><img src=\"/user_uploads/2/e1/a5ldYtwwtkhMwo15ImyYava_/Screen-Shot-2023-09-21-at-11.54.20-AM.png\"></a></div>",
+        "id": 1644860,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695322473
+    },
+    {
+        "content": "<p>I think it's OK if by logging out, a limited guest can see abbreviated profiles like that for users with messages in web-public streams.</p>",
+        "id": 1644863,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695322506
+    },
+    {
+        "content": "<p>Yeah agreed, this guests feature is entirely for organizations without web public streams, so I think we can just leave improving the interaction between those features for a follow up?</p>",
+        "id": 1644877,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1695323620
+    },
+    {
+        "content": "<p>We can document in the help center that we don't recommend using both of these features in an organization.</p>",
+        "id": 1644878,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1695323669
+    },
+    {
+        "content": "<p>I think using both features is potentially fine, even -- it just depends on what sort of information you care about restricting from limited guests.</p>",
+        "id": 1644898,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695325294
+    },
+    {
+        "content": "<p>Ok, sounds good to not add any restrictions for spectators.</p>",
+        "id": 1645273,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1695368502
+    },
+    {
+        "content": "<p>Just wanted to confirm one more thing, should we allow guests to access all the bots?</p>\n<p>One thing here can be that the guest may not have access to the bot owner, so in the UI we might show the owner as \"Unknown user\".</p>",
+        "id": 1645277,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1695369531
+    },
+    {
+        "content": "<p>I think that's fine. Guests don't have Bots in their settings panels, so they'll only actually encounter bots that they receive messages from.</p>",
+        "id": 1645604,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695409115
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10242\">Sahil Batra</span> <a href=\"#narrow/stream/101-design/topic/access.20to.20all.20users.20in.20realm.20.2310970/near/1530335\">said</a>:</p>\n<blockquote>\n<p>This basically means that a user can access another user if they have sent a message received by them or they are subscribed to atleast one common stream.</p>\n</blockquote>\n<p>There can be a case when the guest user is participating in a group DM with two users A and B, but user B has not sent any message in the converstation and also does not satisfy the above mentioned criteria. In this case, should the guest user be allowed to access user B?</p>",
+        "id": 1649078,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1695921368
+    },
+    {
+        "content": "<p>Yes, I think so... In general, users don't have to opt themselves into being seen by a guest -- someone else can add the guest to a place (a stream) where another user is also present.</p>",
+        "id": 1649113,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695923306
+    },
+    {
+        "content": "<p>It seems good if in all the common situations, a guest can see who they are talking to.</p>",
+        "id": 1649114,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695923334
+    }
+]

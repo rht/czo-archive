@@ -1,0 +1,132 @@
+<html>
+<head><meta charset="utf-8"><title>Setting up on subdomain! · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Setting.20up.20on.20subdomain.21.html">Setting up on subdomain!</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1449350"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Setting%20up%20on%20subdomain%21/near/1449350" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> William Nelson <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Setting.20up.20on.20subdomain.21.html#1449350">(Oct 13 2022 at 20:11)</a>:</h4>
+<p>Hi! I followed the tutorial for setting up with docker, and in my docker compose file specified that my domain for zulip would be on a subdomain. Why is it not spawning a webpage at `zulip.&lt;my_website&gt;.org'?</p>
+
+
+
+<a name="1449429"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Setting%20up%20on%20subdomain%21/near/1449429" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Setting.20up.20on.20subdomain.21.html#1449429">(Oct 13 2022 at 22:15)</a>:</h4>
+<p><span class="user-mention" data-user-id="25021">@William Nelson</span> can you be more concrete about what precise settings you specified?</p>
+
+
+
+<a name="1449435"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Setting%20up%20on%20subdomain%21/near/1449435" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> William Nelson <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Setting.20up.20on.20subdomain.21.html#1449435">(Oct 13 2022 at 22:41)</a>:</h4>
+<p>Here's my entire config file:</p>
+<div class="codehilite" data-code-language="Docker"><pre><span></span><code>version: <span class="s2">"2"</span>
+services:
+  database:
+    image: <span class="s2">"zulip/zulip-postgresql:10"</span>
+    environment:
+      POSTGRES_DB: <span class="s2">"zulip"</span>
+      POSTGRES_USER: <span class="s2">"zulip"</span>
+      # Note that you need to <span class="k">do</span> a manual <span class="sb">`</span>ALTER ROLE<span class="sb">`</span> query <span class="k">if</span> you
+      # change this on a system after booting the postgres container
+      # the first <span class="nb">time</span> on a host.  Instructions are available <span class="k">in</span> README.md.
+      POSTGRES_PASSWORD: <span class="s2">"QuantiiRocks_22"</span>
+    volumes:
+      - <span class="s2">"/opt/docker/zulip/postgresql/data:/var/lib/postgresql/data:rw"</span>
+  memcached:
+    image: <span class="s2">"memcached:alpine"</span>
+    command:
+      - <span class="s2">"sh"</span>
+      - <span class="s2">"-euc"</span>
+      - <span class="p">|</span>
+        <span class="nb">echo</span> <span class="s1">'mech_list: plain'</span> &gt; <span class="s2">"</span><span class="nv">$$</span><span class="s2">SASL_CONF_PATH"</span>
+        <span class="nb">echo</span> <span class="s2">"zulip@</span><span class="nv">$$</span><span class="s2">HOSTNAME:</span><span class="nv">$$</span><span class="s2">MEMCACHED_PASSWORD"</span> &gt; <span class="s2">"</span><span class="nv">$$</span><span class="s2">MEMCACHED_SASL_PWDB"</span>
+        <span class="nb">echo</span> <span class="s2">"zulip@localhost:</span><span class="nv">$$</span><span class="s2">MEMCACHED_PASSWORD"</span> &gt;&gt; <span class="s2">"</span><span class="nv">$$</span><span class="s2">MEMCACHED_SASL_PWDB"</span>
+        <span class="nb">exec</span> memcached -S
+    environment:
+      SASL_CONF_PATH: <span class="s2">"/home/memcache/memcached.conf"</span>
+      MEMCACHED_SASL_PWDB: <span class="s2">"/home/memcache/memcached-sasl-db"</span>
+      MEMCACHED_PASSWORD: <span class="s2">"QuantiiRocks_22"</span>
+    restart: always
+  rabbitmq:
+    image: <span class="s2">"rabbitmq:3.7.7"</span>
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: <span class="s2">"zulip"</span>
+      RABBITMQ_DEFAULT_PASS: <span class="s2">"QuantiiRocks_22"</span>
+    volumes:
+      - <span class="s2">"/opt/docker/zulip/rabbitmq:/var/lib/rabbitmq:rw"</span>
+  redis:
+    image: <span class="s2">"redis:alpine"</span>
+    command:
+      - <span class="s2">"sh"</span>
+      - <span class="s2">"-euc"</span>
+      - <span class="p">|</span>
+        <span class="nb">echo</span> <span class="s2">"requirepass '</span><span class="nv">$$</span><span class="s2">REDIS_PASSWORD'"</span> &gt; /etc/redis.conf
+        <span class="nb">exec</span> redis-server /etc/redis.conf
+    environment:
+      REDIS_PASSWORD: <span class="s2">"QuantiiRocks_22"</span>
+    volumes:
+      - <span class="s2">"/opt/docker/zulip/redis:/data:rw"</span>
+  zulip:
+    image: <span class="s2">"zulip/docker-zulip:5.6-0"</span>
+    build:
+      context: .
+      args:
+        # Change these <span class="k">if</span> you want to build zulip from a different repo/branch
+        ZULIP_GIT_URL: https://github.com/zulip/zulip.git
+        ZULIP_GIT_REF: <span class="s2">"5.6"</span>
+        # Set this up <span class="k">if</span> you plan to use your own CA certificate bundle <span class="k">for</span> building
+        # CUSTOM_CA_CERTIFICATES:
+    ports:
+      - <span class="s2">"80:80"</span>
+      - <span class="s2">"443:443"</span>
+    environment:
+      DB_HOST: <span class="s2">"database"</span>
+      DB_HOST_PORT: <span class="s2">"5432"</span>
+      DB_USER: <span class="s2">"zulip"</span>
+      SSL_CERTIFICATE_GENERATION: <span class="s2">"self-signed"</span>
+      SETTING_MEMCACHED_LOCATION: <span class="s2">"memcached:11211"</span>
+      SETTING_RABBITMQ_HOST: <span class="s2">"rabbitmq"</span>
+      SETTING_REDIS_HOST: <span class="s2">"redis"</span>
+      SECRETS_email_password: <span class="s2">"123456789"</span>
+      # These should match RABBITMQ_DEFAULT_PASS, POSTGRES_PASSWORD,
+      # MEMCACHED_PASSWORD, and REDIS_PASSWORD above.
+      SECRETS_rabbitmq_password: <span class="s2">"QuantiiRocks_22"</span>
+      SECRETS_postgres_password: <span class="s2">"QuantiiRocks_22"</span>
+      SECRETS_memcached_password: <span class="s2">"QuantiiRocks_22"</span>
+      SECRETS_redis_password: <span class="s2">"QuantiiRocks_22"</span>
+      SECRETS_secret_key: <span class="s2">"ejgiq39wefj39ef38dio38dfiito3wekd4u2390rfje3jf9023jeifdo2893osdxeu39id3k"</span>
+      SETTING_EXTERNAL_HOST: <span class="s2">"zulip.quantii.org"</span>
+      SETTING_ZULIP_ADMINISTRATOR: <span class="s2">"admins@quantii.org"</span>
+      SETTING_EMAIL_HOST: <span class="s2">"mail.quantii.org"</span> # e.g. smtp.example.com
+      SETTING_EMAIL_HOST_USER: <span class="s2">"noreply@quantii.org"</span>
+      SETTING_EMAIL_PORT: <span class="s2">"587"</span>
+      # It seems that the email server needs to use ssl or tls and can<span class="err">'</span>t be used without it
+      SETTING_EMAIL_USE_SSL: <span class="s2">"False"</span>
+      SETTING_EMAIL_USE_TLS: <span class="s2">"True"</span>
+      ZULIP_AUTH_BACKENDS: <span class="s2">"EmailAuthBackend"</span>
+      # Uncomment this when configuring the mobile push notifications service
+      # SETTING_PUSH_NOTIFICATION_BOUNCER_URL: <span class="s1">'https://push.zulipchat.com'</span>
+    volumes:
+      - <span class="s2">"/opt/docker/zulip/zulip:/data:rw"</span>
+    ulimits:
+      nofile:
+        soft: <span class="m">1000000</span>
+        hard: <span class="m">1048576</span>
+</code></pre></div>
+
+
+
+<a name="1449436"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Setting%20up%20on%20subdomain%21/near/1449436" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> William Nelson <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Setting.20up.20on.20subdomain.21.html#1449436">(Oct 13 2022 at 22:42)</a>:</h4>
+<p>Note that I replaced the passwords and everything <span class="user-mention" data-user-id="7">@Tim Abbott</span></p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,171 @@
+<html>
+<head><meta charset="utf-8"><title>New remote postgres DB · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/New.20remote.20postgres.20DB.html">New remote postgres DB</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1040605"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/New%20remote%20postgres%20DB/near/1040605" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Robert (ro-i) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/New.20remote.20postgres.20DB.html#1040605">(Oct 18 2020 at 19:09)</a>:</h4>
+<p>This is a follow-up question of <a class="stream-topic" data-stream-id="31" href="/#narrow/stream/31-production-help/topic/hardware.20requirements">#production help &gt; hardware requirements</a>.<br>
+I have now used my own installation process (keeping the contents of the old database, i.e. use my backup) to install the db. As it seemed to be difficult to pick out the needed stuff from the normal zulip installation routine, I simply did it the other way round and executed the usual zulip installation and then removed the stuff that is not needed for a standalone postgres server:</p>
+<blockquote>
+<p>- <strong>on new postgres server</strong><br>
+  - install full zulip: <code>sudo ./scripts/setup/install --email=my_email --hostname=my_host --self-signed-cert</code><br>
+    (we do not need the zulip certificates, so just create self-signed ones)</p>
+<p>- stop running zulip services: <code>sudo -u zulip supervisorctl stop all</code><br>
+  - restore backup: <code>sudo /home/zulip/deployments/current/scripts/setup/restore-backup /path/to/backup.tar.gz</code><br>
+  - stop again all zulip services<br>
+  - remove all cron jobs in /etc/cron.d whose file stamps are now:<br>
+<code>sudo rm archive-messages certbot-renew check-analytics-state clearsessions rabbitmq-* restart-zulip send-digest-emails soft-deactivate-users update-analytics-counts</code><br>
+    (there are no such jobs in the other /etc/cron.* directories)</p>
+<p>- stop and disable unnecessary systemd units:<br>
+    - <code>sudo systemctl disable redis*</code><br>
+    - <code>sudo systemctl disable memcached.service</code><br>
+    - <code>sudo systemctl disable rabbitmq-server.service</code><br>
+    - <code>sudo systemctl disable camo.service</code><br>
+  - disable unnecessary supervisorctl jobs:<br>
+    - <code>sudo rm /etc/supervisor/conf.d/zulip.conf</code> <br>
+  - restart supervisor:<br>
+    -  <code>sudo systemctl restart supervisor.service</code><br>
+  - /etc/postgresql-common:<br>
+    - https-cert of server &gt; server.crt<br>
+    - https-cert-key of server &gt; server.key<br>
+  - /etc/postgresql/12/main/postgresql.conf:<br>
+    - listen_addresses = '*'<br>
+    - password_encryption = scram-sha-256<br>
+    - ssl_cert_file = '/etc/postgresql-common/server.crt'<br>
+    - ssl_key_file = '/etc/postgresql-common/server.key'<br>
+  - add the following line to pg_hba.conf:<br>
+<code>hostssl zulip           zulip           [application server hostname]     scram-sha-256</code></p>
+<p>- restart database:<br>
+<code>sudo systemctl restart postgresql</code></p>
+<p>- set password for zulip in postgres:<br>
+    - run <code>sudo -u postgres psql</code> and use <code>\password zulip</code><br>
+  - <strong>go to application server</strong><br>
+  - stop zulip:<br>
+<code>sudo -u zulip supervisorctl stop all</code></p>
+<p>- settings.py: configure the REMOTE_POSTGRES variables according to your need (hostname, port, verify-full)<br>
+  - /etc/zulip/zulip.conf:<br>
+    - puppet_classes = zulip::app_frontend, zulip::memcached, zulip::rabbit, zulip::redis<br>
+  - /etc/zulip/zulip-secrets.conf:<br>
+    - set <code>postgres_password</code> to the password you just assigned to the zulip user in your remote postgres<br>
+  - stop and disable old database<br>
+    - <code>sudo systemctl disable postgresql</code><br>
+  - initialize db:<br>
+<code>sudo -u zulip /home/zulip/deployments/current/scripts/setup/initialize-database</code></p>
+</blockquote>
+<p>Now, I can successfully login and read messages. However, I get the pop-up warning:<br>
+<code>Unable to connect to Zulip. Updates may be delayed. Retrying soon... Try now.</code><br>
+and one mail with <code>Internal Server Error: /json/messages</code> containing:</p>
+<div class="codehilite"><pre><span></span><code>Request info:
+- path: /json/messages
+- GET: {&#39;anchor&#39;: [&#39;1531&#39;], &#39;num_before&#39;: [&#39;1000&#39;], &#39;num_after&#39;: [&#39;0&#39;], &#39;client_gravatar&#39;: [&#39;true&#39;]}
+- REMOTE_ADDR: &quot;ip.ip.ip.ip&quot;
+- QUERY_STRING: &quot;anchor=******&amp;num_before=******&amp;num_after=******&amp;client_gravatar=******&quot;
+- SERVER_NAME: &quot;&quot;
+</code></pre></div>
+
+
+<p>and one with the traceback:</p>
+<div class="codehilite"><pre><span></span><code>Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/base.py&quot;, line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File &quot;./zerver/lib/rest.py&quot;, line 30, in _wrapped_view_func
+    response = view_func(request, *args, **kwargs)
+  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/django/views/decorators/csrf.py&quot;, line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+  File &quot;./zerver/lib/rest.py&quot;, line 168, in rest_dispatch
+    return target_function(request, **kwargs)
+  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/django/utils/decorators.py&quot;, line 142, in _wrapped_view
+    response = view_func(request, *args, **kwargs)
+  File &quot;./zerver/decorator.py&quot;, line 684, in _wrapped_view_func
+    return authenticate_log_and_execute_json(
+  File &quot;./zerver/decorator.py&quot;, line 671, in authenticate_log_and_execute_json
+    return limited_view_func(request, user_profile, *args, **kwargs)
+  File &quot;./zerver/decorator.py&quot;, line 801, in wrapped_func
+    return func(request, *args, **kwargs)
+  File &quot;./zerver/lib/request.py&quot;, line 366, in _wrapped_view_func
+    return view_func(request, *args, **kwargs)
+  File &quot;./zerver/views/message_fetch.py&quot;, line 948, in get_messages_backend
+    message_list = messages_for_ids(
+  File &quot;./zerver/lib/message.py&quot;, line 119, in messages_for_ids
+    MessageDict.post_process_dicts(message_list, apply_markdown, client_gravatar)
+  File &quot;./zerver/lib/message.py&quot;, line 206, in post_process_dicts
+    MessageDict.bulk_hydrate_recipient_info(objs)
+  File &quot;./zerver/lib/message.py&quot;, line 525, in bulk_hydrate_recipient_info
+    display_recipients = bulk_fetch_display_recipients(recipient_tuples)
+  File &quot;./zerver/lib/display_recipient.py&quot;, line 170, in bulk_fetch_display_recipients
+    personal_and_huddle_display_recipients: Dict[int, List[UserDisplayRecipient]] = transformed_bulk_cached_fetch(
+  File &quot;./zerver/lib/cache.py&quot;, line 417, in transformed_bulk_cached_fetch
+    return generic_bulk_cached_fetch(
+  File &quot;./zerver/lib/cache.py&quot;, line 394, in generic_bulk_cached_fetch
+    db_objects = query_function(needed_ids)
+  File &quot;./zerver/lib/display_recipient.py&quot;, line 145, in personal_and_huddle_query_function
+    result.append((recipient.id, [user_profiles[recipient.type_id]]))
+KeyError: 13
+</code></pre></div>
+
+
+<p>Maybe, this is related to a deleted user or something like that? How could I debug this?<br>
+Help is greatly appreciated! :-)</p>
+<p>It would also be great if you could point out a bug in my installation routine! :-) (Maybe I forgot something to disable?)</p>
+
+
+
+<a name="1040607"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/New%20remote%20postgres%20DB/near/1040607" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Robert (ro-i) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/New.20remote.20postgres.20DB.html#1040607">(Oct 18 2020 at 19:22)</a>:</h4>
+<p>I already tried to mark all messages in "All messages" as read but this only caused the error message to come later. (If that helps, maybe it's unrelated...)</p>
+
+
+
+<a name="1040608"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/New%20remote%20postgres%20DB/near/1040608" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Robert (ro-i) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/New.20remote.20postgres.20DB.html#1040608">(Oct 18 2020 at 19:24)</a>:</h4>
+<p>Because of this (maybe irrelevant phenomenon), I also tried <code>/home/zulip/deployments/current/manage.py fix_unreads</code>, which did not help either.</p>
+
+
+
+<a name="1040609"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/New%20remote%20postgres%20DB/near/1040609" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Robert (ro-i) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/New.20remote.20postgres.20DB.html#1040609">(Oct 18 2020 at 19:37)</a>:</h4>
+<p><code>/home/zulip/deployments/current/manage.py audit_fts_indexes</code> says <code>Fixed 0 messages.</code><br>
+(BTW: There was no such problem when the db was local...)</p>
+
+
+
+<a name="1040616"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/New%20remote%20postgres%20DB/near/1040616" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Robert (ro-i) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/New.20remote.20postgres.20DB.html#1040616">(Oct 18 2020 at 20:30)</a>:</h4>
+<p>I think I fixed the problem by deleting the old messages (nothing important yet) using the message retention policy and <code>manage.py archive_messages</code>. Do you think that this has been the correct solution?</p>
+<p>(And what do you think about my way to install the database?)</p>
+
+
+
+<a name="1040741"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/New%20remote%20postgres%20DB/near/1040741" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/New.20remote.20postgres.20DB.html#1040741">(Oct 18 2020 at 21:54)</a>:</h4>
+<p><span class="user-mention" data-user-id="17322">@Robert</span> if I had to guess, you at some point wiped the database without clearing the cache, resulting in phantom objects.</p>
+
+
+
+<a name="1040750"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/New%20remote%20postgres%20DB/near/1040750" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Robert (ro-i) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/New.20remote.20postgres.20DB.html#1040750">(Oct 18 2020 at 22:00)</a>:</h4>
+<p>Hm, but whatever the reason is, it should be properly fixed now (i.e. the db is in a consistent, healthy state)? Or what do you think?</p>
+
+
+
+<a name="1040805"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/New%20remote%20postgres%20DB/near/1040805" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/New.20remote.20postgres.20DB.html#1040805">(Oct 18 2020 at 23:56)</a>:</h4>
+<p>Likely; <code>scripts/setup/flush-memcached</code> will flush the cache and isn't a bad idea just to be sure.</p>
+
+
+
+<a name="1040899"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/New%20remote%20postgres%20DB/near/1040899" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Robert (ro-i) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/New.20remote.20postgres.20DB.html#1040899">(Oct 19 2020 at 06:58)</a>:</h4>
+<p>Ok, thank you. I executed this command successfully on the application machine and then restarted zulip. :-)</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

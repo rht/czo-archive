@@ -1,0 +1,314 @@
+[
+    {
+        "content": "<p>I just did a production deploy, and I think our fonts have just gotten messed up in some way.</p>",
+        "id": 617144,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532451263
+    },
+    {
+        "content": "<p>Yep, i think the <code>bootstrap.css</code> is overwriting font on <code>body</code>, declared in <code>zulip.scss</code> as far i can see in devtools.</p>",
+        "id": 617145,
+        "sender_full_name": "Priyank Patel",
+        "timestamp": 1532451322
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/28/LFPTT3TyJHFUJ4pvGnDEibMw/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">pasted image</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/28/LFPTT3TyJHFUJ4pvGnDEibMw/pasted_image.png\" target=\"_blank\" title=\"pasted image\"><img src=\"/user_uploads/2/28/LFPTT3TyJHFUJ4pvGnDEibMw/pasted_image.png\"></a></div>",
+        "id": 617146,
+        "sender_full_name": "Priyank Patel",
+        "timestamp": 1532451392
+    },
+    {
+        "content": "<p>Yeah, certain areas of the layout have also been affected - <a href=\"/user_uploads/2/d8/G8oUTPeZY32dRbsJ0H6IC4B-/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">search bar</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/d8/G8oUTPeZY32dRbsJ0H6IC4B-/pasted_image.png\" target=\"_blank\" title=\"search bar\"><img src=\"/user_uploads/2/d8/G8oUTPeZY32dRbsJ0H6IC4B-/pasted_image.png\"></a></div>",
+        "id": 617150,
+        "sender_full_name": "Jack Zhang",
+        "timestamp": 1532451632
+    },
+    {
+        "content": "<p>hmm, that bootstrap.css data point is interesting.</p>",
+        "id": 617151,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532451650
+    },
+    {
+        "content": "<p>Yeah, I am facing this issue as well.</p>",
+        "id": 617152,
+        "sender_full_name": "Eeshan Garg",
+        "timestamp": 1532451664
+    },
+    {
+        "content": "<p>This should fix it:</p>\n<div class=\"codehilite\"><pre><span></span><span class=\"gh\">diff --git static/styles/zulip.scss static/styles/zulip.scss</span>\n<span class=\"gh\">index 6261a907a..25eea5752 100644</span>\n<span class=\"gd\">--- static/styles/zulip.scss</span>\n<span class=\"gi\">+++ static/styles/zulip.scss</span>\n<span class=\"gu\">@@ -15,7 +15,7 @@ html {</span>\n }\n\n body {\n<span class=\"gd\">-    font-family: &#39;Source Sans Pro&#39;, &#39;Helvetica Neue&#39;, Helvetica, Arial, sans-serif;</span>\n<span class=\"gi\">+    font-family: &#39;Source Sans Pro&#39;, &#39;Helvetica Neue&#39;, Helvetica, Arial, sans-serif !important;</span>\n</pre></div>",
+        "id": 617153,
+        "sender_full_name": "Priyank Patel",
+        "timestamp": 1532451701
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"4241\">@Priyank</span> while that will override the font thing, I think the more important mystery is what change we made in the last day caused bootstrap to win precedence over zulip.scss.  Given that explanation, there are likely dozens of similar issues where we wrote CSS to override bootstrap, and it is no longer doing so.</p>",
+        "id": 617154,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532451782
+    },
+    {
+        "content": "<p>Could it be the order in which the style sheets are loaded?</p>",
+        "id": 617155,
+        "sender_full_name": "Jack Zhang",
+        "timestamp": 1532451814
+    },
+    {
+        "content": "<p>From looking at the Chrome inspector, it looks like bootstrap.css is indeed being placed AFTER zulip.scss.</p>",
+        "id": 617156,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532451839
+    },
+    {
+        "content": "<p>We have <code>import</code> statements in our webpack configuration in the correct order.  I wonder if webpack isn't preserving that order when bundling?</p>",
+        "id": 617157,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532451918
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"4241\">@Priyank</span> I'm guessing this is somehow indirectly caused by the archive change we merged last night.</p>",
+        "id": 617158,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532451931
+    },
+    {
+        "content": "<p>Yeah, i guess, i can try reverting it locally and see.</p>",
+        "id": 617159,
+        "sender_full_name": "Priyank Patel",
+        "timestamp": 1532451958
+    },
+    {
+        "content": "<p>Reverting locally seems to fix it for me</p>",
+        "id": 617160,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532452070
+    },
+    {
+        "content": "<p>Yeah, it fixes it for me too.</p>",
+        "id": 617161,
+        "sender_full_name": "Priyank Patel",
+        "timestamp": 1532452144
+    },
+    {
+        "content": "<p>OK, deploying with those reverted; I guess you can try to debug why that change reorders the assets (it seems really weird that it does)</p>",
+        "id": 617162,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532452214
+    },
+    {
+        "content": "<p>(I'm guessing it somehow has to do with webpack trying to be clever about that list of files being repeated, but I don't see why it would accidentally reorder assets because of that sort of cleverness)</p>",
+        "id": 617163,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532452259
+    },
+    {
+        "content": "<p><a href=\"https://github.com/webpack/webpack/issues/4120\" target=\"_blank\" title=\"https://github.com/webpack/webpack/issues/4120\">https://github.com/webpack/webpack/issues/4120</a> seems relevant.</p>",
+        "id": 617164,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532452343
+    },
+    {
+        "content": "<p><a href=\"https://github.com/webpack-contrib/extract-text-webpack-plugin/issues/200\" target=\"_blank\" title=\"https://github.com/webpack-contrib/extract-text-webpack-plugin/issues/200\">https://github.com/webpack-contrib/extract-text-webpack-plugin/issues/200</a> also seems relevant.</p>",
+        "id": 617165,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532452456
+    },
+    {
+        "content": "<p>I think it's possible we should be using <code>require</code> rather than <code>import</code> at least for order-dependent things like CSS, in that the second resource suggests <code>import</code> does not guarantee it will preserve ordering.</p>",
+        "id": 617166,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532452500
+    },
+    {
+        "content": "<p>Just a small note here. We're not using the plugin that second resource is linking to. Also, if we're thinking of changing the import strategy lets add a comment linking to the bug so we know its a special case that can be fixed up later on.</p>",
+        "id": 617181,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1532453437
+    },
+    {
+        "content": "<p>to be clear, specifically, this is what I'm referring to from the second link: <a href=\"https://github.com/webpack-contrib/extract-text-webpack-plugin/issues/200#issuecomment-262516852\" target=\"_blank\" title=\"https://github.com/webpack-contrib/extract-text-webpack-plugin/issues/200#issuecomment-262516852\">https://github.com/webpack-contrib/extract-text-webpack-plugin/issues/200#issuecomment-262516852</a></p>",
+        "id": 617183,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532453923
+    },
+    {
+        "content": "<p>Which indicates that the specification for \"import\" does not guarantee anything about the ordering.  I haven't had a chance to look for a more authoritative source (which we should find), but that seems suspicious to me.</p>",
+        "id": 617184,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532453961
+    },
+    {
+        "content": "<p>If you google for \"webpack import css order\" you can find a lot of repotrs of issues around this.</p>",
+        "id": 617185,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532454039
+    },
+    {
+        "content": "<p>Great. Just wanted to make Priyank who’s working on the issue was aware. I would be wary of mixing import and require statements as a solution.</p>",
+        "id": 617192,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1532454604
+    },
+    {
+        "content": "<p>First i tried removing <code>import \"js/bundles/commons.js\";</code> and move it before app.js in <code>tools/webpack-assets.json</code>, and also tried replacing <code>import</code> with <code>require</code> (Thanks to quick find and replace functionality!)  but both do not work.</p>",
+        "id": 617366,
+        "sender_full_name": "Priyank Patel",
+        "timestamp": 1532467734
+    },
+    {
+        "content": "<p>But reverting <a href=\"https://github.com/zulip/zulip/commit/d1d9d638410a86f0542bbd54a705e2c0e27f709f\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/d1d9d638410a86f0542bbd54a705e2c0e27f709f\">https://github.com/zulip/zulip/commit/d1d9d638410a86f0542bbd54a705e2c0e27f709f</a> the combine <code>archive-styles</code> into <code>archive</code> commit does work.</p>",
+        "id": 617368,
+        "sender_full_name": "Priyank Patel",
+        "timestamp": 1532467757
+    },
+    {
+        "content": "<p>I don't get the connection between the <code>archive</code> bundle affecting <code>app</code> bundle, but i think i will try using something like <a href=\"https://www.npmjs.com/package/webpack-bundle-analyzer\" target=\"_blank\" title=\"https://www.npmjs.com/package/webpack-bundle-analyzer\">webpack-bundle-analyser</a> to get some hints.</p>",
+        "id": 617369,
+        "sender_full_name": "Priyank Patel",
+        "timestamp": 1532467961
+    },
+    {
+        "content": "<p>Created PR to revert the commit <a href=\"https://github.com/zulip/zulip/pull/10041\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/10041\">#10041</a></p>",
+        "id": 617372,
+        "sender_full_name": "Priyank Patel",
+        "timestamp": 1532468151
+    },
+    {
+        "content": "<p>My guess is having the <code>archive</code> bundle present makes webpack try to do some optimizations related to files appearing multiple times.</p>",
+        "id": 617375,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532468200
+    },
+    {
+        "content": "<p>I'm going to try to push up a fix for this. How could I reproduce this issue? Would it be just merging acrhive-styles and archive into the webpack config?</p>",
+        "id": 617786,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1532537832
+    },
+    {
+        "content": "<p>I guess I can cherry-pick from Priyanks branch?</p>",
+        "id": 617787,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1532537885
+    },
+    {
+        "content": "<p>If you just undo <a href=\"https://github.com/zulip/zulip/pull/10041\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/10041\">https://github.com/zulip/zulip/pull/10041</a> (aka re-merge those styles), and restart the Zulip server, you'll see the fonts are all messed up.</p>",
+        "id": 617841,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532539528
+    },
+    {
+        "content": "<p>Ok thanks</p>",
+        "id": 617869,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1532542158
+    },
+    {
+        "content": "<p>Does anyone know what the Zulip logo font is, and where I can get a copy of it?</p>",
+        "id": 874008,
+        "sender_full_name": "Trent Lapinski",
+        "timestamp": 1589225048
+    },
+    {
+        "content": "<p>I don't remember myself what was used there.  I can definitely track it down, but maybe others remember more immediately.</p>",
+        "id": 874125,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1589236942
+    },
+    {
+        "content": "<p>It’s suspiciously similar to Myriad Pro Semibold, except with some rounding removed from the P. (To be clear: I was not around when it was made.)</p>",
+        "id": 874142,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1589238745
+    },
+    {
+        "content": "<p>It seems to have shown up in <a href=\"https://github.com/zulip/zulip/pull/10330\">#10330</a> with no discussion of the font choice.</p>",
+        "id": 874155,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1589239889
+    },
+    {
+        "content": "<p>I bet <span class=\"user-mention\" data-user-id=\"131\">@Rishi Gupta</span> knows where that came from.</p>",
+        "id": 874165,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1589240737
+    },
+    {
+        "content": "<p>Will check in a few hours, but it's a modified version of something</p>",
+        "id": 874170,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1589241167
+    },
+    {
+        "content": "<p>Inspecting Portico pages I fount this might be helpful<br>\n<a href=\"/user_uploads/2/27/jesTwdwvIlUK2b5lBwwZBhH6/Screenshot-from-2020-05-12-05-21-30.png\">Screenshot-from-2020-05-12-05-21-30.png</a><br>\n<code>'Source Sans Pro',Helvetica,Arial,sans-serif</code></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/27/jesTwdwvIlUK2b5lBwwZBhH6/Screenshot-from-2020-05-12-05-21-30.png\" title=\"Screenshot-from-2020-05-12-05-21-30.png\"><img src=\"/user_uploads/2/27/jesTwdwvIlUK2b5lBwwZBhH6/Screenshot-from-2020-05-12-05-21-30.png\"></a></div>",
+        "id": 874171,
+        "sender_full_name": "Siddharth",
+        "timestamp": 1589241236
+    },
+    {
+        "content": "<p>Oh, of course. I was looking at the <a href=\"static/images/logo/zulip-org-logo.png\">image</a>, but 64pt Source Sans Pro Semi-Bold is an exact match for that too.</p>\n<div class=\"message_inline_image\"><a href=\"static/images/logo/zulip-org-logo.png\" title=\"image\"><img src=\"static/images/logo/zulip-org-logo.png\"></a></div>",
+        "id": 874172,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1589241485
+    },
+    {
+        "content": "<p>(also the font is not vertically centred with the logo, was that done intentionally?)</p>",
+        "id": 874173,
+        "sender_full_name": "Siddharth",
+        "timestamp": 1589241798
+    },
+    {
+        "content": "<p>Unlikely.</p>",
+        "id": 874174,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1589241859
+    },
+    {
+        "content": "<p>ah, I thought you were talking about this logo:<br>\n<a href=\"/user_uploads/2/33/MgJ4_JoTRDsBTbBl7TqsqqoL/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/33/MgJ4_JoTRDsBTbBl7TqsqqoL/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/33/MgJ4_JoTRDsBTbBl7TqsqqoL/image.png\"></a></div>",
+        "id": 874314,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1589259393
+    },
+    {
+        "content": "<p>I can try to dig up the font/etc if needed</p>",
+        "id": 874315,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1589259426
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/ea/VP_2YgUUS1c9mXL1GxSdL92t/logo-bw.png\">logo-bw.png</a><br>\n<a href=\"user_uploads/2/fb/5m12nZ3plRkDftL1gEBCLPCD/logo-bw.svg\">logo-bw.svg</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/ea/VP_2YgUUS1c9mXL1GxSdL92t/logo-bw.png\" title=\"logo-bw.png\"><img src=\"/user_uploads/2/ea/VP_2YgUUS1c9mXL1GxSdL92t/logo-bw.png\"></a></div>",
+        "id": 874317,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1589259525
+    },
+    {
+        "content": "<p>That one appears to be Aller Regular with the serif shaved off of the ‘i’ and a lengthened ‘p’ tail, but do we use it at all anymore?</p>",
+        "id": 874339,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1589261011
+    },
+    {
+        "content": "<p>I think it's on our last printing of tshirts?</p>",
+        "id": 874450,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1589267404
+    },
+    {
+        "content": "<p>But I am not aware of anywhere it appears on the web.</p>",
+        "id": 874451,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1589267427
+    },
+    {
+        "content": "<p>I prefer the one we have in the top left corner (over the t-shirt one).</p>",
+        "id": 874528,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1589277752
+    },
+    {
+        "content": "<p>The top-left one is pretty blocky; probably not what we actually want.</p>",
+        "id": 874857,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1589303467
+    }
+]

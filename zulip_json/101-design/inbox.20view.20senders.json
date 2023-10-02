@@ -1,0 +1,146 @@
+[
+    {
+        "content": "<p>So the original design for the inbox view (<a class=\"stream-topic\" data-stream-id=\"101\" href=\"/#narrow/stream/101-design/topic/inbox.20view.20.2322408\">#design &gt; inbox view #22408</a>) called for a \"participants\" column similar to what we have in Recent conversations; there's currently a giant blank space there in the view because we've not implemented. I'd like to talk about how that should work, and a few considerations around it.</p>",
+        "id": 1639031,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694548488
+    },
+    {
+        "content": "<ul>\n<li>First, there's always the option to just not have additional information beyond the conversation, unread count, and other small indicators like mentions/muting/etc (which I'm not sure we have yet).</li>\n</ul>",
+        "id": 1639033,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694548523
+    },
+    {
+        "content": "<ul>\n<li>Second, we could implement a \"participants\" column with a definition similar to \"Recent conversations\" -- i.e. the set of users who have sent a message in that topic recently (regardless of whether any of those messages are among the unreads). This is somewhat unpleasant technically -- it'd have a slow loading process for that column (just like Recent conversations has overall) despite our having all the other data to display instantly when the app loads, making the inbox view significantly worse as a \"home page\" experience.  I also think this might not actually be what users want? Like, if I see that there's 3 unread messages in a topic, I probably care more about who sent those specific messages than who has sent recent messages in the topic that I've probably read.</li>\n</ul>",
+        "id": 1639046,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694549123
+    },
+    {
+        "content": "<ul>\n<li>Third, we could display a \"senders\" column that is \"The set of users who sent at least one of those unread messages\". This I think feels like actionable information: Like if I'm waiting for a reply from <span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> on some specific thread and the unreads are from someone else posting something, that information might help me decide to not click into it just yet. And I think from a data perspective, it'd be a nontrivial API change to support, but one that is computationally very straightforward; we're right now fetching the set of <code>(message_id, stream, topic)</code> values for every unread message and organizing them into efficient data structures; we could do the same with the <code>sender_id</code> added with probably only a moderate loss of compression efficiency. (And it's easy to live-update etc. such structures).</li>\n</ul>",
+        "id": 1639053,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694549323
+    },
+    {
+        "content": "<ul>\n<li>Fourth, we could put other information there -- most natural would be something like excerpts from \"The first unread message in the topic\" or \"the first unread message in the conversation\" or \"the last unread message in the conversation\". All of those are pretty messy and expensive to compute, and thus somewhat out of scope; and I also think that design-wise, we might want that sort of excerpt feature, were we to add it, to be on its own line under the conversation row, rather than (depending on window size) squished into a space that's about a quarter of a screen wide. So I think we can table this class of idea for the potential future as not directly relevant to what we do with the space in the row with the unreads.</li>\n</ul>",
+        "id": 1639058,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694549452
+    },
+    {
+        "content": "<p>My proposal is that we do the \"senders\" column, aka option 3, as one can probably imagine from the commentary above. Feedback is very much appreciated, but I think that definition has the nice combination of both being the cheapest in terms of performance impact to compute and maintain even if you have like 50K unreads stacked up over a year, and also I think might be the most useful thing we can put in that space for users to make decisions about what conversations to click into when.</p>",
+        "id": 1639063,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694549548
+    },
+    {
+        "content": "<p>But I would definitely like to hear thoughts from several folks on this, since it will be a fairly significant API change to support having the data to show senders, probably with some annoying backwards-compatibility work, so we should only do that investment if we're pretty confident that we actually want it.</p>",
+        "id": 1639066,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694549607
+    },
+    {
+        "content": "<p>I was thumbs-up on option three even before I got to your conclusion. The cluster of sender avatars in recent conversations always strikes me as nice decoration--yay, look at all those people involved! (and I mean that sincerely)--but it's not really actionable information.</p>",
+        "id": 1639098,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1694550529
+    },
+    {
+        "content": "<p>I don't think it's been discussed, but a setup like you propose could maybe lead to a feature that allows someone to effectively \"follow user,\" in your example where you'd want a more prominent indicator when <span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> has replied, or whatever.</p>",
+        "id": 1639099,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1694550601
+    },
+    {
+        "content": "<p>I would prefer to not have anything there</p>",
+        "id": 1639101,
+        "sender_full_name": "Vlad Korobov",
+        "timestamp": 1694550768
+    },
+    {
+        "content": "<p>Avatars are distracting</p>",
+        "id": 1639102,
+        "sender_full_name": "Vlad Korobov",
+        "timestamp": 1694550779
+    },
+    {
+        "content": "<p>A challenge with having nothing there is mainly that a giant empty space on the side looks bad and so does having a giant empty space in the middle between the topic and the unread count.</p>",
+        "id": 1639105,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694551072
+    },
+    {
+        "content": "<p>I don’t think we should deal with empty space by overloading a user with information without a good reason. In general. But if you think that it is a secondary information which is ok to hide on mobile views and can be useful in desktops sure lets do that.</p>\n<p>I guess last N authors could be useful information to mark topic as read or go and read it. </p>\n<p>I think I would love to see a big button on hover on every row : Mark as read</p>",
+        "id": 1639153,
+        "sender_full_name": "Vlad Korobov",
+        "timestamp": 1694554641
+    },
+    {
+        "content": "<p>The third option seems helpful to me too. But I think with the design <span class=\"user-mention silent\" data-user-id=\"22433\">Vlad Korobov</span> proposed <a href=\"#narrow/stream/101-design/topic/inbox.20view.20.2322408/near/1639397\">here</a>, where the empty space is grey rather than white, it doesn't have to be part of the MVP. We could add this as a follow-on.</p>",
+        "id": 1639738,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694633418
+    },
+    {
+        "content": "<p>I definitely agree with this general principle:</p>\n<p><span class=\"user-mention silent\" data-user-id=\"22433\">Vlad Korobov</span> <a href=\"#narrow/stream/101-design/topic/inbox.20view.20senders/near/1639153\">said</a>:</p>\n<blockquote>\n<p>I don’t think we should deal with empty space by overloading a user with information without a good reason. In general.</p>\n</blockquote>\n<p>But I do regularly find the participant list helpful in the recent-conversations view. And I think about 80-90% of the value I get from it is in the senders of the unread messages. (Often what I'm actually doing is looking at the first avatar or two until I find my own, effectively as a way of deducing which ones are the senders of the unread messages.) So I think a senders column would be helpful.</p>",
+        "id": 1640012,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1694647121
+    },
+    {
+        "content": "<p>(Even if perhaps it's left for after the MVP.)</p>",
+        "id": 1640013,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1694647147
+    },
+    {
+        "content": "<p>OK. I think then we can start an <a class=\"stream\" data-stream-id=\"378\" href=\"/#narrow/stream/378-api-design\">#api design</a> conversation about supporting adding senders information. Just to set expectations, it's probably going be a week or more of hard work for someone to do that API work once we've decided what to do (followed by a fairly small amount of UI work to display it). So I think it's well worth getting to an MVP that we've comfortable turning opn in production.</p>",
+        "id": 1640040,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694649480
+    },
+    {
+        "content": "<p>I filed a brief issue for this: <strong>Add Senders column to Inbox view</strong> <a href=\"https://github.com/zulip/zulip/pull/26751\">#26751</a>. It'll be a nice follow-up when we have time.</p>",
+        "id": 1641264,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694797333
+    },
+    {
+        "content": "<p>I'm aware Inbox focuses more on the unreads only, so 'participants' may not be as relevant, but 'senders' information could also be useful in the recent conversations view - with 'senders' partitioned or highlighted separately from 'other participants'. That would fit well with Greg's point about using the avatars, which I also use in a similar way.</p>",
+        "id": 1641647,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1694819949
+    },
+    {
+        "content": "<p>I don't really find the 'participants' and 'senders' names sufficiently distinct. However, maybe that's OK in Inbox view if the focus is entirely on unreads and we don't show the two titles together.</p>",
+        "id": 1641648,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1694819951
+    },
+    {
+        "content": "<p>The thing we track in the \"Recent conversations\" view is also senders. The key difference is the following:</p>\n<ul>\n<li>In the inbox view, it's specifically the <strong>senders of the unread messages, sorted by most recent unread message</strong>.</li>\n<li>In the Recent view, it's specifically the <strong>senders of the recent messages, sorted by by recent message sent</strong>. Which messages are unread is not considered in this view.</li>\n</ul>\n<p>For example, in a topic where you've say read all but the very latest message, the inbox view will show just the sender of that one message, whereas the recent view might show the 5 users who've sent messages in that topic recently.</p>",
+        "id": 1642237,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1695051443
+    },
+    {
+        "content": "<p>I wonder if we should label the columns differently to better reflect those definitions. \"Senders\" vs. \"Participants\" hints that they aren't quite the same, but doesn't provide any indication as to how.</p>",
+        "id": 1642349,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695061020
+    },
+    {
+        "content": "<p>\"Recent participants\" would make the \"Participants\" column definition more explicit, but I'm not sure what would work for Inbox. \"New participants\"? It's a bit weird, since the participant might have sent both read and unread messages.</p>",
+        "id": 1642352,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695061151
+    },
+    {
+        "content": "<p>It could also be reasonable to just label them both \"Participants\" and have a <code>?</code> tooltip explaining how participation is defined for the purpose of the view. It probably feels like a fuzzy enough term that might feel OK?</p>",
+        "id": 1642431,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1695065513
+    }
+]

@@ -1,0 +1,116 @@
+[
+    {
+        "content": "<p>I'm having some trouble upgrading from git in production. I have a slightly modified zulip branch with some trivial changes. <br>\nLocally all tests are passing and i'm able to build a release tarball. However when I run it in production it seems to be hanging at the <code>./tools/minify-js --prev-deploy /home/zulip/deployments/current</code> step.</p>\n<p>I can't seem to debug the issue further than that. I checked the upgrade log and it provides no additional information apart from that.</p>\n<div class=\"codehilite\"><pre><span></span>Using cached node modules from /srv/zulip-npm-cache/e3c7933380aa32ecc61bc333489f5488ee9bc0b8/node_modules\n+ rm -rf node_modules\n+ ln -nsf /srv/zulip-npm-cache/e3c7933380aa32ecc61bc333489f5488ee9bc0b8/node_modules node_modules\n+ ./tools/setup/emoji/build_emoji\n+ ./tools/inline-email-css\n+ ./tools/setup/generate_zulip_bots_static_files\n+ ./tools/setup/generate-custom-icon-webfont\n+ ./tools/setup/build_pygments_data\n+ ./tools/minify-js --prev-deploy /home/zulip/deployments/current\n</pre></div>\n\n\n<p>It just indefinitely hangs at that step. I need to manually quit the process.</p>",
+        "id": 666882,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1543614801
+    },
+    {
+        "content": "<p>Are you sure it's hanging?  <code>minify-js</code> takes a while, especially on a slow machine.</p>",
+        "id": 666884,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543614989
+    },
+    {
+        "content": "<p>What would be an adequate amount of time to leave it on? Left it for 10 minutes.</p>",
+        "id": 666885,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1543615053
+    },
+    {
+        "content": "<p>Been on for 15 minutes. Process still seems to be hung. Not sure whats going on.</p>",
+        "id": 666896,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1543616296
+    },
+    {
+        "content": "<p>Here's an error I got when the operation failed.</p>\n<div class=\"codehilite\"><pre><span></span>+ ./tools/setup/generate-custom-icon-webfont\n+ ./tools/setup/build_pygments_data\n+ ./tools/minify-js --prev-deploy /home/zulip/deployments/current\n\n^[[0;37;41mError running a subcommand of ./tools/update-prod-static: ./tools/minify-js --prev-deploy /home/zulip/deployments/current^[[0m\n^[[0;37;41mActual error output for the subcommand is just above this.^[[0m\n\nTraceback (most recent call last):\n  File &quot;./tools/update-prod-static&quot;, line 56, in &lt;module&gt;\n    stdout=fp, stderr=fp)\n  File &quot;./tools/../scripts/lib/zulip_tools.py&quot;, line 164, in run\n    subprocess.check_call(args, **kwargs)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./tools/minify-js&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2018-11-30-22-02-24/scripts/lib/upgrade-zulip-stage-2&quot;, line 100, in &lt;module&gt;\n    preexec_fn=su_to_zulip)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./tools/update-prod-static&#39;, &#39;--authors-not-required&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-from-git&quot;, line 80, in &lt;module&gt;\n    deploy_path, &quot;--from-git&quot;] + deploy_options)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2018-11-30-22-02-24/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2018-11-30-22-02-24&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1.\n</pre></div>\n\n\n<p>Ended up building from a tarball instead which was smooth.</p>",
+        "id": 666961,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1543635742
+    },
+    {
+        "content": "<p>There's a <code>var/log/update-prod-static.log</code> file (within the <code>/home/zulip/deployments/</code>  directory) that will have the actual error message.</p>",
+        "id": 666968,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543638484
+    },
+    {
+        "content": "<p>Here's the error in that log</p>\n<div class=\"codehilite\"><pre><span></span>+ ./tools/inline-email-css\n+ ./tools/setup/generate_zulip_bots_static_files\n+ ./tools/setup/generate-custom-icon-webfont\n+ ./tools/setup/build_pygments_data\n+ ./tools/minify-js --prev-deploy /home/zulip/deployments/current\n\n^[[0;37;41mError running a subcommand of ./tools/update-prod-static: ./tools/minify-js --prev-deploy /home/zulip/deployments/current^[[0m\n^[[0;37;41mActual error output for the subcommand is just above this.^[[0m\n\nTraceback (most recent call last):\n  File &quot;./tools/update-prod-static&quot;, line 56, in &lt;module&gt;\n    stdout=fp, stderr=fp)\n  File &quot;./tools/../scripts/lib/zulip_tools.py&quot;, line 164, in run\n    subprocess.check_call(args, **kwargs)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./tools/minify-js&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2018-11-30-22-02-24/scripts/lib/upgrade-zulip-stage-2&quot;, line 100, in &lt;module&gt;\n    preexec_fn=su_to_zulip)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./tools/update-prod-static&#39;, &#39;--authors-not-required&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-from-git&quot;, line 80, in &lt;module&gt;\n    deploy_path, &quot;--from-git&quot;] + deploy_options)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2018-11-30-22-02-24/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2018-11-30-22-02-24&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1.\n</pre></div>",
+        "id": 667076,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1543670608
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"5837\">@Armaan Ahluwalia</span> I think you pasted the wrong thing.  In any case, see the text \"Actual error output for the subcommand is just above this.\"</p>",
+        "id": 667131,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543691567
+    },
+    {
+        "content": "<p>Not sure I did paste the wrong thing. That was from <code>/var/log/zulip/upgrade.log</code>. Here's a full snippet</p>\n<div class=\"codehilite\"><pre><span></span>Using cached node modules from /srv/zulip-npm-cache/e3c7933380aa32ecc61bc333489f5488ee9bc0b8/node_modules\n+ rm -rf node_modules\n+ ln -nsf /srv/zulip-npm-cache/e3c7933380aa32ecc61bc333489f5488ee9bc0b8/node_modules node_modules\n+ ./tools/setup/emoji/build_emoji\n+ ./tools/inline-email-css\n+ ./tools/setup/generate_zulip_bots_static_files\n+ ./tools/setup/generate-custom-icon-webfont\n+ ./tools/setup/build_pygments_data\n+ ./tools/minify-js --prev-deploy /home/zulip/deployments/current\n\n^[[0;37;41mError running a subcommand of ./tools/update-prod-static: ./tools/minify-js --prev-deploy /home/zulip/deployments/current^[[0m\n^[[0;37;41mActual error output for the subcommand is just above this.^[[0m\n\nTraceback (most recent call last):\n  File &quot;./tools/update-prod-static&quot;, line 56, in &lt;module&gt;\n    stdout=fp, stderr=fp)\n  File &quot;./tools/../scripts/lib/zulip_tools.py&quot;, line 164, in run\n    subprocess.check_call(args, **kwargs)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./tools/minify-js&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2018-11-30-22-02-24/scripts/lib/upgrade-zulip-stage-2&quot;, line 100, in &lt;module&gt;\n    preexec_fn=su_to_zulip)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./tools/update-prod-static&#39;, &#39;--authors-not-required&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-from-git&quot;, line 80, in &lt;module&gt;\n    deploy_path, &quot;--from-git&quot;] + deploy_options)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2018-11-30-22-02-24/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2018-11-30-22-02-24&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1.\n</pre></div>",
+        "id": 667138,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1543692169
+    },
+    {
+        "content": "<p>Right, as I said, you need to provide the<code>var/log/update-prod-static.log</code>, which will be in some <code>/home/zulip/deployments/*</code> folder.</p>",
+        "id": 667295,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543807434
+    },
+    {
+        "content": "<p>Ah right. Here's the log from that file. I guess the interesting thing here is upgrading from a tarball works but upgrading from git doesn't. Wondering what could make that the case?</p>\n<div class=\"codehilite\"><pre><span></span>Using cached emojis from /srv/zulip-emoji-cache/1085f58f695ba9203ee5a08effd43ed0bcb91179/emoji\n+ rm -rf /home/zulip/deployments/2018-11-30-22-02-24/tools/setup/emoji/../../../static/generated/emoji\nSUCCESS! Webfonts generated in ./static/generated/icons/fonts.\n(node:19964) DeprecationWarning: Tapable.plugin is deprecated. Use new API on `.hooks` instead\nTraceback (most recent call last):\n  File &quot;tools/webpack&quot;, line 120, in &lt;module&gt;\n    build_for_prod_or_casper(args.quiet)\n  File &quot;tools/webpack&quot;, line 31, in build_for_prod_or_casper\n    subprocess.check_call(webpack_args)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;node&#39;, &#39;node_modules/.bin/webpack-cli&#39;, &#39;--config&#39;, &#39;tools/webpack.config.ts&#39;, &#39;-p&#39;, &#39;--env&#39;, &#39;production&#39;]&#39; died with &lt;Signals.SIGKILL: 9&gt;.\nTraceback (most recent call last):\n  File &quot;./tools/minify-js&quot;, line 35, in &lt;module&gt;\n    subprocess.check_call([&#39;tools/webpack&#39;])\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;tools/webpack&#39;]&#39; returned non-zero exit status 1.\n</pre></div>",
+        "id": 667429,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1543859711
+    },
+    {
+        "content": "<p>Yeah, OK, it seems likely your problem is an OOM kill or something running webpack.  How much RAM does your system have?</p>",
+        "id": 667431,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543859741
+    },
+    {
+        "content": "<p>2GB <span class=\"emoji emoji-1f633\" title=\"embarrassed\">:embarrassed:</span></p>",
+        "id": 667432,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1543859763
+    },
+    {
+        "content": "<p>Relatedly, if I'm running zulip on an instance where  94.0% of 7.69GB has been used, is there anything specific I need to do to make sure the system doesn't run out of memory and crash?</p>",
+        "id": 667436,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1543859918
+    },
+    {
+        "content": "<p>Or to put it another way, whats a safe amount of disk space that I need to have to feel comfortable?</p>",
+        "id": 667439,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1543859949
+    },
+    {
+        "content": "<p>This is all documented in our \"requirements\" page, I'm pretty sure.</p>",
+        "id": 667441,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543859975
+    },
+    {
+        "content": "<p>Yeah, running <code>upgrade-zulip-from-git</code> without first shutting down the server doesn't super work with 2GB of RAM (since building static assets takes more free RAM than is present).</p>",
+        "id": 667443,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543859995
+    },
+    {
+        "content": "<p>Yes I see that apparently I need more power.</p>",
+        "id": 667445,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1543860035
+    },
+    {
+        "content": "<p>Thanks</p>",
+        "id": 667446,
+        "sender_full_name": "Armaan Ahluwalia",
+        "timestamp": 1543860117
+    }
+]

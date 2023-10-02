@@ -1,0 +1,38 @@
+[
+    {
+        "content": "<p>Are there any migrations, database or otherwise, that need to be run when upgrading Debian to Buster, now that Zulip supports that? The <a href=\"https://zulip.readthedocs.io/en/stable/production/upgrade-or-modify.html#upgrading-the-operating-system\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/stable/production/upgrade-or-modify.html#upgrading-the-operating-system\">documentation</a> has specific steps for Ubuntu upgrades, but not (yet) for Debian, so I thought I'd ask before taking the plunge :)</p>",
+        "id": 806183,
+        "sender_full_name": "Andreas Karsten",
+        "timestamp": 1578057673
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13168\">@Andreas Karsten</span> good question!  I would expect the same process to work after replacing the postgres versions in the Ubuntu docs with the appropriate ones for Debian (and of course, replacing <code>do-release-upgrade</code> with the Debian way).</p>",
+        "id": 806217,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1578081596
+    },
+    {
+        "content": "<p>If you're up for verifying that, we can take this opportunity to update the documentation to cover Debian upgrades as well.</p>",
+        "id": 806219,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1578081615
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/Update.20to.20Debian.20Buster/near/806219\" title=\"#narrow/stream/31-production-help/topic/Update.20to.20Debian.20Buster/near/806219\">said</a>:</p>\n<blockquote>\n<p>If you're up for verifying that, we can take this opportunity to update the documentation to cover Debian upgrades as well.</p>\n</blockquote>\n<p>Done, and documented. Will place my documentation below for easy reference in here, but also happy to edit the official documentation if you would like that and my summary is succinct and precise enough.</p>",
+        "id": 820036,
+        "sender_full_name": "Andreas Karsten",
+        "timestamp": 1582453131
+    },
+    {
+        "content": "<p><em>A // Run a backup in preparation</em></p>\n<p><strong>1. Stop all Zulip related services with</strong><br>\n<code>supervisorctl stop all</code></p>\n<p><strong>2. Then run a backup (!) as the zulip user</strong><br>\n<code>su zulip -c '/home/zulip/deployments/current/manage.py backup --output=/home/zulip/release-upgrade.backup.tar.gz'</code></p>\n<p><em>B // Upgrade the operating system using standard tooling</em></p>\n<p><strong>3. Upgrade all Debian 9 packages in preparation</strong><br>\n<code>sudo apt update &amp;&amp; sudo apt upgrade -y</code></p>\n<p><strong>4. Modify package repository to point to buster</strong></p>\n<p>a. Backup current package repository file<br>\n<code>sudo cp /etc/apt/sources.list /etc/apt/sources.list.orig</code></p>\n<p>b. Replace all references to stretch with buster<br>\n<code>sudo sed -i 's/stretch/buster/g' /etc/apt/sources.list</code><br>\n<code>sudo sed -i 's/stretch/buster/g' /etc/apt/sources.list.d/*.list</code></p>\n<p>c. Update package repository index<br>\n<code>sudo apt update</code></p>\n<p><strong>5. Update operating system to Debian 10</strong></p>\n<p>a. Update and upgrade packages<br>\n<code>sudo apt update &amp;&amp; sudo apt upgrade -y</code></p>\n<p>Choose N = keep current version of configuration whenever asked</p>\n<p>b. Upgrade the distribution itself<br>\n<code>sudo apt dist-upgrade -y</code></p>\n<p><em>C // Upgrade database</em></p>\n<p><strong>6. Upgrade database</strong><br>\nFirst install the current version of PostgreSQL (11.5 for Debian Buster) with<br>\n<code>apt install postgresql postgresql-contrib</code><br>\nThen<br>\n<code>touch /usr/share/postgresql/11/pgroonga_setup.sql.applied\n/home/zulip/deployments/current/scripts/zulip-puppet-apply -f\npg_dropcluster 11 main --stop\nsystemctl stop postgresql\npg_upgradecluster 9.6 main\npg_dropcluster 9.6 main\napt remove postgresql-9.6\nsystemctl start postgresql\nsystemctl restart memcached</code></p>\n<p><em>D // Upgrade Zulip</em></p>\n<p><strong>7. Reinstall and recompile Zulip</strong><br>\n<code>rm -rf /srv/zulip-venv-cache/*\n/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 \\\n/home/zulip/deployments/current/ --ignore-static-assets</code></p>\n<p><strong>8. Reboot the machine and verify version</strong><br>\n<code> cat /etc/*-release</code></p>\n<p>This should show output like<br>\n<code>PRETTY_NAME=\"Debian GNU/Linux 10 (buster)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"10\"\nVERSION=\"10 (buster)\"</code></p>",
+        "id": 820038,
+        "sender_full_name": "Andreas Karsten",
+        "timestamp": 1582453455
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13168\">@Andreas Karsten</span> yeah it's be awesome if you can submit that as a pull request.   Our docs live under docs/ in the main repository.</p>",
+        "id": 820210,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1582482384
+    }
+]

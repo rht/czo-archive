@@ -1,0 +1,296 @@
+<html>
+<head><meta charset="utf-8"><title>Better API error responses · design · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/101-design/index.html">design</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html">Better API error responses</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1617568"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617568" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617568">(Jul 28 2023 at 21:13)</a>:</h4>
+<p>Currently, we have our custom validators that each raise a <code>ValidationError</code> of internationalized messages of the form <code>ValidationError(_("{var_name} is not a float").format(var_name=var_name))</code> and the like.</p>
+
+
+
+<a name="1617570"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617570" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Topic Bridge Bot <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617570">(Jul 28 2023 at 21:13)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="19400">Zixuan James Li</span> mentioned this topic in <strong><a href="#narrow/stream/101-design/topic/Code.20playgrounds/near/1617569">#design &gt; Code playgrounds</a></strong>.</p>
+
+
+
+<a name="1617571"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617571" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617571">(Jul 28 2023 at 21:22)</a>:</h4>
+<p>In code playgrounds, we send inconsistent error messages because we have validations done at different layers.</p>
+<p>For <code>WildValue</code>, we intentionally want to avoid <code>ValidationError</code> because of its Django-specific semantics.</p>
+<p><span class="user-mention silent" data-user-id="699">Anders Kaseorg</span> <a href="#narrow/stream/3-backend/topic/WildJSON/near/1365631">said</a>:</p>
+<blockquote>
+<p>The reason not to use <code>ValidationError</code> is that it’s owned by Django, not us. It’s thrown and caught by various Django functions and assigned a special meaning that might conflict with any special meaning we try to assign to it.</p>
+<p>Also, semantically, we want a specific class that says “the input payload that you sent us in your request doesn’t match the format we expect for that request”, not a general class that says “some value somewhere in the program doesn’t match the format some code somewhere else in the program expected for something”.</p>
+<p>We might want to show a detailed message explaining to the user what’s wrong with their own input value; we do not want to show a detailed message explaining what’s wrong with someone else’s value.</p>
+</blockquote>
+
+
+
+<a name="1617573"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617573" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617573">(Jul 28 2023 at 21:24)</a>:</h4>
+<p><code>ValidationError</code> on its own can pop up when validating a field on a model, when validating incoming request payload, or in custom checks like this one:</p>
+<div class="codehilite" data-code-language="Python"><pre><span></span><code><span class="k">def</span> <span class="nf">validate_domain</span><span class="p">(</span><span class="n">domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">domain</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s2">"Domain can't be empty."</span><span class="p">))</span>
+    <span class="k">if</span> <span class="s2">"."</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">domain</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s2">"Domain must have at least one dot (.)"</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">255</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s2">"Domain is too long"</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">domain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"."</span> <span class="ow">or</span> <span class="n">domain</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"."</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s2">"Domain cannot start or end with a dot (.)"</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">subdomain</span> <span class="ow">in</span> <span class="n">domain</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"."</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">subdomain</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s2">"Consecutive '.' are not allowed."</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">subdomain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"-"</span> <span class="ow">or</span> <span class="n">subdomain</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"-"</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s2">"Subdomains cannot start or end with a '-'."</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"^[a-z0-9-]*$"</span><span class="p">,</span> <span class="n">subdomain</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s2">"Domain can only have letters, numbers, '.' and '-'s."</span><span class="p">))</span>
+</code></pre></div>
+
+
+
+<a name="1617576"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617576" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617576">(Jul 28 2023 at 21:25)</a>:</h4>
+<p>Some of these checks are probably specific to a user-provided value directly from a request, but some are called somewhere in our backend logic that may or may not directly come from the user.</p>
+
+
+
+<a name="1617579"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617579" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617579">(Jul 28 2023 at 21:26)</a>:</h4>
+<p>We should not be using Django’s <code>ValidationError</code> for custom functions like that either, for the same reason.</p>
+
+
+
+<a name="1617580"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617580" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617580">(Jul 28 2023 at 21:27)</a>:</h4>
+<p><code>ValidationError</code> is for integration with Django’s <a href="https://docs.djangoproject.com/en/4.2/ref/forms/validation/">form system</a>, not for anything else.</p>
+
+
+
+<a name="1617582"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617582" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617582">(Jul 28 2023 at 21:27)</a>:</h4>
+<p>From the API point of view, it might be useful to always send the path information in their request data in a consistent manner, along with the exact error message indicating what is wrong with the data.</p>
+
+
+
+<a name="1617585"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617585" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617585">(Jul 28 2023 at 21:30)</a>:</h4>
+<p>We are semi-enforcing this in <code>zerver.lib.validators</code> by using the <code>{var_name} is something</code> format messages. But mixing <code>ValidationError</code> for request data validation with other things makes error handling ambiguous, and we do want to move away from <code>ValidationError</code>.</p>
+
+
+
+<a name="1617595"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617595" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617595">(Jul 28 2023 at 21:40)</a>:</h4>
+<p>I think we can start with validations that happen to the request through <code>has_request_variables</code>, which:</p>
+<ul>
+<li>should not care about the <code>var_name</code> (which is actually the path information in the context of validating incoming requests);</li>
+<li>should only contain the user-facing information of the error itself;</li>
+<li>should not be a <code>ValidationError</code>.</li>
+</ul>
+
+
+
+<a name="1617596"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617596" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617596">(Jul 28 2023 at 21:41)</a>:</h4>
+<p>We make the decorator responsible for formatting the error with the path information, by extending <a href="https://catt.rs/en/stable/cattrs.html#cattrs.v.format_exception">cattrs's formatter</a>.</p>
+
+
+
+<a name="1617597"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617597" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617597">(Jul 28 2023 at 21:42)</a>:</h4>
+<p>I'm not sure if we ever need to invent another <code>Execption</code> base class for such validation errors. We can use <code>TypeError</code> <code>ValueError</code> etc. whenever appropriate.</p>
+
+
+
+<a name="1617599"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617599" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617599">(Jul 28 2023 at 21:43)</a>:</h4>
+<p>For validation errors that are raised inside the view functions, we should probably just use <code>JsonableError</code> when appropriate.</p>
+
+
+
+<a name="1617602"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617602" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617602">(Jul 28 2023 at 21:45)</a>:</h4>
+<p>Optionally, we can think of a way to let the view function decorator associate metadata with the function parameters, which can later be used in the view function to associate the error with the path information in the user request.</p>
+
+
+
+<a name="1617604"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617604" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617604">(Jul 28 2023 at 21:46)</a>:</h4>
+<p>We will then have two internationalized strings for each such error. One is the error message itself, another is one of the form <code>{error_message} in the request at {path}</code>, which is the same for all validation errors.</p>
+
+
+
+<a name="1617611"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617611" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617611">(Jul 28 2023 at 21:55)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="19400">Zixuan James Li</span> <a href="#narrow/stream/101-design/topic/ValidationError.20Alternatives/near/1617597">said</a>:</p>
+<blockquote>
+<p>I'm not sure if we ever need to invent another <code>Execption</code> base class for such validation errors. We can use <code>TypeError</code> <code>ValueError</code> etc. whenever appropriate.</p>
+</blockquote>
+<p>A counterargument to this is that we might want to use a special error to distinguish validation failures from programming errors. So that we can send back 500's, and make sure the error strings are all internationalized.</p>
+
+
+
+<a name="1617696"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1617696" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1617696">(Jul 28 2023 at 23:50)</a>:</h4>
+<p>Definitely I think it's valuable to be able to continue returning 4xx responses when the client's request was malformed, and 5xx responses for exceptions we didn't anticipate (that therefore represent a server bug).</p>
+
+
+
+<a name="1623197"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623197" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623197">(Aug 10 2023 at 21:29)</a>:</h4>
+<p>That function is called from the Django forms system, I'm pretty sure.</p>
+
+
+
+<a name="1623198"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623198" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623198">(Aug 10 2023 at 21:30)</a>:</h4>
+<p>To avoid duplicating it, we need to either raise ValidationError and convert to JsonableError in non form code paths or the other way around.</p>
+
+
+
+<a name="1623200"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623200" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623200">(Aug 10 2023 at 21:31)</a>:</h4>
+<p>I don't think it really matters which one we do?</p>
+
+
+
+<a name="1623203"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623203" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623203">(Aug 10 2023 at 21:32)</a>:</h4>
+<p><span class="user-mention" data-user-id="19400">@Zixuan James Li</span> I'm not sure what your constraints are but probably you can switch it to the other way as a quick prep PR if that somehow helps what you're trying to do.</p>
+
+
+
+<a name="1623209"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623209" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623209">(Aug 10 2023 at 21:33)</a>:</h4>
+<p>I don't see a reason we'd need a new class.</p>
+
+
+
+<a name="1623284"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623284" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623284">(Aug 10 2023 at 22:26)</a>:</h4>
+<p>That makes sense. I think once we start to use Pydantic, we can eliminate a handful of home-raised <code>ValidationError</code> without extra work. In any case, I agree that no new class is needed.</p>
+
+
+
+<a name="1623285"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623285" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623285">(Aug 10 2023 at 22:36)</a>:</h4>
+<blockquote>
+<p>That function is called from the Django forms system, I'm pretty sure.</p>
+</blockquote>
+<p>Which “that function”? The API of our validator functions is not even compatible with the API of <a href="https://docs.djangoproject.com/en/4.2/ref/forms/validation/">Django form validators</a>. All they have in common is that they raise the same exception type for no reason.</p>
+
+
+
+<a name="1623286"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623286" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623286">(Aug 10 2023 at 22:38)</a>:</h4>
+<p>There’s no use of <code>zerver.lib.validator</code> within <code>zerver.forms</code> or vice versa.</p>
+
+
+
+<a name="1623288"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623288" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623288">(Aug 10 2023 at 22:40)</a>:</h4>
+<p>If we were to build a thing that converted Django’s <code>ValidationError</code> to our <code>JsonableError</code>, we would probably break all our forms.</p>
+
+
+
+<a name="1623289"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623289" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623289">(Aug 10 2023 at 22:42)</a>:</h4>
+<p>So instead of trying to build something that carefully decides which <code>ValidationError</code>s are Django’s and which our ours, we should have them not be the same type to begin with.</p>
+
+
+
+<a name="1623290"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623290" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623290">(Aug 10 2023 at 22:43)</a>:</h4>
+<p>New classes are cheap. Untangling exceptions that should have been different classes but weren’t is expensive.</p>
+
+
+
+<a name="1623301"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623301" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623301">(Aug 10 2023 at 23:02)</a>:</h4>
+<p>I think the function in question is <code>validate_domain</code> from <a href="#narrow/stream/101-design/topic/Better.20API.20error.20responses/near/1617573">here</a>.</p>
+
+
+
+<a name="1623302"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623302" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623302">(Aug 10 2023 at 23:08)</a>:</h4>
+<p><a href="https://github.com/zulip/zulip/commit/06cc306d00c99899903a6722a17cce076a3647e8">06cc306d00c99899903a6722a17cce076a3647e8</a> converted the errors from <code>ValueError</code> to Django's <code>ValidationError</code>.  I agree 100% with <span class="user-mention" data-user-id="699">@Anders Kaseorg</span> that we want to leave <code>ValidationError</code> to Django, and this is probably a pretty good example of where we can just clean up that mistake.</p>
+
+
+
+<a name="1623311"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623311" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623311">(Aug 10 2023 at 23:09)</a>:</h4>
+<p>This not-so-funny-but-funny thing about the commit here is that we basically catch the exception and re-brand it.</p>
+
+
+
+<a name="1623312"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623312" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623312">(Aug 10 2023 at 23:13)</a>:</h4>
+<p>This is clearly a code smell (even back in 2017):</p>
+<div class="codehilite" data-code-language="Python"><pre><span></span><code>    <span class="k">try</span><span class="p">:</span>
+        <span class="n">validate_domain</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">json_error</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s1">'Invalid domain: </span><span class="si">{}</span><span class="s1">'</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">messages</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+</code></pre></div>
+
+
+
+<a name="1623313"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623313" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623313">(Aug 10 2023 at 23:16)</a>:</h4>
+<p>We had commits like <a href="https://github.com/zulip/zulip/commit/3d25fbce4956cd079a0e1f7129795998003a0540">3d25fbce4956cd079a0e1f7129795998003a0540</a> in 2013 to handle <code>JsonableError</code>.</p>
+
+
+
+<a name="1623317"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623317" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623317">(Aug 10 2023 at 23:27)</a>:</h4>
+<p>As an aside, I wonder if <code>JsonableError</code> is a bit overdue for a rename.  It would be a massive code sweep to rename it, so I don't think we should be rash about.  But most errors should kinda be json-able by default.  Whatever those errors have in common is probably something a little more specific than being json-able.  And, as Anders pointed out, new exception classes are cheap, so if we need to introduce a better system that maybe requires a few more classes to make the code more expressive, then we should IMHO.  (Apologies to Anders if I am misrepresenting any of his opinions in specifics, but we are definitely on the same page in terms of broad strokes.)</p>
+
+
+
+<a name="1623318"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623318" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623318">(Aug 10 2023 at 23:46)</a>:</h4>
+<p>Currently <code>JsonableError</code> inherits directly from <code>Exception</code> and there is surprisingly little code, at least in <code>middleware.py</code>, that is necessary to accommodate it.</p>
+
+
+
+<a name="1623322"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1623322" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1623322">(Aug 10 2023 at 23:50)</a>:</h4>
+<p>OTOH <code>JsonableError</code> itself has about ~35 subclasses.</p>
+
+
+
+<a name="1624060"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1624060" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1624060">(Aug 12 2023 at 00:55)</a>:</h4>
+<p>Ahh, <code>validate_domain</code> was not the function I was thinking of, which is <code>check_subdomain_available</code>, which is a function that we originally wrote for use in the Django forms but then reused in <code>zerver/views/realm.py</code> when adding an API query for the same:</p>
+<div class="codehilite"><pre><span></span><code>from zerver.forms import check_subdomain_available as check_subdomain
+def check_subdomain_available(request: HttpRequest, subdomain: str) -&gt; HttpResponse:
+    try:
+        check_subdomain(subdomain)
+        return json_success(request, data={&quot;msg&quot;: &quot;available&quot;})
+    except ValidationError as e:
+        return json_success(request, data={&quot;msg&quot;: e.message})
+</code></pre></div>
+
+
+
+<a name="1624066"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1624066" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1624066">(Aug 12 2023 at 00:56)</a>:</h4>
+<p>So in that particular case, what I think we should be doing is rewriting it to say <code>raise JsonableError</code>, and having the caller in <code>zerver/forms.py</code> be the one converting a thing to a <code>ValidationError</code>.</p>
+
+
+
+<a name="1624067"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/Better%20API%20error%20responses/near/1624067" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/Better.20API.20error.20responses.html#1624067">(Aug 12 2023 at 00:56)</a>:</h4>
+<p>Sorry for the confusion, I wasn't at a computer and <code>validate_domain</code> has a bad name for a function intended for the <code>RealmDomain</code> feature. The history for that one is likely that originally it was managed via a Django form and just got refactored into not that over the years.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,398 @@
+[
+    {
+        "content": "<p>There are two situations where I think it makes sense to give the user a few recent messages: 1) when they just join the realm, and 2) after bankruptcy. It solves the \"now what\" question you get when presented with a realm with 20 streams, with no obvious thing to click on next. </p>\n<p>I'm trying to figure out how many messages to show. I want it to be enough that there is likely to be enough diversity, but not so many that it feels overwhelming. I'm thinking something like the following algorithm might make sense:</p>\n<ul>\n<li>Keep all PMs and at-mentions unread</li>\n<li>Make the last N messages unread</li>\n<li>If the N messages are diverse enough (at least 2 streams, and at least 4 different topics), done</li>\n<li>Otherwise make the last 2N messages unread, and send those.</li>\n</ul>\n<p>Thoughts? Also, what should N be?</p>",
+        "id": 276040,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1504373323
+    },
+    {
+        "content": "<p>I think we'll want different approaches for new-realm and new-bankruptcy.   For bankruptcy, I think we should simply keep the last N messages unread.   I'm not sure PMs actually deserve any special treatment under bankruptcy.  I don't think there's a huge fear-of-missing-out problem with PMs.  I actually think streams are worse for FOMO, since there's no single person (other than yourself) who can get you caught up on what you missed, whereas for PMs, as soon as the other person pings you, you can scroll back as needed for any context.</p>",
+        "id": 276051,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1504374135
+    },
+    {
+        "content": "<p>For the create-new-realm scenario, can we get unread messages basically for free by being sure to start them in some useful  non-interleaved view?  (I'm also fine with just making the auto-read mechanism less aggressive for new users, or all users, actually, haha.)</p>",
+        "id": 276052,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1504374276
+    },
+    {
+        "content": "<p>for the create-new-realm, we now start people in a PM with welcome-bot, and try to direct them to click on streams first. But still by default all the stream messages are marked as read.</p>",
+        "id": 276061,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1504374841
+    },
+    {
+        "content": "<p>Are the stream messages marked as read as part of the code that creates the messages, or do they become read as soon as they appear on the screen?</p>",
+        "id": 276071,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1504376003
+    },
+    {
+        "content": "<p>I think the first. It's sort of an explicit decision we have to make, otherwise new users would have 1000 unread messages (the number we pre-fill).</p>",
+        "id": 276074,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1504376211
+    },
+    {
+        "content": "<p>We pre-fill 1000 messages?</p>",
+        "id": 276076,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1504376657
+    },
+    {
+        "content": "<p>I guess we pre-fill 100 messages if I am able to remember correctly from reading code</p>",
+        "id": 276079,
+        "sender_full_name": "Aditya Bansal",
+        "timestamp": 1504376793
+    },
+    {
+        "content": "<p>yeah, in zerver.lib.add_new_user_history (though looks like we restrict to messages sent in the last week)</p>",
+        "id": 276080,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1504376875
+    },
+    {
+        "content": "<p>Oh, those messages...yeah, I understand the logic there of making most of them by \"read\" by default, and I agree with you that we should make a few exceptions for recent messages.  Also, I think users will generally get a few messages that are truly new to the user, and those should be unread, but I guess many of those are now coming from the welcome bot.</p>",
+        "id": 276084,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1504377456
+    },
+    {
+        "content": "<p>yeah, the initial messages (mostly applicable to the first-in-realm) are indeed currently left as unread, since they are created after do_create_user (which is what calls add_new_user_history).</p>",
+        "id": 276085,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1504377582
+    },
+    {
+        "content": "<p>also somewhat unrelatedly, I think the 1 week restriction is too strict there. I could easily imagine a lot of realms that get not very many messages a week, but are putting effort into trying to grow. Or there was a bunch of activity, then the champion got distracted for a week, and is now trying to get their realm back up again. </p>\n<p>I'd be in favor of raising it to 1 or 2 months; I'm not sure there is much harm in showing old messages, and especially at the beginning it is helpful to have enough messages to see what we mean by threading.</p>",
+        "id": 276086,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1504378104
+    },
+    {
+        "content": "<p>I think it's generally better to measure \"time\" in terms of messages sent vs. actual calendar time.</p>",
+        "id": 276087,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1504378974
+    },
+    {
+        "content": "<p>agreed. If there are no perf implications, I'd also be down for removing the time restriction entirely.<br>\nThe queries are</p>\n<div class=\"codehilite\"><pre><span></span>    recipients = Recipient.objects.filter(\n        type=Recipient.STREAM,\n        type_id__in=[stream.id for stream in streams\n                     if not stream.invite_only])\n    recent_messages = Message.objects.filter(\n        recipient_id__in=recipients,\n        pub_date__gt=one_week_ago).order_by(&quot;-id&quot;)\n    message_ids_to_use = list(reversed(recent_messages.values_list(&#39;id&#39;, flat=True)[0:1000]))\n</pre></div>",
+        "id": 276088,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1504379159
+    },
+    {
+        "content": "<p>Make sense.  I'd try to unbury the <code>[0:1000]</code> snippet by extracting a line of code to set the values_list and limit-by.</p>",
+        "id": 276089,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1504379448
+    },
+    {
+        "content": "<p>What if we just left the last 100 unread?</p>",
+        "id": 279865,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1505227659
+    },
+    {
+        "content": "<p>Sounds fine as a V1, and we can revisit once we have more feedback. Opened as <a href=\"https://github.com/zulip/zulip/pull/6512\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/6512\">#6512</a> (with 80 instead of 100, vaguely based on the length of the longest real-time conversations I see on <a href=\"http://chat.zulip.org\" target=\"_blank\" title=\"http://chat.zulip.org\">chat.zulip.org</a>).</p>",
+        "id": 280779,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1505353489
+    },
+    {
+        "content": "<p>can anyone explain what is bankruptcy and where is the code for it?</p>",
+        "id": 438827,
+        "sender_full_name": "srikant",
+        "timestamp": 1515611750
+    },
+    {
+        "content": "<p>When you have lots of unread messages, we give you the option to \"declare bankruptcy,\" which basically means you set all your messages to being \"read,\" which means you're effectively wiping out your \"unread message debt.\"</p>\n<p>Run this command to start finding the relevant code:</p>\n<div class=\"codehilite\"><pre><span></span>git grep bankruptcy -- &#39;*.js&#39;\n</pre></div>",
+        "id": 438877,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1515613096
+    },
+    {
+        "content": "<p>hello, i am working on issue <a href=\"https://github.com/zulip/zulip/pull/6512\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/6512\">#6512</a> . As I am new to zulip and i feel that its codebase is huge i am trying to resolve issues bit by part. I made a PR <a href=\"https://github.com/zulip/zulip/pull/10242\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/10242\">#10242</a> can you review and tell whether it is correct for new users and also guide me for further changes in bankruptcy.</p>",
+        "id": 627644,
+        "sender_full_name": "Anmol Chugh",
+        "timestamp": 1533758461
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"8242\">@Anmol Chugh</span> <a class=\"stream\" data-stream-id=\"91\" href=\"/#narrow/stream/91-code-review\">#code review</a> is the right stream to post for code review requests (also, just make a new topic for your issue)</p>",
+        "id": 627682,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1533759238
+    },
+    {
+        "content": "<p>I want to say something that when user just join the realm ,he definitely asked for the help from where he get started so i just want to say that realm member helped him by giving the topic as a link and after clicking the link all the message is load containing in the topic and the stream which contain the topic .For bankruptcy we use the same algorithm of 80 unread message .</p>",
+        "id": 690581,
+        "sender_full_name": "Paras Lakhani",
+        "timestamp": 1548709558
+    },
+    {
+        "content": "<p>If we use last 80 message unread there was a probability that last 80 message is not so important for that user .</p>",
+        "id": 690590,
+        "sender_full_name": "Paras Lakhani",
+        "timestamp": 1548709787
+    },
+    {
+        "content": "<p>Even though 80 is an arbitrary number, I support the concept.  Users can always read back further if 80 is not enough.  (Just because we mark a message as read, it doesn't make it disappear.)</p>",
+        "id": 690591,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548709874
+    },
+    {
+        "content": "<p>for convenience: <a href=\"https://github.com/zulip/zulip/pull/6512\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/6512\">#6512</a> is what we're discussing</p>",
+        "id": 690592,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548709931
+    },
+    {
+        "content": "<p>Okay so i am assigned for this issue and i am interested to solve this issue .What can i do now?</p>",
+        "id": 690594,
+        "sender_full_name": "Paras Lakhani",
+        "timestamp": 1548710319
+    },
+    {
+        "content": "<p>I would start by figuring out which endpoint is used, and then track that to a view.</p>",
+        "id": 690597,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548710461
+    },
+    {
+        "content": "<p>And then when you find the view, you can play around with excluding the last 80 messages from the logic there.</p>",
+        "id": 690598,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548710486
+    },
+    {
+        "content": "<p>In testing, it might be worth using a smaller number than 80 at first, just so you don't have to create lots of test data.</p>",
+        "id": 690600,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548710514
+    },
+    {
+        "content": "<p>How i track the endpoint to the view?</p>",
+        "id": 690606,
+        "sender_full_name": "Paras Lakhani",
+        "timestamp": 1548711100
+    },
+    {
+        "content": "<p>look at <code>zproject/urls.py</code></p>",
+        "id": 690608,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548711229
+    },
+    {
+        "content": "<p>One good thing to know is that our server uses the Django framework.  So spending some time up front on a Django tutorial is well worth your time.</p>",
+        "id": 690609,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548711270
+    },
+    {
+        "content": "<p>We are generally good about following Django conventions, with <code>urls.py</code> being a good example of where we more or less \"do it by the book\" according to Django.</p>",
+        "id": 690610,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548711308
+    },
+    {
+        "content": "<p>It's also good to read this:</p>\n<p><a href=\"https://zulip.readthedocs.io/en/latest/tutorials/new-feature-tutorial.html#example-feature\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/tutorials/new-feature-tutorial.html#example-feature\">https://zulip.readthedocs.io/en/latest/tutorials/new-feature-tutorial.html#example-feature</a></p>",
+        "id": 690611,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548711367
+    },
+    {
+        "content": "<p>Even though you're not adding a new feature for this task, that Zulip-specific tutorial will help you get oriented to the codebase.</p>",
+        "id": 690612,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548711399
+    },
+    {
+        "content": "<p>Okay i understood .Actually i had done some Django project  but i have never use rest api with django  so your code base little bit trickier for me .<br>\n So with the help of Urls I track views then models for database and then actions.py and then events.py file .Am i right?</p>",
+        "id": 690615,
+        "sender_full_name": "Paras Lakhani",
+        "timestamp": 1548711680
+    },
+    {
+        "content": "<p>Yep!</p>",
+        "id": 690618,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548711754
+    },
+    {
+        "content": "<p>You probably won't need to go too deep into <code>events.py</code>, but you'll often be looking at <code>actions.py</code> and, in particular, <code>send_event</code> calls.</p>",
+        "id": 690619,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548711782
+    },
+    {
+        "content": "<p>Okay <span aria-label=\"slight smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"slight smile\">:slight_smile:</span></p>",
+        "id": 690621,
+        "sender_full_name": "Paras Lakhani",
+        "timestamp": 1548711955
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"58\">@Steve Howell</span> <span class=\"user-mention\" data-user-id=\"131\">@Rishi Gupta</span>  Hello,I think we have to create dialogue box who get permission from new user  whether  to show 80 unread message or not  .<br>\nIf he say yes than we show 80 unread message +all PM unread message +all @mention unread message.<br>\nIf he say no then we show all unread message of realm .</p>",
+        "id": 692595,
+        "sender_full_name": "Paras Lakhani",
+        "timestamp": 1548965654
+    },
+    {
+        "content": "<p>Yeah and maybe let them edit the number?</p>",
+        "id": 692597,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548965721
+    },
+    {
+        "content": "<p>We already have a dialog box for bankruptcy, correct?</p>",
+        "id": 692599,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548965777
+    },
+    {
+        "content": "<p>@Steve Howell ,Yes we gave  user  an option to edit a number .<br>\nYes we have dialog box for bankruptcy.</p>",
+        "id": 692604,
+        "sender_full_name": "Paras Lakhani",
+        "timestamp": 1548965931
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"58\">@Steve Howell</span> <span class=\"user-mention\" data-user-id=\"131\">@Rishi Gupta</span>  Can i fix this issue now by  implementing that features or you want  to add something else ?</p>",
+        "id": 692638,
+        "sender_full_name": "Paras Lakhani",
+        "timestamp": 1548966911
+    },
+    {
+        "content": "<p>Fine by me.</p>",
+        "id": 692640,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548966978
+    },
+    {
+        "content": "<p>I would vote against letting them edit the number. I think for this V1 we should ignore the bankruptcy case and just focus on the new user case</p>",
+        "id": 692643,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1548967176
+    },
+    {
+        "content": "<p>(since the new user case happens 10x as often, and is less complicated to think about)</p>",
+        "id": 692644,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1548967198
+    },
+    {
+        "content": "<p>Is your concern mostly about confusing users with too many options?  Or just the work involved?</p>",
+        "id": 692646,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548967314
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"131\">@Rishi Gupta</span> Pardon ,I don't understand what do you want to say?</p>",
+        "id": 692655,
+        "sender_full_name": "Paras Lakhani",
+        "timestamp": 1548967812
+    },
+    {
+        "content": "<p>confusing users with too many options</p>",
+        "id": 692665,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1548968676
+    },
+    {
+        "content": "<p>So except this .I create the dialogue box .</p>",
+        "id": 692734,
+        "sender_full_name": "Paras Lakhani",
+        "timestamp": 1548970612
+    },
+    {
+        "content": "<p>there's no need for a dialogue box for the new user case</p>",
+        "id": 692739,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1548970766
+    },
+    {
+        "content": "<p>If the user doesn’t need to confirm, should this all be backend?  Also do we want to split the original issue into two?</p>",
+        "id": 692756,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548972815
+    },
+    {
+        "content": "<p>yeah, I think this can all be backend</p>",
+        "id": 692759,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1548973476
+    },
+    {
+        "content": "<p>If all this be backend then the user only show 80 unread message +all PM message +@message .</p>",
+        "id": 693089,
+        "sender_full_name": "Paras Lakhani",
+        "timestamp": 1549052103
+    },
+    {
+        "content": "<p>Hello all! I'm new to contributing to open-source projects but have experience with Python and Django and thought I'd give this issue a shot.</p>\n<p>It looks like elenaoat and modestfool have made some progress on making the last N messages unread. (<a href=\"https://github.com/zulip/zulip/pull/6918\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/6918\">https://github.com/zulip/zulip/pull/6918</a>, <a href=\"https://github.com/zulip/zulip/pull/10676\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/10676\">https://github.com/zulip/zulip/pull/10676</a>)</p>\n<p>Is \"keep all PMs and at-mentions unread\" still needed?</p>",
+        "id": 729910,
+        "sender_full_name": "Aylin Lopez",
+        "timestamp": 1554703930
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12137\">@Aylin Lopez</span> do you know what's left from the current effort? Getting that mergeable is probably the most important part.</p>",
+        "id": 730141,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1554747720
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12137\">@Aylin Lopez</span> yeah, I think even just rebasing one of those and addressing the PR feedback would be helpful.</p>",
+        "id": 730768,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554854158
+    },
+    {
+        "content": "<p>I want to work on this... <br>\nI have seen the PR <a href=\"https://github.com/zulip/zulip/pull/10676\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/10676\">#10676</a> regarding this issue... I dont think someone is working on it</p>",
+        "id": 749344,
+        "sender_full_name": "Akshay Mittal",
+        "timestamp": 1559638555
+    },
+    {
+        "content": "<p>I have opened <a href=\"https://github.com/zulip/zulip/pull/12484\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/12484\">#12484</a> for the same</p>",
+        "id": 749665,
+        "sender_full_name": "Akshay Mittal",
+        "timestamp": 1559667611
+    },
+    {
+        "content": "<p>one major issue that i encountered when joining the <a href=\"http://chat.zulip.org\" target=\"_blank\" title=\"http://chat.zulip.org\">chat.zulip.org</a> realm in particular was that my mobile app was inundated with thousands of messages that caused the UI to repeatedly jitter as it rendered them all</p>",
+        "id": 762885,
+        "sender_full_name": "Andrew Szeto",
+        "timestamp": 1562133151
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12096\">@Andrew Szeto</span> did you create an account in <a href=\"http://chat.zulip.org\" target=\"_blank\" title=\"http://chat.zulip.org\">chat.zulip.org</a> a long time ago?</p>",
+        "id": 763219,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562212259
+    },
+    {
+        "content": "<p>I'm also not sure what screen you're describing.  In any case, probably better to move this discussion to <a class=\"stream\" data-stream-id=\"48\" href=\"/#narrow/stream/48-mobile\">#mobile</a>, since it sounds mobile-app specific</p>",
+        "id": 763220,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562212283
+    },
+    {
+        "content": "<p>oof, didn't realize my Zulip account was that old. that explains the thousands of messages coming in when I finally looked back in.</p>",
+        "id": 763226,
+        "sender_full_name": "Andrew Szeto",
+        "timestamp": 1562212443
+    },
+    {
+        "content": "<p>You should be able to easily mark them all as read in the webapp to resolve the issue.</p>",
+        "id": 763232,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562213449
+    },
+    {
+        "content": "<blockquote>\n<p>I would vote against letting them edit the number. I think for this V1 we should ignore the bankruptcy case and just focus on the new user case</p>\n</blockquote>\n<p>i am currently working on this issue.<br>\nare we still ignoring the bankruptcy case?<br>\nas of now upon bankruptcy,all the messages are marked read by default.</p>",
+        "id": 776925,
+        "sender_full_name": "JAYATI SHRIVASTAVA",
+        "timestamp": 1565185572
+    }
+]

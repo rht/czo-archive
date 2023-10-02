@@ -1,0 +1,62 @@
+[
+    {
+        "content": "<p>Hi :-)<br>\nI configured SAML according to the docs, my IdP says that all my configuration work seems to be reasonable and they told me to contact you.<br>\nWhen I try to login using SAML, I get a 500 Internal server error (POST to /complete/saml/) and a mail with the subject <code>[Django] host: Issuer of the Assertion not found or multiple.</code> and the following traceback:</p>\n<div class=\"codehilite\"><pre><span></span><code>Traceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/exception.py&quot;, line 34, in inner\n    response = get_response(request)\n  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/base.py&quot;, line 115, in _get_response\n    response = self.process_exception_by_middleware(e, request)\n  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/base.py&quot;, line 113, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/django/views/decorators/cache.py&quot;, line 44, in _wrapped_view_func\n    response = view_func(request, *args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/django/views/decorators/csrf.py&quot;, line 54, in wrapped_view\n    return view_func(*args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/social_django/utils.py&quot;, line 49, in wrapper\n    return func(request, backend, *args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/social_django/views.py&quot;, line 31, in complete\n    return do_complete(request.backend, _do_login, user=request.user,\n  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/social_core/actions.py&quot;, line 45, in do_complete\n    user = backend.complete(user=user, *args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/social_core/backends/base.py&quot;, line 40, in complete\n    return self.auth_complete(*args, **kwargs)\n  File &quot;./zproject/backends.py&quot;, line 1909, in auth_complete\n    idp_name = self.get_issuing_idp(SAMLResponse)\n  File &quot;./zproject/backends.py&quot;, line 1792, in get_issuing_idp\n    issuers = resp.get_issuers()\n  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/onelogin/saml2/response.py&quot;, line 425, in get_issuers\n    raise OneLogin_Saml2_ValidationError(\nonelogin.saml2.errors.OneLogin_Saml2_ValidationError: Issuer of the Assertion not found or multiple.\n</code></pre></div>\n\n\n<p>Any ideas where I could look for the error? Help would be greatly appreciated! :-)</p>",
+        "id": 1040963,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603097466
+    },
+    {
+        "content": "<p>I haven't encountered that exception before; <span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> might have ideas.</p>",
+        "id": 1041376,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1603134222
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert</span> but I'd probably start with patching your Zulip installation to add print statement to at least determine whether it's none or multiple, since that'll likely be relevant for debugging further.</p>",
+        "id": 1041379,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1603134261
+    },
+    {
+        "content": "<p>It might also be worth manually looking through the SAMLResponse to see what's going on with the issuers. This seems more likely to be an issue on the IdP side if it's generating SAMLResponses with missing issuers or mutiple issuers  which isn't supported by our underlying saml libraries</p>",
+        "id": 1041405,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1603134924
+    },
+    {
+        "content": "<p>Thank you. I tried to analyze the SAML traffic, but I'm not really sure where the error occurred. So I took the FF addon SAML-tracer in order to get nicely formatted SAML traffic for you :-)<br>\nzulip request:</p>\n<div class=\"codehilite\"><pre><span></span><code>&lt;samlp:AuthnRequest xmlns:samlp=&quot;urn:oasis:names:tc:SAML:2.0:protocol&quot;\n                    xmlns:saml=&quot;urn:oasis:names:tc:SAML:2.0:assertion&quot;\n                    ID=&quot;ONELOGIN_[...]&quot;\n                    Version=&quot;2.0&quot;\n                    ProviderName=&quot;Zulip Chat&quot;\n                    IssueInstant=&quot;2020-10-19T21:36:44Z&quot;\n                    Destination=&quot;https://login.idp.de/idp/profile/SAML2/Redirect/SSO&quot;\n                    ProtocolBinding=&quot;urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST&quot;\n                    AssertionConsumerServiceURL=&quot;https://zulip.host.de/complete/saml/&quot;\n                    &gt;\n    &lt;saml:Issuer&gt;https://zulip.host.de&lt;/saml:Issuer&gt;\n    &lt;samlp:NameIDPolicy Format=&quot;urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified&quot;\n                        AllowCreate=&quot;true&quot;\n                        /&gt;\n    &lt;samlp:RequestedAuthnContext Comparison=&quot;exact&quot;&gt;\n        &lt;saml:AuthnContextClassRef&gt;urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport&lt;/saml:AuthnContextClassRef&gt;\n    &lt;/samlp:RequestedAuthnContext&gt;\n&lt;/samlp:AuthnRequest&gt;\n</code></pre></div>\n\n\n<p>idp response:</p>\n<div class=\"codehilite\"><pre><span></span><code>&lt;saml2p:Response Destination=&quot;https://zulip.host.de/complete/saml/&quot;\n                 ID=&quot;[...]&quot;\n                 InResponseTo=&quot;ONELOGIN_[...]&quot;\n                 IssueInstant=&quot;2020-10-19T21:36:44.587Z&quot;\n                 Version=&quot;2.0&quot;\n                 xmlns:saml2p=&quot;urn:oasis:names:tc:SAML:2.0:protocol&quot;\n                 &gt;\n    &lt;saml2:Issuer xmlns:saml2=&quot;urn:oasis:names:tc:SAML:2.0:assertion&quot;&gt;https://idp.host.de/idp/shibboleth&lt;/saml2:Issuer&gt;\n    &lt;ds:Signature xmlns:ds=&quot;http://www.w3.org/2000/09/xmldsig#&quot;&gt;\n        &lt;ds:SignedInfo&gt;\n            &lt;ds:CanonicalizationMethod Algorithm=&quot;http://www.w3.org/2001/10/xml-exc-c14n#&quot; /&gt;\n            &lt;ds:SignatureMethod Algorithm=&quot;http://www.w3.org/2001/04/xmldsig-more#rsa-sha256&quot; /&gt;\n            &lt;ds:Reference URI=&quot;#_[...]&quot;&gt;\n                &lt;ds:Transforms&gt;\n                    &lt;ds:Transform Algorithm=&quot;http://www.w3.org/2000/09/xmldsig#enveloped-signature&quot; /&gt;\n                    &lt;ds:Transform Algorithm=&quot;http://www.w3.org/2001/10/xml-exc-c14n#&quot; /&gt;\n                &lt;/ds:Transforms&gt;\n                &lt;ds:DigestMethod Algorithm=&quot;http://www.w3.org/2001/04/xmlenc#sha256&quot; /&gt;\n                &lt;ds:DigestValue&gt;[...]&lt;/ds:DigestValue&gt;\n            &lt;/ds:Reference&gt;\n        &lt;/ds:SignedInfo&gt;\n        &lt;ds:SignatureValue&gt;[SIG]&lt;/ds:SignatureValue&gt;\n        &lt;ds:KeyInfo&gt;\n            &lt;ds:X509Data&gt;\n                &lt;ds:X509Certificate&gt;[CERTIFICATE]&lt;/ds:X509Certificate&gt;\n            &lt;/ds:X509Data&gt;\n        &lt;/ds:KeyInfo&gt;\n    &lt;/ds:Signature&gt;\n    &lt;saml2p:Status&gt;\n        &lt;saml2p:StatusCode Value=&quot;urn:oasis:names:tc:SAML:2.0:status:Responder&quot; /&gt;\n        &lt;saml2p:StatusMessage&gt;An error occurred.&lt;/saml2p:StatusMessage&gt;\n    &lt;/saml2p:Status&gt;\n&lt;/saml2p:Response&gt;\n</code></pre></div>\n\n\n<p>Can you see anything helpful there?</p>",
+        "id": 1041472,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603144402
+    },
+    {
+        "content": "<p>What I see here looks okay in terms of the issuer (though I'm no expert on the SAML specification) - but this also doesn't seem to be a successful SAMLReseponse, after all you have</p>\n<div class=\"codehilite\"><pre><span></span><code>&lt;saml2p:StatusMessage&gt;An error occurred.&lt;/saml2p:StatusMessage&gt;\n</code></pre></div>\n\n\n<p>and Assertions about the user aren't sent. If this is what's being sent to Zulip on those login attempts that generated the <code>OneLogin_Saml2_ValidationError</code>, then that certainly cannot succeed - although admittely the error we're generating would be rather useless for communicating what's wrong</p>",
+        "id": 1042054,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1603197899
+    },
+    {
+        "content": "<p>Got it: The IdP needed also the certificate for the encryption of the Assertion...<br>\nThank you for your help! :-)</p>",
+        "id": 1043559,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603294271
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert</span> remind me -- what IdP software are you using?  I'd love to update the documentation to help the next person avoid the challenges you've been having configuring this by adding a guide for that IdP.</p>",
+        "id": 1043811,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1603303060
+    },
+    {
+        "content": "<p>Oh, I don't think that this is necessary because it's a special IdP service of my university. So no one else will use it :-)</p>",
+        "id": 1043918,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603311584
+    },
+    {
+        "content": "<p>OK, makes sense.</p>",
+        "id": 1043931,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1603311830
+    }
+]

@@ -1,0 +1,50 @@
+[
+    {
+        "content": "<p>We've run into an issue twice now, where an outgoing webhook coming from Zulip hits a 500 error, which somehow results in no more payloads being sent from zulip. I realize we're about a year behind Zulip versions, but I'm wondering if anyone has ever hit this. Restarting the flask server the 'trouble bot' is running on fixes it, and all queued payloads are immediately sent</p>",
+        "id": 858665,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1587419253
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>2020-04-20 20:32:53.084 WARN [] Message https://chat/#narrow/pm-with/2663,19-pm/near/1194444 triggered an outgoing webhook, returning status code 500.\n Content of response (in quotes): &quot;b&#39;&lt;html&gt;&lt;head&gt;&lt;title&gt;500 Internal Server Error&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Internal Server Error&lt;/h1&gt;&lt;p&gt;The server encountered an internal error and was unable to complete your request.  Either the server is overloaded or there is an error in the application.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;&#39;&quot;\n2020-04-20 20:32:53.156 INFO [] Trigger event list on mustacheme resulted in a connection error. Retrying\n</code></pre></div>\n\n\n<p>After this, no further webhook payloads are sent from Zulip until the <code>mustacheme</code> flask server is restarted</p>",
+        "id": 858666,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1587419379
+    },
+    {
+        "content": "<p>Over on the moustachme flask server (running on a <a href=\"https://github.com/tiangolo/meinheld-gunicorn-flask-docker\" title=\"https://github.com/tiangolo/meinheld-gunicorn-flask-docker\">meinhold-gunicorn-flask docker</a>:</p>\n<div class=\"codehilite\"><pre><span></span><code>[2020-04-20 20:21:53 +0000] [1] [CRITICAL] WORKER TIMEOUT (pid:16)\n[2020-04-20 20:21:53 +0000] [16] [ERROR] Traceback (most recent call last):\n  File &quot;/usr/local/lib/python3.7/site-packages/flask/app.py&quot;, line 2463, in __call__\n    return self.wsgi_app(environ, start_response)\n  File &quot;/usr/local/lib/python3.7/site-packages/flask/app.py&quot;, line 2446, in wsgi_app\n    response = self.full_dispatch_request()\n  File &quot;/usr/local/lib/python3.7/site-packages/flask/app.py&quot;, line 1949, in full_dispatch_request\n    rv = self.dispatch_request()\n  File &quot;/usr/local/lib/python3.7/site-packages/flask/app.py&quot;, line 1935, in dispatch_request\n    return self.view_functions[rule.endpoint](**req.view_args)\n  File &quot;/app/start_server.py&quot;, line 159, in reply\n    reply_content = bot.reply_to(payload=payload)\n  File &quot;/app/mustachemebot/bot.py&quot;, line 347, in reply_to\n    reply = _build_reply(payload=payload)\n  File &quot;/app/mustachemebot/bot.py&quot;, line 137, in _build_reply\n    image = func(content, stickers=sticker_requests)\n  File &quot;/app/onyourface/decorate.py&quot;, line 205, in decorate_by_search\n    minimize_duplicates=minimize_duplicates)\n  File &quot;/app/onyourface/decorate.py&quot;, line 81, in decorate\n    features = get_labeled_face_features(f)\n  File &quot;/app/onyourface/face_recognition.py&quot;, line 240, in get_labeled_face_features\n    landmarks = _face_landmarks(image)\n  File &quot;/app/onyourface/face_recognition.py&quot;, line 216, in _face_landmarks\n    pool.terminate()\n  File &quot;/usr/local/lib/python3.7/multiprocessing/pool.py&quot;, line 548, in terminate\n    self._terminate()\n  File &quot;/usr/local/lib/python3.7/multiprocessing/util.py&quot;, line 189, in __call__\n    res = self._callback(*self._args, **self._kwargs)\n  File &quot;/usr/local/lib/python3.7/multiprocessing/pool.py&quot;, line 617, in _terminate_pool\n    p.join()\n  File &quot;/usr/local/lib/python3.7/multiprocessing/process.py&quot;, line 140, in join\n    res = self._popen.wait(timeout)\n  File &quot;/usr/local/lib/python3.7/multiprocessing/popen_fork.py&quot;, line 48, in wait\n    return self.poll(os.WNOHANG if timeout == 0.0 else 0)\n  File &quot;/usr/local/lib/python3.7/multiprocessing/popen_fork.py&quot;, line 28, in poll\n    pid, sts = os.waitpid(self.pid, flag)\n  File &quot;/usr/local/lib/python3.7/site-packages/gunicorn/workers/base.py&quot;, line 196, in handle_abort\n    sys.exit(1)\nSystemExit: 1\n</code></pre></div>\n\n\n<p>Although we've hit this with the development flask server as well.</p>",
+        "id": 858670,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1587419536
+    },
+    {
+        "content": "<p>We're moving to upgrade our server ASAP (which I think I said a month ago too... <span aria-label=\"face palm\" class=\"emoji emoji-1f926\" role=\"img\" title=\"face palm\">:face_palm:</span> ) Should we be looking for anything on the zulip server before we restart the problem bots that would help with troubleshooting?</p>",
+        "id": 858673,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1587419627
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"3733\">@Sean Wallitsch</span> I think we have made error-handling changes to that code path in the last year.</p>",
+        "id": 858677,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1587419783
+    },
+    {
+        "content": "<p>So while it's possible that the bug you're seeing still exists, it'd probably make sense for you to complete your upgrade first.</p>",
+        "id": 858678,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1587419805
+    },
+    {
+        "content": "<p>cool. no worries. We'll get ourselves upgraded and report if it happens again</p>",
+        "id": 858679,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1587419806
+    },
+    {
+        "content": "<p>Thank you!</p>",
+        "id": 858681,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1587419890
+    }
+]

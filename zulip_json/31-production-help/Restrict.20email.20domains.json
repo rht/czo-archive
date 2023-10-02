@@ -1,0 +1,92 @@
+[
+    {
+        "content": "<p>Hi :)<br>\nWhen I restrict the email domains of users in the org-settings: does this only apply to the <code>EmailAuthBackend</code>, or also to the other backends such as SAML?</p>",
+        "id": 1266984,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1634294243
+    },
+    {
+        "content": "<p>Ah, I tested this in the dev environment with the Github auth backend and there, the email domain restriction applies, too. Then this will be the same for SAML... (?)</p>",
+        "id": 1266986,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1634296161
+    },
+    {
+        "content": "<p>What is the rationale behind this concept? <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>",
+        "id": 1267011,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1634297132
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert (ro-i)</span> I think ideally it'd be more configurable -- but certainly you can imagine wanting \"Everyone with an @example.com email address can login with GitHub SSO\" as your intended policy.</p>",
+        "id": 1267148,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634321534
+    },
+    {
+        "content": "<p>With SAML -- I think there may be some SAML setups that might be shared between multiple sub-organizations; kinda hard to know.</p>",
+        "id": 1267149,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634321558
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/Restrict.20email.20domains/near/1267149\">said</a>:</p>\n<blockquote>\n<p>With SAML -- I think there may be some SAML setups that might be shared between multiple sub-organizations; kinda hard to know.</p>\n</blockquote>\n<p>What exactly do you mean? <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span> <br>\nMaybe it's a good idea to describe what I'm actually trying to do <span aria-label=\"grinning face with smiling eyes\" class=\"emoji emoji-1f601\" role=\"img\" title=\"grinning face with smiling eyes\">:grinning_face_with_smiling_eyes:</span> Maybe there is a less weird solution ^^</p>\n<p>We exclusively use SAML (Log in with Shibboleth) for our single-big-realm Zulip instance. But now, I want to give someone access to our Zulip instance who does not yet have the Shibboleth credentials. I thought that I could create a user manually using <code>manage.py</code> and a virtual email address (with the same domain as the Zulip server itself). Then I wanted to enable the <code>EmailAuthBackend</code> and restrict the email addresses to the domain of the Zulp server. This would exclude all emails except the virtual one I created on the server. But this does not work because the SAML authentication would then suffer from the same email address restrictions.<br>\nMaybe you know another way to add a single external user?</p>",
+        "id": 1267241,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1634327470
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert (ro-i)</span> is the organization configured to allow users to create account without an invitation?</p>",
+        "id": 1267247,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634328216
+    },
+    {
+        "content": "<p>yes, invitations are not used at all</p>",
+        "id": 1267250,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1634328281
+    },
+    {
+        "content": "<p>Yeah, I think ultimately what we want here is to refactor the settings around this to be per-authentication-backend, or something like that.  <span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> may have some thoughts or ideas for a workaround.</p>",
+        "id": 1267252,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634328340
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert (ro-i)</span> Wouldn't it be a more natural solution (only if the SAML IdP allows a good way of doing this though) to add this user in your SAML directory (as some kind of limited access user if possible) and just have them authenticate via SAML - with SAML being the only auth method enabled and thus no need for email domain restrictions?</p>",
+        "id": 1267627,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1634400497
+    },
+    {
+        "content": "<p>Well, yeah, but we don't know if our central IT-support is fast enough <span aria-label=\"eyes\" class=\"emoji emoji-1f440\" role=\"img\" title=\"eyes\">:eyes:</span> <br>\nThe user in question is a new faculty member of our university who hasn't the credentials yet, but it would be really useful if he could already have access to our Zulip instance.</p>",
+        "id": 1267628,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1634400687
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert (ro-i)</span> Ah, I see! I have another concept that may work and would just require closing one github issue we have open. <a href=\"https://github.com/zulip/zulip/issues/16722\">https://github.com/zulip/zulip/issues/16722</a> - this would allow the following set up:</p>\n<ol>\n<li>EmailAuthBackend enabled</li>\n<li>\"Invitation required to join the organization\" enabled.</li>\n<li>SAML configured to bypass the invitation requirement (feature to be added in that issue above).</li>\n<li>Then you could add the user by sending them an invitation link. Nobody else can join through the email backend due to not having invitations, but your SAML flow remains unaffected.</li>\n</ol>\n<p>Would that be a solution?</p>",
+        "id": 1267836,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1634471487
+    },
+    {
+        "content": "<p>Yeah, that would be a solution! <span aria-label=\"thumbs up\" class=\"emoji emoji-1f44d\" role=\"img\" title=\"thumbs up\">:thumbs_up:</span> <br>\nDoes a related pull request already exist? <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>",
+        "id": 1267837,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1634471645
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17322\">Robert (ro-i)</span> <a href=\"#narrow/stream/31-production-help/topic/Restrict.20email.20domains/near/1267837\">said</a>:</p>\n<blockquote>\n<p>Yeah, that would be a solution! <span aria-label=\"thumbs up\" class=\"emoji emoji-1f44d\" role=\"img\" title=\"thumbs up\">:thumbs_up:</span> <br>\nDoes a related pull request already exist? <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>\n</blockquote>\n<p>No, not yet unfortunately. It's probably a relatively small project to get it done so it should on my short term TODO list, but I may not be able to give it proper attention for a bit. If an immediate workaround is needed, and getting the user added in SAML is out of the question for now, I don't really have a better idea than something like setting up a separate auth method for just this user <span aria-label=\"neutral\" class=\"emoji emoji-1f610\" role=\"img\" title=\"neutral\">:neutral:</span>  Could be another SAML IdP, or LDAP with the user being the only one in the directory, or <code>Github</code> with e.g. <code>SOCIAL_AUTH_GITHUB_TEAM_ID</code> restriction where the user is the only member of the team, etc.</p>",
+        "id": 1267870,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1634495680
+    },
+    {
+        "content": "<p>Ok, no problem, thanks for your help! <span aria-label=\"thumbs up\" class=\"emoji emoji-1f44d\" role=\"img\" title=\"thumbs up\">:thumbs_up:</span> </p>\n<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <a href=\"#narrow/stream/31-production-help/topic/Restrict.20email.20domains/near/1267870\">said</a>:</p>\n<blockquote>\n<p>...  <code>Github</code> with e.g. <code>SOCIAL_AUTH_GITHUB_TEAM_ID</code> restriction where the user is the only member of the team, etc.</p>\n</blockquote>\n<p>That sounds interesting, I'm going to test this in the dev-environment :)</p>",
+        "id": 1267873,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1634502099
+    }
+]

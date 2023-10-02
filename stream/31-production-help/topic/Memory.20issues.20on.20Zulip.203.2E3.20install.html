@@ -1,0 +1,291 @@
+<html>
+<head><meta charset="utf-8"><title>Memory issues on Zulip 3.3 install · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html">Memory issues on Zulip 3.3 install</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1116819"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1116819" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1116819">(Feb 12 2021 at 05:01)</a>:</h4>
+<p>I have Zulip 3.3 installed on a Debian 10 VPS with 2GB of RAM.</p>
+<p>Using PGroonga, with back-end error email notifications enabled (<code>ERROR_REPORTING = True</code>). Using LDAP for authentication.</p>
+<p>I also have Gotify running on the same server, and a python script/service that monitors messages and forwards push notifications to the Gotify service. As far as I can tell the Gotify/push script is using less than 2% of system CPU and memory.</p>
+<p>8 users, low traffic. Server has been running less than 2 weeks.</p>
+<p>The server is running out of memory every couple days (happened twice so far over the last few days). Once that happens, the postgresql service exits/gets partially killed. Some of it still hangs around but not enough to either fully restart or allow Zulip to keep operating.</p>
+<p>The first time it happened, calling <code>service postgresql restart</code> failed until one of the processes left over from before was manually killed.</p>
+<p>The second time it happened I think there isn't enough memory available to get everything started again, even after killing the last postgres process. Did a server reboot.</p>
+<p>When postgres finally gets killed, I get a bunch of email error notifications all at the same time. I think they couldn't go out until memory was freed up.</p>
+<ol>
+<li>Does PGroonga or enabling email error notifications need more than 2GB of RAM?</li>
+<li>Should 2GB be enough here and something else is going on?</li>
+</ol>
+
+
+
+<a name="1117020"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117020" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117020">(Feb 12 2021 at 16:40)</a>:</h4>
+<p><span class="user-mention" data-user-id="18723">@ben</span> it sorta sounds like your system is hitting an OOM situation due to a cron job or the like?</p>
+
+
+
+<a name="1117021"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117021" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117021">(Feb 12 2021 at 16:42)</a>:</h4>
+<p>On 3.3, 2GB of RAM is tight, so running extra services could put things on the edge.</p>
+
+
+
+<a name="1117023"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117023" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117023">(Feb 12 2021 at 16:43)</a>:</h4>
+<p>I'd be curious to see detailed output from the OOM kill or <code>top</code> to understand what's happening on your system.</p>
+
+
+
+<a name="1117025"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117025" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117025">(Feb 12 2021 at 16:44)</a>:</h4>
+<p>One possibility I'm realizing we should consider is whether the handful of cron jobs that we run and the like might have an issue where multiple start at the same time, resulting in OOM kills for systems that are very tight on memory.</p>
+
+
+
+<a name="1117026"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117026" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117026">(Feb 12 2021 at 16:44)</a>:</h4>
+<p>(I'd also be curious whether your system has 2GiB or 2GB of RAM)</p>
+
+
+
+<a name="1117029"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117029" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117029">(Feb 12 2021 at 16:47)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> The only cron jobs are syncing LDAP users every second hour and another hourly one that pulls zulip users out and replicates them in Gotify. I wouldn't think they are causing much load, and I do each at a different minute of the hour.</p>
+
+
+
+<a name="1117037"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117037" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117037">(Feb 12 2021 at 16:53)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>root@chat-server:~# free -h
+              total        used        free      shared  buff/cache   available
+Mem:          2.0Gi       1.3Gi       386Mi        71Mi       327Mi       495Mi
+Swap:         2.0Gi       260Mi       1.7Gi
+</code></pre></div>
+
+
+
+<a name="1117038"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117038" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117038">(Feb 12 2021 at 16:54)</a>:</h4>
+<p>I added some swap after the latest reboot. It actually couldn't start back up without it.</p>
+
+
+
+<a name="1117046"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117046" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117046">(Feb 12 2021 at 16:59)</a>:</h4>
+<p>The CPU log from the VPS provider was pretty even at 20% for the last few days, with spikes around both times the system ran out of memory. There isn't a memory usage log available.</p>
+
+
+
+<a name="1117051"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117051" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117051">(Feb 12 2021 at 17:01)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>top - 17:00:09 up 10:45,  1 user,  load average: 0.80, 0.66, 0.59
+Tasks: 119 total,   5 running, 114 sleeping,   0 stopped,   0 zombie
+%Cpu(s): 28.0 us,  8.5 sy,  4.9 ni, 47.6 id,  0.0 wa,  0.0 hi,  0.0 si, 11.0 st
+MiB Mem :   1997.9 total,    357.1 free,   1310.6 used,    330.1 buff/cache
+MiB Swap:   2048.0 total,   1787.8 free,    260.2 used.    468.9 avail Mem
+
+  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+ 1309 zulip     30  10  918352 144228  20292 S   5.6   7.0  38:38.12 python3
+ 6892 postgres  20   0  692036  59480  35240 R   1.3   2.9   0:15.76 postgres
+ 8451 postgres  20   0  693540  62044  36684 R   1.3   3.0   0:36.48 postgres
+ 1297 zulip     20   0  193692  25904   4372 S   1.0   1.3   4:34.77 python3
+  480 rabbitmq  20   0 1746792  57024   6288 S   0.7   2.8   1:21.19 beam.smp
+20191 postgres  20   0  693540  61536  36176 R   0.7   3.0   0:11.90 postgres
+22102 postgres  20   0  691832  57832  33992 R   0.7   2.8   0:04.80 postgres
+   10 root      20   0       0      0      0 I   0.3   0.0   0:28.22 rcu_sched
+  453 root      20   0  225824   5136   2392 S   0.3   0.3   0:04.89 rsyslogd
+  481 message+  20   0    8744   3392   2952 S   0.3   0.2   0:19.44 dbus-daemon
+  593 redis     20   0   51672   4976   2496 S   0.3   0.2   1:26.90 redis-server
+29937 zulip     20   0   11032   3436   2900 R   0.3   0.2   0:00.36 top
+    1 root      20   0  104024  10192   7848 S   0.0   0.5   0:37.92 systemd
+</code></pre></div>
+
+
+
+<a name="1117053"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117053" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117053">(Feb 12 2021 at 17:02)</a>:</h4>
+<p><code>468.9 avail Mem</code> sounds like a lot, so yeah, I think your issue is something to do with the specific bundle of things that run in cron at the same time.</p>
+
+
+
+<a name="1117054"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117054" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117054">(Feb 12 2021 at 17:03)</a>:</h4>
+<p>Without swap that number was lower.</p>
+
+
+
+<a name="1117055"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117055" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117055">(Feb 12 2021 at 17:03)</a>:</h4>
+<p>Zulip's own cron jobs are in <code>/etc/cron.d</code>; maybe worth checking the timing on those?</p>
+
+
+
+<a name="1117056"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117056" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117056">(Feb 12 2021 at 17:03)</a>:</h4>
+<p>Can you sort <code>top</code> by memory by hitting <code>&gt;</code> once?  That's usually a more helpful view.</p>
+
+
+
+<a name="1117059"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117059" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117059">(Feb 12 2021 at 17:05)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>top - 17:05:03 up 10:50,  1 user,  load average: 0.84, 0.81, 0.66
+Tasks: 133 total,   3 running, 130 sleeping,   0 stopped,   0 zombie
+%Cpu(s): 39.4 us, 15.8 sy,  3.7 ni, 30.4 id,  0.0 wa,  0.0 hi,  0.0 si, 10.6 st
+MiB Mem :   1997.9 total,    310.5 free,   1356.7 used,    330.7 buff/cache
+MiB Swap:   2048.0 total,   1787.8 free,    260.2 used.    422.8 avail Mem
+
+  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+ 1309 zulip     30  10  918352 144228  20292 R   5.6   7.0  38:58.47 python3
+  704 zulip     20   0  322900 134288  20084 S   0.7   6.6   1:33.54 python3
+  713 zulip     35  15  239540 128188  19556 S   0.0   6.3   0:04.67 python3
+  711 zulip     35  15  245388 125280  18972 S   0.0   6.1   0:32.78 python3
+ 1281 zulip     25   5  312160 114216   9728 S   0.0   5.6   0:02.88 uwsgi
+ 1282 zulip     25   5  317104 113400  10824 S   0.0   5.5   0:26.20 uwsgi
+ 1280 zulip     25   5  313348 109516   9908 S   0.0   5.4   0:04.63 uwsgi
+ 1279 zulip     25   5  311820 103612   9452 S   0.0   5.1   0:02.04 uwsgi
+  712 zulip     30  10  239236  95472  16328 S   0.0   4.7   0:03.31 python3
+20191 postgres  20   0  693540  61536  36176 S   1.3   3.0   0:15.18 postgres
+28013 postgres  20   0  693540  60784  36060 S   0.7   3.0   0:02.25 postgres
+ 6892 postgres  20   0  692036  59480  35240 S   1.0   2.9   0:18.97 postgres
+22102 postgres  20   0  691832  57832  33992 S   1.3   2.8   0:08.07 postgres
+  480 rabbitmq  20   0 1746792  57032   6288 S   0.0   2.8   1:21.77 beam.smp
+28372 postgres  20   0  705668  56988  33648 S   0.0   2.8   0:00.08 postgres
+  663 postgres  20   0  384956  54680  54056 S   0.0   2.7   0:01.45 postgres
+  861 postgres  20   0  785416  52436  40380 S   0.0   2.6   0:00.45 postgres
+ 2339 postgres  20   0  708188  41016  35748 S   0.0   2.0   0:00.88 postgres
+  703 zulip     25   5  192548  35340  17812 S   0.0   1.7   0:03.86 uwsgi
+  707 zulip     20   0   55476  33860  12748 R  17.9   1.7   0:00.54 python3
+  766 zulip     20   0  549640  32628   7784 S   0.0   1.6   0:24.84 python
+ 1297 zulip     20   0  193692  25904   4372 S   0.7   1.3   4:37.34 python3
+ 1548 postgres  20   0  387988  24976  22572 S   0.0   1.2   0:01.21 postgres
+  750 rabbitmq  20   0 1632820  23848   4940 S   8.0   1.2   0:00.24 beam.smp
+ 1547 postgres  20   0  387516  23032  20968 S   0.0   1.1   0:00.14 postgres
+ 1348 postgres  20   0  386748  21964  20940 S   0.0   1.1   0:10.24 postgres
+  749 rabbitmq  20   0 1630048  21924   5052 S   8.0   1.1   0:00.24 beam.smp
+  572 nobody    20   0  578132  21760  11648 S   0.0   1.1   0:01.23 nodejs
+31894 postgres  20   0  387500  20408  18224 S   0.0   1.0   0:00.01 postgres
+ 3210 postgres  20   0  387384  16668  16160 S   0.0   0.8   0:00.00 postgres
+  668 postgres  20   0  385320  16256  15556 S   0.0   0.8   0:01.00 postgres
+  764 zulip     20   0 1024948  14844   6324 S   0.0   0.7   0:10.52 gotify-linux-am
+ 1351 postgres  20   0  386616  14708  13128 S   0.0   0.7   0:09.05 postgres
+ 1352 postgres  20   0  386748  14680  13092 S   0.0   0.7   0:00.40 postgres
+  706 zulip     20   0   49316  13644   8980 S   0.0   0.7   0:00.68 python3
+  585 zulip     20   0   82276  13224   4892 S   0.0   0.6   0:07.10 nginx
+ 1262 zulip     20   0   46120  12868   4672 S   0.0   0.6   0:00.45 zulip-botserver
+  221 root      20   0   43680  11388   8780 S   0.7   0.6   0:23.35 systemd-journal
+  714 root      20   0   19432  11284   5820 S   3.0   0.6   0:00.09 python3
+  478 root      20   0   30060  11020   4468 S   0.0   0.5   0:19.78 supervisord
+  489 memcache  20   0  426764  10980   3540 S   0.0   0.5   0:31.55 memcached
+</code></pre></div>
+
+
+
+<a name="1117066"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117066" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117066">(Feb 12 2021 at 17:11)</a>:</h4>
+<p>Hmm, OK, so you're also running a <code>zulip-botserver</code> and a <code>nodejs</code> process in addition to <code>gotify</code>.  All small, but these things do add up.</p>
+<p>One thing you could consider is adjusting the number of <code>uwsgi</code> workers in /etc/zulip/zulip.conf.</p>
+
+
+
+<a name="1117070"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117070" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117070">(Feb 12 2021 at 17:12)</a>:</h4>
+<p><a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#uwsgi-processes">https://zulip.readthedocs.io/en/latest/production/deployment.html#uwsgi-processes</a></p>
+
+
+
+<a name="1117071"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117071" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117071">(Feb 12 2021 at 17:13)</a>:</h4>
+<p>nodejs may be part of gotify. I'm not running it independently</p>
+
+
+
+<a name="1117072"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117072" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117072">(Feb 12 2021 at 17:14)</a>:</h4>
+<p>I didn't see anything obviously terrible in the cron jobs</p>
+
+
+
+<a name="1117073"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117073" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117073">(Feb 12 2021 at 17:15)</a>:</h4>
+<p>We possibly should just reduce the default 4 uwsgi process count for 2GB systems for everyone to 2 or 3; I think on a 2GiB system, having spare memory so that one can do things like run a botserver is much more of a consideration than the need for 4 CPUs of simultaneous requests.</p>
+
+
+
+<a name="1117074"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117074" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117074">(Feb 12 2021 at 17:15)</a>:</h4>
+<p>Yes, I forgot. I also added a google translate bot.</p>
+
+
+
+<a name="1117077"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117077" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117077">(Feb 12 2021 at 17:17)</a>:</h4>
+<p>I believe this server only has 2 vCPUs</p>
+
+
+
+<a name="1117097"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117097" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117097">(Feb 12 2021 at 17:34)</a>:</h4>
+<p>After setting it to 2 uwsgi workers and restarting zulip:</p>
+<div class="codehilite"><pre><span></span><code>top - 17:32:21 up 11:17,  1 user,  load average: 2.50, 1.68, 1.21
+Tasks: 112 total,   2 running, 110 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  3.6 us,  5.1 sy,  2.1 ni, 74.6 id,  0.0 wa,  0.0 hi,  0.0 si, 14.5 st
+MiB Mem :   1997.9 total,    476.1 free,   1147.0 used,    374.8 buff/cache
+MiB Swap:   2048.0 total,   1939.1 free,    108.9 used.    635.0 avail Mem
+
+  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+11835 zulip     30  10  908664 145288  25656 S   4.3   7.1   0:08.88 python3
+11396 zulip     20   0  315144 136988  25376 S   0.3   6.7   0:04.34 python3
+11810 zulip     30  10  239884 135664  25392 S   0.0   6.6   0:04.86 python3
+11812 zulip     35  15  239720 135592  25412 S   0.0   6.6   0:05.18 python3
+11811 zulip     35  15  239732 135296  25144 S   0.3   6.6   0:05.24 python3
+11826 zulip     25   5  309652 121372  12560 S   0.0   5.9   0:01.66 uwsgi
+11760 zulip     25   5  192412  95724  24820 S   0.0   4.7   0:02.65 uwsgi
+11825 zulip     25   5  192412  74932   4020 S   0.0   3.7   0:00.00 uwsgi
+20191 postgres  20   0  693540  62188  36824 S   1.3   3.0   0:31.89 postgres
+28013 postgres  20   0  693540  62064  36708 S   1.0   3.0   0:19.24 postgres
+ 1162 postgres  20   0  691812  59264  35336 S   1.0   2.9   0:17.03 postgres
+22102 postgres  20   0  691832  58544  34700 S   1.3   2.9   0:24.92 postgres
+28372 postgres  20   0  691832  57868  34028 S   1.0   2.8   0:06.34 postgres
+  480 rabbitmq  20   0 1737476  57596   6656 S   0.0   2.8   1:25.46 beam.smp
+  663 postgres  20   0  384956  54684  54056 S   0.0   2.7   0:01.54 postgres
+  861 postgres  20   0  771580  52576  40440 S   1.0   2.6   0:06.64 postgres
+ 2339 postgres  20   0  694352  41416  35976 S   1.3   2.0   0:07.28 postgres
+  766 zulip     20   0  549640  34544   8068 S   0.3   1.7   0:26.67 python
+11818 zulip     20   0   49316  29584  12844 S   0.0   1.4   0:00.46 python3
+ 1297 zulip     20   0  193692  25908   4372 S   1.0   1.3   4:51.32 python3
+11855 zulip     20   0   81652  24940   4548 S   0.0   1.2   0:00.05 nginx
+  764 zulip     20   0 1025204  24064   8340 S   0.0   1.2   0:11.63 gotify-linux-am
+  572 nobody    20   0  578132  21760  11648 S   0.0   1.1   0:01.23 nodejs
+11898 postgres  20   0  387500  20084  18040 S   0.0   1.0   0:00.00 postgres
+11899 postgres  20   0  386752  17668  15920 S   0.0   0.9   0:00.00 postgres
+11888 postgres  20   0  386756  17240  15460 S   0.0   0.8   0:00.00 postgres
+11892 postgres  20   0  386748  17032  15364 S   0.0   0.8   0:00.00 postgres
+  668 postgres  20   0  385320  16260  15556 S   0.0   0.8   0:01.04 postgres
+11891 postgres  20   0  386620  15704  14092 S   0.0   0.8   0:00.02 postgres
+11819 postgres  20   0  386628  15120  13540 S   0.0   0.7   0:00.00 postgres
+  478 root      20   0   30380  13492   5500 S   0.0   0.7   0:27.84 supervisord
+ 1262 zulip     20   0   46120  12868   4672 S   0.0   0.6   0:00.45 zulip-botserver
+  221 root      20   0   43812  11960   9300 S   0.0   0.6   0:24.47 systemd-journal
+  669 postgres  20   0  385216  11152  10576 S   0.0   0.5   0:01.06 postgres
+  489 memcache  20   0  426764  10980   3540 S   0.3   0.5   0:32.99 memcached
+    1 root      20   0  104024  10192   7848 S   0.0   0.5   0:39.99 systemd
+</code></pre></div>
+
+
+
+<a name="1117099"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Memory%20issues%20on%20Zulip%203.3%20install/near/1117099" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Memory.20issues.20on.20Zulip.203.2E3.20install.html#1117099">(Feb 12 2021 at 17:36)</a>:</h4>
+<p>(midnight here, I'll see what it looks like in the morning)</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

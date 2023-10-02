@@ -1,0 +1,68 @@
+<html>
+<head><meta charset="utf-8"><title>what does `attr_username` do in SAML config? · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/what.20does.20.60attr_username.60.20do.20in.20SAML.20config.3F.html">what does `attr_username` do in SAML config?</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1596370"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/what%20does%20%60attr_username%60%20do%20in%20SAML%20config%3F/near/1596370" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> sev <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/what.20does.20.60attr_username.60.20do.20in.20SAML.20config.3F.html#1596370">(Jun 21 2023 at 14:46)</a>:</h4>
+<p>I am trying to integrate LDAP and SAML into my environment. Unless I am mistaken Zulip does not have a notion of usernames and instead uses email for everything. so why is <code>attr_username</code> a recommended field in the docs and production config template, what does it do?</p>
+
+
+
+<a name="1596372"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/what%20does%20%60attr_username%60%20do%20in%20SAML%20config%3F/near/1596372" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> sev <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/what.20does.20.60attr_username.60.20do.20in.20SAML.20config.3F.html#1596372">(Jun 21 2023 at 14:48)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span></p>
+
+
+
+<a name="1596373"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/what%20does%20%60attr_username%60%20do%20in%20SAML%20config%3F/near/1596373" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/what.20does.20.60attr_username.60.20do.20in.20SAML.20config.3F.html#1596373">(Jun 21 2023 at 14:49)</a>:</h4>
+<p>My guess is that is inherited purely from <a href="https://python-social-auth.readthedocs.io/en/latest/backends/saml.html">python-auth-social</a>.</p>
+
+
+
+<a name="1596374"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/what%20does%20%60attr_username%60%20do%20in%20SAML%20config%3F/near/1596374" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/what.20does.20.60attr_username.60.20do.20in.20SAML.20config.3F.html#1596374">(Jun 21 2023 at 14:51)</a>:</h4>
+<p>And that that module has some requirement that it get a "username" because the interface it provides wants to always be able to provide a username to the Django app -- and Zulip happens to not use that.</p>
+
+
+
+<a name="1596441"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/what%20does%20%60attr_username%60%20do%20in%20SAML%20config%3F/near/1596441" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> sev <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/what.20does.20.60attr_username.60.20do.20in.20SAML.20config.3F.html#1596441">(Jun 21 2023 at 15:13)</a>:</h4>
+<p>I'm not sure about the Django side of things, but I just removed <code>attr_username</code> and <code>attr_user_permanent_id</code> and I had no trouble logging in.<br>
+the SAML backend <a href="https://github.com/zulip/zulip/blob/784622ee5d3e5bca4db9ebafba748acd797b427d/zproject/backends.py#L2229">already overrides <code>get_user_details</code></a>, so if this is really a requirement to satisfy a Django interface, it should be handled there and not presented for the user to configure.</p>
+
+
+
+<a name="1596458"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/what%20does%20%60attr_username%60%20do%20in%20SAML%20config%3F/near/1596458" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/what.20does.20.60attr_username.60.20do.20in.20SAML.20config.3F.html#1596458">(Jun 21 2023 at 15:20)</a>:</h4>
+<p>Mmmm, yeah.  I suspect you're right and we can drop <code>attr_username</code>.  The <em>concept</em> of <code>attr_user_permanent_id</code> is somewhat useful for being able to track users across renames -- though I think we probably don't do that correctly at the moment.</p>
+
+
+
+<a name="1596465"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/what%20does%20%60attr_username%60%20do%20in%20SAML%20config%3F/near/1596465" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> sev <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/what.20does.20.60attr_username.60.20do.20in.20SAML.20config.3F.html#1596465">(Jun 21 2023 at 15:22)</a>:</h4>
+<p>yes, I was hoping for some kind of mechanism like that. since I allow my users to change their email address in the IdP/LDAP, and as far as I can tell neither the SAML or LDAP backends support a "permanent user ID" (i.e. a username that isn't an email address in my case), I either have to also sync email changes to Zulip any time it is changed, or create a dummy email that forwards to their real email...</p>
+
+
+
+<a name="1603421"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/what%20does%20%60attr_username%60%20do%20in%20SAML%20config%3F/near/1603421" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/what.20does.20.60attr_username.60.20do.20in.20SAML.20config.3F.html#1603421">(Jul 04 2023 at 05:30)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> is there a documentation update we should be making here?</p>
+
+
+
+<a name="1603592"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/what%20does%20%60attr_username%60%20do%20in%20SAML%20config%3F/near/1603592" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> sev <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/what.20does.20.60attr_username.60.20do.20in.20SAML.20config.3F.html#1603592">(Jul 04 2023 at 12:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> <span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> at the very least, have a note that the values don't really do anything as of yet, but they might in the future :)</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

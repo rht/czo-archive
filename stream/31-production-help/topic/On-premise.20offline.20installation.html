@@ -1,0 +1,63 @@
+<html>
+<head><meta charset="utf-8"><title>On-premise offline installation · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/On-premise.20offline.20installation.html">On-premise offline installation</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="683563"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/On-premise%20offline%20installation/near/683563" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Data Stream <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/On-premise.20offline.20installation.html#683563">(Jan 17 2019 at 11:03)</a>:</h4>
+<p>Hello everyone,</p>
+<p>Currently I'm trying to setup Zulip server on a physically disconnected network but there's a surprising lack of documentation on such a process for an organization proudly proclaiming the possibility on its website. There's not even one paragraph on this specific usecase in the docs. </p>
+<p>So I'm trying to decide on the best way to go about doing this. My current thoughts are to either:<br>
+- Download all dependencies and edit the install scripts to point to the dependencies supplied locally and attempt to install it that way.<br>
+- Doing the same thing but with a docker image.<br>
+- Installing a VM with ubuntu 18 on an online machine part of a different network and installing Zulip server on there then turning it into an image and moving the VM into the offline network.</p>
+<p>Does anyone have any experience with this? Which method would you suggest?</p>
+<p>Thanks for reading</p>
+
+
+
+<a name="683756"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/On-premise%20offline%20installation/near/683756" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/On-premise.20offline.20installation.html#683756">(Jan 17 2019 at 19:09)</a>:</h4>
+<p><span class="user-mention" data-user-id="11011">@Data Stream</span> we recommend using the Docker image for this; this is one of the things Docker is supposed to be good for.  The Docker image doesn't need to fetch anything from the network in order to run (well, you need Docker itself and the image).</p>
+
+
+
+<a name="683758"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/On-premise%20offline%20installation/near/683758" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/On-premise.20offline.20installation.html#683758">(Jan 17 2019 at 19:10)</a>:</h4>
+<p>You're right that we should probably comment on this in the docs; do you think the "Requirements" page is a good place for that?</p>
+
+
+
+<a name="683917"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/On-premise%20offline%20installation/near/683917" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Data Stream <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/On-premise.20offline.20installation.html#683917">(Jan 18 2019 at 08:05)</a>:</h4>
+<p>You're right that docker doesn't need anything from the network! I overlooked that fact. </p>
+<p>I think putting information for the requirements (needs docker/hyper-v thus any of the preceding POSIX os' but also windows server capable that way) is a good start with maybe some more in depth information on steps and concerns in a separate chapter, much like "Installing a production server", is a good idea. </p>
+<p>Thanks for your response by the way! Saves me from trying all methods at once. :)</p>
+
+
+
+<a name="684671"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/On-premise%20offline%20installation/near/684671" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Data Stream <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/On-premise.20offline.20installation.html#684671">(Jan 21 2019 at 15:20)</a>:</h4>
+<p>I suggest going a bit more in depth on how to setup the docker-compose.yml file for offline installation. Docker is almost useless when it comes to error messages and the zulip documentation simply says use the commands found in the settings.py template found the base zulip git repo. Except there are mismatches between the parameters mentioned in the docs and the template. </p>
+<p>For example: the documentation mentions ZULIP_AUTH_BACKENDS but in the template it's called AUTHENTICATION_BACKENDS. The docker-zulip specific documentation implies that every setting from settings.py that you want to put in the compose file needs either SETTING_ or SECRETS_ in front of it. This implies that it would have to be SETTING_AUTHENTICATION_BACKENDS.  But the docs simply ZULIP_AUTH_BACKENDS. Does that mean it would have to be SETTING_ZULIP_AUTH_BACKENDS or just ZULIP_AUTH_BACKENDS? Well from reading through <a href="http://entrypoint.sh" target="_blank" title="http://entrypoint.sh">entrypoint.sh</a> I can see that it specifically looks for ZULIP_AUTH_BACKENDS. So no SETTING_ in front of it required. At least, that's what line 36 and 225 from the entrypoint would imply. Yet in zulipConfiguration() it specifically expects the SETTING_. Confusing to say the least.</p>
+<p>I think what I'm trying to say is: properly setting up a docker container for zulip seems to require going in-depth to the point that it seems like the person is joining the dev team (learning all the ins and outs of the code) instead of configuring a product and running it. Simply because the documentation seems to reference other bits of the docs or comments in a separate code file causing you to jump from page to page picking up crumbs trying to piece together a slice of bread, when all you really wanted was a whole bread. (This because I read a line in the docs that said that there are many more configuration options because the settings file is python based but go unexplained because reasons. If someone wants them they have to go here. )</p>
+<p>Sorry if this post seems confusing but I've written 5 different posts so far and deleted them all because I keep thinking it's a fault of mine and not the docs. For this one I'm just going to post it anyway even if all it does is get more attention to the confusing nature of the documentation. </p>
+<p>Meanwhile I'll keep trying to solve this "docker-zulip_zulip_1 exited with code 1" error that docker keeps shitting out</p>
+
+
+
+<a name="686797"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/On-premise%20offline%20installation/near/686797" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Data Stream <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/On-premise.20offline.20installation.html#686797">(Jan 24 2019 at 10:24)</a>:</h4>
+<p>I've managed to get the docker installation working on an online computer but when transferring the saved images with docker save ${docker images -q} allimages.tar I can't seem to get it to run.</p>
+<p>Docker is always asking for connections to the outside which are actually impossible because the offline network is physically not connected to the outside. I'm starting to think docker is not the right move unless there are some hidden settings that I missed while googling. But so far it seems that docker is far more trouble than it's worth.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,69 @@
+<html>
+<head><meta charset="utf-8"><title>API to modify role · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20to.20modify.20role.html">API to modify role</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="899309"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20to%20modify%20role/near/899309" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Plankter <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20to.20modify.20role.html#899309">(Jun 09 2020 at 13:36)</a>:</h4>
+<p>I'm trying to use the API to modify a user's role, from 400 to 200 (from Member to Administrator). When I do this, I get the following message:<br>
+{"result":"success","msg":""}<br>
+Yet, when I look at the user's profile or at the role value in the database, the role is unchanged. I see "Member" on the profile and 400 in the database.<br>
+It seems this feature is fairly new. Has it been tested in production mode?</p>
+
+
+
+<a name="899538"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20to%20modify%20role/near/899538" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20to.20modify.20role.html#899538">(Jun 09 2020 at 17:40)</a>:</h4>
+<p><span class="user-mention" data-user-id="15931">@Plankter</span> the API did just change from passing <code>is_admin=true</code> to using role.  Depending what server you're talking to, it's very possible your server does not support that change.</p>
+
+
+
+<a name="899542"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20to%20modify%20role/near/899542" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20to.20modify.20role.html#899542">(Jun 09 2020 at 17:41)</a>:</h4>
+<p>One quirk of our API is that to make potentially adding future options in the future, passing random extra parameters is ignored; so my guess is what happened is that 200 success is reporting that you successfully made no changes whatsoever.  I feel like we should be able to do something better here, but I'm not sure what it should be.</p>
+
+
+
+<a name="899543"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20to%20modify%20role/near/899543" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20to.20modify.20role.html#899543">(Jun 09 2020 at 17:41)</a>:</h4>
+<p>(Are you self-hosting?)</p>
+
+
+
+<a name="900328"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20to%20modify%20role/near/900328" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Plankter <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20to.20modify.20role.html#900328">(Jun 10 2020 at 15:14)</a>:</h4>
+<p>Yes. I have zulip_version   "2.1.3-9-g2b95f54593". </p>
+<p>What I find is this:<br>
+1) Changing the role in the admin of the site works: the user's role is changed, as is the role value in the database, which goes from 400 to 200.<br>
+2) Manually setting the role to 200 directly in the database does not change the role, even though the value is recorded as 200 in the database.<br>
+3) Setting the role with the API does not change the value in the database. It remains 400, even though the operation appears to be successful (your mentioned quirk).</p>
+<p>Does 2) imply that there is a second value to set somewhere (e.g. is_admin)?</p>
+
+
+
+<a name="900391"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20to%20modify%20role/near/900391" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20to.20modify.20role.html#900391">(Jun 10 2020 at 16:40)</a>:</h4>
+<p><span class="user-mention" data-user-id="15931">@Plankter</span> 2 is because manually making changes in the database does not flush caches.  You should use the Django <code>manage.py shell</code> and the functions in <code>zerver/lib/actions.py</code> that handle caching correctly if you're going to make manual changes.</p>
+
+
+
+<a name="900393"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20to%20modify%20role/near/900393" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20to.20modify.20role.html#900393">(Jun 10 2020 at 16:41)</a>:</h4>
+<p>And yes, if you're running Zulip 2.1.3, you should use <code>is_admin=True</code> to create an administrator.  This is documented in <a href="https://zulipchat.com/api/update-user">https://zulipchat.com/api/update-user</a>; the <code>role</code> is new in Zulip 2.2 (to be released soon).</p>
+
+
+
+<a name="900450"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20to%20modify%20role/near/900450" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Plankter <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20to.20modify.20role.html#900450">(Jun 10 2020 at 17:08)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span>  Thanks again. I'll mind the version from now on.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

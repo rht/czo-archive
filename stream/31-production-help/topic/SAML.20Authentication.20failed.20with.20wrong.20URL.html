@@ -1,0 +1,144 @@
+<html>
+<head><meta charset="utf-8"><title>SAML Authentication failed with wrong URL · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html">SAML Authentication failed with wrong URL</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1201673"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20Authentication%20failed%20with%20wrong%20URL/near/1201673" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Lumrenion <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html#1201673">(Jun 05 2021 at 10:09)</a>:</h4>
+<p>Hi, I come from this issue: <a href="https://github.com/zulip/zulip/issues/18659">https://github.com/zulip/zulip/issues/18659</a><br>
+In short, the problem is that I cannot authenticate with SAML because of the error <code>The response was received at https://zulip.example.com:80/complete/saml/ instead of https://zulip.example.com/complete/saml/</code><br>
+I think the problem lies between the request forwarding from my Traefik reverse proxy to my zulip docker image, but I have no idea how to solve this. Hope, somebody here can help :)</p>
+
+
+
+<a name="1202023"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20Authentication%20failed%20with%20wrong%20URL/near/1202023" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html#1202023">(Jun 06 2021 at 12:23)</a>:</h4>
+<p><span class="user-mention" data-user-id="20570">@Lumrenion</span>  I might have an idea. This is the underlying code where python3-saml determines the relevant part of the URL that it compares with <code>Destination</code> of the SAMLResponse:</p>
+<div class="codehilite"><pre><span></span><code>    @staticmethod
+    def get_self_url_host(request_data):
+        &quot;&quot;&quot;
+        Returns the protocol + the current host + the port (if different than
+        common ports).
+
+        :param request_data: The request as a dict
+        :type: dict
+
+        :return: Url
+        :rtype: string
+        &quot;&quot;&quot;
+        current_host = OneLogin_Saml2_Utils.get_self_host(request_data)
+        port = &#39;&#39;
+        if OneLogin_Saml2_Utils.is_https(request_data):
+            protocol = &#39;https&#39;
+        else:
+            protocol = &#39;http&#39;
+
+        if &#39;server_port&#39; in request_data and request_data[&#39;server_port&#39;] is not None:
+            port_number = str(request_data[&#39;server_port&#39;])
+            port = &#39;:&#39; + port_number
+
+            if protocol == &#39;http&#39; and port_number == &#39;80&#39;:
+                port = &#39;&#39;
+            elif protocol == &#39;https&#39; and port_number == &#39;443&#39;:
+                port = &#39;&#39;
+
+        return &#39;%s://%s%s&#39; % (protocol, current_host, port)
+</code></pre></div>
+<p>So this would indicate that you're getting :80 appended to the hostname because it doesn't match what's expected for https. So the solution could be to simply make the Docker container with Zulip receive requests on port 443 instead of 80.</p>
+
+
+
+<a name="1202044"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20Authentication%20failed%20with%20wrong%20URL/near/1202044" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Lumrenion <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html#1202044">(Jun 06 2021 at 14:56)</a>:</h4>
+<p>Thanks for pointing me to the code snippet. The receiving port of a docker container can be changed in traefik with <code>traefik.http.services.zulip.loadbalancer.server.port=443</code>. But doing so results in a Bad Gateway, probably because there is no SSL certificate set internally <span aria-label="thinking" class="emoji emoji-1f914" role="img" title="thinking">:thinking:</span></p>
+
+
+
+<a name="1202052"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20Authentication%20failed%20with%20wrong%20URL/near/1202052" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html#1202052">(Jun 06 2021 at 15:06)</a>:</h4>
+<p>Maybe you have to ignore self signed ssl certificates.<br>
+I did find the following regarding Traefik: <a href="https://community.traefik.io/t/problem-using-ssl-backend-with-selfsigned-certificates/1974/3">https://community.traefik.io/t/problem-using-ssl-backend-with-selfsigned-certificates/1974/3</a></p>
+
+
+
+<a name="1202080"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20Authentication%20failed%20with%20wrong%20URL/near/1202080" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Lumrenion <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html#1202080">(Jun 06 2021 at 15:35)</a>:</h4>
+<p><span class="user-mention" data-user-id="15808">@Felix (strifel)</span> that would only apply if Zulip would provide SSL certificates itself, wouldn't it? In my case, certificates are handled by Traefik and Zulip is configured with <code>DISABLE_HTTPS: "True"</code></p>
+<p>I think I was able to bypass this issue with some help from here: <a href="https://github.com/onelogin/python3-saml/issues/83">https://github.com/onelogin/python3-saml/issues/83</a> <br>
+First I had to set the environment variable <code>SETTING_USE_X_FORWARDED_PORT: "True"</code>, second I had to add the Header <code>X-Forwarded-Proto=https</code> by adding the docker label <code>traefik.http.middlewares.zulip-headers.headers.sslproxyheaders.X-Forwarded-Proto=https</code> (and of course adding the middleware to the service). <br>
+But the login still refuses to work with another error in the django.log <span aria-label="sweat smile" class="emoji emoji-1f605" role="img" title="sweat smile">:sweat_smile:</span></p>
+<div class="codehilite"><pre><span></span><code>2021-06-06 15:23:11.842 INFO [zulip.auth.saml] AuthFailed: Authentication failed: SAML login failed: [&#39;invalid_response&#39;] (Signature validation failed. SAML Response rejected)
+</code></pre></div>
+
+
+
+<a name="1202083"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20Authentication%20failed%20with%20wrong%20URL/near/1202083" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html#1202083">(Jun 06 2021 at 15:37)</a>:</h4>
+<p>Did not know that you had actively disabled https. sorry<span aria-label="frown" class="emoji emoji-1f641" role="img" title="frown">:frown:</span></p>
+
+
+
+<a name="1202090"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20Authentication%20failed%20with%20wrong%20URL/near/1202090" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html#1202090">(Jun 06 2021 at 15:45)</a>:</h4>
+<p>Hmm, do you have the IdP certificate correctly set up in /etc/zulip/saml/idps/? Perhaps <a href="https://www.samltool.com/validate_response.php">https://www.samltool.com/validate_response.php</a> can be used for double-checking if Zulip server is confused or if there's something genuinely wrong with the SAMLResponse?</p>
+
+
+
+<a name="1202474"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20Authentication%20failed%20with%20wrong%20URL/near/1202474" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Lumrenion <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html#1202474">(Jun 07 2021 at 09:08)</a>:</h4>
+<p>Thanks for your support all of you. I had configured the wrong certificate as <code>/etc/zulip/saml/idps/{idp_name}.crt</code>. You have to use the keycloak realms certificate, not the keycloak clients certificate. I will provide a walk through to get SAML authentication in zulip up and running with keycloak soon! I am still not able to log in because users need to be invited (at least thats what displays in the browser after I try to login with SAML), but thats a different topic :)</p>
+
+
+
+<a name="1202495"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20Authentication%20failed%20with%20wrong%20URL/near/1202495" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html#1202495">(Jun 07 2021 at 09:27)</a>:</h4>
+<p><span class="user-mention" data-user-id="20570">@Lumrenion</span> You can fix the invitattion requirement with <a href="https://zulip.com/help/allow-anyone-to-join-without-an-invitation">https://zulip.com/help/allow-anyone-to-join-without-an-invitation</a> + making SAML the only enabled authentication method (so that people outside the organization can't just sign up via a non-SAML method)</p>
+
+
+
+<a name="1202518"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20Authentication%20failed%20with%20wrong%20URL/near/1202518" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Lumrenion <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html#1202518">(Jun 07 2021 at 10:22)</a>:</h4>
+<p>I did that and have a working setup now. It might be a bit confusing, that users signing in with SAML will see the screen "Continue registering", when signing in for the first time. A auto signup for users authenticating with SAML might be useful. <br>
+I have documented my setup here: <a href="https://github.com/zulip/zulip/issues/18659#issuecomment-855799758">https://github.com/zulip/zulip/issues/18659#issuecomment-855799758</a></p>
+<p>There is one last thing: It seems, the <code>attr_user_permanent_id</code> is not respected. When I have a user registered for zulip with email <a href="mailto:mail@example.com">mail@example.com</a> and username example.user and change the email to <a href="mailto:test@example.com">test@example.com</a>, Zulip says, there is no user with that email address <a href="mailto:test@example.com">test@example.com</a> and I can continue with the registration. But the user should be identified by its username example.user and be able to sign in with their user account even when their email address changes. Am I doing something wrong?</p>
+
+
+
+<a name="1202532"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20Authentication%20failed%20with%20wrong%20URL/near/1202532" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Lumrenion <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html#1202532">(Jun 07 2021 at 10:42)</a>:</h4>
+<p>The issue with the username is discussed here: <a href="https://github.com/zulip/zulip/issues/17910">https://github.com/zulip/zulip/issues/17910</a><br>
+This topic can be "closed" from my side now <span aria-label="blush" class="emoji emoji-1f60a" role="img" title="blush">:blush:</span></p>
+
+
+
+<a name="1202573"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20Authentication%20failed%20with%20wrong%20URL/near/1202573" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html#1202573">(Jun 07 2021 at 13:34)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="20570">Lumrenion</span> <a href="#narrow/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL/near/1202518">said</a>:</p>
+<blockquote>
+<p>I did that and have a working setup now. It might be a bit confusing, that users signing in with SAML will see the screen "Continue registering", when signing in for the first time. A auto signup for users authenticating with SAML might be useful. </p>
+</blockquote>
+<p>Ah, I had a PR for that I think!</p>
+
+
+
+<a name="1202574"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20Authentication%20failed%20with%20wrong%20URL/near/1202574" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html#1202574">(Jun 07 2021 at 13:35)</a>:</h4>
+<p>Got it - <a href="https://github.com/zulip/zulip/pull/16009">https://github.com/zulip/zulip/pull/16009</a> </p>
+<p>I should take this opportunity to refresh it so that it can be merged</p>
+
+
+
+<a name="1203026"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20Authentication%20failed%20with%20wrong%20URL/near/1203026" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL.html#1203026">(Jun 07 2021 at 19:42)</a>:</h4>
+<p>Yeah, that'd be really valuable to finish <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

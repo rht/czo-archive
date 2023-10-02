@@ -1,0 +1,104 @@
+[
+    {
+        "content": "<p>I have a server that had no smtp functional for many months, and would like to clear the backlog of emails pending for notifications etc... when I \"fixed smtp\" it started sending all the backlog to the point the provider killed the connection. <br>\nI tried manage.py print_email_delivery_backlog to see if I could gain insight but didn't have much luck. Sorry, I didn't find an answer in a search or google.</p>",
+        "id": 1373941,
+        "sender_full_name": "Tyson Parker",
+        "timestamp": 1651010339
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"18622\">@Tyson Parker</span> I'd check <code>rabbitmqctl list_queue</code>; my guess is that the <code>email_senders</code> queue (or perhaps another) has a ton of stuff in it.</p>",
+        "id": 1373953,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651010685
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/smtp.20backlog.20clear\">#issues &gt; smtp backlog clear</a> by <span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span>.</p>",
+        "id": 1374229,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1651036086
+    },
+    {
+        "content": "<p>Thanks <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> <br>\nI googled rabbitmqctl and ran the rabbitmqctl list_queue as suggested, which showed 23000 remaining email_senders.<br>\nI then ran rabbitmqctl purge_queue email_senders which reduced that number to 100. <br>\nThank you!</p>",
+        "id": 1374389,
+        "sender_full_name": "Tyson Parker",
+        "timestamp": 1651066778
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"18622\">Tyson Parker</span> has marked this topic as resolved.</p>",
+        "id": 1374409,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1651070433
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"18622\">Tyson Parker</span> has marked this topic as unresolved.</p>",
+        "id": 1375687,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1651186903
+    },
+    {
+        "content": "<p>Still seeing more emails go out for accounts with a subject like \"OrName on Zulip: Your new account details\" for accounts that were created months ago. But the list_queue shows zeros.  I need to clear this backlog. Our provider is blocking us for sending so many emails out at once. </p>\n<p>root@zulip:/etc/zulip# rabbitmqctl list_queues<br>\nTimeout: 60.0 seconds ...<br>\nListing queues for vhost / ...<br>\nuser_presence   0<br>\ninvites 0<br>\nembedded_bots   0<br>\nerror_reports   0<br>\nmissedmessage_emails    0<br>\nembed_links     0<br>\nemail_mirror    0<br>\nuser_activity_interval  0<br>\ndigest_emails   0<br>\nsignups 0<br>\nnotify_tornado  0<br>\ndeferred_work   0<br>\nmissedmessage_mobile_notifications      0<br>\noutgoing_webhooks       0<br>\nemail_senders   0<br>\nuser_activity   0<br>\nroot@zulip:/etc/zulip#</p>",
+        "id": 1375689,
+        "sender_full_name": "Tyson Parker",
+        "timestamp": 1651187050
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"18622\">@Tyson Parker</span> I wonder if you have emails queues in <code>postfix</code> or whatever you're configured as your outgoing SMTP provider.</p>",
+        "id": 1375707,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651189717
+    },
+    {
+        "content": "<p>That specific email should be in the <code>ScheduledEmail</code> table, though.</p>",
+        "id": 1375708,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651189790
+    },
+    {
+        "content": "<p>So try <code>ScheduledEmail.objects.all().count()</code> in a <code>manage.py shell</code>.</p>",
+        "id": 1375709,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651189805
+    },
+    {
+        "content": "<p>We had been using <a href=\"http://smtp-relay.gmail.com\">smtp-relay.gmail.com</a>, which broke a few months ago (authentication issue), when I fixed that it spammed the google relay to the point they blocked that account. Which was when I asked for help. and cleared out 700,000 backlog and 40k error mesages from teh rabbitmqctl queue. I then built another relay on a MS server using IP authentication, which then immediately started sending out those emails even though the queues show 0?  We don't have any new users. I guess this is why I'm confused. <br>\nWhere is this queue at as it isn't showing in the zulip rabbitmqctl list and doesn't start sending emails till I attach it to a functional relay. <br>\nThanks <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span></p>",
+        "id": 1375925,
+        "sender_full_name": "Tyson Parker",
+        "timestamp": 1651241506
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/smtp.20backlog.20clear/near/1375709\">said</a>:</p>\n<blockquote>\n<p>So try <code>ScheduledEmail.objects.all().count()</code> in a <code>manage.py shell</code>.</p>\n</blockquote>\n<p>Will check this when I get back to my computer. Thanks!</p>",
+        "id": 1375926,
+        "sender_full_name": "Tyson Parker",
+        "timestamp": 1651241562
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  I've logged into the manage.py shell, I don't see an option for ScheduledEmail to manipulate.   I tried listing the options and that isn't there.</p>",
+        "id": 1376973,
+        "sender_full_name": "Tyson Parker",
+        "timestamp": 1651511838
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"18622\">@Tyson Parker</span>: You just paste the line Tim give you into the prompt that appears after running <code>./manage.py shell</code>.  Like so:</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip@alexmv-prod:~/deployments/current$ ./manage.py shell\nPython 3.8.10 (default, Mar 15 2022, 12:22:08)\nType &#39;copyright&#39;, &#39;credits&#39; or &#39;license&#39; for more information\nIPython 7.32.0 -- An enhanced Interactive Python. Type &#39;?&#39; for help.\n\nSuccessfully imported Zulip settings, models, and actions functions.\n\nIn [1]: ScheduledEmail.objects.all().count()\nOut[1]: 0\n</code></pre></div>",
+        "id": 1377046,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651529782
+    },
+    {
+        "content": "<p>OIC I was missing the \"shell\" after the manage.py and just running manage.py </p>\n<p>Thanks <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> </p>\n<p>zulip@zulip:~/deployments/current$ ./manage.py shell<br>\nPython 3.7.3 (default, Jan 22 2021, 20:04:44)<br>\nType 'copyright', 'credits' or 'license' for more information<br>\nIPython 7.31.1 -- An enhanced Interactive Python. Type '?' for help.</p>\n<p>Successfully imported Zulip settings, models, and actions functions.</p>\n<p>In [1]: ScheduledEmail.objects.all().count()<br>\nOut[1]: 4</p>",
+        "id": 1377232,
+        "sender_full_name": "Tyson Parker",
+        "timestamp": 1651587113
+    },
+    {
+        "content": "<p>I have rejiggered the smtp relay yesterday using no authentication and IP white listing... and it sent out a bunch of emails that I didn't see in the rabbit queue. Not the previously large number. Had hope to avoid spamming everyone though. </p>\n<p>So in the future how would I clear that scheduledemail queue?</p>",
+        "id": 1377233,
+        "sender_full_name": "Tyson Parker",
+        "timestamp": 1651587202
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"18622\">@Tyson Parker</span> <code>ScheduledEmail.objects.all().delete()</code> will clear all scheduled outgoing emails, in that management shell.</p>",
+        "id": 1377410,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651605546
+    }
+]

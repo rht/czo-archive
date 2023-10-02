@@ -1,0 +1,248 @@
+[
+    {
+        "content": "<p>Hello, </p>\n<p>I'm looking to automate the full installation even the lastest steps where it asks to go to an URL to create the Zulip organization.<br>\nIs there a way to script that?</p>\n<p>PS: I'm using ansible to deploy Zulip with SAML auth.</p>",
+        "id": 1259991,
+        "sender_full_name": "delaf",
+        "timestamp": 1632901344
+    },
+    {
+        "content": "<p>I have check with the <code>manage.py</code> script, but there is no <code>create_realm</code> function.</p>",
+        "id": 1260009,
+        "sender_full_name": "delaf",
+        "timestamp": 1632906013
+    },
+    {
+        "content": "<p>I have found a way: </p>\n<div class=\"codehilite\"><pre><span></span><code>/home/zulip/deployments/current/manage.py shell\n=&gt; do_create_realm(string_id=&quot;&quot;, name=&quot;Demo&quot;, emails_restricted_to_domains=False)\n/home/zulip/deployments/current/manage.py create_user -r 2 --this-user-has-accepted-the-tos   --password ... test@test.com &quot;Admin1&quot;\n</code></pre></div>",
+        "id": 1260012,
+        "sender_full_name": "delaf",
+        "timestamp": 1632908702
+    },
+    {
+        "content": "<p>so this thing is that do_create_realm is not an option for manage.py</p>",
+        "id": 1260013,
+        "sender_full_name": "delaf",
+        "timestamp": 1632908727
+    },
+    {
+        "content": "<p>I have added a new file : <br>\n<code>$ cat /home/zulip/deployments/current/zerver/management/commands/create_realm.py</code></p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"kn\">from</span> <span class=\"nn\">argparse</span> <span class=\"kn\">import</span> <span class=\"n\">ArgumentParser</span>\n<span class=\"kn\">from</span> <span class=\"nn\">typing</span> <span class=\"kn\">import</span> <span class=\"n\">Any</span>\n\n<span class=\"kn\">from</span> <span class=\"nn\">zerver.lib.management</span> <span class=\"kn\">import</span> <span class=\"n\">ZulipBaseCommand</span>\n<span class=\"kn\">from</span> <span class=\"nn\">zerver.lib.actions</span> <span class=\"kn\">import</span> <span class=\"n\">do_create_realm</span>\n\n<span class=\"k\">class</span> <span class=\"nc\">Command</span><span class=\"p\">(</span><span class=\"n\">ZulipBaseCommand</span><span class=\"p\">):</span>\n    <span class=\"n\">help</span> <span class=\"o\">=</span> <span class=\"s2\">\"\"\"Change the stream name for a realm.\"\"\"</span>\n\n    <span class=\"k\">def</span> <span class=\"nf\">add_arguments</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">,</span> <span class=\"n\">parser</span><span class=\"p\">:</span> <span class=\"n\">ArgumentParser</span><span class=\"p\">)</span> <span class=\"o\">-&gt;</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n        <span class=\"n\">parser</span><span class=\"o\">.</span><span class=\"n\">add_argument</span><span class=\"p\">(</span><span class=\"s2\">\"name\"</span><span class=\"p\">,</span> <span class=\"n\">metavar</span><span class=\"o\">=</span><span class=\"s2\">\"&lt;name&gt;\"</span><span class=\"p\">,</span> <span class=\"n\">help</span><span class=\"o\">=</span><span class=\"s2\">\"name of REALM\"</span><span class=\"p\">)</span>\n\n    <span class=\"k\">def</span> <span class=\"nf\">handle</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">,</span> <span class=\"o\">*</span><span class=\"n\">args</span><span class=\"p\">:</span> <span class=\"n\">Any</span><span class=\"p\">,</span> <span class=\"o\">**</span><span class=\"n\">options</span><span class=\"p\">:</span> <span class=\"nb\">str</span><span class=\"p\">)</span> <span class=\"o\">-&gt;</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n        <span class=\"n\">name</span> <span class=\"o\">=</span> <span class=\"n\">options</span><span class=\"p\">[</span><span class=\"s2\">\"name\"</span><span class=\"p\">]</span>\n        <span class=\"n\">do_create_realm</span><span class=\"p\">(</span><span class=\"n\">string_id</span><span class=\"o\">=</span><span class=\"s2\">\"\"</span><span class=\"p\">,</span> <span class=\"n\">name</span><span class=\"o\">=</span><span class=\"n\">name</span><span class=\"p\">,</span> <span class=\"n\">emails_restricted_to_domains</span><span class=\"o\">=</span><span class=\"kc\">False</span><span class=\"p\">,</span> <span class=\"n\">invite_required</span><span class=\"o\">=</span><span class=\"kc\">False</span><span class=\"p\">)</span>\n</code></pre></div>",
+        "id": 1260021,
+        "sender_full_name": "delaf",
+        "timestamp": 1632915113
+    },
+    {
+        "content": "<p>(deleted)</p>",
+        "id": 1260022,
+        "sender_full_name": "delaf",
+        "timestamp": 1632915152
+    },
+    {
+        "content": "<p>and now I can do: </p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code>/home/zulip/deployments/current/manage.py create_realm <span class=\"s2\">\"DEMO\"</span>\n</code></pre></div>\n<p>and then </p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code>/home/zulip/deployments/current/manage.py create_user --password <span class=\"s2\">\"...\"</span>  --this-user-has-accepted-the-tos -r <span class=\"m\">2</span> email@domain.com <span class=\"s2\">\"FirstUser\"</span>\n/home/zulip/deployments/current/manage.py change_user_role -r <span class=\"m\">2</span> <span class=\"s2\">\"email@domain.com\"</span> admin\n</code></pre></div>",
+        "id": 1260023,
+        "sender_full_name": "delaf",
+        "timestamp": 1632915269
+    },
+    {
+        "content": "<p>^ sounds useful. Also, with <code>manage.py create_realm</code>, people no longer need to set up their email if they just want to run a Zulip realm as an experiment.<br>\nEdit: nvm, I got mixed up between user creation and realm creation. Still useful to have <code>create_realm</code> nevertheless.</p>",
+        "id": 1260029,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1632917371
+    },
+    {
+        "content": "<p>This is great, thank you. I would like to see that checked in!<br>\nAnyone know if realm commands seem to be missing from the API by design?</p>",
+        "id": 1260038,
+        "sender_full_name": "Jamie Strachan",
+        "timestamp": 1632925063
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"21617\">Jamie Strachan</span> <a href=\"#narrow/stream/31-production-help/topic/Automatic.20deployment/near/1260038\">said</a>:</p>\n<blockquote>\n<p>Anyone know if realm commands seem to be missing from the API by design?</p>\n</blockquote>\n<p>I don't know, but it will be nice to be able to set admin config from cli. I'll work on something like I did for create_realm as I need it quite soon.</p>",
+        "id": 1260039,
+        "sender_full_name": "delaf",
+        "timestamp": 1632925250
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21617\">@Jamie Strachan</span> which realm commands in particular are you looking for?  The API settings for modifying a realm are just missing documentation, which is one of the missing endpoints we're most likely to add in the near future.</p>\n<p>But creating a realm doesn't naturally make sense as a thing to offer via the API for security model reasons.  (Self-hosted servers probably don't want random folks being able to create new organizations via the API; and it's typically a rare enough operation that a web workflow is a nicer experience).</p>",
+        "id": 1260127,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632936359
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9869\">@delaf</span> I think we'd be open to merging a <code>create_realm</code> management command that included creating a realm owner as part of its script (i.e. all 3 steps you have above).  The tool you've written would violate an invariant we'd like the code to be able to rely on, namely that every organization has an owner.</p>",
+        "id": 1260129,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632936412
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> ok, does something like this would match your requirements ?<br>\n<code>manage.py create_realm --realm-name \"DEMO\" --user-email email@domain.com --user-password \"...\"  --user-name  \"FirstUser\" </code> ?</p>",
+        "id": 1260250,
+        "sender_full_name": "delaf",
+        "timestamp": 1632943367
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> is there a way with CLI to change REALM parameters ? (parameters like \"default language\", \"24-hour time\",  \"Prevent users from changing their name\",  etc). I did not find anything, but I think I could create a \"set_realm_parameters\" options to <code>manage.py</code> that will call <code>do_set_realm_property()</code>?</p>",
+        "id": 1260269,
+        "sender_full_name": "delaf",
+        "timestamp": 1632943871
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9869\">@delaf</span> I'd expect one to do so with the API once your realm is created.</p>",
+        "id": 1260319,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632947160
+    },
+    {
+        "content": "<p>via <code>PATCH /realm</code>.</p>",
+        "id": 1260320,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632947186
+    },
+    {
+        "content": "<p>ok <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span></p>",
+        "id": 1261594,
+        "sender_full_name": "delaf",
+        "timestamp": 1633081258
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> </p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"kn\">import</span> <span class=\"nn\">argparse</span>\n<span class=\"kn\">from</span> <span class=\"nn\">typing</span> <span class=\"kn\">import</span> <span class=\"n\">Any</span>\n\n<span class=\"kn\">from</span> <span class=\"nn\">django.core</span> <span class=\"kn\">import</span> <span class=\"n\">validators</span>\n<span class=\"kn\">from</span> <span class=\"nn\">django.core.exceptions</span> <span class=\"kn\">import</span> <span class=\"n\">ValidationError</span>\n<span class=\"kn\">from</span> <span class=\"nn\">django.core.management.base</span> <span class=\"kn\">import</span> <span class=\"n\">CommandError</span>\n<span class=\"kn\">from</span> <span class=\"nn\">django.db.utils</span> <span class=\"kn\">import</span> <span class=\"n\">IntegrityError</span>\n<span class=\"kn\">from</span> <span class=\"nn\">zerver.lib.management</span> <span class=\"kn\">import</span> <span class=\"n\">ZulipBaseCommand</span>\n<span class=\"kn\">from</span> <span class=\"nn\">zerver.lib.initial_password</span> <span class=\"kn\">import</span> <span class=\"n\">initial_password</span>\n<span class=\"kn\">from</span> <span class=\"nn\">zerver.lib.actions</span> <span class=\"kn\">import</span> <span class=\"p\">(</span>\n    <span class=\"n\">do_create_realm</span><span class=\"p\">,</span>\n    <span class=\"n\">do_create_user</span><span class=\"p\">,</span>\n<span class=\"p\">)</span>\n<span class=\"kn\">from</span> <span class=\"nn\">zerver.models</span> <span class=\"kn\">import</span> <span class=\"n\">UserProfile</span>\n\n<span class=\"k\">class</span> <span class=\"nc\">Command</span><span class=\"p\">(</span><span class=\"n\">ZulipBaseCommand</span><span class=\"p\">):</span>\n    <span class=\"n\">help</span> <span class=\"o\">=</span> <span class=\"s2\">\"\"\"Create a new REALM with its owner.\"\"\"</span>\n\n    <span class=\"k\">def</span> <span class=\"nf\">add_arguments</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">,</span> <span class=\"n\">parser</span><span class=\"p\">:</span> <span class=\"n\">argparse</span><span class=\"o\">.</span><span class=\"n\">ArgumentParser</span><span class=\"p\">)</span> <span class=\"o\">-&gt;</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n        <span class=\"n\">parser</span><span class=\"o\">.</span><span class=\"n\">add_argument</span><span class=\"p\">(</span><span class=\"s2\">\"name\"</span><span class=\"p\">,</span> <span class=\"n\">metavar</span><span class=\"o\">=</span><span class=\"s2\">\"&lt;name&gt;\"</span><span class=\"p\">,</span> <span class=\"n\">help</span><span class=\"o\">=</span><span class=\"s2\">\"name of REALM\"</span><span class=\"p\">)</span>\n        <span class=\"n\">parser</span><span class=\"o\">.</span><span class=\"n\">add_argument</span><span class=\"p\">(</span>\n            <span class=\"s2\">\"--string-id\"</span><span class=\"p\">,</span> <span class=\"n\">help</span><span class=\"o\">=</span><span class=\"s2\">\"The REALM string-id. Empty if not used.\"</span>\n        <span class=\"p\">)</span>\n        <span class=\"n\">parser</span><span class=\"o\">.</span><span class=\"n\">add_argument</span><span class=\"p\">(</span>\n            <span class=\"s2\">\"--password\"</span><span class=\"p\">,</span>\n            <span class=\"n\">help</span><span class=\"o\">=</span><span class=\"s2\">\"password of new user. For development only.\"</span>\n            <span class=\"s2\">\" Note that we recommend against setting \"</span>\n            <span class=\"s2\">\"passwords this way, since they can be snooped by any user account \"</span>\n            <span class=\"s2\">\"on the server via `ps -ef` or by any superuser with\"</span>\n            <span class=\"s2\">\"read access to the user's bash history.\"</span><span class=\"p\">,</span>\n        <span class=\"p\">)</span>\n        <span class=\"n\">parser</span><span class=\"o\">.</span><span class=\"n\">add_argument</span><span class=\"p\">(</span>\n            <span class=\"s2\">\"--password-file\"</span><span class=\"p\">,</span> <span class=\"n\">help</span><span class=\"o\">=</span><span class=\"s2\">\"The file containing the password of the new user.\"</span>\n        <span class=\"p\">)</span>\n        <span class=\"n\">parser</span><span class=\"o\">.</span><span class=\"n\">add_argument</span><span class=\"p\">(</span>\n            <span class=\"s2\">\"--disable-invite-required\"</span><span class=\"p\">,</span>\n            <span class=\"n\">action</span><span class=\"o\">=</span><span class=\"s2\">\"store_true\"</span><span class=\"p\">,</span>\n            <span class=\"n\">help</span><span class=\"o\">=</span><span class=\"s2\">\"Create Realm with invite disabled.\"</span><span class=\"p\">,</span>\n        <span class=\"p\">)</span>\n        <span class=\"n\">parser</span><span class=\"o\">.</span><span class=\"n\">add_argument</span><span class=\"p\">(</span>\n            <span class=\"s2\">\"email\"</span><span class=\"p\">,</span>\n            <span class=\"n\">metavar</span><span class=\"o\">=</span><span class=\"s2\">\"&lt;email&gt;\"</span><span class=\"p\">,</span>\n            <span class=\"n\">help</span><span class=\"o\">=</span><span class=\"s2\">\"email address of the REALM admin\"</span><span class=\"p\">,</span>\n        <span class=\"p\">)</span>\n        <span class=\"n\">parser</span><span class=\"o\">.</span><span class=\"n\">add_argument</span><span class=\"p\">(</span>\n            <span class=\"s2\">\"full_name\"</span><span class=\"p\">,</span>\n            <span class=\"n\">metavar</span><span class=\"o\">=</span><span class=\"s2\">\"&lt;full name&gt;\"</span><span class=\"p\">,</span>\n            <span class=\"n\">help</span><span class=\"o\">=</span><span class=\"s2\">\"full name of the REALM user\"</span><span class=\"p\">,</span>\n        <span class=\"p\">)</span>\n\n    <span class=\"k\">def</span> <span class=\"nf\">handle</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">,</span> <span class=\"o\">*</span><span class=\"n\">args</span><span class=\"p\">:</span> <span class=\"n\">Any</span><span class=\"p\">,</span> <span class=\"o\">**</span><span class=\"n\">options</span><span class=\"p\">:</span> <span class=\"nb\">str</span><span class=\"p\">)</span> <span class=\"o\">-&gt;</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n        <span class=\"n\">name</span> <span class=\"o\">=</span> <span class=\"n\">options</span><span class=\"p\">[</span><span class=\"s2\">\"name\"</span><span class=\"p\">]</span>\n        <span class=\"n\">email</span> <span class=\"o\">=</span> <span class=\"n\">options</span><span class=\"p\">[</span><span class=\"s2\">\"email\"</span><span class=\"p\">]</span>\n        <span class=\"n\">full_name</span> <span class=\"o\">=</span> <span class=\"n\">options</span><span class=\"p\">[</span><span class=\"s2\">\"full_name\"</span><span class=\"p\">]</span>\n        <span class=\"k\">try</span><span class=\"p\">:</span>\n            <span class=\"n\">validators</span><span class=\"o\">.</span><span class=\"n\">validate_email</span><span class=\"p\">(</span><span class=\"n\">email</span><span class=\"p\">)</span>\n        <span class=\"k\">except</span> <span class=\"n\">ValidationError</span><span class=\"p\">:</span>\n            <span class=\"k\">raise</span> <span class=\"n\">CommandError</span><span class=\"p\">(</span><span class=\"s2\">\"Invalid email address.\"</span><span class=\"p\">)</span>\n\n        <span class=\"k\">if</span> <span class=\"n\">options</span><span class=\"p\">[</span><span class=\"s2\">\"string_id\"</span><span class=\"p\">]</span> <span class=\"ow\">is</span> <span class=\"ow\">not</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n            <span class=\"n\">string_id</span> <span class=\"o\">=</span><span class=\"n\">options</span><span class=\"p\">[</span><span class=\"s2\">\"string_id\"</span><span class=\"p\">]</span>\n        <span class=\"k\">else</span><span class=\"p\">:</span>\n            <span class=\"n\">string_id</span> <span class=\"o\">=</span> <span class=\"s2\">\"\"</span>\n\n        <span class=\"k\">if</span> <span class=\"n\">options</span><span class=\"p\">[</span><span class=\"s2\">\"password_file\"</span><span class=\"p\">]</span> <span class=\"ow\">is</span> <span class=\"ow\">not</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n            <span class=\"k\">with</span> <span class=\"nb\">open</span><span class=\"p\">(</span><span class=\"n\">options</span><span class=\"p\">[</span><span class=\"s2\">\"password_file\"</span><span class=\"p\">])</span> <span class=\"k\">as</span> <span class=\"n\">f</span><span class=\"p\">:</span>\n                <span class=\"n\">pw</span> <span class=\"o\">=</span> <span class=\"n\">f</span><span class=\"o\">.</span><span class=\"n\">read</span><span class=\"p\">()</span><span class=\"o\">.</span><span class=\"n\">strip</span><span class=\"p\">()</span>\n        <span class=\"k\">elif</span> <span class=\"n\">options</span><span class=\"p\">[</span><span class=\"s2\">\"password\"</span><span class=\"p\">]</span> <span class=\"ow\">is</span> <span class=\"ow\">not</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n            <span class=\"n\">pw</span> <span class=\"o\">=</span> <span class=\"n\">options</span><span class=\"p\">[</span><span class=\"s2\">\"password\"</span><span class=\"p\">]</span>\n        <span class=\"k\">else</span><span class=\"p\">:</span>\n            <span class=\"n\">user_initial_password</span> <span class=\"o\">=</span> <span class=\"n\">initial_password</span><span class=\"p\">(</span><span class=\"n\">email</span><span class=\"p\">)</span>\n            <span class=\"k\">if</span> <span class=\"n\">user_initial_password</span> <span class=\"ow\">is</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n                <span class=\"k\">raise</span> <span class=\"n\">CommandError</span><span class=\"p\">(</span><span class=\"s2\">\"Password is unusable.\"</span><span class=\"p\">)</span>\n            <span class=\"n\">pw</span> <span class=\"o\">=</span> <span class=\"n\">user_initial_password</span>\n        <span class=\"k\">if</span> <span class=\"n\">options</span><span class=\"p\">[</span><span class=\"s2\">\"disable_invite_required\"</span><span class=\"p\">]</span> <span class=\"ow\">is</span> <span class=\"ow\">not</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n            <span class=\"n\">invite_required</span> <span class=\"o\">=</span> <span class=\"kc\">False</span>\n        <span class=\"k\">else</span><span class=\"p\">:</span>\n            <span class=\"n\">invite_required</span> <span class=\"o\">=</span> <span class=\"kc\">True</span>\n\n        <span class=\"k\">try</span><span class=\"p\">:</span>\n            <span class=\"n\">realm</span> <span class=\"o\">=</span> <span class=\"n\">do_create_realm</span><span class=\"p\">(</span><span class=\"n\">string_id</span><span class=\"o\">=</span><span class=\"n\">string_id</span><span class=\"p\">,</span> <span class=\"n\">name</span><span class=\"o\">=</span><span class=\"n\">name</span><span class=\"p\">,</span> <span class=\"n\">invite_required</span><span class=\"o\">=</span><span class=\"n\">invite_required</span><span class=\"p\">)</span>\n        <span class=\"k\">except</span> <span class=\"ne\">AssertionError</span><span class=\"p\">:</span>\n            <span class=\"k\">raise</span> <span class=\"n\">CommandError</span><span class=\"p\">(</span><span class=\"s2\">\"Realm '</span><span class=\"si\">{}</span><span class=\"s2\">' already exists.\"</span><span class=\"o\">.</span><span class=\"n\">format</span><span class=\"p\">(</span><span class=\"n\">string_id</span><span class=\"p\">))</span>\n\n        <span class=\"k\">try</span><span class=\"p\">:</span>\n            <span class=\"n\">user</span> <span class=\"o\">=</span> <span class=\"n\">do_create_user</span><span class=\"p\">(</span>\n                <span class=\"n\">email</span><span class=\"p\">,</span>\n                <span class=\"n\">pw</span><span class=\"p\">,</span>\n                <span class=\"n\">realm</span><span class=\"p\">,</span>\n                <span class=\"n\">full_name</span><span class=\"p\">,</span>\n        <span class=\"n\">role</span><span class=\"o\">=</span><span class=\"n\">UserProfile</span><span class=\"o\">.</span><span class=\"n\">ROLE_REALM_OWNER</span><span class=\"p\">,</span>\n                <span class=\"n\">acting_user</span><span class=\"o\">=</span><span class=\"kc\">None</span><span class=\"p\">,</span>\n            <span class=\"p\">)</span>\n        <span class=\"k\">except</span> <span class=\"n\">IntegrityError</span><span class=\"p\">:</span>\n            <span class=\"k\">raise</span> <span class=\"n\">CommandError</span><span class=\"p\">(</span><span class=\"s2\">\"User already exists.\"</span><span class=\"p\">)</span>\n</code></pre></div>",
+        "id": 1272007,
+        "sender_full_name": "delaf",
+        "timestamp": 1635248446
+    },
+    {
+        "content": "<p>I have integrate the 3 steps into one : </p>\n<ul>\n<li>create the realm</li>\n<li>create the user </li>\n<li>\n<p>make the user admin<br>\n=&gt;  </p>\n</li>\n<li>\n<p>create the realm and create a owner for it</p>\n</li>\n</ul>",
+        "id": 1272008,
+        "sender_full_name": "delaf",
+        "timestamp": 1635248567
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9869\">@delaf</span> cool, thanks for sharing.  I think there are probably something things we'd want to tweak to make it harder to do passwords wrong (E.g. maybe just prompt on the console if they don't use a password file?), but it seems like something we can iterate from.  Want to make a pull request?</p>",
+        "id": 1272333,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635281055
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> please find it: <a href=\"https://github.com/zulip/zulip/pull/20074\">PR 20075</a></p>",
+        "id": 1272339,
+        "sender_full_name": "delaf",
+        "timestamp": 1635283044
+    },
+    {
+        "content": "<p>for password, I took the code from the <code>create_user</code> command</p>",
+        "id": 1272340,
+        "sender_full_name": "delaf",
+        "timestamp": 1635283241
+    },
+    {
+        "content": "<p>hum, mypy check fails but I do not understand why</p>",
+        "id": 1272419,
+        "sender_full_name": "delaf",
+        "timestamp": 1635287374
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9869\">@delaf</span> <a href=\"https://zulip.readthedocs.io/en/latest/git/index.html\">https://zulip.readthedocs.io/en/latest/git/index.html</a> may be useful, since it looks like you accidentally closed the pull request when adjusting your branch.</p>",
+        "id": 1272421,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635287519
+    },
+    {
+        "content": "<p>GitHub supports updating pull requests by just force-pushing to the branch; so one never needs to close and reopen them.</p>",
+        "id": 1272422,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635287545
+    },
+    {
+        "content": "<p>ohh !</p>",
+        "id": 1272423,
+        "sender_full_name": "delaf",
+        "timestamp": 1635287557
+    },
+    {
+        "content": "<p>sorry</p>",
+        "id": 1272424,
+        "sender_full_name": "delaf",
+        "timestamp": 1635287560
+    },
+    {
+        "content": "<p>so now is it <a href=\"https://github.com/zulip/zulip/pull/20075\">PR20075</a> (with the correct URL)</p>",
+        "id": 1272429,
+        "sender_full_name": "delaf",
+        "timestamp": 1635287719
+    },
+    {
+        "content": "<p>You can type just <a href=\"https://github.com/zulip/zulip/pull/20075\">#20075</a>, and our linkifiers will do the right thing <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1272430,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635287745
+    },
+    {
+        "content": "<p><code>#XXX</code> is linked to our ticket system on our zulip, so I did not think about using it here for PR ^^</p>",
+        "id": 1272433,
+        "sender_full_name": "delaf",
+        "timestamp": 1635287834
+    },
+    {
+        "content": "<p>Yeah, makes sense <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1272434,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635287928
+    },
+    {
+        "content": "<p>ok just check the available linkifiers on this zulip instance. I'll use them ;-)</p>",
+        "id": 1272435,
+        "sender_full_name": "delaf",
+        "timestamp": 1635287947
+    },
+    {
+        "content": "<p>btw any idea for the mypy failing check ?</p>",
+        "id": 1272436,
+        "sender_full_name": "delaf",
+        "timestamp": 1635287977
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9869\">@delaf</span> yeah, I suspect you have argparse parameters that have <code>\"\"</code> as the value if you don't specify them, and then code that does something different if they are <code>None</code>, and that's impossible.</p>",
+        "id": 1272444,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635288536
+    },
+    {
+        "content": "<p>Not sure -- it could be that mypy is inferring incorrectly, but you should be able to test whether you get <code>None</code> or <code>\"\"</code>.</p>",
+        "id": 1272445,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635288557
+    },
+    {
+        "content": "<p>That’s strange as the code for password has been copied from the user_create command. I’ll check that tomorrow and will update the PR. Thank you</p>",
+        "id": 1272446,
+        "sender_full_name": "delaf",
+        "timestamp": 1635288658
+    },
+    {
+        "content": "<p>Ok I have updated the PR to pass mypy checks.</p>",
+        "id": 1272749,
+        "sender_full_name": "delaf",
+        "timestamp": 1635326856
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9869\">@delaf</span> just did a review on this pull request.</p>",
+        "id": 1289708,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638407811
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> I have added some comments</p>",
+        "id": 1289791,
+        "sender_full_name": "delaf",
+        "timestamp": 1638432319
+    },
+    {
+        "content": "<p>Great <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1290004,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638465913
+    },
+    {
+        "content": "<p>Thanks for the reply, <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> .  We are working on a system where another database and admin portal will be used to create groups and users, and we would like to programmatically add these users and groups (equivalent to realms) into Zulip, without any emails or any further action required.<br>\nWe've got something worked out now!</p>",
+        "id": 1300558,
+        "sender_full_name": "Jamie Strachan",
+        "timestamp": 1640200426
+    }
+]

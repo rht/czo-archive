@@ -1,0 +1,122 @@
+[
+    {
+        "content": "<p>I'm trying to add a second organization to my server, and want to start by moving my unique existing organization to a subdomain. <a href=\"https://zulip.com/help/change-organization-url#self-hosting\">This</a> says I should do <code>do_change_realm_subdomain(realm, \"new_subdomain\")</code> in a management shell. </p>\n<p>However, I don't know what to put for <code>realm</code>. Is it the same as the organization's <code>string_id</code>? <a href=\"https://zulip.readthedocs.io/en/stable/production/management-commands.html#accessing-an-organization-s-string-id\">This</a> says to list realms with <code>./manage.py list_realms</code> , and that the id in case of a unique organization is the empty string <code>''</code> (which I confirmed), but when I do </p>\n<p><code>do_change_realm_subdomain('', \"baker\")</code></p>\n<p>in the management shell, I get the following error message: </p>\n<div class=\"codehilite\"><pre><span></span><code>AttributeError                            Traceback (most recent call last)\n&lt;ipython-input-7-140788cc20d0&gt; in &lt;module&gt;\n----&gt; 1 do_change_realm_subdomain(&#39;&#39;, &quot;baker&quot;)\n\n~/deployments/2020-11-14-17-42-58/zerver/lib/actions.py in do_change_realm_subdomain(realm, new_subdomain)\n    856\n    857 def do_change_realm_subdomain(realm: Realm, new_subdomain: str) -&gt; None:\n--&gt; 858     realm.string_id = new_subdomain\n    859     realm.save(update_fields=[&quot;string_id&quot;])\n    860\n\nAttributeError: &#39;str&#39; object has no attribute &#39;string_id&#39;\n</code></pre></div>\n<p>What's going on? I suspect that for the first argument of <code>do_change_realm_subdomain</code> I'm not supposed to give a string, but some other kind of python object, but I don't know what to type.</p>\n<p>Thanks in advance for any help.</p>",
+        "id": 1146289,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1616990755
+    },
+    {
+        "content": "<p>The <code>realm</code> means that the function is asking for a <code>Realm</code> object which can be retrieved using a get query. What you need to do is <code>realm = Realm.objects.get(string_id=string_id)</code> this fetches the realm with a particular string id. You can then send this <code>realm</code> object as argument.</p>",
+        "id": 1146310,
+        "sender_full_name": "Mainak Sengupta (cool-pants)",
+        "timestamp": 1616991433
+    },
+    {
+        "content": "<p>We should fix the documentation for this.</p>",
+        "id": 1146316,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1616991810
+    },
+    {
+        "content": "<p>Opened <a href=\"https://github.com/zulip/zulip/issues/17857\">https://github.com/zulip/zulip/issues/17857</a> for this.</p>",
+        "id": 1146318,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1616991901
+    },
+    {
+        "content": "<p>Thanks! It worked!</p>",
+        "id": 1146319,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1616992021
+    },
+    {
+        "content": "<p>OK now I have a new problem: After moving the realm to a subdomain and  generating a certificate for the subdomain with <code>setup-certbot</code> I can log onto the server in chrome on ubuntu, but when using the ubuntu desktop \"snap\" app I get the error message</p>\n<div class=\"codehilite\"><pre><span></span><code>The server presented an invalid certificate for https://mydomain.dev:\n\nnet::ERR_CERT_COMMON_NAME_INVALID\n</code></pre></div>\n<p>why is is the program concerned about the certificate for <code>mydomain.dev</code>, when the organization  URL is actually <code>subdomain.mydomain.dev</code>, which has a valid certificate?</p>\n<p>In firefox I get a somewhat scrambled login screen, and after entering email &amp; password I get a persistent</p>\n<div class=\"codehilite\"><pre><span></span><code>Loading...\n\nIf this message does not go away, please wait a couple seconds and reload the page.\n</code></pre></div>\n<p>The android app works with the new setup, so all in all it's 2 out of 4 ...</p>\n<p>Did I do something wrong?</p>",
+        "id": 1146352,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1616996371
+    },
+    {
+        "content": "<p><a href=\"https://www.ssllabs.com/\">https://www.ssllabs.com/</a> is likely useful for investigating certificate issues.</p>",
+        "id": 1146355,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1616996643
+    },
+    {
+        "content": "<p>the PR to improve the documentation is up!<br>\nhere it is: <a href=\"https://github.com/zulip/zulip/pull/17859\">https://github.com/zulip/zulip/pull/17859</a></p>",
+        "id": 1146433,
+        "sender_full_name": "Siddharth Asthana",
+        "timestamp": 1617007970
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/problem.20with.20change_realm/near/1146355\">said</a>:</p>\n<blockquote>\n<p><a href=\"https://www.ssllabs.com/\">https://www.ssllabs.com/</a> is likely useful for investigating certificate issues.</p>\n</blockquote>\n<p>The server test gives me an overall A+ for the URL of the subdomain , with enties</p>\n<div class=\"codehilite\"><pre><span></span><code>Revocation status      Validation error\n                       OCSP ERROR: Exception: connect timed out [http://r3.o.lencr.org]\nDNS CAA                No (more info)\n</code></pre></div>\n<p>in the first block in orange.</p>\n<p>One thing that I'm not sure about is whether I need certificates and DNS entries for the root domain <em>and</em> the subdomain, or just the subdomain.</p>\n<p>Initially I had certificates for both, but that gave me error messages in the desktop app regarding the validity of the certificate of the root domain, so I removed the DNS entry and certificate for the root, and left just that for the subdomain. However, a colleague tells me that he gets \"name not resolved\" errors in firefox for the root now, so I assume I have to add those back in. (That would also explained why the login page looks scrambled, since some of the page elements fail to load from the root domain)</p>\n<p>QUESTIONS: </p>\n<ul>\n<li>should I just add DNS entries for root and subdomains, both pointing to the same IP? Or should I prefix the IP with the subdomain? I'm doing this in google domains in the section \"Custom resource records\".</li>\n<li>Does it matter in which order I create certificates for root/subdomain with <code>setup-certbot</code> ? Maybe the tool does local config changes apart from requesting certificates?</li>\n</ul>\n<p>Apologies again for the noob questions, and thanks a lot for your help and patience!</p>",
+        "id": 1146773,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1617038475
+    },
+    {
+        "content": "<p>I think we at most make very limited and configurable access to the root domain (by root domain, I assume you mean <code>EXTERNAL_HOST</code>?)</p>",
+        "id": 1146778,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617038607
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/problem.20with.20change_realm/near/1146778\">said</a>:</p>\n<blockquote>\n<p>I think we at most make very limited and configurable access to the root domain (by root domain, I assume you mean <code>EXTERNAL_HOST</code>?)</p>\n</blockquote>\n<p>Yes, that's <code>EXTERNAL_HOST</code> in <code>settings.py</code></p>",
+        "id": 1146780,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1617038765
+    },
+    {
+        "content": "<p>Just to double check -- is that correct? If I have multiple orgs on parallel subdomains, should the <code>EXTERNAL_HOST</code> variable be the common postfix? <code>settings.py</code> says</p>\n<div class=\"codehilite\"><pre><span></span><code># The user-accessible Zulip hostname for this installation, e.g.\n# zulip.example.com.  This should match what users will put in their\n# web browser.  If you want to allow multiple hostnames, add the rest\n# to ALLOWED_HOSTS.\n</code></pre></div>\n<p>but if I have multiple orgs on subdomains, then the common postfix is <em>not</em> what the users enter into their browsers.</p>",
+        "id": 1147037,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1617050981
+    },
+    {
+        "content": "<p>Correct.</p>",
+        "id": 1147093,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617053268
+    },
+    {
+        "content": "<p><a href=\"https://zulip.readthedocs.io/en/latest/production/multiple-organizations.html\">https://zulip.readthedocs.io/en/latest/production/multiple-organizations.html</a> has relevant documentation.</p>",
+        "id": 1147094,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617053278
+    },
+    {
+        "content": "<p>OK I found what the problem was: I need SSL certificates for the root domain <em>and</em> the subdomain, but apparently when creating them one-by-one with <code>setup-certbot</code>, it screws up the configuration of the other each time. The solution was to generate them <strong>both at once</strong>, with the command</p>\n<div class=\"codehilite\"><pre><span></span><code>sudo /home/zulip/deployments/current/scripts/setup/setup-certbot --email=&quot;my@ema.il&quot; subdomain.mydomain.dev mydomain.dev\n</code></pre></div>\n<p>With that command I get the following message:</p>\n<div class=\"codehilite\"><pre><span></span><code>- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\nYou have an existing certificate that contains a portion of the domains you\nrequested\n[...]\nDo you want to expand and replace this existing certificate with the new\ncertificate?\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n(E)xpand/(C)ancel:\n</code></pre></div>\n<p>After selecting <code>(E)xpand</code>, it works.</p>\n<p>With the same technique I now also succeeded to get a working setup with a second realm on another subdomain, this time calling  <code>setup-certbot</code> with root domains and both  subdomains at once.</p>",
+        "id": 1147263,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1617058825
+    },
+    {
+        "content": "<p>Thanks again for all the advice!</p>",
+        "id": 1147286,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1617059509
+    },
+    {
+        "content": "<p>Ahh, yeah, I hadn't realized you were trying to run the command twice rather than once with both commands.</p>",
+        "id": 1147329,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617061600
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17356\">@Jonas F</span> do you have ideas for what we could tweak in the documentation to help the next person not be confused by that detail?</p>",
+        "id": 1147330,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617061625
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> <a href=\"https://zulip.readthedocs.io/en/latest/production/multiple-organizations.html#subdomains\">Here</a> it says</p>\n<div class=\"codehilite\"><pre><span></span><code>* Make sure you have SSL certificates for all of the subdomains you’re going to use.\nIf you’re using our Let’s Encrypt instructions, it’s easy to just specify multiple subdomains in your certificate request.\n</code></pre></div>\n<p>There are several points to comment on:</p>\n<ul>\n<li>The text speaks of certificate<strong>s</strong> in plural, though in the end, I succeeded by having only <strong>one</strong> (multiple-domain) certificate, if I understand correctly.</li>\n<li>Furthermore, the text says \"it’s easy to just specify multiple subdomains\", but it doesn't say that it <strong>has</strong> to be done that way. </li>\n<li>The <a href=\"https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html#certbot-recommended\">linked page</a> doesn't give an explicit procedure for moving from a one-org to a multi-org setup either, though it mentions the term \"multiple domain certificate\", as I now see</li>\n</ul>\n<p>Ideally I think it would be good to give an explicit commandline of a call to setup-certbot including root-domain and subdomain(s) as arguments, to make clear that the root-domain always has to be included, and for multi-org-setups, <em>all</em> of the subdomains have to be given each time one wants to add one. At least that's my understanding now of how it works, I don't know if that's the only way.</p>\n<p>Another point that confused and unsettled me <a href=\"https://zulip.readthedocs.io/en/latest/production/multiple-organizations.html#subdomains\">here</a> was the enigmatic bullet point:</p>\n<div class=\"codehilite\"><pre><span></span><code>* If necessary, modify your nginx configuration to use your new certificates.\n</code></pre></div>\n<p>What is nginx? How do I modify its configuration? And how do I know if it's necessary? Some elaboration and/or links would probably be helpful here.</p>",
+        "id": 1147402,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1617065522
+    },
+    {
+        "content": "<p>Cool, thanks for the feedback!  This is super helpful.</p>",
+        "id": 1147821,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617124610
+    }
+]

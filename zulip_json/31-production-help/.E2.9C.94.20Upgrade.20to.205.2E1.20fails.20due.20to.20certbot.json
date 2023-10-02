@@ -1,0 +1,116 @@
+[
+    {
+        "content": "<p>I cannot upgrade our self-hosted server to 5.1 because the script tries to renew the Let's Encrypt certificate, but we have moved the server behind a firewall/reverse proxy that does all cert stuff, so the ACME challenge fails. <br>\nCan I skip this step during the upgrade, or change Zulip back to a self-signed cert? All I found was a parameter I could apply at the initial install, but not afterwards.<br>\nThe failed step is fix-standalone-certbot</p>",
+        "id": 1374313,
+        "sender_full_name": "Chris",
+        "timestamp": 1651049901
+    },
+    {
+        "content": "<p>I tried <a href=\"https://zulip.readthedocs.io/en/stable/production/ssl-certificates.html#self-signed-certificate\">https://zulip.readthedocs.io/en/stable/production/ssl-certificates.html#self-signed-certificate</a> to change it, but it still tries to renew the LE certificate and fails.</p>",
+        "id": 1374335,
+        "sender_full_name": "Chris",
+        "timestamp": 1651055376
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17613\">@Chris</span> I'm surprised that the upgrade script would try to renew the certificate. But you can likely just comment out the line that does the renewal to proceed with the upgrade if you don't want to wait for us to to fix that.</p>",
+        "id": 1374475,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651085207
+    },
+    {
+        "content": "<p>Can you provide the precise traceback you're getting?</p>",
+        "id": 1374476,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651085226
+    },
+    {
+        "content": "<p>This is caused by <a href=\"https://github.com/zulip/zulip/commit/a3adaf4aa354f1a11f9ce80e401d652c37232403\">a3adaf4aa354f1a11f9ce80e401d652c37232403</a></p>",
+        "id": 1374497,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651086191
+    },
+    {
+        "content": "<p>Because we don't have a clean API to munge the certbot configuration, we run certbot to renew in the new configuration.</p>",
+        "id": 1374498,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651086221
+    },
+    {
+        "content": "<p>But we do this regardless of if Zulip is configured to <em>use</em> certbot -- we do it if certbot is configured at all.</p>",
+        "id": 1374499,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651086262
+    },
+    {
+        "content": "<p>I think the cleanest fix is to <code>certbot delete</code> the certificate after switching to self-signed.</p>",
+        "id": 1374502,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651086417
+    },
+    {
+        "content": "<p>We can possibly extend <code>scripts/setup/generate-self-signed-cert</code> to do that, but that's destructive, so I'd rather wary of doing so.</p>",
+        "id": 1374503,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651086464
+    },
+    {
+        "content": "<p>I think we can check for this by looking if <code>/etc/ssl/certs/zulip.combined-chain.crt</code> is a symlink into certbot before we run fix-standalone-certbot?</p>",
+        "id": 1374508,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651086535
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Upgrade.20to.205.2E1.20fails.20due.20to.20certbot/near/1374508\">said</a>:</p>\n<blockquote>\n<p>I think we can check for this by looking if <code>/etc/ssl/certs/zulip.combined-chain.crt</code> is a symlink into certbot before we run fix-standalone-certbot?</p>\n</blockquote>\n<p>That seems like a correct test for whether we've made a certbot cert.</p>",
+        "id": 1374537,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651087103
+    },
+    {
+        "content": "<p>That said, could we instead just make that puppet configuration conditional on having Zulip configured to use certbot?</p>",
+        "id": 1374538,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651087127
+    },
+    {
+        "content": "<p>There is no \"Zulip configured to use certbot\" other than looking at the symlink -- we don't set anything in <code>zulip.conf</code> or whatnot.  And checking first, in Puppet, is what I intend to do:</p>\n<div class=\"codehilite\" data-code-language=\"Diff\"><pre><span></span><code><span class=\"gh\">diff --git a/puppet/zulip/manifests/profile/app_frontend.pp b/puppet/zulip/manifests/profile/app_frontend.pp</span><span class=\"w\"></span>\n<span class=\"gh\">index 5e46e54829..8ff26b556e 100644</span><span class=\"w\"></span>\n<span class=\"gd\">--- a/puppet/zulip/manifests/profile/app_frontend.pp</span><span class=\"w\"></span>\n<span class=\"gi\">+++ b/puppet/zulip/manifests/profile/app_frontend.pp</span><span class=\"w\"></span>\n<span class=\"gu\">@@ -61,7 +61,7 @@ class zulip::profile::app_frontend {</span><span class=\"w\"></span>\n<span class=\"w\"> </span>    require =&gt; Package[certbot],<span class=\"w\"></span>\n<span class=\"w\"> </span>  }<span class=\"w\"></span>\n<span class=\"w\"> </span>  exec { 'fix-standalone-certbot':<span class=\"w\"></span>\n<span class=\"gd\">-    onlyif  =&gt; 'test -d /etc/letsencrypt/renewal &amp;&amp; grep -qx \"authenticator = standalone\" /etc/letsencrypt/renewal/*.conf',</span><span class=\"w\"></span>\n<span class=\"gi\">+    onlyif  =&gt; 'test -L /etc/ssl/certs/zulip.combined-chain.crt &amp;&amp; test -d /etc/letsencrypt/renewal &amp;&amp; grep -qx \"authenticator = standalone\" /etc/letsencrypt/renewal/*.conf',</span><span class=\"w\"></span>\n<span class=\"w\"> </span>    command =&gt; \"${::zulip_scripts_path}/lib/fix-standalone-certbot\",<span class=\"w\"></span>\n<span class=\"w\"> </span>  }<span class=\"w\"></span>\n</code></pre></div>",
+        "id": 1374787,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651097572
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/21934\">#21934</a>.</p>",
+        "id": 1374793,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651097895
+    },
+    {
+        "content": "<p>Ahh, OK, that makes esnse.</p>",
+        "id": 1374804,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651098803
+    },
+    {
+        "content": "<p>I managed to install the upgrade by temporarily putting our Zulip server directly on the Internet and then running the script, so the ACME challenge worked again. Thus I don't have the upgrade.log anymore, but I see you guys already figured it out without it :)<br>\nThanks for the quick response. <br>\nDo I need to delete anything (old certs?) prior to the next upgrade, or will the proposed fix work regardless? I'd rather clean up now than trying to remember what the solution was whenever 5.2 or 6.0 comes around...</p>",
+        "id": 1375094,
+        "sender_full_name": "Chris",
+        "timestamp": 1651131232
+    },
+    {
+        "content": "<p>You shouldn't need to do anything special for the next upgrade.</p>",
+        "id": 1375097,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651131269
+    },
+    {
+        "content": "<p>Excellent, thanks!</p>",
+        "id": 1375108,
+        "sender_full_name": "Chris",
+        "timestamp": 1651132130
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17613\">Chris</span> has marked this topic as resolved.</p>",
+        "id": 1375109,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1651132399
+    }
+]

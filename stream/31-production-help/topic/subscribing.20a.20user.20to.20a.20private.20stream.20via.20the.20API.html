@@ -1,0 +1,103 @@
+<html>
+<head><meta charset="utf-8"><title>subscribing a user to a private stream via the API · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/subscribing.20a.20user.20to.20a.20private.20stream.20via.20the.20API.html">subscribing a user to a private stream via the API</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1433988"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/subscribing%20a%20user%20to%20a%20private%20stream%20via%20the%20API/near/1433988" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ron Bertino <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/subscribing.20a.20user.20to.20a.20private.20stream.20via.20the.20API.html#1433988">(Sep 12 2022 at 07:14)</a>:</h4>
+<p>I'm wanting to subscribe a user to a private stream via the API.</p>
+<p>I've found the <a href="https://zulip.com/api/subscribe">Subscribe to a stream</a> endpoint, but this endpoint only seems to be for the "active (me) user".</p>
+<p>If the API call is being done by a bot account, how can I add a specific user to a private stream?</p>
+<p>Alternatively, is there a way to be able to grab the personal API key of a specific user?</p>
+
+
+
+<a name="1434064"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/subscribing%20a%20user%20to%20a%20private%20stream%20via%20the%20API/near/1434064" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/subscribing.20a.20user.20to.20a.20private.20stream.20via.20the.20API.html#1434064">(Sep 12 2022 at 14:05)</a>:</h4>
+<p><span class="user-mention" data-user-id="24719">@Ron Bertino</span> This isn't just for the active user - you can specify more user ids in the <code>principals</code> parameter</p>
+
+
+
+<a name="1434134"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/subscribing%20a%20user%20to%20a%20private%20stream%20via%20the%20API/near/1434134" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ron Bertino <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/subscribing.20a.20user.20to.20a.20private.20stream.20via.20the.20API.html#1434134">(Sep 12 2022 at 17:25)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> , if I use the <code>principals</code> field in order to add an array of user email addresses, I get the following error:</p>
+<div class="codehilite"><pre><span></span><code>{
+    &quot;result&quot;: &quot;error&quot;,
+    &quot;msg&quot;: &quot;User not authorized to execute queries on behalf of &#39;fred@mydomain.com&#39;&quot;,
+    &quot;principal&quot;: &quot;fred@mydomain.com&quot;,
+    &quot;code&quot;: &quot;UNAUTHORIZED_PRINCIPAL&quot;
+}
+</code></pre></div>
+<p>I've already configured my bot to be an admin, but I'm still getting the above error.</p>
+
+
+
+<a name="1434139"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/subscribing%20a%20user%20to%20a%20private%20stream%20via%20the%20API/near/1434139" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/subscribing.20a.20user.20to.20a.20private.20stream.20via.20the.20API.html#1434139">(Sep 12 2022 at 17:37)</a>:</h4>
+<p><span class="user-mention" data-user-id="24719">@Ron Bertino</span> I think this error message may be misleading, based on my look at the code. I think what's actually happening is the user not being found. Based on the other thread, my guess is that you have email visibility restricted but here you're naming the <code>principal</code> by their real email. If you use the dummy <code>email</code> value of the user, or just the user id,  this should work.</p>
+
+
+
+<a name="1434141"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/subscribing%20a%20user%20to%20a%20private%20stream%20via%20the%20API/near/1434141" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/subscribing.20a.20user.20to.20a.20private.20stream.20via.20the.20API.html#1434141">(Sep 12 2022 at 17:38)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> Do you have an idea why we are returning an error <code>User not authorized to execute queries on behalf of </code> when what's happening is the <code>UserProfile</code> not being found?</p>
+<div class="codehilite"><pre><span></span><code>def principal_to_user_profile(agent: UserProfile, principal: Union[str, int]) -&gt; UserProfile:
+    try:
+        if isinstance(principal, str):
+            return get_active_user(principal, agent.realm)
+        else:
+            return get_active_user_profile_by_id_in_realm(principal, agent.realm)
+    except UserProfile.DoesNotExist:
+        # We have to make sure we don&#39;t leak information about which users
+        # are registered for Zulip in a different realm.  We could do
+        # something a little more clever and check the domain part of the
+        # principal to maybe give a better error message
+        raise PrincipalError(principal)
+</code></pre></div>
+
+
+
+<a name="1434145"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/subscribing%20a%20user%20to%20a%20private%20stream%20via%20the%20API/near/1434145" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ron Bertino <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/subscribing.20a.20user.20to.20a.20private.20stream.20via.20the.20API.html#1434145">(Sep 12 2022 at 17:47)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> <br>
+Yes, you're correct.<br>
+I changed the array of principals to use user IDs rather than emails and it worked for a public stream.</p>
+<p>I then tried the same thing in order to add that user (by user ID) to a private stream and I'm getting the following error:</p>
+<div class="codehilite"><pre><span></span><code>{
+    &quot;result&quot;: &quot;error&quot;,
+    &quot;msg&quot;: &quot;Unable to access stream (_mfg).&quot;,
+    &quot;code&quot;: &quot;BAD_REQUEST&quot;
+}
+</code></pre></div>
+<p>Is there something special that needs to be done for joining users to a private (rather than public) stream?</p>
+
+
+
+<a name="1434163"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/subscribing%20a%20user%20to%20a%20private%20stream%20via%20the%20API/near/1434163" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Neil Pilgrim (neiljp) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/subscribing.20a.20user.20to.20a.20private.20stream.20via.20the.20API.html#1434163">(Sep 12 2022 at 18:00)</a>:</h4>
+<p>Is the bot subscribed to that private stream? I believe right now that admins can see all private streams, but only existing members of that private stream can subscribe other users.</p>
+
+
+
+<a name="1434166"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/subscribing%20a%20user%20to%20a%20private%20stream%20via%20the%20API/near/1434166" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ron Bertino <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/subscribing.20a.20user.20to.20a.20private.20stream.20via.20the.20API.html#1434166">(Sep 12 2022 at 18:10)</a>:</h4>
+<p>Thanks <span class="user-mention" data-user-id="2406">@Neil Pilgrim (neiljp)</span> <br>
+Once I subscribed the bot to the private channels, then the API call for joining another user to that private channel worked.<br>
+It would be nice if these things were laid out in the official documentation.   <span aria-label="stuck out tongue wink" class="emoji emoji-1f61c" role="img" title="stuck out tongue wink">:stuck_out_tongue_wink:</span></p>
+
+
+
+<a name="1434167"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/subscribing%20a%20user%20to%20a%20private%20stream%20via%20the%20API/near/1434167" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/subscribing.20a.20user.20to.20a.20private.20stream.20via.20the.20API.html#1434167">(Sep 12 2022 at 18:11)</a>:</h4>
+<p>It's described in <a href="https://zulip.com/help/stream-permissions">https://zulip.com/help/stream-permissions</a> - quite possibly the API doc could be mentioning this as well though <span aria-label="thinking" class="emoji emoji-1f914" role="img" title="thinking">:thinking:</span></p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

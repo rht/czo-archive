@@ -1,0 +1,244 @@
+<html>
+<head><meta charset="utf-8"><title>LDAP user sync empty · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html">LDAP user sync empty</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1374439"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1374439" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> JackBauer78 <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1374439">(Apr 27 2022 at 17:03)</a>:</h4>
+<p>Hello !</p>
+<p>I configured LDAP sync with the docs for our Active Directory.<br>
+I want our users to connect with samAccountName field.</p>
+<p>1st problem : When I launch : <code>su zulip -c '/home/zulip/deployments/current/manage.py query_ldap &lt;username&gt;', the fields are displaying for all users in the Organizaton Unit I configured except for </code>Office<code> and </code>OfficePhone` fields. Fields exist and are not empty.</p>
+<p>2nd problem : When I launch : <code>su zulip -c '/home/zulip/deployments/current/manage.py sync_ldap_user_data'</code>, here's the output :<br>
+<code>2022-04-27 16:53:22.826 INFO [zulip.sync_ldap_user_data] Starting update.
+2022-04-27 16:53:22.839 DEBG [django_auth_ldap] search_s('xxxxxx', 2, '(mail=%(email)s)') returned 0 objects:
+2022-04-27 16:53:22.842 DEBG [django_auth_ldap] search_s('xxxxxx', 2, '(sAMAccountName=%(user)s)') returned 0 objects:
+2022-04-27 16:53:22.842 WARN [zulip.sync_ldap_user_data] Did not find zulip@xxxxx in LDAP.
+2022-04-27 16:53:22.846 INFO [zulip.sync_ldap_user_data] Finished update.</code></p>
+<p>I replaced sensible text with <code>xxxxxx</code></p>
+<p>Does anyone have an idea ?</p>
+<p>Thanks in advance !</p>
+
+
+
+<a name="1374796"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1374796" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1374796">(Apr 27 2022 at 22:25)</a>:</h4>
+<p><span class="user-mention" data-user-id="24093">@JackBauer78</span> <br>
+What do your settings look like for:<br>
+import ldap<br>
+AUTH_LDAP_SERVER_URI<br>
+AUTH_LDAP_BIND_DN<br>
+AUTH_LDAP_USERNAME_ATTR<br>
+AUTH_LDAP_USE_SEARCH</p>
+<p>Those tripped me up when I did our LDAP authentication. We use CN vs sAMAccountName.</p>
+
+
+
+<a name="1375150"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1375150" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> JackBauer78 <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1375150">(Apr 28 2022 at 12:09)</a>:</h4>
+<p>AUTH_LDAP_SERVER_URI = "ldap://&lt;DC IP address&gt;"<br>
+AUTH_LDAP_BIND_DN = "CN=svc_zulip,OU=Zulip..."<br>
+AUTH_LDAP_USERNAME_ATTR = "sAMAccountName"<br>
+AUTH_LDAP_USER_SEARCH = LDAPSearch(<br>
+    "OU=Users,OU=DSI,OU=...", ldap.SCOPE_SUBTREE, "(sAMAccountName=%(user)s)"<br>
+)</p>
+
+
+
+<a name="1375216"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1375216" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1375216">(Apr 28 2022 at 15:58)</a>:</h4>
+<p><span class="user-mention" data-user-id="24093">@JackBauer78</span>  <br>
+Noting a few minor things that may or may not help.<br>
+Up higher in the settings.py file I had to enhance this line, as well as make sure the modules were installed. There is a thread somewhere here discussing this. <br>
+import ldap<br>
+from django_auth_ldap.config import LDAPSearch, LDAPSearchUnion</p>
+<p>AUTH_LDAP_SERVER_URI = "ldaps://ise-dc01.ise-trip.org"</p>
+<h1>We had to use ldaps vs ldap on server 2019</h1>
+<p>AUTH_LDAP_USERNAME_ATTR = "cn"</p>
+<h1>you are using sam vs cn so that is different for sure</h1>
+<p>AUTH_LDAP_USER_ATTR_MAP = {<br>
+    "full_name": "cn",<br>
+    "first_name": "givenName",<br>
+    "last_name": "sn",<br>
+}</p>
+<p>LDAP_APPEND_DOMAIN = "<a href="http://semesteratsea.org">semesteratsea.org</a>"<br>
+LDAP_EMAIL_ATTR = "mail"<br>
+AUTH_LDAP_USERNAME_ATTR = "cn"<br>
+LDAP_DEACTIVATE_NON_MATCHING_USERS = False</p>
+<h1>We had two OU's to combine so some of this is more complex.  I believe the case mattered as well.</h1>
+<p>AUTH_LDAP_USER_SEARCH = LDAPSearchUnion(<br>
+    LDAPSearch("ou=SP22,ou=Voyagers,dc=ise-trip,DC=org", ldap.SCOPE_SUBTREE, "(cn=%(user)s)"),<br>
+    LDAPSearch("ou=ISE,ou=Voyagers,dc=ise-trip,DC=org", ldap.SCOPE_SUBTREE, "(cn=%(user)s)"),<br>
+)<br>
+AUTH_LDAP_REVERSE_EMAIL_SEARCH = LDAPSearchUnion(<br>
+    LDAPSearch("ou=SP22,ou=Voyagers,dc=ise-trip,DC=org", ldap.SCOPE_SUBTREE, "(mail=%(email)s)"),<br>
+    LDAPSearch("ou=ISE,ou=Voyagers,dc=ise-trip,DC=org", ldap.SCOPE_SUBTREE, "(mail=%(email))s)"),<br>
+)</p>
+<p>Does that help at all?</p>
+
+
+
+<a name="1375516"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1375516" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> JackBauer78 <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1375516">(Apr 28 2022 at 20:30)</a>:</h4>
+<p>With your configuration, it's seems you login with the cn attribute, is that true ?<br>
+I left LDAP_APPEND_DOMAIN empty because I just want our users to use their samAccountName to login.</p>
+
+
+
+<a name="1375524"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1375524" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1375524">(Apr 28 2022 at 21:15)</a>:</h4>
+<p>Yes we use CN, and wanted the email to populate as well. We don't use samAccountName because of some odd restriction in size that CN didn't have when many of our other systems were built. <br>
+AUTH_LDAP_USERNAME_ATTR="samAccountName" should work and sub that in the Search parameter. With your OU's. <br>
+The import at the top was an issue as well if I recall.</p>
+
+
+
+<a name="1375913"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1375913" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> JackBauer78 <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1375913">(Apr 29 2022 at 12:57)</a>:</h4>
+<p>I can't use CN for login because it's the name and first name.<br>
+I added the domain suffix in LDAP_APPEND_DOMAIN but it doesn't change.<br>
+Really strange...</p>
+
+
+
+<a name="1377036"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1377036" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1377036">(May 02 2022 at 20:11)</a>:</h4>
+<p><span class="user-mention" data-user-id="24093">@JackBauer78</span>  We did have it working with samaccount first, and changed to CN. So it should work. PLease do check that you have those import lines correct at the top of the file, as well as those modules installed on your server. If I recall there was one missing.</p>
+
+
+
+<a name="1378328"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1378328" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1378328">(May 05 2022 at 13:35)</a>:</h4>
+<p><span class="user-mention" data-user-id="24093">@JackBauer78</span> Do you have <code>AUTH_LDAP_REVERSE_EMAIL_SEARCH</code> configured?</p>
+
+
+
+<a name="1379709"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1379709" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> JackBauer78 <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1379709">(May 10 2022 at 07:49)</a>:</h4>
+<p><span class="user-mention" data-user-id="18622">@Tyson Parker</span> the first lines are correct for me...</p>
+
+
+
+<a name="1379710"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1379710" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> JackBauer78 <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1379710">(May 10 2022 at 07:50)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> Yes I do.</p>
+
+
+
+<a name="1379734"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1379734" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1379734">(May 10 2022 at 14:04)</a>:</h4>
+<p><span class="user-mention" data-user-id="24093">@JackBauer78</span>  Can you post the full ldap search and reverse without ...ing anything out? Also compare that string to what you cut and paste from the properties of a user in the ldap app.</p>
+
+
+
+<a name="1379735"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1379735" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1379735">(May 10 2022 at 14:10)</a>:</h4>
+<p>Yeah, it'd be useful to see the <code>AUTH_LDAP_REVERSE_EMAIL_SEARCH</code> value and the others without <code>...</code>, plus the <code>sync_user_ldap_data</code> debug output uncensored as well. You can just replace the actual values you want to censor with dummy values of analogical format</p>
+
+
+
+<a name="1379797"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1379797" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> JackBauer78 <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1379797">(May 10 2022 at 20:18)</a>:</h4>
+<p>I changed several values :</p>
+<p>AUTH_LDAP_SERVER_URI = "ldap://10.200.0.51"<br>
+AUTH_LDAP_BIND_DN = "CN=svc_zulip,OU=Zulip,OU=Applications,DC=my,DC=dc,DC=fr"<br>
+AUTH_LDAP_USER_SEARCH = LDAPSearch(<br>
+    "OU=Users,OU=DirectionA,OU=Site1,OU=Sites,DC=my,DC=dc,DC=fr", ldap.SCOPE_SUBTREE, "(sAMAccountName=%(user)s)"<br>
+)<br>
+AUTH_LDAP_USERNAME_ATTR = "sAMAccountName"<br>
+LDAP_APPEND_DOMAIN = "<a href="http://my.dc.fr">my.dc.fr</a>"<br>
+LDAP_EMAIL_ATTR = "mail"<br>
+AUTH_LDAP_REVERSE_EMAIL_SEARCH = LDAPSearch(<br>
+    "OU=Users,OU=DirectionA,OU=Site1,OU=Sites,DC=my,DC=dc,DC=fr", ldap.SCOPE_SUBTREE, "(mail=%(email)s)"<br>
+)<br>
+AUTH_LDAP_USER_ATTR_MAP = {<br>
+    "full_name": "cn",<br>
+    "Function": "Description",<br>
+    "Desk": "Office",<br>
+    "Phone": "OfficePhone",<br>
+    "Direction": "Company",<br>
+    "avatar": "thumbnailPhoto",<br>
+}</p>
+<p>And here's the output of the <code>sync_user_ldap_data</code> :<br>
+root@zulipweb01:~# su zulip -c '/home/zulip/deployments/current/manage.py sync_ldap_user_data'<br>
+2022-05-10 20:13:46.862 INFO [zulip.sync_ldap_user_data] Starting update.<br>
+2022-05-10 20:13:46.872 WARN [zulip.sync_ldap_user_data] Did not find <a href="mailto:john.doe@test.fr">john.doe@test.fr</a> in LDAP.<br>
+2022-05-10 20:13:46.875 INFO [zulip.sync_ldap_user_data] Finished update.</p>
+<p><a href="mailto:john.doe@test.fr">john.doe@test.fr</a> is my address mail I put for the first local admin account which is also in the AD of course.</p>
+
+
+
+<a name="1379853"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1379853" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1379853">(May 10 2022 at 21:32)</a>:</h4>
+<p>Hmm, and what's the output if you <code>manage.py query_ldap john.doe@test.fr</code>?</p>
+
+
+
+<a name="1380311"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1380311" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> JackBauer78 <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1380311">(May 11 2022 at 16:33)</a>:</h4>
+<p>The output for <code>manage.py query_ldap john.doe@test.fr</code> :<br>
+No such user found: Email <a href="mailto:john.doe@test.fr">john.doe@test.fr</a> does not match LDAP domain <a href="http://my.dc.fr">my.dc.fr</a>.</p>
+<p>The output for <code>manage.py query_ldap doe.j</code> : (which is the samAccountName)<br>
+2022-05-11 16:28:13.783 DEBG [django_auth_ldap] search_s('OU=Users,OU=DirectionA,OU=Site1,OU=Sites,DC=my,DC=dc,DC=fr', 2, '(sAMAccountName=%(user)s)') returned 1 objects: cn=Doe\, John,OU=Users,OU=DirectionA,OU=Site1,OU=Sites,DC=my,DC=dc,DC=fr<br>
+2022-05-11 16:28:13.786 DEBG [django_auth_ldap] search_s('cn=Doe\, John,OU=Users,OU=DirectionA,OU=Site1,OU=Sites,DC=my,DC=dc,DC=fr', 0, '(objectClass=*)') returned 1 objects: cn=Doe\, John,OU=Users,OU=DirectionA,OU=Site1,OU=Sites,DC=my,DC=dc,DC=fr<br>
+2022-05-11 16:28:13.792 DEBG [django_auth_ldap] search_s('OU=Users,OU=DirectionA,OU=Site1,OU=Sites,DC=my,DC=dc,DC=fr', 2, '(sAMAccountName=%(user)s)') returned 1 objects: cn=Doe\, John,OU=Users,OU=DirectionA,OU=Site1,OU=Sites,DC=my,DC=dc,DC=fr<br>
+2022-05-11 16:28:13.795 DEBG [django_auth_ldap] search_s('cn=Doe\, John,OU=Users,OU=DirectionA,OU=Site1,OU=Sites,DC=my,DC=dc,DC=fr', 0, '(objectClass=*)') returned 1 objects: cn=Doe\, John,OU=Users,OU=DirectionA,OU=Site1,OU=Sites,DC=my,DC=dc,DC=fr<br>
+full_name: DOE, John<br>
+Fonction: IT Engineer<br>
+Bureau: LDAP field not present<br>
+Téléphone: LDAP field not present<br>
+Direction: Direction A<br>
+avatar: LDAP field not present<br>
+email: <a href="mailto:john.doe@test.fr">john.doe@test.fr</a></p>
+
+
+
+<a name="1380312"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1380312" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> JackBauer78 <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1380312">(May 11 2022 at 16:34)</a>:</h4>
+<p>The output is logic for me because I want the user to use their samAccountName instead of their mail to login.</p>
+
+
+
+<a name="1380321"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1380321" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1380321">(May 11 2022 at 17:03)</a>:</h4>
+<p>Ohh, you've mentioned setting <code>LDAP_APPEND_DOMAIN</code> earlier, right? We should set it to <code>None</code> and try again. It's  not needed with the email search configured as above</p>
+
+
+
+<a name="1382007"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1382007" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1382007">(May 18 2022 at 18:12)</a>:</h4>
+<p><span class="user-mention" data-user-id="24093">@JackBauer78</span> By chance are you using Zulip 6 and Debian 11? I ask because I upgraded my server to debian 11 and then updated Zulup to 6 and my LDAP all broke horribly. I've reverted back to Deb 10 and Zulip 5 to do a more slow upgrade and see where it broke.</p>
+
+
+
+<a name="1382009"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1382009" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1382009">(May 18 2022 at 18:15)</a>:</h4>
+<p>Just to double-check - did you run step 6 of the <a href="https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-from-debian-10-to-11">OS upgrade instructions</a>?  That's the one that's, offhand, likely to make things go weirdly haywire if it's skipped.</p>
+
+
+
+<a name="1382019"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1382019" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1382019">(May 18 2022 at 18:32)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/LDAP.20user.20sync.20empty/near/1382009">said</a>:</p>
+<blockquote>
+<p>Just to double-check - did you run step 6 of the <a href="https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-from-debian-10-to-11">OS upgrade instructions</a>?  That's the one that's, offhand, likely to make things go weirdly haywire if it's skipped.</p>
+</blockquote>
+<p>Yes. After it was borked I found that helpful section and ran it, but things were still borked, so I reverted my snapshot and am stepping forward again with new instructions to see what happened or if I can narrow down where it broke. Luckily this is a production system but we are in a lul where we aren't actually in production. I remembered this thread and thought I'd ask if by chance this was related.</p>
+
+
+
+<a name="1382105"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20user%20sync%20empty/near/1382105" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20user.20sync.20empty.html#1382105">(May 18 2022 at 21:04)</a>:</h4>
+<p><span class="user-mention" data-user-id="24093">@JackBauer78</span>  Check the file /etc/ldap/ldap.conf and see if you have this in there or not.<br>
+TLS_REQCERT never</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

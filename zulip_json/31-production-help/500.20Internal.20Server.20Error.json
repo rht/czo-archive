@@ -1,0 +1,554 @@
+[
+    {
+        "content": "<p>Hi all,<br>\nTrying to get a production server installed and running. Was able to successfully install and initialize the database. Was even able to generate a realm and receive the activation link. However, after following the link I receive \"500: Internal server error\".</p>\n<p>My error.log file shows the following:</p>\n<div class=\"codehilite\"><pre><span></span>2017-06-04 19:09:25,259 WARNING  TornadoQueueClient lost connection to RabbitMQ, reconnecting...\n2017-06-04 19:19:26,604 WARNING  TornadoQueueClient lost connection to RabbitMQ, reconnecting...\n2017-06-04 19:19:28,605 CRITICAL Failed to reconnect to RabbitMQ, retrying...\n2017-06-04 19:19:30,606 CRITICAL Failed to reconnect to RabbitMQ, retrying...\n2017-06-04 19:19:32,607 CRITICAL Failed to reconnect to RabbitMQ, retrying...\n2017-06-04 19:19:34,608 CRITICAL Failed to reconnect to RabbitMQ, retrying...\n2017-06-04 19:19:36,609 CRITICAL Failed to reconnect to RabbitMQ, retrying...\n2017-06-04 19:19:38,618 CRITICAL Failed to reconnect to RabbitMQ, retrying...\n2017-06-04 19:22:30,704 WARNING  TornadoQueueClient lost connection to RabbitMQ, reconnecting...\n2017-06-04 19:22:32,706 CRITICAL Failed to reconnect to RabbitMQ, retrying...\n</pre></div>\n\n\n<p>I've already attempted rerunning scripts/setup/configure-rabbitmq and am at a bit of a loss here. Any suggestions of where to look next?</p>",
+        "id": 218966,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1496619480
+    },
+    {
+        "content": "<p>Have you tried manually restarting rabbitmq? Sometimes I've had to do that because of some peculiarities of my VM. <br>\n<code>/etc/init.d/rabbitmq-server restart</code></p>",
+        "id": 218968,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1496620475
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"maxnl2@gmail.com\" data-user-id=\"2529\">@Max Levine</span> I don't have a proper answer, but at least it won't hurt anything to try that. (As root, btw.)</p>",
+        "id": 218969,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1496620526
+    },
+    {
+        "content": "<p>I had tried that before. Just gave it another shot and it still is giving me the same issue. The log file shows 2 new entires</p>\n<div class=\"codehilite\"><pre><span></span>2017-06-04 19:56:00,204 WARNING  TornadoQueueClient lost connection to RabbitMQ, reconnecting...\n2017-06-04 19:56:02,228 CRITICAL Failed to reconnect to RabbitMQ, retrying...\n</pre></div>",
+        "id": 218970,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1496620707
+    },
+    {
+        "content": "<p>Are you seeing an exception in server.log?</p>",
+        "id": 218972,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1496620799
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"maxnl2@gmail.com\" data-user-id=\"2529\">@Max Levine</span> so after you ran <code>configure-rabbitmq</code>, did you restart the Zulip server?</p>",
+        "id": 218997,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496625120
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"zulip@feorlen.org\" data-user-id=\"397\">@Andrea  Longo</span> Looking in server.log I see many \"Tornado   0.0% busy over the past X seconds\" lines. These stand out:</p>\n<div class=\"codehilite\"><pre><span></span>2017-06-05 00:05:03,959 INFO     172.31.205.122  GET     302   1ms / (unauth via ?)\n2017-06-05 00:05:03,973 INFO     172.31.205.122  GET     301   2ms /login (unauth via ?)\n2017-06-05 00:05:04,075 INFO     172.31.205.122  GET     200  88ms (db: 1ms/1q) /login/ (unauth via ?)\n2017-06-05 00:06:52,234 INFO     172.31.205.12   GET     200  13ms (db: 1ms/3q) /accounts/do_confirm/badb3c6a0d2271086deea3aa15fd1da0acd03036 (unauth via ?)\n2017-06-05 00:06:53,111 INFO     172.31.205.12   POST    500 830ms (db: 7ms/5q) /accounts/register/ (unauth via ?)\n</pre></div>\n\n\n<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span>  I thought I had, but just to be sure I re-ran configure-rabbitmq and rebooted again. Still having the same issue.</p>\n<p>Interestingly, I don't see additional \"Failed to reconnect\" messages. So I think we've moved past one issue and onto another?</p>",
+        "id": 219013,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1496635786
+    },
+    {
+        "content": "<p>The unauth stuff looks like browser access. For example, this is what I see when I load the login page before I'm logged in: </p>\n<div class=\"codehilite\"><pre><span></span>2017-06-05 23:46:42,451 INFO     1.2.3.4     GET     200  34ms (db: 2ms/2q) /accounts/login/ (unauth via ?)\n</pre></div>\n\n\n<p>When you see that in the log, you are getting the 500? I presume at this point you still haven't completed your own admin account creation. If something goes wrong while you are using the one-time link, I'm not exactly sure what happens. (I'll have to explore that when my test server is free.)</p>",
+        "id": 219668,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1496706878
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"maxnl2@gmail.com\" data-user-id=\"2529\">@Max Levine</span> do you have any error logs (e.g. in <code>errors.log</code>) for that 500?  If I had to guess, your email configure has a problem, but one could check directly :).</p>",
+        "id": 219673,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496707544
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> I am pretty sure I have my email configured properly. The test email came through ok, and I am able to use the one time link to browse to the install and input an admin email address. I receive the email with the activation link, it's when I open that link that I get the 500 error.<br>\nIn the errors.log file there are no new entires, so I think I did need to run the configure-rabbitmq script as well.</p>",
+        "id": 219694,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1496708759
+    },
+    {
+        "content": "<p>hmm, interesting</p>",
+        "id": 219697,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496708790
+    },
+    {
+        "content": "<p>Zulip should never 500 without logging something</p>",
+        "id": 219699,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496708799
+    },
+    {
+        "content": "<p>The only log entries I see that stand out are the browser access. I can see where it shows me accessing the page. I know I get the 500. Nothing else in errors.log<br>\nI'll look further to see if I can find anything more</p>",
+        "id": 219716,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1496709425
+    },
+    {
+        "content": "<p>Try <code>django.log</code> as well</p>",
+        "id": 219719,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496709462
+    },
+    {
+        "content": "<p>(that and tornado.log have raw stdout, so if the failure is somehow happening too early for error reporting to work, something will be there)</p>",
+        "id": 219721,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496709491
+    },
+    {
+        "content": "<p>Well this is something. django.log</p>\n<div class=\"codehilite\"><pre><span></span>Traceback (most recent call last):\n  File &quot;./zerver/logging_handlers.py&quot;, line 41, in emit\n    user_full_name = user_profile.full_name\n  File &quot;/home/zulip/deployments/2017-06-04-20-50-09/zulip-venv/lib/python2.7/site-packages/django/utils/functional.py&quot;, line 235, in inner\n    return func(self._wrapped, *args)\nAttributeError: &#39;AnonymousUser&#39; object has no attribute &#39;full_name&#39;\n</pre></div>\n\n\n<p>Nothing in tornado.log</p>",
+        "id": 219726,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1496709898
+    },
+    {
+        "content": "<p>Ahh, yeah, OK, so the problem is the error handling itself is failing</p>",
+        "id": 219728,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496710530
+    },
+    {
+        "content": "<p>That's a bug we fixed not long ago</p>",
+        "id": 219729,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496710533
+    },
+    {
+        "content": "<p>I'd recommend that you upgrade to Zulip 1.6 (coming out very soon); you can do so via Git here: <a href=\"https://zulip.readthedocs.io/en/latest/prod-maintain-secure-upgrade.html#upgrading-from-a-git-repository\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/prod-maintain-secure-upgrade.html#upgrading-from-a-git-repository\">https://zulip.readthedocs.io/en/latest/prod-maintain-secure-upgrade.html#upgrading-from-a-git-repository</a></p>",
+        "id": 219730,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496710568
+    },
+    {
+        "content": "<p>That will make debugging a lot easier</p>",
+        "id": 219731,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496710575
+    },
+    {
+        "content": "<p>because you're not getting the real exception here</p>",
+        "id": 219732,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496710582
+    },
+    {
+        "content": "<p>Ok. So, I've started over with 1.6, I'm still getting an error after clicking the link in the realm creation email. It's no longer saying it's an error 500, but I am getting an email of the error I'm getting:</p>\n<div class=\"codehilite\"><pre><span></span>Traceback (most recent call last):\n File &quot;/home/zulip/deployments/2017-06-09-15-58-54/zulip-venv/lib/python2.7/site-packages/django/core/handlers/exception.py&quot;, line 42, in inner\n   response = get_response(request)\n File &quot;/home/zulip/deployments/2017-06-09-15-58-54/zulip-venv/lib/python2.7/site-packages/django/core/handlers/base.py&quot;, line 249, in _legacy_get_response\n   response = self._get_response(request)\n File &quot;/home/zulip/deployments/2017-06-09-15-58-54/zulip-venv/lib/python2.7/site-packages/django/core/handlers/base.py&quot;, line 187, in _get_response\n   response = self.process_exception_by_middleware(e, request)\n File &quot;/home/zulip/deployments/2017-06-09-15-58-54/zulip-venv/lib/python2.7/site-packages/django/core/handlers/base.py&quot;, line 185, in _get_response\n   response = wrapped_callback(request, *callback_args, **callback_kwargs)\n File &quot;./zerver/decorator.py&quot;, line 118, in wrapper\n   return func(request, *args, **kwargs)\n File &quot;./zerver/views/registration.py&quot;, line 192, in accounts_register\n   org_type = int(form.cleaned_data[&#39;realm_org_type&#39;])\nValueError: invalid literal for int() with base 10: &#39;&#39;\n\n\nRequest info:\n- path: /accounts/register/\n- POST: {u&#39;full_name&#39;: [u&#39;&#39;], u&#39;csrfmiddlewaretoken&#39;: [u&#39;**********&#39;], u&#39;from_confirmation&#39;: [u&#39;1&#39;], u&#39;key&#39;: [u&#39;**********&#39;]}\n- REMOTE_ADDR: &quot;[u&#39;172.31.205.12&#39;]&quot;\n- QUERY_STRING: &quot;[u&#39;&#39;]&quot;\n- SERVER_NAME: &quot;[u&#39;&#39;]&quot;\n</pre></div>",
+        "id": 223550,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497059339
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"maxnl2@gmail.com\" data-user-id=\"2529\">@Max Levine</span> this one is quite mysterious; did you end up figuring it out?  I don't think we've seen it before.</p>",
+        "id": 227587,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497487644
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> I haven't had a chance to look into this yet. I'm going to try and find some time over the next few days to actually go over logs. I'll admit, I'm not a Linux expert by any means. I don't do any programming and while I can work my way around command line I'm much more efficient working in a GUI. I guess that's likely to happen when your primary role is helpdesk lol</p>\n<p>I'll see if I can dive into this with my director who is much more proficient at this stuff than I am. I'll let you know if I find anything. Thanks for the follow up!</p>",
+        "id": 227688,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497495627
+    },
+    {
+        "content": "<p>OK, cool.  I suspect it may be something silly like you didn't pick an organization type and the error handling for that case is buggy.</p>",
+        "id": 227690,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497495660
+    },
+    {
+        "content": "<p>Well, I don't think I've even gotten that far? I ran generate_realm_creation_link, opened the URL and input my email address, and then clicked the link in the email to activate. I received an error and that was the traceback that was automatically generated to the administrator address.</p>\n<p>So basically I'm stuck between the last two bullet points on step 5 here <a href=\"https://zulip.readthedocs.io/en/latest/prod-install.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/prod-install.html\">https://zulip.readthedocs.io/en/latest/prod-install.html</a></p>\n<p>Do I need to set an organization type before following this step? I was under the impression that this would be something I would setup after I successfully log in to the web ui.</p>\n<p>I am using LDAP for authentication. I was able to test it and it was able to resolve my email address to my name, so I think I have that configured properly. The email address I'm trying to use to setup the organization is in LDAP, is that a problem?</p>",
+        "id": 227715,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497497959
+    },
+    {
+        "content": "<p>Wait, did you get the error when clicking the link, or after filling out the form?</p>",
+        "id": 227733,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497499547
+    },
+    {
+        "content": "<p>I bet the problem is that you need to use email authentication to create the organization</p>",
+        "id": 227734,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497499569
+    },
+    {
+        "content": "<p>Even if you're later going to use LDAP only</p>",
+        "id": 227735,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497499574
+    },
+    {
+        "content": "<p>When clicking the link from the \"Activate your Zulip account\" email.</p>\n<p>Ah, that would definitely explain it. That was not clear to me. So I need to enable email authentication at first, or in addition to LDAP? And once I'm going to LDAP, would I disable email authentication? And can I use an email address that will be in LDAP once LDAP is enabled? So many unanswered questions.  You've got me thinking about it, so I'm going to log in and play around a bit</p>",
+        "id": 227884,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497505809
+    },
+    {
+        "content": "<p>in addition to LDAP</p>",
+        "id": 227890,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497505955
+    },
+    {
+        "content": "<p>You can disable it as soon as you've created the organization.  I think you had bad luck, in that we updated the docs to make the fact that email auth is required clear in the last week, probably after you started installation.</p>",
+        "id": 227892,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497505985
+    },
+    {
+        "content": "<p>I was going to say, there's a theme at my current company where we'll find a way to break things no matter how much they've been tested. Hopefully I'll be successful now!</p>",
+        "id": 227897,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497506095
+    },
+    {
+        "content": "<p>I'm curious, where in the documentation does it state that you need to have email auth enabled?</p>",
+        "id": 227900,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497506195
+    },
+    {
+        "content": "<p>The last bullet in <a href=\"http://zulip.readthedocs.io/en/latest/prod-install.html#step-3-configure-zulip\" target=\"_blank\" title=\"http://zulip.readthedocs.io/en/latest/prod-install.html#step-3-configure-zulip\">http://zulip.readthedocs.io/en/latest/prod-install.html#step-3-configure-zulip</a></p>",
+        "id": 227917,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497506686
+    },
+    {
+        "content": "<p>Well, I went and enabled email auth, tried to activate, and I'm still getting an error. It looks identical to the one from before. </p>\n<div class=\"codehilite\"><pre><span></span>Traceback (most recent call last):\n File &quot;/home/zulip/deployments/2017-06-15-01-54-21/zulip-venv/lib/python2.7/site-packages/django/core/handlers/exception.py&quot;, line 42, in inner\n   response = get_response(request)\n File &quot;/home/zulip/deployments/2017-06-15-01-54-21/zulip-venv/lib/python2.7/site-packages/django/core/handlers/base.py&quot;, line 249, in _legacy_get_response\n   response = self._get_response(request)\n File &quot;/home/zulip/deployments/2017-06-15-01-54-21/zulip-venv/lib/python2.7/site-packages/django/core/handlers/base.py&quot;, line 187, in _get_response\n   response = self.process_exception_by_middleware(e, request)\n File &quot;/home/zulip/deployments/2017-06-15-01-54-21/zulip-venv/lib/python2.7/site-packages/django/core/handlers/base.py&quot;, line 185, in _get_response\n   response = wrapped_callback(request, *callback_args, **callback_kwargs)\n File &quot;./zerver/decorator.py&quot;, line 118, in wrapper\n   return func(request, *args, **kwargs)\n File &quot;./zerver/views/registration.py&quot;, line 192, in accounts_register\n   org_type = int(form.cleaned_data[&#39;realm_org_type&#39;])\nValueError: invalid literal for int() with base 10: &#39;&#39;\n\n\nRequest info:\n- path: /accounts/register/\n- POST: {u&#39;full_name&#39;: [u&#39;&#39;], u&#39;csrfmiddlewaretoken&#39;: [u&#39;**********&#39;], u&#39;from_confirmation&#39;: [u&#39;1&#39;], u&#39;key&#39;: [u&#39;**********&#39;]}\n- REMOTE_ADDR: &quot;[u&#39;172.31.205.122&#39;]&quot;\n- QUERY_STRING: &quot;[u&#39;&#39;]&quot;\n- SERVER_NAME: &quot;[u&#39;&#39;]&quot;\n</pre></div>",
+        "id": 227920,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497506841
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"maxnl2@gmail.com\" data-user-id=\"2529\">@Max Levine</span> did you restart the server after enabling auth?</p>",
+        "id": 227921,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497506881
+    },
+    {
+        "content": "<p>Otherwise, you're still running the old configuration :)</p>",
+        "id": 227922,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497506886
+    },
+    {
+        "content": "<p>If so, I'd recommend proceeding with the print-debugging approach I suggested.</p>",
+        "id": 227923,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497506904
+    },
+    {
+        "content": "<p>Also <span class=\"user-mention\" data-user-email=\"zulip@feorlen.org\" data-user-id=\"397\">@Andrea  Longo</span> have you ever seen this exception before?  It'd be awesome if we could reproduce it, which I've been unable to do.</p>",
+        "id": 227924,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497506927
+    },
+    {
+        "content": "<p>I actually reverted to my pre-install snapshot, installed, configured, and initialized the DB</p>",
+        "id": 227925,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497506931
+    },
+    {
+        "content": "<p>So I think it has to be running with that auth enabled. I'm double checking to make sure it's all configured right</p>",
+        "id": 227926,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497506950
+    },
+    {
+        "content": "<p>hmm, weird</p>",
+        "id": 227929,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497506983
+    },
+    {
+        "content": "<p>Just to be clear, this is happening after you fill out the form, right?</p>",
+        "id": 227930,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497506998
+    },
+    {
+        "content": "<p>If our internal SMTP server supports sending emails without authentication, I shouldn't need to input an email_host_user or email_password, right?</p>",
+        "id": 227931,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497507025
+    },
+    {
+        "content": "<p>Yeah, that should work.  Also the error would be very different were that the problem</p>",
+        "id": 227935,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497507093
+    },
+    {
+        "content": "<p>Well, what form? I used the URL generated by the create realm command and  input my email address on the website. I received the activation email and attempted to load the URL to complete activation. This is where I'm getting this error. I haven't done any setup on the organization or input any information about the organization yet</p>",
+        "id": 227937,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497507116
+    },
+    {
+        "content": "<p>Oh, that's interesting.</p>",
+        "id": 227939,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497507127
+    },
+    {
+        "content": "<p>I had assumed you were getting this error on the following step.</p>",
+        "id": 227940,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497507148
+    },
+    {
+        "content": "<p>Not quite. This is exactly where I was having an issue last week, but at that point I didn't have the email auth enabled</p>",
+        "id": 227944,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497507221
+    },
+    {
+        "content": "<p>I need to head to sleep, but I think <span class=\"user-mention\" data-user-email=\"yo@vishnuks.com\" data-user-id=\"52\">@Vishnu Ks</span> or <span class=\"user-mention\" data-user-email=\"umair.waheed@gmail.com\" data-user-id=\"92\">@Umair Khan</span> should be able to help with this.    I think we should print-debug to get to the bottom of this, but it sounds like somehow it's skipping the step of showing you the realm creation form, which looks like this:<br>\n<a href=\"/user_uploads/2/87/uUgtIsW8iXKulweIcgPT2jzH/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">pasted image</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/87/uUgtIsW8iXKulweIcgPT2jzH/pasted_image.png\" target=\"_blank\" title=\"pasted image\"><img src=\"/user_uploads/2/87/uUgtIsW8iXKulweIcgPT2jzH/pasted_image.png\"></a></div>",
+        "id": 227946,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497507292
+    },
+    {
+        "content": "<p>And throwing the error you'd get if you somehow filled out that form without answering the radio button question, which is kinda impossible.</p>",
+        "id": 227947,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497507315
+    },
+    {
+        "content": "<p>I've not seen that form once yet. I need to head to sleep as well, but will try and find some time tomorrow to look into this more</p>",
+        "id": 227948,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497507353
+    },
+    {
+        "content": "<p>I don't see any information about print-debugging, maybe you had mentioned it in a different thread? I'm thinking you're referring to this? <a href=\"https://zulip.readthedocs.io/en/latest/testing-with-casper.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/testing-with-casper.html\">https://zulip.readthedocs.io/en/latest/testing-with-casper.html</a></p>",
+        "id": 227951,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497507727
+    },
+    {
+        "content": "<p>I just mean adding <code>print()</code> statements in the code and then restarting the server to see what the values are.</p>",
+        "id": 227956,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497508488
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"maxnl2@gmail.com\" data-user-id=\"2529\">@Max Levine</span>, can you post the url you are clicking?</p>",
+        "id": 227958,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1497508669
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> Where would I add those?<br>\n<span class=\"user-mention\" data-user-email=\"umair.waheed@gmail.com\" data-user-id=\"92\">@Umair Khan</span> <a href=\"https://zulip.mkoss.com/accounts/do_confirm/c98e7942a7a923072595c8efca097dc528b7bba4\" target=\"_blank\" title=\"https://zulip.mkoss.com/accounts/do_confirm/c98e7942a7a923072595c8efca097dc528b7bba4\">https://zulip.mkoss.com/accounts/do_confirm/c98e7942a7a923072595c8efca097dc528b7bba4</a></p>",
+        "id": 227961,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497508753
+    },
+    {
+        "content": "<p>Thanks.</p>",
+        "id": 227962,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1497508772
+    },
+    {
+        "content": "<p>I am guessing that you have set <code>POPULATE_PROFILE_VIA_LDAP=True</code>?</p>",
+        "id": 227984,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1497509805
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"maxnl2@gmail.com\" data-user-id=\"2529\">@Max Levine</span>, I have only tested this on the console but I think setting <code>POPULATE_PROFILE_VIA_LDAP</code> to  <code>True</code> can lead to the error you are getting. In that code path ,<code>form.is_valid()</code> gives <code>True</code>.</p>",
+        "id": 227992,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1497510228
+    },
+    {
+        "content": "<p>I haven't intentionally set that,  I'm not even sure where I would set it. I only filled out sections present in the default settings.py file. I don't see a line <code>POPULATE_PROFILE_VIA_LDAP</code> in there, so I wouldn't have set it. I did run <code>manage.py sync_ldap_user_data</code> which completed without issue. I actually have tried disabled LDAP now, just leaving email and restarted the server. After it came back up I tried to follow the activation link again and it generated the same error as before.</p>",
+        "id": 227996,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497510625
+    },
+    {
+        "content": "<p>I'm off for the night. I'm in eastern time and it got to be a bit later than I realized. Thanks for the help tonight. I'll check back in tomorrow</p>",
+        "id": 227998,
+        "sender_full_name": "Max Levine",
+        "timestamp": 1497510677
+    },
+    {
+        "content": "<p>Cool</p>",
+        "id": 227999,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1497510687
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span>, so the problem occurs when:<br>\n1. LDAP auth is enabled.<br>\n2. <code>realm_creation</code> is <code>True</code>.<br>\n3. <code>TERMS_OF_SERVICE</code> is <code>False</code><br>\n4. <code>ldap_attrs[settings.AUTH_LDAP_USER_ATTR_MAP['full_name']][0]</code> returns a name.<br>\n5. request.POST.get('from_confirmation') is <code>True</code></p>\n<p>Problem can be reproduced in <a href=\"https://github.com/zulip/zulip/pull/5402\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/5402\">#5402</a>.</p>",
+        "id": 228045,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1497517008
+    },
+    {
+        "content": "<p>Cool, nice debugging!  I guess it's not clear to me why that set of things would interact badly.  Simplest might be to ignore LDAP names during realm creation, but it seems like there's probably a more root cause fix we could do here?</p>",
+        "id": 228047,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497517131
+    },
+    {
+        "content": "<p>It seems that we assume that when LDAP auth is enabled, we can't follow <code>realm_creation</code> code path.</p>",
+        "id": 228048,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1497517195
+    },
+    {
+        "content": "<p>We intentionally setup our form so that it becomes valid and we bypass the flow in which form is shown to the user.</p>",
+        "id": 228050,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1497517247
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>148                         # We don&#39;t use initial= here, because if the form is\n149                         # complete (that is, no additional fields need to be\n150                         # filled out by the user) we want the form to validate,\n151                         # so they can be directly registered without having to\n152                         # go through this interstitial.\n153                         form = RegistrationForm({&#39;full_name&#39;: ldap_full_name})\n</pre></div>",
+        "id": 228051,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1497517283
+    },
+    {
+        "content": "<p>Ahh, that makes sense.  I think that code path should just have a <code>not realm_creation</code> check in it.</p>",
+        "id": 228065,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497518108
+    },
+    {
+        "content": "<p>Yeah, that should fix this.</p>",
+        "id": 228066,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1497518135
+    },
+    {
+        "content": "<p>Shall I go ahead with the fix?</p>",
+        "id": 228067,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1497518166
+    },
+    {
+        "content": "<p>yep!</p>",
+        "id": 228069,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497518186
+    },
+    {
+        "content": "<p>Cool.</p>",
+        "id": 228070,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1497518195
+    },
+    {
+        "content": "<p>Fixed here: <a href=\"https://github.com/zulip/zulip/pull/5402\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/5402\">#5402</a></p>",
+        "id": 228200,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1497523699
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> <span class=\"user-mention\" data-user-email=\"umair.waheed@gmail.com\" data-user-id=\"92\">@Umair Khan</span> No, I hadn't seen that error before but I haven't tried LDAP. I wonder if enabling Open Directory on my OS X Server box would be sufficient to test this.</p>",
+        "id": 228347,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1497535474
+    },
+    {
+        "content": "<p>Awesome to have a fix, LDAP is fussy business but important to many folk's infra.</p>",
+        "id": 228348,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1497535519
+    },
+    {
+        "content": "<p>I'm trying to set up Open Directory for a test, but I'm having problems getting Zulip to connect to it. Does anyone have a sample configuration? I can ldapsearch, but <code>manage.py query_ldap</code> says it can't reach it.</p>",
+        "id": 229394,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1497570678
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/issues/349\" target=\"_blank\" title=\"https://github.com/zulip/zulip/issues/349\">https://github.com/zulip/zulip/issues/349</a> could be helpful</p>",
+        "id": 229440,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497576624
+    },
+    {
+        "content": "<p>Looks like my OD problem is with a self-signed cert. But in the process, I got a new 500 error: <a href=\"https://github.com/zulip/zulip/issues/5431\" target=\"_blank\" title=\"https://github.com/zulip/zulip/issues/5431\">https://github.com/zulip/zulip/issues/5431</a></p>",
+        "id": 229480,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1497583917
+    },
+    {
+        "content": "<p>Still trying to get Zulip login working, may be something with my server and OD.</p>",
+        "id": 229481,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1497584011
+    },
+    {
+        "content": "<p>I'm running  ' /home/zulip/deployments/current/manage.py generate_realm_creation_link ' ,but there is error like this,why  <a href=\"/user_uploads/2/ac/N6UcmfAB3NJ0LeRaphM_b0IO/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">pasted image</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/ac/N6UcmfAB3NJ0LeRaphM_b0IO/pasted_image.png\" target=\"_blank\" title=\"pasted image\"><img src=\"/user_uploads/2/ac/N6UcmfAB3NJ0LeRaphM_b0IO/pasted_image.png\"></a></div>",
+        "id": 258948,
+        "sender_full_name": "zhangqx",
+        "timestamp": 1501246971
+    },
+    {
+        "content": "<p>I have test '/home/zulip/deployments/current/manage.py send_test_email <a href=\"mailto:username@example.com\" title=\"mailto:username@example.com\">username@example.com</a> ',it is successful。</p>",
+        "id": 258954,
+        "sender_full_name": "zhangqx",
+        "timestamp": 1501249675
+    },
+    {
+        "content": "<p>what does this <code>/var/log/zulip/errors.log</code> say?</p>",
+        "id": 258955,
+        "sender_full_name": "Aditya Bansal",
+        "timestamp": 1501249691
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/d2/B-g55c1-_LIdWU3qZRM4sZvL/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">pasted image</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/d2/B-g55c1-_LIdWU3qZRM4sZvL/pasted_image.png\" target=\"_blank\" title=\"pasted image\"><img src=\"/user_uploads/2/d2/B-g55c1-_LIdWU3qZRM4sZvL/pasted_image.png\"></a></div>",
+        "id": 258964,
+        "sender_full_name": "zhangqx",
+        "timestamp": 1501254289
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/52/3grbb0KDonQijyNwoZkGFRRx/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">pasted image</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/52/3grbb0KDonQijyNwoZkGFRRx/pasted_image.png\" target=\"_blank\" title=\"pasted image\"><img src=\"/user_uploads/2/52/3grbb0KDonQijyNwoZkGFRRx/pasted_image.png\"></a></div>",
+        "id": 258965,
+        "sender_full_name": "zhangqx",
+        "timestamp": 1501254296
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"elek-bot@chat.zulip.org\" data-user-id=\"2899\">@zhangqx</span> that log error looks like somehow RabbitMQ isn't setup properly.  I think <code>scripts/setup/configure-rabbitmq</code> should help.</p>",
+        "id": 259040,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1501261934
+    },
+    {
+        "content": "<blockquote>\n<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> I am pretty sure I have my email configured properly. The test email came through ok, and I am able to use the one time link to browse to the install and input an admin email address. I receive the email with the activation link, it's when I open that link that I get the 500 error.<br>\nIn the errors.log file there are no new entires, so I think I did need to run the configure-rabbitmq script as well.</p>\n</blockquote>\n<p>I get a same error ,but the <code>django.log</code> is not similar with that </p>\n<div class=\"codehilite\"><pre><span></span>2017-07-29 08:19:49,101 ERROR    Internal Server Error: /accounts/login/\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/core/handlers/exception.py&quot;, line 41, in inner\n    response = get_response(request)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/core/handlers/base.py&quot;, line 187, in _get_response\n    response = self.process_exception_by_middleware(e, request)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/core/handlers/base.py&quot;, line 185, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File &quot;./zerver/views/auth.py&quot;, line 448, in login_page\n    extra_context=extra_context, **kwargs)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/contrib/auth/views.py&quot;, line 54, in inner\n    return func(*args, **kwargs)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/contrib/auth/views.py&quot;, line 139, in login\n    return LoginView.as_view(**kwargs)(request, *args, **kwargs)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/views/generic/base.py&quot;, line 68, in view\n    return self.dispatch(request, *args, **kwargs)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/utils/decorators.py&quot;, line 67, in _wrapper\n    return bound_func(*args, **kwargs)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/views/decorators/debug.py&quot;, line 76, in sensitive_post_parameters_wrapper\n    return view(request, *args, **kwargs)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/utils/decorators.py&quot;, line 63, in bound_func\n    return func.__get__(self, type(self))(*args2, **kwargs2)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/utils/decorators.py&quot;, line 67, in _wrapper\n    return bound_func(*args, **kwargs)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/utils/decorators.py&quot;, line 149, in _wrapped_view\n    response = view_func(request, *args, **kwargs)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/utils/decorators.py&quot;, line 63, in bound_func\n    return func.__get__(self, type(self))(*args2, **kwargs2)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/utils/decorators.py&quot;, line 67, in _wrapper\n    return bound_func(*args, **kwargs)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/views/decorators/cache.py&quot;, line 57, in _wrapped_view_func\n    response = view_func(request, *args, **kwargs)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/utils/decorators.py&quot;, line 63, in bound_func\n    return func.__get__(self, type(self))(*args2, **kwargs2)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/contrib/auth/views.py&quot;, line 90, in dispatch\n    return super(LoginView, self).dispatch(request, *args, **kwargs)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/views/generic/base.py&quot;, line 88, in dispatch\n    return handler(request, *args, **kwargs)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/views/generic/edit.py&quot;, line 183, in post\n    return self.form_valid(form)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/contrib/auth/views.py&quot;, line 117, in form_valid\n    auth_login(self.request, form.get_user())\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/contrib/auth/__init__.py&quot;, line 160, in login\n    user_logged_in.send(sender=user.__class__, request=request, user=user)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/dispatch/dispatcher.py&quot;, line 193, in send\n    for receiver in self._live_receivers(sender)\n  File &quot;./zerver/signals.py&quot;, line 91, in email_on_new_login\n    send_email_to_user(&#39;zerver/emails/notify_new_login&#39;, user, context=context)\n  File &quot;./zerver/lib/send_email.py&quot;, line 60, in send_email_to_user\n    from_address=from_address, context=context)\n  File &quot;./zerver/lib/send_email.py&quot;, line 55, in send_email\n    return mail.send() &gt; 0\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/core/mail/message.py&quot;, line 348, in send\n    return self.get_connection(fail_silently).send_messages([self])\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/core/mail/backends/smtp.py&quot;, line 111, in send_messages\n    sent = self._send(message)\n  File &quot;/home/zulip/deployments/2017-07-28-13-43-19/zulip-venv/lib/python2.7/site-packages/django/core/mail/backends/smtp.py&quot;, line 127, in _send\n    self.connection.sendmail(from_email, recipients, message.as_bytes(linesep=&#39;\\r\\n&#39;))\n  File &quot;/usr/lib/python2.7/smtplib.py&quot;, line 751, in sendmail\n    raise SMTPDataError(code, resp)\nSMTPDataError: (550, &#39;5.7.1 Client does not have permissions to send as this sender&#39;)\n2017-07-29 08:19:49,119 INFO     192.168.19.143  POST    500 409ms (db: 12ms/5q) (+start: 7ms) /accounts/login/ (unauth via ?)\n[pid: 66208|app: 0|req: 9/16] 192.168.19.143 () {52 vars in 992 bytes} [Sat Jul 29 08:19:48 2017] POST /accounts/login/?next=/ =&gt; generated 4337 bytes in 420 msecs (HTTP/1.1 500) 5 headers in 324 bytes (1 switches on core 0)\n</pre></div>",
+        "id": 259980,
+        "sender_full_name": "zhangqx",
+        "timestamp": 1501409187
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"elek-bot@chat.zulip.org\" data-user-id=\"2899\">@zhangqx</span> Yeah, so the issue now is that your SMTP credentials seem to not be able to send with different <code>Sender</code> / <code>From</code> addresses.  What tool are you using to send outgoing email?  That tool may need some configuration.</p>",
+        "id": 260077,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1501459493
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"rishig@zulipchat.com\" data-user-id=\"131\">@Rishi Gupta</span> <span class=\"user-mention\" data-user-email=\"james.rowan13@gmail.com\" data-user-id=\"2277\">@James Rowan</span> as a sidenote, do we have a list of what email accounts Zulip will send as?</p>",
+        "id": 260078,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1501459516
+    },
+    {
+        "content": "<p>For the email address part, I think it should only be things that appear in prod_settings_template.py, which is ZULIP_ADMINISTRATOR and NOREPLY_EMAIL_ADDRESS.<br>\nThe display name part can be anything, e.g. due to missed message emails.</p>",
+        "id": 260123,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1501466512
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> I don't use SMTP credentials ,and I test sending an email with tools <code>/home/zulip/deployments/current/manage.py send_test_email</code>successfully。</p>",
+        "id": 260124,
+        "sender_full_name": "zhangqx",
+        "timestamp": 1501467081
+    },
+    {
+        "content": "<blockquote>\n<p>For the email address part, I think it should only be things that appear in prod_settings_template.py, which is ZULIP_ADMINISTRATOR and NOREPLY_EMAIL_ADDRESS.<br>\nThe display name part can be anything, e.g. due to missed message emails.</p>\n</blockquote>\n<p>thinks,I have found the reason of this error.</p>",
+        "id": 260128,
+        "sender_full_name": "zhangqx",
+        "timestamp": 1501469020
+    }
+]

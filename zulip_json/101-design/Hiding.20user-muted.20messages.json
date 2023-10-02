@@ -1,0 +1,1130 @@
+[
+    {
+        "content": "<p>From <a class=\"stream-topic\" data-stream-id=\"2\" href=\"/#narrow/stream/2-general/topic/Mute.20user.20.2316915\">#general &gt; Mute user #16915</a></p>\n<p><strong>Background</strong><br>\nI'm currently working on the mute-users feature in <a href=\"https://github.com/zulip/zulip/pull/16915\">#16915</a>. In <a class=\"stream-topic\" data-stream-id=\"2\" href=\"/#narrow/stream/2-general/topic/Mute.20user.20.2316915\">#general &gt; Mute user #16915</a>,  we decided that we'd completely hide 1:1 PMs with muted users, because doing so wouldn't result in loss of context.<br>\nThis pertains to the behavior of stream/huddle messages sent by muted users in message views.  We want to somehow partially hide stream and huddle messages sent by mutees in a way which will allow the muter to take a look at (/reveal) the message and easily hide it again if they regret revealing the message.</p>\n<p>Some aspects to consider are-</p>\n<h1>A. Sticky vs non-sticky vs semi-sticky revealing</h1>\n<ol>\n<li>Sticky - all muted messages are hidden by default, but when the mutee reveals them, or re-hides them, they maintain their state across changing narrows as well as page refreshes. This would maybe require us to make a flag in the <code>UserMessage</code> table.</li>\n<li>Semi-sticky - messages retain their state in the current session only (on changing narrows), but not across page refreshes.</li>\n<li>Non-sticky - If messages are revealed, they always become hidden on changing narrows as well as on page refresh.</li>\n</ol>\n<p>The \"collapse\" messages feature currently is A(1), while the \"condense\" feature (which is used to shorten long messages) is A(2).</p>\n<h1>B. UI to hide/reveal the message</h1>\n<ol>\n<li>\n<p>Replace message content with \"Click to reveal\" text<br>\n<a href=\"/user_uploads/2/fa/EGHN5uwDli0dEbPz-dtq1dgH/image.png\">image.png</a><br>\nOn revealing, it'll look like a normal message-<br>\n<a href=\"/user_uploads/2/cd/uRYn31cowlsvwUCw3xFq2kNk/image.png\">image.png</a></p>\n</li>\n<li>\n<p>Use buttons like the condense/collapse features.<br>\n<a href=\"/user_uploads/2/6a/Cxjj3hWtNKeP22Wx-nrAmsh1/image.png\">image.png</a></p>\n</li>\n<li>\n<p>Wrap message contents in a spoiler while rendering<br>\n<a href=\"/user_uploads/2/4c/4q6CB5sXPE_EAJgNtWfcn3Ua/image.png\">image.png</a><br>\n<a href=\"/user_uploads/2/74/C2129blfwUuLUk4EALPCm9O_/image.png\">image.png</a></p>\n</li>\n<li>\n<p>Show the messages on hover in a tooltip or something similar, without any buttons to hide/reveal them.</p>\n</li>\n</ol>\n<h1>C. Hiding the mutee's profile picture and name.</h1>\n<p>We want to hide these too. But on revealing a hidden message, what will decide if the sender should be shown again or not? We could either</p>\n<ol>\n<li>Follow the current behavior (show the sender if the message above the current one is from a different sender)</li>\n<li>Always show the sender on revealing a hidden message. The reason for doing this could be, that we may possibly end up in a situation where a muted message is revealed but it's top and bottom neighbors (which are also muted messages) haven't been revealed.</li>\n</ol>\n<p>I'd really appreciate thoughts on these, and new ideas too!</p>\n<p>CC <span class=\"user-mention\" data-user-id=\"58\">@Steve Howell (showell)</span> <span class=\"user-mention\" data-user-id=\"13033\">@Ryan Rehman</span></p>",
+        "id": 1125032,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1614421040
+    },
+    {
+        "content": "<p>What do other apps with a \"mute user\" feature do, and can we find any commentary on what people think about it?  I'm pretty sure Twitter has it, and probably various chat apps.</p>",
+        "id": 1125719,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1614642189
+    },
+    {
+        "content": "<p>(deleted)</p>",
+        "id": 1125802,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1614658597
+    },
+    {
+        "content": "<p>Matrix has a <a href=\"https://matrix.org/docs/spec/client_server/latest#id144\">\"ignore\" user feature</a>. I tried out element, and they <strong>completely</strong> hide messages from these ignored users, everywhere.</p>",
+        "id": 1125804,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1614658790
+    },
+    {
+        "content": "<p>Rocketchat also has a \"ignore user\" feature. They show messages from ignored users in the chat by wrapping them into a spoiler.<br>\n<a href=\"user_uploads/2/90/ZPAVC9tr1KDtJAaeCswBKbz-/image.png\">https://chat.zulip.org/user_uploads/2/90/ZPAVC9tr1KDtJAaeCswBKbz-/image.png</a><br>\nThey do not hide the sender in such messages, just the content.<br>\n(Sender not included in screenshot)<br>\nLooks like messages once \"revealed\" cannot be hidden again in the same session. One has to refresh the tab to get those messages as hidden. Checkout <a href=\"https://github.com/RocketChat/Rocket.Chat/pull/10517\">https://github.com/RocketChat/Rocket.Chat/pull/10517</a> for a GIF.</p>\n<div class=\"message_inline_image\"><a href=\"user_uploads/2/90/ZPAVC9tr1KDtJAaeCswBKbz-/image.png\" title=\"https://chat.zulip.org/user_uploads/2/90/ZPAVC9tr1KDtJAaeCswBKbz-/image.png\"><img src=\"user_uploads/2/90/ZPAVC9tr1KDtJAaeCswBKbz-/image.png\"></a></div>",
+        "id": 1125807,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1614658868
+    },
+    {
+        "content": "<p>Twitter has a \"mute account\" feature. They hide tweets from timeline and block notifications. Partial hiding is done in only special cases.</p>\n<blockquote>\n<p>If an account you have not muted Reweets with comments an account you have muted, the Tweet will be hidden with a This Tweet is unavailable message.</p>\n</blockquote>\n<p><a href=\"user_uploads/2/27/aaNJLEZvnCX4Qlul5mEvx70u/image.png\">https://chat.zulip.org/user_uploads/2/27/aaNJLEZvnCX4Qlul5mEvx70u/image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"user_uploads/2/27/aaNJLEZvnCX4Qlul5mEvx70u/image.png\" title=\"https://chat.zulip.org/user_uploads/2/27/aaNJLEZvnCX4Qlul5mEvx70u/image.png\"><img src=\"user_uploads/2/27/aaNJLEZvnCX4Qlul5mEvx70u/image.png\"></a></div>",
+        "id": 1125809,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1614658940
+    },
+    {
+        "content": "<p>Mattermost does not have a mute users feature, but has many <a href=\"https://mattermost.uservoice.com/forums/306457-general/suggestions/12844593-mute-individual-users\">user requests</a> for one.</p>",
+        "id": 1125811,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1614658980
+    },
+    {
+        "content": "<p>Slack does not have a mute users option, and they seem to <a href=\"https://twitter.com/SlackHQ/status/767806840524705792\">firmly defend not having one</a>.</p>\n<div class=\"inline-preview-twitter\"><div class=\"twitter-tweet\"><a href=\"https://twitter.com/SlackHQ/status/767806840524705792\"><img class=\"twitter-avatar\" src=\"https://pbs.twimg.com/profile_images/1192935671473659905/AMUy2VsJ_normal.jpg\"></a><p><a href=\"https://twitter.com/sondy\">@sondy</a> No, you can't block or mute people in Slack. As a tool for teams to work together, that could make it very hard! <span aria-label=\"tulip\" class=\"emoji emoji-1f337\" role=\"img\" title=\"tulip\">:tulip:</span></p><span>- Slack (@SlackHQ)</span></div></div>",
+        "id": 1125812,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1614659021
+    },
+    {
+        "content": "<blockquote>\n<p>can we find any commentary on what people think about it?</p>\n</blockquote>\n<p>That's a bit difficult. Most public user interactions I came across were feature requests from <strong>before</strong> the feature was implemented, and a lot of them were pretty vague in what they wanted.<br>\nI couldn't find much user feedback specifically about how they like/dislike the hiding mechanisms above.</p>",
+        "id": 1125965,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1614696270
+    },
+    {
+        "content": "<p>Most of my opinions here have been inspired by experience with Twitter.  I understand it's a rather different app than Zulip when it comes to social interactions, so I draw not to draw too many conclusions from it.  But it's nice to be able to mute a user and still occasionally see what they say, so you don't lose the context of a conversation.</p>",
+        "id": 1125970,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1614699934
+    },
+    {
+        "content": "<p>I'm don't use Twitter much, but does Twitter have some other way of hiding tweets also, apart from the one I pasted above (which doesn't seem to allow revealing the tweet without unmuting the user)?</p>",
+        "id": 1125974,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1614701707
+    },
+    {
+        "content": "<p>I've gone on a Twitter diet recently, so it's possible something has changed.  I had to mute our former president, but occasionally folks would retweet his ranting, and I couldn't help my curiosity.  I believe there used to be a way to just unhide one tweet.</p>",
+        "id": 1126012,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1614710616
+    },
+    {
+        "content": "<p>I somewhat appreciate Slack's stance on this, although this it's obviously motivated more by not wanting to build the feature than fostering community.</p>\n<p>It sounds like Rocketchat does mostly what we've discussed, but it's slightly buggy?</p>",
+        "id": 1126013,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1614710686
+    },
+    {
+        "content": "<p>Yeah, OK, I think the spoiler-type versions probably make the most sense to me, since it'll avoid problems where a public conversation becomes unintelligible because you're not seeing half the conversation?</p>",
+        "id": 1126118,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1614731605
+    },
+    {
+        "content": "<p>I think Zulip's spoiler would quickly become unwieldy if used for this purpose. I think something closer to the vanilla HTML <code>&lt;details&gt;&lt;summary&gt;</code> would be better (RocketChat's implementation is very similar to that, at least visually)</p>\n<p>Here's a GIF<br>\n<a href=\"/user_uploads/2/4e/cE4kVUjzsW34_3gnMeDQXttd/temp.gif\">temp.gif</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/4e/cE4kVUjzsW34_3gnMeDQXttd/temp.gif\" title=\"temp.gif\"><img src=\"/user_uploads/2/4e/cE4kVUjzsW34_3gnMeDQXttd/temp.gif\"></a></div>",
+        "id": 1126243,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1614767687
+    },
+    {
+        "content": "<p>(<code>Aaron</code> was muted by <code>Prospero</code>)</p>",
+        "id": 1126246,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1614769383
+    },
+    {
+        "content": "<p>Yeah, certainly I don't intend that we use the spoiler markdown syntax for this.</p>",
+        "id": 1126580,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1614801232
+    },
+    {
+        "content": "<p>i think it was mentioned upthread that we want to hide the sender as well — there are a few different ways to do that with the spoiler-style thing, not sure which one is best. i just want to make sure that isn't dropped, since imo it's quite important :)</p>",
+        "id": 1126637,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1614810724
+    },
+    {
+        "content": "<p>Yeah, I agree; one version is a \"Blocked user\" name, and another would be more of a whole-line change.</p>",
+        "id": 1126666,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1614816938
+    },
+    {
+        "content": "<p>At the moment I kinda don't want to spend too much thought on the UI presentation until we've done more review of the plumbing for this feature.</p>",
+        "id": 1126667,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1614816963
+    },
+    {
+        "content": "<p>What is the status of the design for this? If this is going to be in 4.0, then we should start work on the mobile side of it now, which means we should have the design locked in.</p>\n<p>On the mobile side of things, I'd personally go for a whole line \"This message was sent by a user you have blocked, long press to view\" (similar to the way Twitter does it). Then once it's revealed, have it stick around until the user reloads whatever narrow contains the message (in reality, we'd probably just re-hide it whenever we re-render, which due to <a href=\"https://github.com/zulip/zulip-mobile/pull/3851\">#M3851</a> is currently pretty often)</p>\n<p>Desktop doesn't have a long-press equivalent, I'm not sure if we should go for requiring a double click to reveal makes sense, or if we just want to trust people to not mis-click.</p>\n<p>How does this sound to folks?</p>",
+        "id": 1163712,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618514942
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17945\">@Wesley Aptekar-Cassels</span> can you post a screenshot of how Twitter renders this?</p>",
+        "id": 1163771,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1618516376
+    },
+    {
+        "content": "<p>The current state for the webapp is that we've merged the backend, but not the frontend of displaying messages, which is currently pretty basic in terms of visual design.</p>",
+        "id": 1163773,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1618516412
+    },
+    {
+        "content": "<p>(BTW, <span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span>, how close are you to having an updated frontend PR for that?)</p>",
+        "id": 1163774,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1618516476
+    },
+    {
+        "content": "<p>I think it's potentially OK for us to mention the feature and that mobile support is a work in progress in our release notes, if it proves too difficult to coordinate having it fully implemented for mobile by the time 4.0 is released, as long as the server implementation has what mobile needs (which seems likely to be true already).  But I agree it'd be nice if we can do so, especially given that the feature's UX is essentially entirely client-side.</p>",
+        "id": 1163775,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1618516554
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/da/noUmvtybVEddFq8hAoB9MfU5/image.png\">image.png</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/da/noUmvtybVEddFq8hAoB9MfU5/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/da/noUmvtybVEddFq8hAoB9MfU5/image.png\"></a></div><p>(apologies for the extremely crispy jpeg, it's the only one i could find, and i didn't really want to go looking for this in the twitter UI)</p>",
+        "id": 1163778,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618516692
+    },
+    {
+        "content": "<p>i don't think that it's OK to release the muting users feature without mobile support, the failure mode of someone thinking that they've muted someone and then still seeing their messages in the app seems very bad.</p>",
+        "id": 1163783,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618516772
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/57/TTMXfqQpZla3ZkQGaS-5-KGz/image.png\">image.png</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/57/TTMXfqQpZla3ZkQGaS-5-KGz/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/57/TTMXfqQpZla3ZkQGaS-5-KGz/image.png\"></a></div><p>here's a more reasonable image</p>",
+        "id": 1163786,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618516849
+    },
+    {
+        "content": "<p>I think that could potentially be managed with \"beta\" labels, etc.  (Most critically, we have a confirmation modal for muting a user that could explain this detail), but of course it'd be better to just have mobile support.</p>",
+        "id": 1163787,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1618516856
+    },
+    {
+        "content": "<p>I agree with that visual design (and the detail that it hides the avatar/sender name as well as message content).</p>",
+        "id": 1163790,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1618516917
+    },
+    {
+        "content": "<p>Because of our styling for adjacent messages, we may want \"5 messages are not available because they were sent by someone you blocked\" as the way we do the labels.</p>",
+        "id": 1163793,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1618516960
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1163774\">said</a>:</p>\n<blockquote>\n<p>(BTW, <span class=\"user-mention silent\" data-user-id=\"16839\">Abhijeet Bodas</span>, how close are you to having an updated frontend PR for that?)</p>\n</blockquote>\n<p>I think I'll be able to push an updated version this weekend.</p>",
+        "id": 1164171,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1618542250
+    },
+    {
+        "content": "<p>I have a few more questions about this design from the mobile side. I think we definitely want to:</p>\n<ul>\n<li>Hide messages from muted users</li>\n<li>Block notifications from muted users</li>\n<li>Hide muted users in the PMs list</li>\n</ul>\n<p>do we also want to:</p>\n<ul>\n<li>Hide muted users in the typeahead list?</li>\n<li>Hide muted users in the \"all users\" list?</li>\n</ul>\n<p>One thing that makes this sort of tricky is that many apps have \"mute user\" and \"block user\" as separate actions, but we're sort of conflating them, I think. I'm curious if that's something we've discussed in the past.</p>",
+        "id": 1166137,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618866608
+    },
+    {
+        "content": "<p>also, i have the first draft of this for mobile done (<a href=\"https://github.com/zulip/zulip-mobile/pull/4678\">#M4678</a>), you can see screenshots <a href=\"#narrow/stream/243-mobile-team/topic/muted.20users/near/1166125\">here</a>. happy to have comments on them! (although they are pretty WIP)</p>",
+        "id": 1166142,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618866728
+    },
+    {
+        "content": "<blockquote>\n<p>\"mute user\" and \"block user\"</p>\n</blockquote>\n<p>Yeah, this feature will block and mute the user, in the terminology of apps that have both ideas.</p>",
+        "id": 1166178,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1618868951
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17945\">@Wesley Aptekar-Cassels</span> probably yes for both of your typeahead/presence questions.  Unless the \"all users\" list is something administrative in nature (for e.g. deactivating a user) but instead for viewing/sending messages, the blocker user should not appear.</p>\n<p>But for something security-sensitive, like showing subscribers to a private stream, we would want to ideally show them as \"Blocked user\" rather than removing the row; but I think you don't have that in the mobile app.</p>",
+        "id": 1166181,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1618869054
+    },
+    {
+        "content": "<p>hmmm, what do we want to do for group PMs with the user in them? presumably they still show up in the PM list, just with the messages hidden as usual?</p>\n<p>not sure exactly what to do about the user icon on mobile, curious if people have thoughts on that.</p>",
+        "id": 1166262,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618874721
+    },
+    {
+        "content": "<p>in general, i'd appreciate a design doc of some sort where we could write all of this down in one place :)</p>",
+        "id": 1166264,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618874895
+    },
+    {
+        "content": "<p>Yeah, that's what we're imagining for group PMs -- there's not really anything else one can do.</p>",
+        "id": 1166268,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1618875400
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17945\">@Wesley Aptekar-Cassels</span> yeah, agreed that we should write down these decisions.  I think the right model is that the /help/ and/or /api/ documentation for the feature will explain what it does rather than a separate design document; I'm not sure if the current webapp PR does that yet though.</p>",
+        "id": 1166269,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1618875489
+    },
+    {
+        "content": "<p>Has the /help/ documentation for this feature been written yet? I think that'd be a valuable thing to do relatively early in the implementation process. Explaining how the feature works would be a good way of being sure we've thought through a lot of the pieces of how it'll work from a user perspective.</p>",
+        "id": 1166324,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1618894518
+    },
+    {
+        "content": "<p>But then what I think Wesley is suggesting would be good to do is to write down these design decisions about the feature at basically the next level of detail beyond what probably goes in /help/.</p>\n<p>In particular we might list all the different places in the UI where another user's name, avatar, or messages might appear, and for each one identify how we'll handle it:</p>\n<ul>\n<li>vanished completely (like in the typeahead for @-mentions)</li>\n<li>hidden with an indication there's something hidden there (like in the message list)</li>\n<li>visible normally (like for an admin en route to deactivating a user)</li>\n</ul>\n<p>I think that'd be a helpful thing to do, for (a) helping be sure we've covered everything (because any time someone thinks of some obscure case, they can look in the one list and check if it's listed there), (b) spotting any mismatches between different cases, (c) facilitating discussion about specific choices, and (d) making sure we're all on the same page as people go implement different pieces.</p>",
+        "id": 1166325,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1618894878
+    },
+    {
+        "content": "<p>I'm not sure what medium to try doing it in. This is the sort of thing I like to reach for Dropbox Paper for, but that's inconvenient for something shared publicly like open-source work. Perhaps on a GitHub issue? With discussion in chat and/or on the issue, and with people editing the issue as needed.</p>",
+        "id": 1166326,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1618895053
+    },
+    {
+        "content": "<p>I had written down some of these areas in <a href=\"https://github.com/zulip/zulip/issues/8040#issuecomment-761567838\">https://github.com/zulip/zulip/issues/8040#issuecomment-761567838</a>, but that contains only the most visible parts of the UI -- right sidebar, message view and right sidebar PMs list. I think mention typeahead is also pretty visible.</p>",
+        "id": 1166327,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1618895186
+    },
+    {
+        "content": "<p>Great, yeah, that's a quite helpful list of several of these design choices.</p>\n<p>So basically the suggestion is to have a list that's a lot like that but also contains what we're doing on mobile, and in more-obscure corners of the webapp, and could also include choices in zulip-terminal.</p>",
+        "id": 1166328,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1618895542
+    },
+    {
+        "content": "<p>And also that we edit as we make changes to any of these (or make decisions for the first time, for those where we haven't really made a choice yet.)</p>",
+        "id": 1166329,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1618895603
+    },
+    {
+        "content": "<p>What sharing settings do we want for the doc? Looks like Paper doesn't let you use different groups for different levels of permissions (view vs. edit),  but Google Docs would certainly work for that. Perhaps iterating in Paper or Docs and later exporting to Github would work?</p>",
+        "id": 1166345,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1618900429
+    },
+    {
+        "content": "<p>ideally publicly readable, but editing limited to a set of email addresses</p>",
+        "id": 1166351,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618901137
+    },
+    {
+        "content": "<p>Yeah, I think you have to use Docs rather than Paper for that.</p>",
+        "id": 1166372,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1618901731
+    },
+    {
+        "content": "<p>another thought here: presumably we should replace the name of a muted user with \"Muted User\" or something similar in the poll widget?</p>",
+        "id": 1166427,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618912850
+    },
+    {
+        "content": "<p>and presumably for the reaction list UI as well</p>",
+        "id": 1166429,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618913050
+    },
+    {
+        "content": "<p>i'm going to go ahead and make a google doc for this</p>",
+        "id": 1166430,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618913071
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17945\">Wesley Aptekar-Cassels</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1166429\">said</a>:</p>\n<blockquote>\n<p>and presumably for the reaction list UI as well</p>\n</blockquote>\n<p>I think we can also hide a emoji reaction if the all people who reacted with that emoji are muted?</p>",
+        "id": 1166431,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1618913179
+    },
+    {
+        "content": "<p>i think it's best to show the reaction, even in that case? but i'm not 100% sure, i could definitely be convinced otherwise.</p>",
+        "id": 1166433,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618913394
+    },
+    {
+        "content": "<p><a href=\"https://docs.google.com/document/d/1UFQnai5t8R6Fp8lDiWlO9XWuqTUrMrI1tMd-7e7ml3Y/\">here's</a> the doc. anyone who wants edit permissions, just PM me your google email address :)</p>\n<p>i added <span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span> <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> and <span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span>, since i happen to know all of your emails :)</p>",
+        "id": 1166435,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618913617
+    },
+    {
+        "content": "<p>from a goals/design perspective, i think <a href=\"https://github.com/zulip/zulip/issues/168#issuecomment-291614022\">this comment</a> in <a href=\"https://github.com/zulip/zulip/pull/168\">#168</a> is very insightful. while it describes a feature that we're probably not going to build right now, this part of the comment seems quite useful:</p>\n<blockquote>\n<p>When modeling threats to a user, these are the general use cases I'm aware of.</p>\n<ul>\n<li>Abusive close contact (authority figure or peer; parent, partner, manager, forum moderator, co-worker, fellow student)</li>\n<li>Stalker (not necessarily a close contact, but a singular/small group, and often known, entity)</li>\n<li>Swarm attack (the instigator may be a stalker, or it may be a loosely organized interest group with participants who are not above participating in a swarm attack; this is probably less of a problem in a small-ish organization with known users)</li>\n</ul>\n<p>Non-threatening:</p>\n<ul>\n<li>Overly chatty user</li>\n<li>Obnoxious user</li>\n<li>Reply-all storm/topic of extreme disinterest</li>\n<li>1:1 excessive chattiness or obnoxiousness</li>\n</ul>\n</blockquote>",
+        "id": 1166442,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618914906
+    },
+    {
+        "content": "<p>i do think that it would be good to build a v2 of this feature that separates muting and blocking. i'm curious if people have thoughts on that.</p>",
+        "id": 1166443,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618914943
+    },
+    {
+        "content": "<p>In the current version, does anything change from the perspective of the person being muted? If A mutes B, can B still see presence status for A?</p>",
+        "id": 1166445,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1618916855
+    },
+    {
+        "content": "<p>i think we want the fact that a user has been muted to be completely invisible to that user, i was just thinking about adding that to the design doc.</p>",
+        "id": 1166449,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618918382
+    },
+    {
+        "content": "<p>i can see the argument for hiding the presence status, but i don't think it's worth leaking information about the fact that someone has muted you.</p>",
+        "id": 1166450,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618918416
+    },
+    {
+        "content": "<p>Given that reaction lists and polls both have counts, I wonder whether \"Muted user\" or just leaving them out of the list (but not the count) completely makes sense. The latter is definitely more confusing if they notice, but is less likely to make somebody remember about something they don't want to think about. I don't have a great sense how real or common the latter is.</p>",
+        "id": 1166576,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1618935408
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17945\">Wesley Aptekar-Cassels</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1166450\">said</a>:</p>\n<blockquote>\n<p>i can see the argument for hiding the presence status, but i don't think it's worth leaking information about the fact that someone has muted you.</p>\n</blockquote>\n<p>Yeah, I think that makes sense. Would that potentially be one of the differences between muting a user and blocking them, where blocking would not be secret and could hide presence information?</p>\n<p>The context for my question is that a user I chatted with brought up presence information as feeling somewhat privacy-invasive in the context of a class that's using Zulip. Students can always just set their status to \"unavailable\", but being able to hide status from particular users (e.g one's ex) would be a nice-to-have.</p>",
+        "id": 1166580,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1618936750
+    },
+    {
+        "content": "<p>I think we can also wait a bit and see how much the muted user feature gets used, and that will help guide how much/how soon we want to invest into refining it further.</p>",
+        "id": 1166628,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1618941186
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1166580\">said</a>:</p>\n<blockquote>\n<p>Would that potentially be one of the differences between muting a user and blocking them, where blocking would not be secret and could hide presence information?</p>\n</blockquote>\n<p>I had a similar thought.</p>\n<blockquote>\n<p>The context for my question is that a user I chatted with brought up presence information as feeling somewhat privacy-invasive in the context of a class that's using Zulip. Students can always just set their status to \"unavailable\", ...</p>\n</blockquote>\n<p>Just to mention it, at least as of 3.3, clients receive presence events even if a user has marked themselves unavailable. I think it's more intended as an informational feature rather than as a privacy or abuse-prevention feature.</p>",
+        "id": 1166849,
+        "sender_full_name": "Cyphase",
+        "timestamp": 1618963505
+    },
+    {
+        "content": "<p>This setting at the bottom of \"Notification settings\" lets individual users configure that behavior.</p>\n<p><a href=\"/user_uploads/2/76/7BV6VGQyj4qeLKBa0leNT8I4/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/76/7BV6VGQyj4qeLKBa0leNT8I4/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/76/7BV6VGQyj4qeLKBa0leNT8I4/image.png\"></a></div>",
+        "id": 1166856,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1618965045
+    },
+    {
+        "content": "<blockquote>\n<p>Yeah, I think that makes sense. Would that potentially be one of the differences between muting a user and blocking them, where blocking would not be secret and could hide presence information?</p>\n</blockquote>\n<p>this is one way of thinking about it (Twitter has this model), although i'm not 100% convinced that it's the best. the way i'd think about it is that both muting and blocking should be invisible to the muted/blocked user, but muting is primarily for people who you find annoying and want to filter out in public streams, while blocking is for ensuring that the person can't contact you/you can't see them.</p>\n<p>basically, if muting and blocking are separate, i'd want muting to be \"this person is noisy and i want to filter them out, but if they mention or PM me i should still see it\", and blocking is what we're currently building.</p>",
+        "id": 1167170,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1619021955
+    },
+    {
+        "content": "<p>I wonder to what extent we have communities where the annoying case is a big issue, since the way Zulip is being used is more professional than social (perhaps Recurse being the main exception?).</p>",
+        "id": 1167176,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1619022217
+    },
+    {
+        "content": "<p>I think if a person is truly being abusive, they should just be removed from the realm completely.  So I would tend to view the normal use case here as somebody simply being annoying or noisy.  So if there are a few loopholes like somebody you muted shows up in poll results, I don't think it's the end of the world, and we can iterate.</p>",
+        "id": 1167641,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1619102251
+    },
+    {
+        "content": "<p>some professional orgs are going to have states between \"stop person A from abusing person B\" and \"entirely ban person A.\" especially big ones.</p>",
+        "id": 1167642,
+        "sender_full_name": "Ken Clary",
+        "timestamp": 1619102502
+    },
+    {
+        "content": "<p>Yeah, that's fair.  I just think if somebody shows up in a poll result, and it bothers you that much to see their name, you probably either have a legitimate case to get that person banned, or, if not, you can simply ignore the person.</p>",
+        "id": 1167645,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1619103202
+    },
+    {
+        "content": "<p>I do kinda suspect that blocking someone (beyond \"muting\") wouldn't remove their data from your view of a poll. I guess it would depend on whether the poll has freeform text answers that are visible, wherein someone could use that text to perpetuate harassment and such.</p>",
+        "id": 1167646,
+        "sender_full_name": "Ken Clary",
+        "timestamp": 1619103528
+    },
+    {
+        "content": "<p>Based on past experience, the most likely \"annoying\" case will be a bot that someone set up where the correct community action is to turn off the bot.</p>",
+        "id": 1168193,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1619206303
+    },
+    {
+        "content": "<p>(deleted, sorry, wrong topic)</p>",
+        "id": 1168256,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1619209093
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/16915\">https://github.com/zulip/zulip/pull/16915</a> is down to only 300 lines unmerged from the original ~2K -- basically just the UI commits.</p>",
+        "id": 1169913,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1619549626
+    },
+    {
+        "content": "<p>Do we need to do anything with typing notifications from muted users?  Probably good to suppress them client-side.</p>",
+        "id": 1170330,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1619582232
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1170330\">said</a>:</p>\n<blockquote>\n<p>Do we need to do anything with typing notifications from muted users?  Probably good to suppress them client-side.</p>\n</blockquote>\n<p>Yeah, agreed. I've just added an item for that to <a href=\"https://docs.google.com/document/d/1UFQnai5t8R6Fp8lDiWlO9XWuqTUrMrI1tMd-7e7ml3Y/edit\">the doc</a> Wesley made last week.</p>",
+        "id": 1170646,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1619632897
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17945\">Wesley Aptekar-Cassels</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1166351\">said</a>:</p>\n<blockquote>\n<p>ideally publicly readable, but editing limited to a set of email addresses</p>\n</blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1166372\">said</a>:</p>\n<blockquote>\n<p>Yeah, I think you have to use Docs rather than Paper for that.</p>\n</blockquote>\n<p>FTR, Paper supports this just fine. Here's a demo doc, which shows right up for me in an incognito window:<br>\n<a href=\"https://paper.dropbox.com/doc/This-is-a-test-zJhfC2WkJP0r2qPq56YUO\">https://paper.dropbox.com/doc/This-is-a-test-zJhfC2WkJP0r2qPq56YUO</a></p>\n<p>I did that with the \"Invite\" button at the top &gt; \"Settings\" &gt; then setting the radio buttons like so:<br>\n<a href=\"/user_uploads/2/e8/dw3UoFcNNTPlMoDWeFO89xQN/image.png\">image.png</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/e8/dw3UoFcNNTPlMoDWeFO89xQN/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/e8/dw3UoFcNNTPlMoDWeFO89xQN/image.png\"></a></div><p>in particular setting \"Who can open this doc?\" to \"Anyone with the link\".</p>",
+        "id": 1170650,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1619633720
+    },
+    {
+        "content": "<p>two more thoughts about how things should work, that we should document if we agree on:</p>\n<ul>\n<li>messages from a muted user that mention the recipient should not show up as highlighted in the UI until expanded</li>\n<li>group PMs where all of the other users in the group are muted should be marked as read and not show in the UI (this is not super important, imo, but seems reasonable)</li>\n</ul>",
+        "id": 1172444,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1619860497
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17945\">@Wesley Aptekar-Cassels</span> agreed.  I think the webapp-side implementation already agrees with the \"group PMs\" item for the UI side (we came to the same conclusion in what we merged on Friday for the left sidebar), but I think we probably still need to do something for huddle messages in the server code.</p>",
+        "id": 1172969,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620015382
+    },
+    {
+        "content": "<p>Oh, never mind, the server will already do that implicitly: messages sent in a group private message thread where everyone other than you is muted cannot be unread, since the sender must be either you or a muted user anyway.</p>",
+        "id": 1172970,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620015462
+    },
+    {
+        "content": "<p>BTW this is a super simple prototype (~10 lines of code) for the visuals of hiding muted messages in the webapp:<br>\n<a href=\"user_uploads/2/93/hDNpE8BR9R1BATd80E9QoO9h/image.png\">https://chat.zulip.org/user_uploads/2/93/hDNpE8BR9R1BATd80E9QoO9h/image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"user_uploads/2/93/hDNpE8BR9R1BATd80E9QoO9h/image.png\" title=\"https://chat.zulip.org/user_uploads/2/93/hDNpE8BR9R1BATd80E9QoO9h/image.png\"><img src=\"user_uploads/2/93/hDNpE8BR9R1BATd80E9QoO9h/image.png\"></a></div>",
+        "id": 1172971,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620015516
+    },
+    {
+        "content": "<div class=\"codehilite\" data-code-language=\"HTML+Handlebars\"><pre><span></span><code>commit cae388ea65c870d8f53fde6cd3f31ea390defff5 (HEAD -&gt; master)\nAuthor: Tim Abbott <span class=\"p\">&lt;</span><span class=\"nt\">tabbott</span><span class=\"err\">@</span><span class=\"na\">zulip</span><span class=\"err\">.</span><span class=\"na\">com</span><span class=\"p\">&gt;</span>\nDate:   Sun May 2 20:43:04 2021 -0700\n\n    muting: Hide messages sent by muted users.\n\ndiff --git a/static/js/message_list_view.js b/static/js/message_list_view.js\nindex f64a808889..539b6c8652 100644\n--- a/static/js/message_list_view.js\n+++ b/static/js/message_list_view.js\n@@ -19,6 +19,7 @@ import * as message_edit from \"./message_edit\";\n import * as message_lists from \"./message_lists\";\n import * as message_store from \"./message_store\";\n import * as message_viewport from \"./message_viewport\";\n+import * as muting from \"./muting\";\n import * as narrow_state from \"./narrow_state\";\n import <span class=\"err\">{</span>page_params} from \"./page_params\";\n import * as people from \"./people\";\n@@ -358,6 +359,7 @@ export class MessageListView <span class=\"err\">{</span>\n             ) <span class=\"err\">{</span>\n                 message_container.include_sender = false;\n             }\n+            message_container.sender_is_muted = muting.is_user_muted(message_container.msg.sender_id);\n\n             message_container.sender_is_bot = people.sender_is_bot(message_container.msg);\n             message_container.sender_is_guest = people.sender_is_guest(message_container.msg);\ndiff --git a/static/templates/single_message.hbs b/static/templates/single_message.hbs\nindex f1c51cc08a..e2d5d53a3e 100644\n--- a/static/templates/single_message.hbs\n+++ b/static/templates/single_message.hbs\n@@ -1,14 +1,26 @@\n <span class=\"p\">&lt;</span><span class=\"nt\">div</span> <span class=\"na\">zid</span><span class=\"o\">=</span><span class=\"s\">\"</span><span class=\"cp\">{{</span><span class=\"nv\">msg/id</span><span class=\"cp\">}}</span><span class=\"s\">\"</span> <span class=\"na\">id</span><span class=\"o\">=</span><span class=\"s\">\"</span><span class=\"cp\">{{</span><span class=\"nv\">table_name</span><span class=\"cp\">}}{{</span><span class=\"nv\">msg/id</span><span class=\"cp\">}}</span><span class=\"s\">\"</span>\n<span class=\"err\">+</span>  <span class=\"cp\">{{</span><span class=\"m m-Attribute\">#if</span> <span class=\"nv\">sender_is_muted</span><span class=\"cp\">}}</span>\n<span class=\"err\">+</span>  <span class=\"na\">class</span><span class=\"o\">=</span><span class=\"s\">\"message_row selectable_row\"</span> <span class=\"na\">role</span><span class=\"o\">=</span><span class=\"s\">\"listitem\"</span><span class=\"p\">&gt;</span>\n+  <span class=\"cp\">{{</span><span class=\"nv\">else</span><span class=\"cp\">}}</span>\n   class=\"message_row<span class=\"cp\">{{</span><span class=\"err\">^</span><span class=\"nv\">msg/is_stream</span><span class=\"cp\">}}</span> private-message<span class=\"cp\">{{</span><span class=\"m m-Attribute\">/msg/is_stream</span><span class=\"cp\">}}{{</span><span class=\"m m-Attribute\">#include_sender</span><span class=\"cp\">}}</span> include-sender<span class=\"cp\">{{</span><span class=\"m m-Attribute\">/include_sender</span><span class=\"cp\">}}{{</span><span class=\"m m-Attribute\">#contains_mention</span><span class=\"cp\">}}</span> mention<span class=\"cp\">{{</span><span class=\"m m-Attribute\">/contains_mention</span><span class=\"cp\">}}{{</span><span class=\"m m-Attribute\">#include_footer</span><span class=\"cp\">}}</span> last_message<span class=\"cp\">{{</span><span class=\"m m-Attribute\">/include_footer</span><span class=\"cp\">}}{{</span><span class=\"m m-Attribute\">#msg.unread</span><span class=\"cp\">}}</span> unread<span class=\"cp\">{{</span><span class=\"m m-Attribute\">/msg.unread</span><span class=\"cp\">}}</span> <span class=\"cp\">{{</span><span class=\"m m-Attribute\">#if</span> <span class=\"nv\">msg.locally_echoed</span><span class=\"cp\">}}</span>local<span class=\"cp\">{{</span><span class=\"m m-Attribute\">/if</span><span class=\"cp\">}}</span> selectable_row\"\n   role=\"listitem\"&gt;\n     <span class=\"p\">&lt;</span><span class=\"nt\">div</span> <span class=\"na\">class</span><span class=\"o\">=</span><span class=\"s\">\"unread_marker\"</span><span class=\"p\">&gt;&lt;</span><span class=\"nt\">div</span> <span class=\"na\">class</span><span class=\"o\">=</span><span class=\"s\">\"unread-marker-fill\"</span><span class=\"p\">&gt;&lt;/</span><span class=\"nt\">div</span><span class=\"p\">&gt;&lt;/</span><span class=\"nt\">div</span><span class=\"p\">&gt;</span>\n+  <span class=\"cp\">{{</span><span class=\"m m-Attribute\">/if</span><span class=\"cp\">}}</span>\n     <span class=\"cp\">{{</span><span class=\"m m-Attribute\">#if</span> <span class=\"nv\">want_date_divider</span><span class=\"cp\">}}</span>\n     <span class=\"p\">&lt;</span><span class=\"nt\">div</span> <span class=\"na\">class</span><span class=\"o\">=</span><span class=\"s\">\"date_row no-select\"</span> <span class=\"cp\">{{</span><span class=\"m m-Attribute\">#if</span> <span class=\"nv\">msg/is_stream</span><span class=\"cp\">}}</span><span class=\"na\">style</span><span class=\"o\">=</span><span class=\"s\">\"box-shadow: inset 2px 0px 0px 0px </span><span class=\"cp\">{{</span><span class=\"nv\">background_color</span><span class=\"cp\">}}</span><span class=\"s\">, -1px 0px 0px 0px </span><span class=\"cp\">{{</span><span class=\"nv\">background_color</span><span class=\"cp\">}}</span><span class=\"s\">;\"</span><span class=\"cp\">{{</span><span class=\"m m-Attribute\">/if</span><span class=\"cp\">}}</span><span class=\"p\">&gt;</span><span class=\"cs\">{{{</span><span class=\"nv\">date_divider_html</span><span class=\"cs\">}}}</span><span class=\"p\">&lt;/</span><span class=\"nt\">div</span><span class=\"p\">&gt;</span>\n     <span class=\"cp\">{{</span><span class=\"m m-Attribute\">/if</span><span class=\"cp\">}}</span>\n     <span class=\"p\">&lt;</span><span class=\"nt\">div</span> <span class=\"na\">class</span><span class=\"o\">=</span><span class=\"s\">\"messagebox </span><span class=\"cp\">{{</span><span class=\"m m-Attribute\">#if</span> <span class=\"nv\">next_is_same_sender</span><span class=\"cp\">}}</span><span class=\"s\">next_is_same_sender</span><span class=\"cp\">{{</span><span class=\"m m-Attribute\">/if</span><span class=\"cp\">}}</span><span class=\"s\">\"</span>\n       <span class=\"cp\">{{</span><span class=\"m m-Attribute\">#if</span> <span class=\"nv\">msg/is_stream</span><span class=\"cp\">}}</span><span class=\"na\">style</span><span class=\"o\">=</span><span class=\"s\">\"box-shadow: inset 2px 0px 0px 0px </span><span class=\"cp\">{{</span><span class=\"nv\">background_color</span><span class=\"cp\">}}</span><span class=\"s\">, -1px 0px 0px 0px </span><span class=\"cp\">{{</span><span class=\"nv\">background_color</span><span class=\"cp\">}}</span><span class=\"s\">;\"</span><span class=\"cp\">{{</span><span class=\"m m-Attribute\">/if</span><span class=\"cp\">}}</span><span class=\"p\">&gt;</span>\n+        <span class=\"cp\">{{</span><span class=\"m m-Attribute\">#if</span> <span class=\"nv\">sender_is_muted</span><span class=\"cp\">}}</span>\n+        <span class=\"p\">&lt;</span><span class=\"nt\">div</span> <span class=\"na\">class</span><span class=\"o\">=</span><span class=\"s\">\"messagebox-content\"</span><span class=\"p\">&gt;</span>\n+          <span class=\"p\">&lt;</span><span class=\"nt\">div</span> <span class=\"na\">class</span><span class=\"o\">=</span><span class=\"s\">\"message_top_line\"</span><span class=\"p\">&gt;</span>\n+            <span class=\"p\">&lt;</span><span class=\"nt\">em</span><span class=\"p\">&gt;</span>A message was sent by a user you have muted.<span class=\"p\">&lt;/</span><span class=\"nt\">em</span><span class=\"p\">&gt;</span>\n+          <span class=\"p\">&lt;/</span><span class=\"nt\">div</span><span class=\"p\">&gt;</span>\n+         <span class=\"p\">&lt;/</span><span class=\"nt\">div</span><span class=\"p\">&gt;</span>\n+        <span class=\"cp\">{{</span><span class=\"nv\">else</span><span class=\"cp\">}}</span>\n         <span class=\"p\">&lt;</span><span class=\"nt\">div</span> <span class=\"na\">class</span><span class=\"o\">=</span><span class=\"s\">\"messagebox-content\"</span><span class=\"p\">&gt;</span>\n             <span class=\"cp\">{{</span><span class=\"k\">&gt;</span> <span class=\"nv\">message_body</span><span class=\"cp\">}}</span>\n         <span class=\"p\">&lt;/</span><span class=\"nt\">div</span><span class=\"p\">&gt;</span>\n+        <span class=\"cp\">{{</span><span class=\"m m-Attribute\">/if</span><span class=\"cp\">}}</span>\n     <span class=\"p\">&lt;/</span><span class=\"nt\">div</span><span class=\"p\">&gt;</span>\n <span class=\"p\">&lt;/</span><span class=\"nt\">div</span><span class=\"p\">&gt;</span>\n</code></pre></div>",
+        "id": 1172972,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620015556
+    },
+    {
+        "content": "<p>Super hacky but I think the UX that generates is more or less passable.</p>",
+        "id": 1172973,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620015598
+    },
+    {
+        "content": "<p>(Didn't spend any time on the text etc. since my goal was to unblock <span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span> and <span class=\"user-mention\" data-user-id=\"5140\">@Aman Agrawal (amanagr)</span>)</p>",
+        "id": 1172974,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620015631
+    },
+    {
+        "content": "<p>Thanks! I get that this is just a prototype, but to clarify, we will want to give this treatment to message groups right? (And not individual messages?)<br>\nThat'll allow us to hide multiple consequetive muted messages into a single such dialog, like what's implemented in mobile.</p>",
+        "id": 1172998,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620023943
+    },
+    {
+        "content": "<p>Yeah, the hard part is implementing this for message groups. So, if we are not planning to do that, <span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span> can just integrating this in his PR easily right?</p>",
+        "id": 1173000,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1620027046
+    },
+    {
+        "content": "<p>Here's how the above style looks like with many messages<br>\n<a href=\"/user_uploads/2/52/o2NXW6QTUijpjHrxYTt3ugjH/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/52/o2NXW6QTUijpjHrxYTt3ugjH/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/52/o2NXW6QTUijpjHrxYTt3ugjH/image.png\"></a></div>",
+        "id": 1173022,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620037531
+    },
+    {
+        "content": "<p>(I deliberately used the same left margin as a normal message, because reactions look weird otherwise)<br>\nAnother question is, should we also be hiding reactions on these messages?</p>",
+        "id": 1173024,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620037970
+    },
+    {
+        "content": "<p>my approach on mobile was to hide reactions as well. i think that's best, especially if we're coalescing messages.</p>",
+        "id": 1173047,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1620051931
+    },
+    {
+        "content": "<p>Yeah, agreed re: hiding reactions.</p>",
+        "id": 1173078,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620055692
+    },
+    {
+        "content": "<p>I think it's passable to have the repetition if there's a lot of messages from a muted user.  It might be nicer if we can collapse them, but doing so would likely require some tricky restructuring of <code>message_list</code> data structures for how moving the cursor works.  And perhaps there's some value in being able to see the timestamps and/or just toggle display for a single message that someone linked you to (without the rest), which is only possible if we display one line per message.</p>",
+        "id": 1173079,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620055795
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1173078\">said</a>:</p>\n<blockquote>\n<p>Yeah, agreed re: hiding reactions.</p>\n</blockquote>\n<p>Do we want the dialog to float-left then?</p>",
+        "id": 1173102,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620057584
+    },
+    {
+        "content": "<p>Also, in the screenshot above, it somehow feels like the first hidden message was sent by <code>Zulip error bot</code>, because there's no clear boundary (since no sender is shown). Should we do something about that?</p>",
+        "id": 1173103,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620057671
+    },
+    {
+        "content": "<p>I think returning to the float-left styling from my prototype probably fixes that problem.</p>",
+        "id": 1173110,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620059043
+    },
+    {
+        "content": "<p>Ok, makes sense!</p>",
+        "id": 1173125,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620059279
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1173078\">said</a>:</p>\n<blockquote>\n<p>Yeah, agreed re: hiding reactions.</p>\n</blockquote>\n<p>I've gone and added that explicitly to <a href=\"https://docs.google.com/document/d/1UFQnai5t8R6Fp8lDiWlO9XWuqTUrMrI1tMd-7e7ml3Y/edit\">the doc</a>.</p>",
+        "id": 1173318,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1620069544
+    },
+    {
+        "content": "<p>Also a note that ideally we coalesce messages, but that the webapp currently doesn't/won't because of that trickiness.</p>",
+        "id": 1173324,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1620069698
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17945\">Wesley Aptekar-Cassels</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1172444\">said</a>:</p>\n<blockquote>\n<ul>\n<li>messages from a muted user that mention the recipient should not show up as highlighted in the UI until expanded</li>\n</ul>\n</blockquote>\n<p>Also recorded this one.</p>",
+        "id": 1173332,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1620069879
+    },
+    {
+        "content": "<p>Sure; we should make sure to sync those details to the /api/ documentation for posterity.</p>",
+        "id": 1173333,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620069894
+    },
+    {
+        "content": "<p>Thoughts?<br>\n<a href=\"/user_uploads/2/41/zaQWLTSBC2BAz_jyVHzqQPvq/reveal_hidden_message.gif\">reveal_hidden_message.gif</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/41/zaQWLTSBC2BAz_jyVHzqQPvq/reveal_hidden_message.gif\" title=\"reveal_hidden_message.gif\"><img src=\"/user_uploads/2/41/zaQWLTSBC2BAz_jyVHzqQPvq/reveal_hidden_message.gif\"></a></div>",
+        "id": 1173699,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620116585
+    },
+    {
+        "content": "<p>Because we don't usually rerender the <code>all_messages</code> list, a hidden message if revealed in-</p>\n<ul>\n<li>the <code>all_messages</code> list will be re-hidden only after a reload (or if some event triggers a rerender of that list)</li>\n<li>any other narrow will be re-hidden after changing the narrows</li>\n</ul>",
+        "id": 1173783,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620136774
+    },
+    {
+        "content": "<p>For the reactions tooltip, do we want to show <code>... and some muted users reacted with :emoji:</code> or replace each username individually with placeholder text like <code>Muted user</code>?</p>",
+        "id": 1173784,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620139123
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span> I think that looks like a reasonable click behavior, yeah.</p>",
+        "id": 1173809,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620143691
+    },
+    {
+        "content": "<p>When the messages get hidden, it looks like the text size for \"This message was hidden...\" changes after a second?</p>",
+        "id": 1173867,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1620146586
+    },
+    {
+        "content": "<p>Yeah, I noticed that too -- may be a side effect of the animation?</p>",
+        "id": 1173873,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620147171
+    },
+    {
+        "content": "<p>I couldn't reproduce this again. I think it's probably some other glitch amplified by my machine behaving kinda slow at the time of recording the GIF. I've seen this rarely happening on CZO in message list too, most of the times just after a reload.</p>",
+        "id": 1173879,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620147687
+    },
+    {
+        "content": "<p>Yeah, it kinda looks like some font-size CSS is taking a moment to be processed, or something like that.  Weird.</p>",
+        "id": 1173886,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620148716
+    },
+    {
+        "content": "<p>We now have only a tiny bit of webapp code not merged (for an extension that I'm not sure whether we want), so this feature will definitely be in Zulip 4.0.  The main remaining larger project is writing a nice /help/ article on muting users, and adding links in all the right places to that.</p>",
+        "id": 1174408,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620233081
+    },
+    {
+        "content": "<p>Re <a href=\"https://github.com/zulip/zulip/pull/16915#issuecomment-832836231\">https://github.com/zulip/zulip/pull/16915#issuecomment-832836231</a></p>\n<p>Almost all of <a href=\"https://github.com/zulip/zulip/pull/16915\">#16915</a> is merged now, except those changes which will exclude 1:1 PMs from message lists entirely.<br>\nThe reasoning behind this was that, doing so would not lead to loss of  conversational context, so we can take the most severe actions.<br>\nFrom what's currently on master, these messages will still be hidden under a \"This message was hidden\" banner. So do we or do we not want to exclude these messages all together?</p>",
+        "id": 1174409,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620233162
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17945\">@Wesley Aptekar-Cassels</span> <span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span> what's your thinking on that?  My worry is that it's a lot of complexity that could end up being buggy, and I'm not sure that users will expect that 1:1 PMs from a muted user will work differently from other messages sent by the muted user in this way.</p>",
+        "id": 1174414,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620233705
+    },
+    {
+        "content": "<p>Keeping it consistent makes sense to me... Also, it might be better to have some way to know that those PMs exist?</p>",
+        "id": 1174427,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1620233973
+    },
+    {
+        "content": "<p>CC <span class=\"user-mention\" data-user-id=\"58\">@Steve Howell (showell)</span> since he was in favour of this when we discussed about this feature a couple months ago in <a class=\"stream-topic\" data-stream-id=\"2\" href=\"/#narrow/stream/2-general/topic/Mute.20user.20.2316915\">#general &gt; Mute user #16915</a></p>",
+        "id": 1174428,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620234024
+    },
+    {
+        "content": "<p>BTW, is there a nicer term for 1:1 PMs? Or is that assumed to be implied when someone simply says \"private message\"? (vs \"huddle\" for more than two people involved?)</p>",
+        "id": 1174449,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620234773
+    },
+    {
+        "content": "<p>Typically I use the terms \"private messages\" and \"group private messages\" in user-facing text that's try to distinguish the two.</p>",
+        "id": 1174455,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620235000
+    },
+    {
+        "content": "<p>this is mostly relevant for the all messages view, right? if we don't do this, would the PM show up as being to \"Muted User\" in all messages?</p>",
+        "id": 1174507,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1620236957
+    },
+    {
+        "content": "<p>Yes, and search and the \"Private messages\" view too.</p>",
+        "id": 1174510,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620237041
+    },
+    {
+        "content": "<p>In master, the messages will appear as \"A message was sent by a muted user. Click here for view.\" like they would for any other message that user sent.</p>",
+        "id": 1174513,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620237068
+    },
+    {
+        "content": "<p>(I guess one distinction, though, is that I think messages you sent them in a PM might appear as normal right now?  Haven't tested)</p>",
+        "id": 1174514,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620237083
+    },
+    {
+        "content": "<p>i should specific that the thing i'm wondering about is the header:</p>\n<p><a href=\"/user_uploads/2/8b/hx3m8tcdmBUZL41RrpduDS1t/0000-recent.png\">muted user header</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/8b/hx3m8tcdmBUZL41RrpduDS1t/0000-recent.png\" title=\"muted user header\"><img src=\"/user_uploads/2/8b/hx3m8tcdmBUZL41RrpduDS1t/0000-recent.png\"></a></div><p>is the thing that would change that to show \"Muted User\" just not deployed on CZO?</p>",
+        "id": 1174518,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1620237258
+    },
+    {
+        "content": "<p>Oh, I see -- I think that we have not as of yet implemented something that would change the recipient bar headings.  Maybe that is a good argument for the \"not including PMs with muted users in interleaved views entirely\" proposal.</p>",
+        "id": 1174570,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620239545
+    },
+    {
+        "content": "<p>(We at present have not implemented a mechanism for changing how their name is displayed, because every UI widget we've thought about is either in settings (where we decided to leave it as normal) or in a context where we just don't show their content without explicit action at all)</p>",
+        "id": 1174571,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620239606
+    },
+    {
+        "content": "<p>yeah, that's the primary reason i see to hide PMs in interleaved views. if we want to hide the username in all contexts, which we've previously established that we do, we either need to rewrite headers, or hide PMs in interleaved views. personally, i'd lean towards hiding PMs in interleaved views for that, but i don't have a super strong opinion on the matter.</p>",
+        "id": 1174577,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1620239755
+    },
+    {
+        "content": "<p>Yeah, I think that's a reasonable design resolution here.</p>",
+        "id": 1174580,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620239813
+    },
+    {
+        "content": "<p>Wait, hiding PMs with muted users in interleaved views, or hiding <em>all</em> PMs in interleaved views? The former sounds reasonable but I don’t agree with the latter.</p>",
+        "id": 1174587,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1620239949
+    },
+    {
+        "content": "<p>hiding PMs with muted users in interleaved views — should've been more clear about that.</p>",
+        "id": 1174590,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1620239996
+    },
+    {
+        "content": "<p>We'll need to change the username to \"Muted user\" in huddle headers too then right?</p>",
+        "id": 1175036,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620263619
+    },
+    {
+        "content": "<blockquote>\n<p>For the reactions tooltip, do we want to show <code>... and some muted users reacted with :emoji:</code> or replace each username individually with placeholder text like <code>Muted user</code>?</p>\n</blockquote>\n<p>Would be great to have thoughts on this too!</p>",
+        "id": 1175037,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620263662
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"16839\">Abhijeet Bodas</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1175036\">said</a>:</p>\n<blockquote>\n<p>We'll need to change the username to \"Muted user\" in huddle headers too then right?</p>\n</blockquote>\n<p>Yeah, I think so.</p>",
+        "id": 1175054,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620264624
+    },
+    {
+        "content": "<p>For reactions, I think it'd be better to just never display reactions from muted users?</p>",
+        "id": 1175055,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620264674
+    },
+    {
+        "content": "<p>Ok, thanks!</p>",
+        "id": 1175069,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620267622
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/3b/VLOZg2Br99gk1lZc0fK33DMf/image.png\">image.png</a> <br>\n<span class=\"user-mention\" data-user-id=\"17945\">@Wesley Aptekar-Cassels</span>  How's this?</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/3b/VLOZg2Br99gk1lZc0fK33DMf/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/3b/VLOZg2Br99gk1lZc0fK33DMf/image.png\"></a></div>",
+        "id": 1175314,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620277704
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17945\">Wesley Aptekar-Cassels</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1174518\">said</a>:</p>\n<blockquote>\n<p>i should specific that the thing i'm wondering about is the header:</p>\n</blockquote>\n<p>Is the concern about seeing the username in the header or about these messages cluttering up the All messages/private messages narrows? (Or both?)</p>",
+        "id": 1175356,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620277807
+    },
+    {
+        "content": "<blockquote>\n<p>(I guess one distinction, though, is that I think messages you sent them in a PM might appear as normal right now? Haven't tested)</p>\n</blockquote>\n<p>Yep, the current version on master will only hide messages sent <em>by</em> muted users.</p>",
+        "id": 1175359,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620277861
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"16839\">Abhijeet Bodas</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1175314\">said</a>:</p>\n<blockquote>\n<p><a href=\"/user_uploads/2/3b/VLOZg2Br99gk1lZc0fK33DMf/image.png\">image.png</a> </p>\n</blockquote>\n<p>Maybe this is better?<br>\n<a href=\"/user_uploads/2/4b/z5-DZ38G29zpOHNuRKkcTqzO/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/4b/z5-DZ38G29zpOHNuRKkcTqzO/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/4b/z5-DZ38G29zpOHNuRKkcTqzO/image.png\"></a></div>",
+        "id": 1175385,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620282386
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1175055\">said</a>:</p>\n<blockquote>\n<p>For reactions, I think it'd be better to just never display reactions from muted users?</p>\n</blockquote>\n<p>I'm not sure I agree with this? If you're thinking we do this, there are a few other questions: do we hide the muted user's reactions in the number next to the message, or just the mouseover/longpress? If it's the former, that seems bad — for instance, if someone uses emoji for polls/etc, a person who's muted a user could see a different result than everyone else. If it's the latter, what happens when only a muted user has reacted, and you mouseover? Just an empty list?</p>\n<p>Using \"Muted User\" as a placeholder seems much cleaner to me. We could collapse it to \"N Muted Users\" if there's more than one, but that doesn't seem like it'd matter a lot.</p>",
+        "id": 1176256,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1620364338
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"16839\">Abhijeet Bodas</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1175356\">said</a>:</p>\n<blockquote>\n<p>Is the concern about seeing the username in the header or about these messages cluttering up the All messages/private messages narrows? (Or both?)</p>\n</blockquote>\n<p>It's about seeing the username in the header. The first screenshot you posted looks good to me.</p>",
+        "id": 1176258,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1620364374
+    },
+    {
+        "content": "<p>I don't think it's necessary for the MVP, but it would be nice if it was possible to re-hide messages from muted users after viewing them.</p>",
+        "id": 1177882,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1620674584
+    },
+    {
+        "content": "<p>Where would you put the button to do that?</p>",
+        "id": 1177929,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620676180
+    },
+    {
+        "content": "<p>Hm, a couple of options:</p>\n<ol>\n<li>In the three-dot menu for the message. It wouldn't be that easy to find, but you could get there if you needed it.</li>\n<li>Next to the sender's name would make it more discoverable. It might make it complicated if there are multiple messages from the muted user in a row, but I think it could just hide all the messages that share the from-header.</li>\n</ol>",
+        "id": 1178049,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1620679706
+    },
+    {
+        "content": "<p>Separately, it looks like this part of the design doc might not be implemented yet?</p>\n<blockquote>\n<p>Show “Muted User” or some similar placeholder value instead of username in poll widget response list.</p>\n</blockquote>",
+        "id": 1178051,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1620679745
+    },
+    {
+        "content": "<p>Yeah, 3-dots menu sounds right to me.</p>",
+        "id": 1178058,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620680021
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span> FYI for the poll widget detail.</p>",
+        "id": 1178059,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620680036
+    },
+    {
+        "content": "<p>We've now merged the documentation for the feature, and enabled it in production <span aria-label=\"tada\" class=\"emoji emoji-1f389\" role=\"img\" title=\"tada\">:tada:</span>.  Huge thanks for building this <span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span> and <span class=\"user-mention\" data-user-id=\"17945\">@Wesley Aptekar-Cassels</span>!</p>\n<p>What remains in my mind is the following:</p>\n<ul>\n<li>Folks should read <a href=\"help/mute-a-user\">https://chat.zulip.org/help/mute-a-user</a> and comment on the user-facing documentation.</li>\n<li>We should double-check that <a href=\"api/mute-user\">https://chat.zulip.org/api/mute-user</a> is accurate, since we've changed our mind about a few things since then.</li>\n<li>Do the \"Muted user\" name thing in polls.</li>\n<li>Implement or open issue for a 3-dots menu item to re-hide a muted message that we've shown.  (Issue might be the best resolution, and then we can address at our convenience; one can always navigate away and back to reset state if needed).</li>\n</ul>\n<p>But I could be missing things, so let me know if I am!</p>",
+        "id": 1178284,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620692543
+    },
+    {
+        "content": "<p>From the user-facing docs:</p>\n<blockquote>\n<p>To avoid interfering with administration, settings UI, such as the list of subscribers to a stream or members of the organization, display muted users name and other details as normal.</p>\n</blockquote>\n<p>I'm having a parse failure here.  Maybe:</p>\n<blockquote>\n<p>To avoid interfering with administration tasks, parts of the settings UI (such as the list of subscribers to a stream, or members of the organization) will display muted users' names and other details as normal.</p>\n</blockquote>",
+        "id": 1178313,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1620693388
+    },
+    {
+        "content": "<p>Yeah, that sounds good; feel free to just merge that edit.</p>",
+        "id": 1178315,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620693463
+    },
+    {
+        "content": "<blockquote>\n<p>All stream messages and group private messages sent by muted users are hidden behind a Click to reveal banner. This allows you to understand whether other users' messages are responses to messages sent by a muted user, while only seeing the muted user's name, profile picture, or message content for messages you have not opted into reading.</p>\n</blockquote>\n<p>The last line feels confusing. I think it should be \"for messages you <em>have</em> opted into reading\"?</p>",
+        "id": 1178404,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620707504
+    },
+    {
+        "content": "<p>One more thing which I just noticed is that we should probably also hide the muted users avatar from the Recent topic \"Participants\" column? Should I use <code>user-slash</code> as discussed in <a class=\"stream-topic\" data-stream-id=\"101\" href=\"/#narrow/stream/101-design/topic/.22muted.20user.22.20avatar\">#design &gt; \"muted user\" avatar</a>  for mobile?</p>",
+        "id": 1178408,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620708555
+    },
+    {
+        "content": "<p>Yeah that's a typo.  And yeah I think that's the right design for recent topics, good catch.</p>",
+        "id": 1178447,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620712421
+    },
+    {
+        "content": "<blockquote>\n<p>Consider also reporting abusive behavior to organization owners and administrators, who can take organization-level actions like deactivating a user.</p>\n</blockquote>\n<p>I don't think we should be advising people what to do about abusive behavior, because it depends a lot on the organization. E.g. at a company, the approriate action would be to talk to your manager/the person's manager/HR, not to the IT department folks running the Zulip instance. That's why I had a written the sentence more neutrally to mention a salient fact without telling people what they should do:</p>\n<p>\"Only organization <a href=\"/help/roles-and-permissions\">owners and administrators</a> can <a href=\"/help/deactivate-or-reactivate-a-user\">deactivate users</a>.\"</p>",
+        "id": 1178462,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1620714178
+    },
+    {
+        "content": "<blockquote>\n<p>One more thing which I just noticed is that we should probably also hide the muted users avatar from the Recent topic \"Participants\" column? Should I use user-slash as discussed in #design &gt; \"muted user\" avatar for mobile?</p>\n</blockquote>\n<p>Looks like <code>user-slash</code> was <a href=\"https://github.com/FortAwesome/Font-Awesome/blob/master/metadata/icons.yml#L20403\">introduced in</a> Font Awesome 5.0.11, and we're on 4.7<br>\nShould we use some other icon? <code>eye-slash</code> seems like an option. Since we've used it in other places also, that would be consistent too.</p>",
+        "id": 1178581,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620738773
+    },
+    {
+        "content": "<p>Yeah, and can't upgrade past Font Awesome 4.7 because they changed their licensing model starting with 5.0 to no longer be fully open source (many icons in 4.7 that we use only have similar looking variants in the non-OSS version of 5.0).</p>",
+        "id": 1178608,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620747704
+    },
+    {
+        "content": "<p>Eye-slash seems like  not a great option but we can try it and see how it looks.</p>",
+        "id": 1178610,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620747744
+    },
+    {
+        "content": "<p>I would just try the user icon, rather than <code>eye-slash</code>.</p>",
+        "id": 1178634,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1620749556
+    },
+    {
+        "content": "<p>Opened <a href=\"https://github.com/zulip/zulip/pull/18451\">#18451</a> for the recent topics participants part<br>\n<a href=\"/user_uploads/2/1c/K9oUXiD33-ZZjU52pvLpgx77/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/1c/K9oUXiD33-ZZjU52pvLpgx77/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/1c/K9oUXiD33-ZZjU52pvLpgx77/image.png\"></a></div>",
+        "id": 1179077,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620800480
+    },
+    {
+        "content": "<p>Is this detail worth adding to the user docs?</p>",
+        "id": 1179082,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620800854
+    },
+    {
+        "content": "<p>And opened issue <a href=\"https://github.com/zulip/zulip/pull/18452\">#18452</a> for hiding revealed messages.</p>",
+        "id": 1179088,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620802073
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"16839\">Abhijeet Bodas</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1179082\">said</a>:</p>\n<blockquote>\n<p>Is this detail worth adding to the user docs?</p>\n</blockquote>\n<p>I think so, if we explain it generally \"When an avatar is displayed\", rather than specifically talking about recent topics -- the mobile apps have some places where they do this too.</p>",
+        "id": 1179092,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620802825
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span> <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  It looks like we don't currently hide names of muted users in group PMs in the left sidebar list. Hopefully it's a quick fix! (Thanks to <span class=\"user-mention silent\" data-user-id=\"13313\">Chris Bobbe</span> for noticing!) <a href=\"/user_uploads/2/96/7CeSh3SFxZBNjFXj8GndaqdC/Screen-Shot-2021-05-12-at-11.58.18-PM.png\">Screen-Shot-2021-05-12-at-11.58.18-PM.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/96/7CeSh3SFxZBNjFXj8GndaqdC/Screen-Shot-2021-05-12-at-11.58.18-PM.png\" title=\"Screen-Shot-2021-05-12-at-11.58.18-PM.png\"><img src=\"/user_uploads/2/96/7CeSh3SFxZBNjFXj8GndaqdC/Screen-Shot-2021-05-12-at-11.58.18-PM.png\"></a></div>",
+        "id": 1179851,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1620889251
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/18474\">https://github.com/zulip/zulip/pull/18474</a></p>",
+        "id": 1179857,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620891749
+    },
+    {
+        "content": "<p>Thanks for reporting!</p>",
+        "id": 1179858,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620891759
+    },
+    {
+        "content": "<p>Regarding <a href=\"https://github.com/zulip/zulip/issues/18452\">https://github.com/zulip/zulip/issues/18452</a>,( Allow re-hiding a revealed message from a muted sender.)<br>\nCurrently, I have implemented following design:<br>\n<a href=\"/user_uploads/2/79/iXxVNBgPQ37ENkx_7IXwaiYV/muted_user_message.gif\">muted_user_message.gif</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/79/iXxVNBgPQ37ENkx_7IXwaiYV/muted_user_message.gif\" title=\"muted_user_message.gif\"><img src=\"/user_uploads/2/79/iXxVNBgPQ37ENkx_7IXwaiYV/muted_user_message.gif\"></a></div><p>Here, in popover the option for hide/reveal is always present based on whether message is shown/hidden so I wanted ideas over few points on this:</p>\n<ul>\n<li>Do we want to show only hide option in the popover, when message is revealed.(that is as message can always be revealed using content <code>click here to reveal</code>)</li>\n<li>Icon suggestion regarding these, currently I have used <code>fa-plus</code> for reveal option and <code>fa-minus</code> for hide option but that  looks weird  with icon in current collapse/uncollapse option in the same popover.</li>\n</ul>",
+        "id": 1179898,
+        "sender_full_name": "Purushottam Tiwari",
+        "timestamp": 1620911539
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17546\">@Purushottam Tiwari (m-e-l-u-h-a-n)</span> I think we only need the hide option -- we have a separate \"Collapse\" feature that applies generically.</p>",
+        "id": 1179978,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620923465
+    },
+    {
+        "content": "<p>There's a proposal to change the wording of the second tip in <a href=\"https://zulip.com/help/mute-a-user\">https://zulip.com/help/mute-a-user</a> from:</p>\n<blockquote>\n<p>Zulip offers no way to distinguish a user who has muted you from a user who is ignoring you.</p>\n</blockquote>\n<p>to:</p>\n<blockquote>\n<p>When you mute a user, they have no way of telling that you have muted them.</p>\n</blockquote>\n<p>Thoughts?</p>",
+        "id": 1180007,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620924633
+    },
+    {
+        "content": "<p>I struggled a lot with the original string, because a user could potentially guess based on your behavior in reaction to their messages, and you will be completely ignoring what they say in PMs.  So I don't want to promise that another user can't guess.</p>",
+        "id": 1180010,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620924718
+    },
+    {
+        "content": "<p>I think the proposed revision may solve that problem (and I do prefer the framking of you as being the person who did the muting), but I'm not sure.</p>",
+        "id": 1180012,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620924750
+    },
+    {
+        "content": "<p>I think something like <code>Muting someone does not affect their user experience in any way</code> would be better. It's technically correct, and one can infer the above from it.</p>",
+        "id": 1180047,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620926686
+    },
+    {
+        "content": "<p>Hmm, yeah, that might express this more clearly.</p>",
+        "id": 1180050,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1620926761
+    },
+    {
+        "content": "<p>I think any of these options are reasonable; we can go with <span class=\"user-mention silent\" data-user-id=\"16839\">Abhijeet Bodas</span> 's proposal.</p>\n<blockquote>\n<p>Muting someone does not affect their user experience in any way.</p>\n</blockquote>",
+        "id": 1180230,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1620937504
+    },
+    {
+        "content": "<p>Created: <a href=\"https://github.com/zulip/zulip/pull/18497\">https://github.com/zulip/zulip/pull/18497</a> for <a href=\"https://github.com/zulip/zulip/issues/18452\">issue #18452</a>.<br>\n(Allow muted user's message to be rehidden.)</p>",
+        "id": 1181037,
+        "sender_full_name": "Purushottam Tiwari",
+        "timestamp": 1620995447
+    },
+    {
+        "content": "<p>Opened <a href=\"https://github.com/zulip/zulip/pull/18498\">#18498</a> for the documentation point.</p>",
+        "id": 1181109,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1620999138
+    },
+    {
+        "content": "<p>Regarding <a href=\"https://github.com/zulip/zulip/pull/18497\">#18497</a>(Allow muted user's message to be rehidden.). I've added another option for re-hiding muted user's message after it is revealed in message action popover. This option is currently called <code>Hide this message again</code> with <code>fa-eye-slash</code> icon next to it.<br>\nAs Tim <a href=\"https://github.com/zulip/zulip/pull/18497#issuecomment-843661502\">suggests</a>, It would be nice to discuss naming for this option. So putting this for discussion regarding that.</p>",
+        "id": 1183408,
+        "sender_full_name": "Purushottam Tiwari",
+        "timestamp": 1621421424
+    },
+    {
+        "content": "<p>For this thread: it looks like that question got some replies on the PR thread.</p>",
+        "id": 1184096,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1621453323
+    },
+    {
+        "content": "<p>I think those(most recent ones, from <span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> ) are suggestions regarding wordings to be used in /help document.</p>",
+        "id": 1184098,
+        "sender_full_name": "Purushottam Tiwari",
+        "timestamp": 1621453547
+    },
+    {
+        "content": "<p>Ahh, OK.  I think \"Hide muted message again\" might be clearer about what that option is for, than \"this message\"?</p>",
+        "id": 1184298,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1621461113
+    },
+    {
+        "content": "<p>That appears fine to me.</p>",
+        "id": 1184663,
+        "sender_full_name": "Purushottam Tiwari",
+        "timestamp": 1621490537
+    },
+    {
+        "content": "<p>I'll update this along with suggestion for /help document.</p>",
+        "id": 1184664,
+        "sender_full_name": "Purushottam Tiwari",
+        "timestamp": 1621490627
+    },
+    {
+        "content": "<p>Great, thanks!</p>",
+        "id": 1184665,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1621490646
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span>  regarding this <a href=\"https://github.com/zulip/zulip/pull/18497#discussion_r635451319\">comment</a> quoting it below:</p>\n<blockquote>\n<p>How about, \"Re-hide a message that has been revealed\"?</p>\n</blockquote>\n<p>I think it would be useful to have some way of giving a hint that these are steps for re-hiding a revealed message of muted user. That is why I named that section as <code>Re-hide revealed messages of muted users</code>. May be we can discuss it more, as I feel that one you suggested can be confused with generic collapse/Un-collapse feature.<br>\nI have implemented rest of other changes we discussed.</p>",
+        "id": 1184731,
+        "sender_full_name": "Purushottam Tiwari",
+        "timestamp": 1621505309
+    },
+    {
+        "content": "<blockquote>\n<p>Yeah, and can't upgrade past Font Awesome 4.7 because they changed their licensing model starting with 5.0 to no longer be fully open source (many icons in 4.7 that we use only have similar looking variants in the non-OSS version of 5.0).</p>\n</blockquote>\n<p>Do you have more details on this? Should we avoid pulling Font Awesome &gt;4.7 into mobile as well?</p>",
+        "id": 1185249,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1621549999
+    },
+    {
+        "content": "<p>We could easily deal with this issue in the same way as we deal with <code>emoji-datasource-google-blob</code>, by pulling selected SVGs from the old version into the zulip-icons font. We should probably do this anyway because we shouldn’t need to load the entire FontAwesome font for the relatively few icons we use from it.</p>",
+        "id": 1185250,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1621550149
+    },
+    {
+        "content": "<p>Hmm, yeah, that's not a bad idea.  It's a little annoying to need to register which icons we use or don't explicitly, but maybe not so annoying that we couldn't reasonably do it.</p>",
+        "id": 1185251,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1621550227
+    },
+    {
+        "content": "<blockquote>\n<p>Do you have more details on this? Should we avoid pulling Font Awesome &gt;4.7 into mobile as well?</p>\n</blockquote>\n<p>Basically, Font Awesome 5+ has an OSS version and a nonfree version that you have to pay for, that basically has 2 extra variants of most icons.  And they have designed things in a way such that in many cases, the icon variant most similar to the 4.7 variant is in the paid version of 5.0 (E.g. the 5.0 variant has really thick borders that would make it look weird if you just had a 4.7-based design).</p>\n<p>(I have a draft blog post on this topic that needs more editing)</p>",
+        "id": 1185252,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1621550352
+    },
+    {
+        "content": "<p>ok, so to be clear, pulling in \"FontAwesome 5\" is fine from a legal perspective, but will likely look bad next to other fontawesome icons, but pulling in \"FontAwesome 5 Pro\" is unacceptable from a legal standpoint?</p>",
+        "id": 1185266,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1621551000
+    },
+    {
+        "content": "<p>That's right.  And I think it's a net regression to upgrade from a 4.7 to 5.x because of the fact that many previously normal-looking icons have unusably thick borders in 5.0 without Pro.</p>",
+        "id": 1185269,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1621551362
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17546\">Purushottam Tiwari (m-e-l-u-h-a-n)</span> <a href=\"#narrow/stream/101-design/topic/Hiding.20user-muted.20messages/near/1184731\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span>  regarding this <a href=\"https://github.com/zulip/zulip/pull/18497#discussion_r635451319\">comment</a> quoting it below:</p>\n<blockquote>\n<p>How about, \"Re-hide a message that has been revealed\"?</p>\n</blockquote>\n<p>I think it would be useful to have some way of giving a hint that these are steps for re-hiding a revealed message of muted user. That is why I named that section as <code>Re-hide revealed messages of muted users</code>. May be we can discuss it more, as I feel that one you suggested can be confused with generic collapse/Un-collapse feature.<br>\nI have implemented rest of other changes we discussed.</p>\n</blockquote>\n<p>I think that since this section is on a help page all about muted users, we shouldn't need to mention muted users again in the section heading. Does that make sense?</p>",
+        "id": 1185416,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1621577032
+    },
+    {
+        "content": "<p>Updated <a href=\"https://github.com/zulip/zulip/pull/18497\">#18497</a>.</p>",
+        "id": 1185523,
+        "sender_full_name": "Purushottam Tiwari",
+        "timestamp": 1621608876
+    },
+    {
+        "content": "<p>There is a problem with current hiding muted user's message, probably due to <a href=\"https://github.com/zulip/zulip/pull/18497\">#18497</a>. It is showing option for hiding in messages of unmuted users whose messages are obviously revealed by default:<br>\n<a href=\"/user_uploads/2/69/hU1F9cPT8StGKyzA6btUoF6H/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/69/hU1F9cPT8StGKyzA6btUoF6H/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/69/hU1F9cPT8StGKyzA6btUoF6H/image.png\"></a></div><p>I'll look at this, just posting it here now for note.<br>\n(Also thanks to <span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span>, as he noticed it).</p>",
+        "id": 1187374,
+        "sender_full_name": "Purushottam Tiwari",
+        "timestamp": 1621888301
+    },
+    {
+        "content": "<p>Created: <a href=\"https://github.com/zulip/zulip/pull/18593\">#18593</a>.</p>",
+        "id": 1187885,
+        "sender_full_name": "Purushottam Tiwari",
+        "timestamp": 1621937119
+    }
+]

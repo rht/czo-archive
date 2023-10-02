@@ -1,0 +1,129 @@
+<html>
+<head><meta charset="utf-8"><title>upgrading from 1.5.3 to 1.6.0 · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html">upgrading from 1.5.3 to 1.6.0</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="267915"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/267915" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#267915">(Aug 15 2017 at 19:17)</a>:</h4>
+<p>The rabbitmq and beam.smp services both want to bind TCP 5672, which prevents rabbitmq from starting &amp; aborts the upgrade (resolved by rebooting, fixing rabbitmq and running the upgrade script again)<br>
+The migration script <code>zerver.0077_add_file_name_field_to_realm_emoji</code> fails with python urllib3 warnings:</p>
+<div class="codehilite"><pre><span></span>/home/zulip/deployments/2017-08-15-20-10-37/zulip-venv/lib/python2.7/site-packages/requests/packages/urllib3/util/ssl_.py:334: SNIMissingWarning: An HTTPS request has been made, but the SNI (Subject Name Indication) extension to TLS is not available on this platform. This may cause the server to present an incorrect TLS certificate, which can cause validation failures. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings
+  SNIMissingWarning
+/home/zulip/deployments/2017-08-15-20-10-37/zulip-venv/lib/python2.7/site-packages/requests/packages/urllib3/util/ssl_.py:132: InsecurePlatformWarning: A true SSLContext object is not available. This prevents urllib3 from configuring SSL appropriately and may cause certain SSL connections to fail. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings
+  InsecurePlatformWarning
+2017-08-15 19:11:27,956 WARNING  ERROR: Could not download emoji RealmEmoji object; please reupload manually
+</pre></div>
+
+
+<p>Platform is the 14.04 appliance upgraded from 1.3.0 via some intermediate versions to 1.5.3</p>
+
+
+
+<a name="267916"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/267916" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#267916">(Aug 15 2017 at 19:20)</a>:</h4>
+<p><span class="user-mention" data-user-email="dbgshane@gmail.com" data-user-id="2772">@Shane Kearns</span> I'm a bit confused; <code>beam.smp</code> is part of RabbitMQ.</p>
+
+
+
+<a name="267917"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/267917" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#267917">(Aug 15 2017 at 19:20)</a>:</h4>
+<p>I guess it didn't shut down properly then</p>
+
+
+
+<a name="267918"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/267918" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#267918">(Aug 15 2017 at 19:20)</a>:</h4>
+<p>I think the <code>urllib</code> warnings are mostly fine; you'll just need to re-upload the one realm emoji that it couldn't reach if you still want it.</p>
+
+
+
+<a name="267920"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/267920" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#267920">(Aug 15 2017 at 19:23)</a>:</h4>
+<p>I just looked in the rabbitmq startup_err log and it had eaddrinuse errors, while there were beam.smp processes using that port in netstat; didn't realise they were the same thing</p>
+
+
+
+<a name="267924"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/267924" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#267924">(Aug 15 2017 at 19:24)</a>:</h4>
+<p>The abort log looked like:</p>
+<div class="codehilite"><pre><span></span>Setting up rabbitmq-server (3.2.4-1ubuntu0.1) ...
+ * Starting message broker rabbitmq-server
+ * FAILED - check /var/log/rabbitmq/startup_\{log, _err\}
+   ...fail!
+invoke-rc.d: initscript rabbitmq-server, action &quot;start&quot; failed.
+dpkg: error processing package rabbitmq-server (--configure):
+ subprocess installed post-installation script returned error exit status 1
+Setting up libruby1.9.1 (1.9.3.484-2ubuntu1.3) ...
+Setting up ruby1.9.1 (1.9.3.484-2ubuntu1.3) ...
+Processing triggers for libc-bin (2.19-0ubuntu6.13) ...
+Errors were encountered while processing:
+ rabbitmq-server
+E: Sub-process /usr/bin/dpkg returned an error code (1)
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2017-08-15-19-57-20/scripts/lib/upgrade-zulip-stage-2&quot;, line 49, in &lt;module&gt;
+</pre></div>
+
+
+
+<a name="267928"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/267928" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#267928">(Aug 15 2017 at 19:26)</a>:</h4>
+<p>Annoying; that's actually the <code>apt-get upgrade</code> part failing.</p>
+
+
+
+<a name="267929"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/267929" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#267929">(Aug 15 2017 at 19:26)</a>:</h4>
+<p>(which isn't really our code, even)</p>
+
+
+
+<a name="267931"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/267931" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#267931">(Aug 15 2017 at 19:27)</a>:</h4>
+<p>Yes, unless it's something related to the rabbitmq config that stops it shutting down cleanly there's nothing to be done</p>
+
+
+
+<a name="267945"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/267945" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#267945">(Aug 15 2017 at 19:31)</a>:</h4>
+<p>The emoji migration didn't block the upgrade so that's just in case it's worth updating the migration script to avoid that issue</p>
+
+
+
+<a name="267949"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/267949" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#267949">(Aug 15 2017 at 19:33)</a>:</h4>
+<p>yeah; I think that will fix itself magically when we move to Python 3.</p>
+
+
+
+<a name="267956"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/267956" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#267956">(Aug 15 2017 at 19:39)</a>:</h4>
+<p>I think so, when i saw that error in another tool, running python3 instead of python fixed it</p>
+
+
+
+<a name="286501"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/286501" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#286501">(Sep 23 2017 at 20:47)</a>:</h4>
+<p>Fyi, I just ran into this trying to install on my test server after a couple months idle. I tried updating all my current packages, but that didn't help. Finally I did <code>apt-get purge rabbitmq-server</code> and restarted the Zulip install. Now it's back to normal.</p>
+
+
+
+<a name="286512"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/286512" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#286512">(Sep 23 2017 at 22:29)</a>:</h4>
+<p>Should <code>apt-get purge rabbitmq-server</code> or a script to force stop it be in the upgrade script, to prevent further similar issue?</p>
+
+
+
+<a name="286719"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/upgrading%20from%201.5.3%20to%201.6.0/near/286719" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/upgrading.20from.201.2E5.2E3.20to.201.2E6.2E0.html#286719">(Sep 25 2017 at 03:10)</a>:</h4>
+<p>Hmm.  My first thought would be no, since that can break things that were otherwise working.  But we should think about it.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

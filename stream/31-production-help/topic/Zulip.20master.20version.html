@@ -1,0 +1,172 @@
+<html>
+<head><meta charset="utf-8"><title>Zulip master version · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html">Zulip master version</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1226094"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226094" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Robert (ro-i) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226094">(Jul 06 2021 at 21:52)</a>:</h4>
+<p>Hi :)<br>
+Just out of curiosity: in "About Zulip", our installation (current master) shows</p>
+<div class="codehilite" data-code-language="Text only"><pre><span></span><code>Version 4.0-dev-5385-g906a75ac00
+Forked from upstream at 4.0-dev-5181-g48addae20b
+</code></pre></div>
+<p>Wouldn't this be supposed to switch to 5.0?</p>
+
+
+
+<a name="1226099"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226099" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226099">(Jul 06 2021 at 21:58)</a>:</h4>
+<p>That implies the repo it's using didn't fetch the tags.</p>
+
+
+
+<a name="1226230"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226230" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226230">(Jul 06 2021 at 22:00)</a>:</h4>
+<p><span class="user-mention" data-user-id="17322">@Robert (ro-i)</span> can you run <code>git remote -v</code> on <code>/srv/zulip.git</code> on your server?</p>
+
+
+
+<a name="1226279"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226279" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226279">(Jul 06 2021 at 22:01)</a>:</h4>
+<p>This code in <code>upgrade-zulip-from-git</code> is what manages this:</p>
+<div class="codehilite"><pre><span></span><code>try:
+    deploy_path = make_deploy_path()
+
+    # Populate LOCAL_GIT_CACHE_DIR with both the requested remote and zulip/zulip.
+    if not os.path.exists(LOCAL_GIT_CACHE_DIR):
+        logging.info(&quot;Cloning the repository&quot;)
+        subprocess.check_call(
+            [&quot;git&quot;, &quot;clone&quot;, &quot;-q&quot;, remote_url, &quot;--mirror&quot;, LOCAL_GIT_CACHE_DIR],
+            stdout=subprocess.DEVNULL,
+        )
+    if os.stat(LOCAL_GIT_CACHE_DIR).st_uid == 0:
+        subprocess.check_call([&quot;chown&quot;, &quot;-R&quot;, &quot;zulip:zulip&quot;, LOCAL_GIT_CACHE_DIR])
+
+    os.chdir(LOCAL_GIT_CACHE_DIR)
+    subprocess.check_call(
+        [&quot;git&quot;, &quot;remote&quot;, &quot;set-url&quot;, &quot;origin&quot;, remote_url], preexec_fn=su_to_zulip
+    )
+
+    # Ensure upstream remote is configured; we need this to make `git describe` accurate.
+    remotes = subprocess.check_output([&quot;git&quot;, &quot;remote&quot;], preexec_fn=su_to_zulip).split(b&quot;\n&quot;)
+    if b&quot;upstream&quot; not in remotes:
+        subprocess.check_call(
+            [&quot;git&quot;, &quot;remote&quot;, &quot;add&quot;, &quot;upstream&quot;, remote_url], preexec_fn=su_to_zulip
+        )
+
+    logging.info(&quot;Fetching the latest commits&quot;)
+    subprocess.check_call([&quot;git&quot;, &quot;fetch&quot;, &quot;-q&quot;, &quot;--tags&quot;, &quot;--all&quot;], preexec_fn=su_to_zulip)
+</code></pre></div>
+
+
+
+<a name="1226282"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226282" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226282">(Jul 06 2021 at 22:02)</a>:</h4>
+<p>Oh, one possibility is if you're building your own release tarballs rather than upgrading from Git, and the system that is doing those builds hasn't done a <code>git fetch --all --tags</code>.</p>
+
+
+
+<a name="1226284"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226284" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226284">(Jul 06 2021 at 22:02)</a>:</h4>
+<p>(I wonder if this is a failure mode that our Docker setup might have?)</p>
+
+
+
+<a name="1226289"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226289" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Robert (ro-i) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226289">(Jul 06 2021 at 22:04)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/Zulip.20master.20version/near/1226230">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="17322">Robert (ro-i)</span> can you run <code>git remote -v</code> on <code>/srv/zulip.git</code> on your server?</p>
+</blockquote>
+<p>Sure:</p>
+<div class="codehilite" data-code-language="Bash Session"><pre><span></span><code><span class="go">/srv/zulip.git$ git remote -v</span>
+<span class="go">origin  https://github.com/ro-i/zulip.git (fetch)</span>
+<span class="go">origin  https://github.com/ro-i/zulip.git (push)</span>
+<span class="go">upstream    https://github.com/ro-i/zulip.git (fetch)</span>
+<span class="go">upstream    https://github.com/ro-i/zulip.git (push)</span>
+</code></pre></div>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/Zulip.20master.20version/near/1226282">said</a>:</p>
+<blockquote>
+<p>Oh, one possibility is if you're building your own release tarballs rather than upgrading from Git [...]</p>
+</blockquote>
+<p>No, I do directly <code>sudo /home/zulip/deployments/current/scripts/upgrade-zulip-from-git zulip.in.tum.de</code>.</p>
+
+
+
+<a name="1226315"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226315" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Robert (ro-i) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226315">(Jul 06 2021 at 22:16)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/Zulip.20master.20version/near/1226099">said</a>:</p>
+<blockquote>
+<p>That implies the repo it's using didn't fetch the tags.</p>
+</blockquote>
+<p>Hm, so I need to do more than just <code>git fetch upstream master</code> + <code>git rebase upstream/master</code> on my fork? <span aria-label="see no evil" class="emoji emoji-1f648" role="img" title="see no evil">:see_no_evil:</span></p>
+
+
+
+<a name="1226318"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226318" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226318">(Jul 06 2021 at 22:20)</a>:</h4>
+<p><code>git fetch --tags upstream master</code></p>
+
+
+
+<a name="1226320"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226320" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226320">(Jul 06 2021 at 22:20)</a>:</h4>
+<p>You'll also need to make sure the tags gte pushed to your fork once you fetch them.</p>
+
+
+
+<a name="1226327"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226327" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226327">(Jul 06 2021 at 22:26)</a>:</h4>
+<p>The problem is that your <code>upstream</code> remote points to ro-i/zulip rather than zulip/zulip.</p>
+
+
+
+<a name="1226331"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226331" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226331">(Jul 06 2021 at 22:28)</a>:</h4>
+<p>This probably happens if the first <code>upgrade-zulip-from-git</code> you did was from ro-i/zulip. Run <code>git remote set-url upstream https://github.com/zulip/zulip.git; git fetch upstream</code> to fix it.</p>
+
+
+
+<a name="1226335"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226335" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Robert (ro-i) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226335">(Jul 06 2021 at 22:32)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="699">Anders Kaseorg</span> <a href="#narrow/stream/31-production-help/topic/Zulip.20master.20version/near/1226331">said</a>:</p>
+<blockquote>
+<p>This probably happens if the first <code>upgrade-zulip-from-git</code> you did was from ro-i/zulip. Run <code>git remote set-url upstream https://github.com/zulip/zulip.git; git fetch upstream</code> to fix it.</p>
+</blockquote>
+<p>So I'm supposed to run this on the server in <code>/srv/zulip.git</code>? But what would the <code>fetch upstream</code> part lead to in this case? Wouldn't I also need the <code>--tags</code> that <span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> mentioned?</p>
+
+
+
+<a name="1226339"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226339" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226339">(Jul 06 2021 at 22:37)</a>:</h4>
+<p>Yes, in <code>/srv/zulip.git</code>. The <code>--tags</code> is unimportant; Git already fetches tags that are connected to branches.</p>
+
+
+
+<a name="1226342"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226342" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226342">(Jul 06 2021 at 22:39)</a>:</h4>
+<p>Oh, you probably want to do this as the <code>zulip</code> user, or <code>chown -R zulip: /srv/zulip.git</code> if you already did it as <code>root</code>.</p>
+
+
+
+<a name="1226346"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226346" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226346">(Jul 06 2021 at 22:41)</a>:</h4>
+<p>After that, run <code>su zulip -c /home/zulip/deployments/current/tools/cache-zulip-git-version</code> (to update <code>/home/zulip/deployments/current/zulip-git-version</code>).</p>
+
+
+
+<a name="1226351"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20master%20version/near/1226351" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Robert (ro-i) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20master.20version.html#1226351">(Jul 06 2021 at 22:44)</a>:</h4>
+<p>... and do a <code>restart-server</code> :)<br>
+Worked! Thank you so much <span aria-label="heart" class="emoji emoji-2764" role="img" title="heart">:heart:</span></p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

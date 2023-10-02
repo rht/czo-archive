@@ -1,0 +1,218 @@
+[
+    {
+        "content": "<p>Yes I'm having the exact same error and ended up trying to bring the surroundings up to speed as your documentation suggests using Postresql 15 so I figured the constraint issue could've been related to me running 14 - and that's when problems started stackpiling. I was running Zulip 6.2 with pgroonga installed before.</p>",
+        "id": 1583923,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685681019
+    },
+    {
+        "content": "<p>So as a note unrelated to this the database upgrade script is really dangerous to use as it just goes ahead and drops pg clusters</p>",
+        "id": 1583924,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685681077
+    },
+    {
+        "content": "<p>Which might be worthwile to mention in the documentation at least :)</p>",
+        "id": 1583925,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685681095
+    },
+    {
+        "content": "<p>Also restoring the backup done by the manage backup scripts isn't straightforward after this since the zulip role goes bye bye as well.</p>",
+        "id": 1583927,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685681143
+    },
+    {
+        "content": "<p>We have a long upgrade path behind going back to at least version 1.8</p>",
+        "id": 1583928,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685681296
+    },
+    {
+        "content": "<p>I also had 1.6 or 1.8 installed initially (I don't remember exactly)</p>",
+        "id": 1583992,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685685550
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0/near/1583327\">said</a>:</p>\n<blockquote>\n<p>I don't understand this migration well enough to say why it might be possible for that to happen, but I'm guessing this is the fix for the issue:</p>\n<p><div class=\"codehilite\"><pre><span></span><code>diff --git a/zerver/migrations/0443_userpresence_new_table_schema.py b/zerver/migrations/0443_userpresence_new_table_schema.py\nindex e4a7d3ca10..d1e5f3bdfe 100644\n--- a/zerver/migrations/0443_userpresence_new_table_schema.py\n+++ b/zerver/migrations/0443_userpresence_new_table_schema.py\n@@ -33,6 +33,11 @@ def rename_indexes_constraints(\n                     suffix = &quot;_idx&quot; if len(infodict[&quot;columns&quot;]) &gt; 1 else &quot;&quot;\n                     is_index = True\n                 new_name = schema_editor._create_index_name(new_table, infodict[&quot;columns&quot;], suffix)\n+\n+                if old_name == new_name:\n+                    # Don&#39;t crash if these already have the right names.\n+                    continue\n+\n                 if is_index:\n                     raw_query = SQL(&quot;ALTER INDEX {old_name} RENAME TO {new_name}&quot;).format(\n                         old_name=Identifier(old_name), new_name=Identifier(new_name)\n</code></pre></div><br>\n</p>\n</blockquote>\n<p>I tried to add your condition, unfortunately I got the same error again. I will attach the logs again, but it seems like the error has not changed<br>\n<a href=\"/user_uploads/2/41/ymwLuVzm9jcvMdcPL4UWTKsS/upgrade.log\">upgrade.log</a></p>",
+        "id": 1584018,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685687217
+    },
+    {
+        "content": "<p>the problem we are solving is very similar to this one:<br>\n<a href=\"https://code.djangoproject.com/ticket/23577\">https://code.djangoproject.com/ticket/23577</a></p>\n<p>I found this link in the file 0443_userpresence_new_table_schema.py on line 89 in the comments</p>",
+        "id": 1584048,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685692034
+    },
+    {
+        "content": "<p>I tried to find something in the zerver_userpresence table with the name zerver_userpresenceo_user_profile_id_d75366d6_fk_zerver_us I didn't find anything, no indexes, nothing</p>",
+        "id": 1584076,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685693786
+    },
+    {
+        "content": "<p>Hmm, yeah I don't think  <code>old_name == new_name</code> could even happen here, because they will always have a different prefix (<code>zerver_userpresence</code> vs <code>zerver_userpresenceo</code>/<code>zerver_userpresenceold</code> (apparently the <code>old</code> gets truncated a bit when generating a long contraint name, but that's not really a problem i think)).</p>\n<p><span class=\"user-mention\" data-user-id=\"23869\">@Serg  Grishchenko</span> Can you show information about your table by running <code>\\d zerver_userpresence</code> in <code>manage.py dbshell</code>?</p>\n<p>And can you try running the upgrade with Tim's patch tweaked to have a print statement like this?<br>\n(and then show us the output that it'll print during the migration - it should be on the standard output rather than the log file)</p>\n<div class=\"codehilite\"><pre><span></span><code>diff --git a/zerver/migrations/0443_userpresence_new_table_schema.py b/zerver/migrations/0443_userpresence_new_table_schema.py\nindex e4a7d3ca10..7faf50fef3 100644\n--- a/zerver/migrations/0443_userpresence_new_table_schema.py\n+++ b/zerver/migrations/0443_userpresence_new_table_schema.py\n@@ -33,6 +33,12 @@ def rename_indexes_constraints(\n                     suffix = &quot;_idx&quot; if len(infodict[&quot;columns&quot;]) &gt; 1 else &quot;&quot;\n                     is_index = True\n                 new_name = schema_editor._create_index_name(new_table, infodict[&quot;columns&quot;], suffix)\n+\n+                if old_name == new_name:\n+                    # Don&#39;t crash if these already have the right names.\n+                    continue\n+\n+                print(f&quot;Renaming {old_name} to {new_name}&quot;)\n                 if is_index:\n                     raw_query = SQL(&quot;ALTER INDEX {old_name} RENAME TO {new_name}&quot;).format(\n                         old_name=Identifier(old_name), new_name=Identifier(new_name\n</code></pre></div>\n<p>That will help us see what exactly is going on in the migration. I wonder if e.g. there might be two different constraints that for some the migration ends up trying to give the same <code>new_name</code> <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>",
+        "id": 1584117,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685697668
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/15/DW09WB24GEChVYVQVHRDAacj/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/15/DW09WB24GEChVYVQVHRDAacj/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/15/DW09WB24GEChVYVQVHRDAacj/image.png\"></a></div>",
+        "id": 1584147,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685699824
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <a href=\"#narrow/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0/near/1584117\">said</a>:</p>\n<blockquote>\n<p>Hmm, yeah I don't think  <code>old_name == new_name</code> could even happen here, because they will always have a different prefix (<code>zerver_userpresence</code> vs <code>zerver_userpresenceo</code>/<code>zerver_userpresenceold</code> (apparently the <code>old</code> gets truncated a bit when generating a long contraint name, but that's not really a problem i think)).</p>\n<p><span class=\"user-mention silent\" data-user-id=\"23869\">Serg  Grishchenko</span> Can you show information about your table by running <code>\\d zerver_userpresence</code> in <code>manage.py dbshell</code>?</p>\n<p>And can you try running the upgrade with Tim's patch tweaked to have a print statement like this?<br>\n(and then show us the output that it'll print during the migration - it should be on the standard output rather than the log file)</p>\n<div class=\"codehilite\"><pre><span></span><code>diff --git a/zerver/migrations/0443_userpresence_new_table_schema.py b/zerver/migrations/0443_userpresence_new_table_schema.py\nindex e4a7d3ca10..7faf50fef3 100644\n--- a/zerver/migrations/0443_userpresence_new_table_schema.py\n+++ b/zerver/migrations/0443_userpresence_new_table_schema.py\n@@ -33,6 +33,12 @@ def rename_indexes_constraints(\n                     suffix = &quot;_idx&quot; if len(infodict[&quot;columns&quot;]) &gt; 1 else &quot;&quot;\n                     is_index = True\n                 new_name = schema_editor._create_index_name(new_table, infodict[&quot;columns&quot;], suffix)\n+\n+                if old_name == new_name:\n+                    # Don&#39;t crash if these already have the right names.\n+                    continue\n+\n+                print(f&quot;Renaming {old_name} to {new_name}&quot;)\n                 if is_index:\n                     raw_query = SQL(&quot;ALTER INDEX {old_name} RENAME TO {new_name}&quot;).format(\n                         old_name=Identifier(old_name), new_name=Identifier(new_name\n</code></pre></div>\n<p>That will help us see what exactly is going on in the migration. I wonder if e.g. there might be two different constraints that for some the migration ends up trying to give the same <code>new_name</code> <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>\n</blockquote>\n<p>completed. the output above is in the message</p>",
+        "id": 1584150,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685699873
+    },
+    {
+        "content": "<p>\"And can you try running the upgrade with Tim's patch tweaked to have a print statement like this?\"</p>\n<p>I'll try it now</p>",
+        "id": 1584152,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685699956
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/52/9AUlOaZaFo7Dgu3pPyP_c_1B/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/52/9AUlOaZaFo7Dgu3pPyP_c_1B/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/52/9AUlOaZaFo7Dgu3pPyP_c_1B/image.png\"></a></div>",
+        "id": 1584155,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685700092
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/be/dc3DvlWae3i2kioSYm6Zd1uJ/image.png\">image.png</a><br>\nI did, the error remained the same</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/be/dc3DvlWae3i2kioSYm6Zd1uJ/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/be/dc3DvlWae3i2kioSYm6Zd1uJ/image.png\"></a></div>",
+        "id": 1584156,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685700186
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"23869\">@Serg  Grishchenko</span> Hmm, it doesn't look in that screenshot <a href=\"user_uploads/2/be/dc3DvlWae3i2kioSYm6Zd1uJ/image.png\">https://chat.zulip.org/user_uploads/2/be/dc3DvlWae3i2kioSYm6Zd1uJ/image.png</a> like the <code>print(f\"Renaming {old_name} to {new_name}\")</code> statement has been added like i suggested? Also just to clarify, for now the idea isn't that it's going to fix anything, but the output will give us information about what exactly the migration is doing, which might let us understand the cause of this.</p>\n<div class=\"message_inline_image\"><a href=\"user_uploads/2/be/dc3DvlWae3i2kioSYm6Zd1uJ/image.png\" title=\"https://chat.zulip.org/user_uploads/2/be/dc3DvlWae3i2kioSYm6Zd1uJ/image.png\"><img src=\"user_uploads/2/be/dc3DvlWae3i2kioSYm6Zd1uJ/image.png\"></a></div>",
+        "id": 1584161,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685701709
+    },
+    {
+        "content": "<p>can you tell me where to register it? <br>\nLine number or in what condition?</p>",
+        "id": 1584162,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685701788
+    },
+    {
+        "content": "<p>done!<br>\n<a href=\"/user_uploads/2/c5/J97e3blZjk2-X3g77gd9A_AE/image.png\">image.png</a><br>\n<a href=\"/user_uploads/2/ca/nbY_1e0ZEvdLs4opDlrwJS2Z/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/c5/J97e3blZjk2-X3g77gd9A_AE/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/c5/J97e3blZjk2-X3g77gd9A_AE/image.png\"></a></div><div class=\"message_inline_image\"><a href=\"/user_uploads/2/ca/nbY_1e0ZEvdLs4opDlrwJS2Z/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/ca/nbY_1e0ZEvdLs4opDlrwJS2Z/image.png\"></a></div>",
+        "id": 1584163,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685702385
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <a href=\"#narrow/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0/near/1584161\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"23869\">Serg  Grishchenko</span> Hmm, it doesn't look in that screenshot <a href=\"user_uploads/2/be/dc3DvlWae3i2kioSYm6Zd1uJ/image.png\">https://chat.zulip.org/user_uploads/2/be/dc3DvlWae3i2kioSYm6Zd1uJ/image.png</a> like the <code>print(f\"Renaming {old_name} to {new_name}\")</code> statement has been added like i suggested? Also just to clarify, for now the idea isn't that it's going to fix anything, but the output will give us information about what exactly the migration is doing, which might let us understand the cause of this.</p>\n</blockquote>\n<p>in the screenshot, I did not quite highlight it, if an error occurs, it passes by the condition where the line with Remainig3</p>",
+        "id": 1584164,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685702465
+    },
+    {
+        "content": "<p>this<br>\n<a href=\"/user_uploads/2/93/lzm1rQVECH4yCSpo5GV7Ndm3/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/93/lzm1rQVECH4yCSpo5GV7Ndm3/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/93/lzm1rQVECH4yCSpo5GV7Ndm3/image.png\"></a></div>",
+        "id": 1584165,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685702505
+    },
+    {
+        "content": "<p>2 last strings:<br>\nRenaming3 zerver_userpresence_user_profile_id_b67b4092_fk to <strong>zerver_userpresenceo_user_profile_id_d75366d6_fk_zerver_us</strong><br>\nRenaming3 zerver_userpresence_user_profile_id_b67b4092_fk_zerver_us to <strong>zerver_userpresenceo_user_profile_id_d75366d6_fk_zerver_us</strong></p>",
+        "id": 1584183,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685704421
+    },
+    {
+        "content": "<p><strong>zerver_userpresence_user_profile_id_b67b4092_fk</strong> and <strong>zerver_userpresence_user_profile_id_b67b4092_fk_zerver_us</strong> to <strong>zerver_userpresenceo_user_profile_id_d75366d6_fk_zerver_us</strong></p>\n<p>conflict</p>",
+        "id": 1584190,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685705404
+    },
+    {
+        "content": "<p>Thanks, okay I think that tells us a lot about the problem! </p>\n<p>So it seems there is a possibly redundant foreign key, causing the migration to try to rename two foreign keys to the same name. From the table info in <br>\n<a href=\"/user_uploads/2/6d/vMKOtYsR0N6mDJsbp5lfqkjw/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/6d/vMKOtYsR0N6mDJsbp5lfqkjw/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/6d/vMKOtYsR0N6mDJsbp5lfqkjw/image.png\"></a></div><p>we see <code>zerver_userpresence_user_profile_id_b67b4092_fk</code> and <code>zerver_userpresence_user_profile_id_b67b4092_fk_zerver_us</code> that I think are the same foreign key twice, with a different name? And then confirmed by the migratoin output, both are being renamed to the same name:</p>\n<div class=\"codehilite\"><pre><span></span><code>Renaming3 zerver_userpresence_user_profile_id_b67b4092_fk to zerver_userpresenceo_user_profile_id_d75366d6_fk_zerver_us\nRenaming3 zerver_userpresence_user_profile_id_b67b4092_fk_zerver_us to zerver_userpresenceo_user_profile_id_d75366d6_fk_zerver_us\n</code></pre></div>\n<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> I think the resolution that will let Serg proceed successfully will be to drop one of those foreign keys, can you double-check my thinking here? </p>\n<p>The remaining questions are what could have caused this state with duplicate foreign keys for the affected deployments and how can we best fix that up? Should we just add some duplicate-fk detection at the beginning of the migration and drop the duplicate if found?</p>",
+        "id": 1584208,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685706193
+    },
+    {
+        "content": "<p>Dropping the duplicate seems like good sense to me</p>",
+        "id": 1584214,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1685706600
+    },
+    {
+        "content": "<p>which key can be deleted? I would try this</p>",
+        "id": 1584217,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685706646
+    },
+    {
+        "content": "<p>Huh, looks like a duplicate foreign key, not a duplicate index</p>",
+        "id": 1584218,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1685706682
+    },
+    {
+        "content": "<p>zerver_userpresence_user_profile_id_b67b4092_fk or  zerver_userpresence_user_profile_id_b67b4092_fk_zerver_us?</p>",
+        "id": 1584220,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685706698
+    },
+    {
+        "content": "<p>Either should be fine, <code>zerver_userpresence_user_profile_id_b67b4092_fk</code> is the unusual one i guess compared to a typical server. You can do <code>ALTER TABLE zerver_userpresence DROP CONSTRAINT zerver_userpresence_user_profile_id_b67b4092_fk;</code> in <code>manage.py dbshell</code> and then re-run the migration and it should work fine now.</p>",
+        "id": 1584256,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685708807
+    },
+    {
+        "content": "<blockquote>\n<blockquote>\n<p>ALTER TABLE zerver_userpresence DROP CONSTRAINT zerver_userpresence_user_profile_id_b67b4092_fk; &lt;&lt;<br>\nthank you, the problem is solved. </p>\n</blockquote>\n</blockquote>\n<p>Thank you so much)</p>",
+        "id": 1584263,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685709282
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"23869\">Serg  Grishchenko</span> has marked this topic as resolved.</p>",
+        "id": 1584264,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1685709303
+    },
+    {
+        "content": "<p>Was about to mention I did <code>alter table zerver_userpresence drop constraint zerver_userpresence_user_profile_id_b67b4092_fk_zerver_us;</code> and this worked</p>",
+        "id": 1584270,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685710299
+    },
+    {
+        "content": "<p>seems like same as suggested :).</p>",
+        "id": 1584271,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685710310
+    },
+    {
+        "content": "<p>Yay, glad that it worked! Now we just have to figure out a reasonable PR to solve this  automatically</p>",
+        "id": 1584274,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685710709
+    },
+    {
+        "content": "<p>Why didn't running the SQL query work within the regular Postgres shell with <code>zulip</code> db selected, but have to use <code>su - zulip -c \"/home/zulip/deployments/current/manage.py dbshell\"</code>? <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>",
+        "id": 1584323,
+        "sender_full_name": "Alfons RV",
+        "timestamp": 1685716425
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"9948\">Alfons RV</span> <a href=\"#narrow/stream/31-production-help/topic/.E2.9C.94.20presence.20migration.20upgrading.206.2E2.20to.207.2E0/near/1584323\">said</a>:</p>\n<blockquote>\n<p>Why didn't running the SQL query work within the regular Postgres shell with <code>zulip</code> db selected, but have to use <code>su - zulip -c \"/home/zulip/deployments/current/manage.py dbshell\"</code>? <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>\n</blockquote>\n<p>Hmm, not sure, can you post the exact steps you followed for doing it in the regular postgres shell?</p>",
+        "id": 1584360,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685718885
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <a href=\"#narrow/stream/31-production-help/topic/.E2.9C.94.20presence.20migration.20upgrading.206.2E2.20to.207.2E0/near/1584274\">said</a>:</p>\n<blockquote>\n<p>Yay, glad that it worked! Now we just have to figure out a reasonable PR to solve this  automatically</p>\n</blockquote>\n<p>Opened <a href=\"https://github.com/zulip/zulip/pull/25887\">#25887</a></p>",
+        "id": 1585203,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685965506
+    }
+]

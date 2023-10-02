@@ -1,0 +1,158 @@
+[
+    {
+        "content": "<p>I'm getting emails containing the error message \"Function call timed out\" from our zulip server whenever somebody tries to post a long and math-heavy message.</p>\n<p>Can I increase a timeout threshold somewhere to avoid this?</p>\n<p>Our zulip version is:</p>\n<div class=\"codehilite\"><pre><span></span><code>Version 4.3\nForked from upstream at 4.2-21-g9815581957\n</code></pre></div>\n<p>(I think the same happens on this server here as well -- long enough messages don't render. I just tried it by messaging myself)</p>",
+        "id": 1288980,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1638318693
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17356\">@Jonas F</span> thanks for the report!</p>",
+        "id": 1289375,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638390743
+    },
+    {
+        "content": "<p>Am I correct that messages affected by the issue are those that have a very large number of small math blocks, rather than those that have a single very long math block?</p>",
+        "id": 1289376,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638390773
+    },
+    {
+        "content": "<p>I think what's happening is that each individual inline math block requires us to wait for a node process to startup and run <code>KaTeX</code> on the math block, so if you have hundreds of them, the total of those startup times will exceed the timeouts for rendering messages.</p>",
+        "id": 1289378,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638390823
+    },
+    {
+        "content": "<p>You can likely change the <code>5</code> (seconds) here in <code>zerver/lib/markdown/__init__.py</code> to change the timeout (untested):</p>\n<div class=\"codehilite\"><pre><span></span><code>    try:\n        # Spend at most 5 seconds rendering; this protects the backend\n        # from being overloaded by bugs (e.g. Markdown logic that is\n        # extremely inefficient in corner cases) as well as user\n        # errors (e.g. a linkifier that makes some syntax\n        # infinite-loop).\n        rendering_result.rendered_content = timeout(5, lambda: _md_engine.convert(content))\n</code></pre></div>",
+        "id": 1289379,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638390877
+    },
+    {
+        "content": "<p>The right fix likely involves changing how we run <code>KaTeX</code> to some sort of batch-processing mode that would allow us to only start <code>KaTeX</code> once and have it render all the math blocks in a given message with only a single startup overhead.</p>",
+        "id": 1289380,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638390937
+    },
+    {
+        "content": "<p>I haven't looked into whether <code>KaTeX</code> provides a mechanism for doing that.</p>",
+        "id": 1289381,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638390954
+    },
+    {
+        "content": "<p>We can write our own JS wrapper that communicates using JSON lines. We can even keep the subprocess around and use it for different messages.</p>",
+        "id": 1289384,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1638391063
+    },
+    {
+        "content": "<p>Yes, though if we do that we have to be careful about handling macros.<br>\n<a href=\"https://katex.org/docs/api.html#server-side-rendering-or-rendering-to-a-string\">https://katex.org/docs/api.html#server-side-rendering-or-rendering-to-a-string</a></p>",
+        "id": 1289385,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638391084
+    },
+    {
+        "content": "<p>We just need to avoid doing the thing that explicitly persists the macro state.</p>",
+        "id": 1289387,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1638391141
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/Timeout.20errors/near/1289378\">said</a>:</p>\n<blockquote>\n<p>I think what's happening is that each individual inline math block requires us to wait for a node process to startup and run <code>KaTeX</code> on the math block, so if you have hundreds of them, the total of those startup times will exceed the timeouts for rendering messages.</p>\n</blockquote>\n<p>I just counted, and I think it's not hundreds of little math blocks but can be 40 or 50 in a message that triggers an error.</p>",
+        "id": 1289394,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1638391393
+    },
+    {
+        "content": "<p>This is <a href=\"https://github.com/zulip/zulip/issues/17425\">https://github.com/zulip/zulip/issues/17425</a> BTW.</p>",
+        "id": 1289404,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638391793
+    },
+    {
+        "content": "<p>Sometimes I get a state where the message seems to render and display correctly, but in the upper right there are two red icons saying \"retry\" and \"cancel\" when hovering:</p>\n<p><a href=\"/user_uploads/2/ce/-E0A2P7FfpQrs-tYdgO6WPjz/Screenshot_20211201_154825.png\">Screenshot_20211201_154825.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/ce/-E0A2P7FfpQrs-tYdgO6WPjz/Screenshot_20211201_154825.png\" title=\"Screenshot_20211201_154825.png\"><img src=\"/user_uploads/2/ce/-E0A2P7FfpQrs-tYdgO6WPjz/Screenshot_20211201_154825.png\"></a></div>",
+        "id": 1289405,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1638391827
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17356\">@Jonas F</span> oh, I think if you upgrade to <code>main</code> you'll find the problem gets a lot better.</p>",
+        "id": 1289406,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638391840
+    },
+    {
+        "content": "<p>We fixed a couple issues that are not timeouts that cause large LaTeX documents to not send (discussed on that thread).</p>",
+        "id": 1289407,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638391862
+    },
+    {
+        "content": "<p>But I think those fixes were after the 4.0 release.</p>",
+        "id": 1289410,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638391937
+    },
+    {
+        "content": "<p>I see, I might try upgrading. But as I said, I tried to send the same messages to myself on this server here, and also got the red icons.</p>",
+        "id": 1289411,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1638391966
+    },
+    {
+        "content": "<p>Yeah, the changes don't fix the timeout issue, but fix an issue you'll see with substantially smaller messages that they generate a too-large rendered HTML message body.</p>",
+        "id": 1289415,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638392029
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  What I'm confused about is that with the red retry/cancel icons, the message displays as rendered, but for some reason gets stuck in this state. So the problem is not a timeout with the rendering, is it?  (Kevin Buzzard talks about the same red icons in the bug report you linked, though he reports essentially losing what he typed. That hasn't happended to me yet fortunately)</p>",
+        "id": 1289429,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1638392799
+    },
+    {
+        "content": "<p>Well the \"local echo\" immediate rendering is done in your browser, which doesn't have the performance issue of starting KaTeX many times, but can't be trusted by the server for use by other clients.  So the server is rejecting the message due to the timeout even though the browser client is able to render it.</p>",
+        "id": 1289431,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638392854
+    },
+    {
+        "content": "<p>We should make those error icons not only on hover.</p>",
+        "id": 1289432,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638392879
+    },
+    {
+        "content": "<p>Yes the fact those are hover-only is an important bug that I hope we've fixed in main but if we haven't, perhaps <span class=\"user-mention\" data-user-id=\"9808\">@Yash RE</span> can pick it up.</p>",
+        "id": 1289434,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638392925
+    },
+    {
+        "content": "<p>(Reproducer should just be to modify <code>zerver/views/message_send.py</code> to <code>raise JsonableError</code> on all messages)</p>",
+        "id": 1289435,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638392969
+    },
+    {
+        "content": "<p>I think a version of <span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span>'s proposal to reuse the KaTeX process would work, and potentially not be a big project for someone with the right systems engineering experience.</p>",
+        "id": 1289436,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638392991
+    },
+    {
+        "content": "<p>By the way, when just logging into the server after experimenting with long messages I got the message</p>\n<div class=\"codehilite\"><pre><span></span><code>=&gt; There is 1 zombie process.\n</code></pre></div>\n<p>which I've never seen before. No idea if it's related, but I thought I mention it.</p>",
+        "id": 1289444,
+        "sender_full_name": "Jonas F",
+        "timestamp": 1638393154
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/Timeout.20errors/near/1289434\">said</a>:</p>\n<blockquote>\n<p>Yes the fact those are hover-only is an important bug that I hope we've fixed in main but if we haven't, perhaps <span class=\"user-mention silent\" data-user-id=\"9808\">Yash RE</span> can pick it up.</p>\n</blockquote>\n<p><a href=\"https://github.com/zulip/zulip/pull/20548\">#20548</a></p>",
+        "id": 1296401,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1639318797
+    }
+]

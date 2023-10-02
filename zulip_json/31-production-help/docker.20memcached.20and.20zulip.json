@@ -1,0 +1,116 @@
+[
+    {
+        "content": "<p>Been trying to deploy zulip and it's dependencies on different machines. <br>\nI'm deploying docker-zulip container and memcached on the same machine.<br>\nI'm having this error.</p>\n<p>**File \"/home/zulip/deployments/2019-12-14-03-04-44/zulip-py3-venv/lib/python3.6/site-packages/django_pylibmc/memcached.py\", line 151, in delete<br>\n  return super(PyLibMCCache, self).delete(*args, **kwargs)<br>\nFile \"/home/zulip/deployments/2019-12-14-03-04-44/zulip-py3-venv/lib/python3.6/site-packages/django/core/cache/backends/memcached.py\", line 92, in delete<br>\n  self._cache.delete(key)<br>\nFile \"/home/zulip/deployments/2019-12-14-03-04-44/zulip-py3-venv/lib/python3.6/site-packages/django_pylibmc/memcached.py\", line 140, in set<br>\n<strong>COMPRESS_KWARGS)</strong></p>\n<p>Does anyone know anything about it?</p>",
+        "id": 804642,
+        "sender_full_name": "Luís Correia",
+        "timestamp": 1577496177
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"14300\">@Luís Correia</span> That’s just part of the middle of a Python traceback, not a complete error. A complete traceback starts with <code>Traceback (most recent call last):</code>, and ends with the line <em>two lines after</em> the last <code>File</code> line, which is most important because it contains the actual exception that was thrown. There may be some relevant surrounding context before or after too, so when in doubt, include more rather than less. (By the way, you can enclose code blocks in <code> ``` </code> for proper formatting.)</p>",
+        "id": 804670,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1577526774
+    },
+    {
+        "content": "<p>I'm doing this with ansible:</p>\n<div class=\"codehilite\"><pre><span></span>- name: Run memcached\n  docker_container:\n    name: memcached\n    image: sameersbn/memcached:1.5.6-2\n\n- name: Run zulip\n  docker_container:\n    name: zulip\n    published_ports:\n      - &#39;80:80&#39;\n      - &#39;443:443&#39;\n    image: zulip/docker-zulip:2.1.1-0\n    env:\n      DB_HOST: &quot;{{ database }}&quot;\n      DB_HOST_PORT: &#39;5432&#39;\n      DB_USER: &#39;zulip&#39;\n      SSL_CERTIFICATE_GENERATION: &#39;self-signed&#39;\n      SETTING_MEMCACHED_LOCATION: &#39;127.0.0.1:11211&#39;\n ```\n</pre></div>",
+        "id": 804671,
+        "sender_full_name": "Luís Correia",
+        "timestamp": 1577527173
+    },
+    {
+        "content": "<p>but somehow it always end up in memcached error</p>",
+        "id": 804672,
+        "sender_full_name": "Luís Correia",
+        "timestamp": 1577527194
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span>  this is the error then:</p>\n<p><strong>pylibmc.ServerDown: error 47 from memcached_set: (0x366c5c0) SERVER HAS FAILED AND IS DISABLED UNTIL TIMED RETRY, host: memcached:11211 -&gt; libmemcached/connect.cc:720</strong></p>",
+        "id": 804674,
+        "sender_full_name": "Luís Correia",
+        "timestamp": 1577527316
+    },
+    {
+        "content": "<p>Docker containers have their own network, so you can’t reach your memcached container from your zulip container on 127.0.0.1.</p>",
+        "id": 804675,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1577527369
+    },
+    {
+        "content": "<p>Yes, i'm doing that. I've set <strong>SETTING_MEMCACHED_LOCATION: 127.0.0.1:11211</strong></p>",
+        "id": 804676,
+        "sender_full_name": "Luís Correia",
+        "timestamp": 1577527505
+    },
+    {
+        "content": "<p>Both containers are on the same machine</p>",
+        "id": 804677,
+        "sender_full_name": "Luís Correia",
+        "timestamp": 1577527521
+    },
+    {
+        "content": "<p>What I’m telling you is that 127.0.0.1 will not work.</p>",
+        "id": 804678,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1577527533
+    },
+    {
+        "content": "<p>Each container has its own 127.0.0.1.</p>",
+        "id": 804679,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1577527570
+    },
+    {
+        "content": "<p>sorry, i read it all wrong</p>",
+        "id": 804680,
+        "sender_full_name": "Luís Correia",
+        "timestamp": 1577527589
+    },
+    {
+        "content": "<p>I've tried setting <strong>SETTING_MEMCACHED_LOCATION: memcached:11211</strong></p>",
+        "id": 804681,
+        "sender_full_name": "Luís Correia",
+        "timestamp": 1577527621
+    },
+    {
+        "content": "<p>but it doesn't work either</p>",
+        "id": 804682,
+        "sender_full_name": "Luís Correia",
+        "timestamp": 1577527645
+    },
+    {
+        "content": "<p>I’m not familiar enough with how Ansible sets up Docker to say whether that should work. It works with docker-compose.</p>",
+        "id": 804683,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1577527715
+    },
+    {
+        "content": "<p>Try logging into the zulip container with <code>docker exec -it zulip bash</code> and try your favorite debugging steps like <code>ping memcached</code> or <code>nc memcached 11211</code>.</p>",
+        "id": 804684,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1577527879
+    },
+    {
+        "content": "<p>yeah, me too. I'm still learning how to use ansible <span aria-label=\"sweat smile\" class=\"emoji emoji-1f605\" role=\"img\" title=\"sweat smile\">:sweat_smile:</span></p>",
+        "id": 804685,
+        "sender_full_name": "Luís Correia",
+        "timestamp": 1577527987
+    },
+    {
+        "content": "<p>thank you, i'm gonna try that</p>",
+        "id": 804686,
+        "sender_full_name": "Luís Correia",
+        "timestamp": 1577527995
+    },
+    {
+        "content": "<p>It looks like Ansible can <a href=\"https://docs.ansible.com/ansible/latest/modules/docker_compose_module.html\" target=\"_blank\" title=\"https://docs.ansible.com/ansible/latest/modules/docker_compose_module.html\">manage docker-compose</a>, so maybe it would help to set it up that way, perhaps using <a href=\"https://github.com/zulip/docker-zulip/blob/master/docker-compose.yml\" target=\"_blank\" title=\"https://github.com/zulip/docker-zulip/blob/master/docker-compose.yml\">our docker-compose.yml</a> as a guide.</p>",
+        "id": 804687,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1577528232
+    },
+    {
+        "content": "<p>Thank you very much. I'm deploying the application and i'm gonna try that</p>",
+        "id": 804688,
+        "sender_full_name": "Luís Correia",
+        "timestamp": 1577528571
+    }
+]

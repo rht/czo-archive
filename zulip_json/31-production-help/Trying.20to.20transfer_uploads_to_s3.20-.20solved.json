@@ -1,0 +1,62 @@
+[
+    {
+        "content": "<p>Followed instructions from:<br>\n<a href=\"https://zulip.readthedocs.io/en/latest/production/upload-backends.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/upload-backends.html\">https://zulip.readthedocs.io/en/latest/production/upload-backends.html</a><br>\nThe Bucket works for new uploads as I see them in my AWS interface.</p>\n<p>When trying the ./manage.py transfer_uploads_to_s3 , I see this at the start:</p>\n<p>boto.exception.S3ResponseError: S3ResponseError: 403 Forbidden<br>\n&lt;?xml version=\"1.0\" encoding=\"UTF-8\"?&gt;<br>\n&lt;Error&gt;&lt;Code&gt;AccessDenied&lt;/Code&gt;&lt;Message&gt;Access Denied&lt;/Message&gt;&lt;RequestId&gt;7ACB4A3D1091A197&lt;/RequestId&gt;&lt;HostId&gt;zsCCGBIjiXjyyWUqUevPZwCUvFnUW++msim/Mb41+dTrcgRa5wJ2zE7VKNOWUMX1lojc1W6wWq8=&lt;/HostId&gt;&lt;/Error&gt;</p>\n<p>But then,  it seems to work:<br>\n...<br>\nConnectionResetError: [Errno 104] Connection reset by peer<br>\n...<br>\n2019-06-26 21:07:31.712 INFO [] Uploaded message file in path /home/zulip/uploads/files/2/e2Yj-_qu5_ceH7EyUq-VzDNO/2019-06-25-164733.png<br>\nTransfer to S3 completed successfully.</p>\n<p>But nothing is uploaded.</p>\n<p>The s3_key and s3_secret_key are set in /etc/zulip/zulip-secrets.conf and the buckets and region are in /etc/zulip/settings.py.</p>\n<p>If I disable LOCAL_UPLOADS_DIR, then new uploads are saved in the AWS Bucket - so it seems that process works - just the migration tool doesn't.</p>\n<p>Any suggestions?</p>",
+        "id": 760604,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1561583902
+    },
+    {
+        "content": "<p>Well,  I temporarily granted full S3 access to my AWS api user, and now it worked - so obviously the issue is not in Zulip but with my AWS policy.  If anything, maybe this helps someone else.</p>",
+        "id": 760605,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1561584472
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10092\">@Geoff Wild</span> thanks for posting.  Yeah, that does sound like an AWS policy issue.  Did you try using the policy we recommend in the docs?</p>",
+        "id": 760618,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1561589757
+    },
+    {
+        "content": "<p>Yeah - tried that policy.  At the moment, the api user I am using has full access to S3 - just to eliminate that part.  Interesting issue now is, uploading files works and are seen in Zulip.  Uploading avatars works - but can NOT be seen.  Weird.  I can see them in the AWS S3 avatar bucket as well.  </p>\n<p>Here's the nginx in it, BTW, Zulip 2.03.</p>\n<div class=\"codehilite\"><pre><span></span># cat /etc/nginx/sites-available/zulip-enterprise\n# no avatar\nserver {\n    listen 80;\n    listen [::]:80;\n    return 301 https://$host$request_uri;\n}\n\ninclude /etc/nginx/zulip-include/upstreams;\n\nserver {\n    listen 443;\n    listen [::]:443;\n\n    ssl on;\n    ssl_certificate /etc/ssl/certs/zulip.combined-chain.crt;\n    ssl_certificate_key /etc/ssl/private/zulip.key;\n\n\n    location /local-static {\n        alias /home/zulip/local-static;\n    }\n\n    include /etc/nginx/zulip-include/certbot;\n    include /etc/nginx/zulip-include/app;\n}\n</pre></div>",
+        "id": 761006,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1561662075
+    },
+    {
+        "content": "<p>The policy listed is just for the files bucket; the avatars bucket should be world-readable.</p>",
+        "id": 761018,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1561663079
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10092\">@Geoff Wild</span> does that address your issue?</p>",
+        "id": 761019,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1561663088
+    },
+    {
+        "content": "<p>I have no policies active at the moment - user has full access</p>",
+        "id": 761049,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1561664390
+    },
+    {
+        "content": "<p>For the avatars, I'm talking about world-readable to the public; we serve the S3 URLs for avatars directly.</p>",
+        "id": 761056,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1561665016
+    },
+    {
+        "content": "<p>Got it - thanks - yes, it needed the policy to be attached to the bucket - not an IAM User Policy!  <br>\nAll working now!</p>",
+        "id": 761083,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1561666852
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10092\">@Geoff Wild</span> if you have advice for how we can tweak the docs to avoid future users being confused the way you were, we'd love the suggestions!</p>",
+        "id": 761157,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1561674203
+    }
+]

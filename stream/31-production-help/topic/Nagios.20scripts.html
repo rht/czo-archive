@@ -1,0 +1,94 @@
+<html>
+<head><meta charset="utf-8"><title>Nagios scripts · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nagios.20scripts.html">Nagios scripts</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1027063"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nagios%20scripts/near/1027063" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jerome Charaoui <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nagios.20scripts.html#1027063">(Sep 29 2020 at 00:41)</a>:</h4>
+<p>Hello, on a small Zulip install (15 users, &lt;200 messages a day) I've noticed a CPU spike occurring every minute or so and tracked it down to <code>rabbitmq-numconsumers</code> and <code>rabbitmq-queuesize</code> being executed every minute via <code>/etc/cron.d</code>. I've tried looking at the docs to figure out what purpose these script are being run when I don't have a Nagios agent configured on this host to monitor Zulip. Does it serve some sort of self-monitoring purpose? Can I disable them, as I'm worried about the overall load this system is generating compared to the very low level of user generated activity it's seeing.</p>
+
+
+
+<a name="1027065"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nagios%20scripts/near/1027065" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jerome Charaoui <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nagios.20scripts.html#1027065">(Sep 29 2020 at 00:46)</a>:</h4>
+<p>They seem to be installed by the rabbitmq Puppet manifest in <a href="https://github.com/zulip/zulip/blob/cfa62700809584003468a982605ef724204a5f21/puppet/zulip/manifests/rabbit.pp#L12-L26">https://github.com/zulip/zulip/blob/cfa62700809584003468a982605ef724204a5f21/puppet/zulip/manifests/rabbit.pp#L12-L26</a></p>
+
+
+
+<a name="1027066"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nagios%20scripts/near/1027066" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jerome Charaoui <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nagios.20scripts.html#1027066">(Sep 29 2020 at 00:49)</a>:</h4>
+<p>I understand the value of making these scripts available but from what I gather these checks are being executed for nothing as I can't see which other parts of Zulip actually consume these checks' results.</p>
+
+
+
+<a name="1027067"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nagios%20scripts/near/1027067" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jerome Charaoui <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nagios.20scripts.html#1027067">(Sep 29 2020 at 00:51)</a>:</h4>
+<p>I don't see any of those other Nagios checks configured "stock" in <code>/etc/cron.d</code> <a href="https://zulip.readthedocs.io/en/latest/production/troubleshooting.html#nagios-configuration">https://zulip.readthedocs.io/en/latest/production/troubleshooting.html#nagios-configuration</a></p>
+
+
+
+<a name="1027164"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nagios%20scripts/near/1027164" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nagios.20scripts.html#1027164">(Sep 29 2020 at 06:21)</a>:</h4>
+<p>Just wanted to say: I also see <a href="/user_uploads/2/df/dz9Oz6iRMJttyMkdzG935Wqg/image.png">the spikes</a> occurring in my Zulip installation.</p>
+<div class="message_inline_image"><a href="/user_uploads/2/df/dz9Oz6iRMJttyMkdzG935Wqg/image.png" title="the spikes"><img src="/user_uploads/2/df/dz9Oz6iRMJttyMkdzG935Wqg/image.png"></a></div>
+
+
+
+<a name="1027436"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nagios%20scripts/near/1027436" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nagios.20scripts.html#1027436">(Sep 29 2020 at 19:26)</a>:</h4>
+<p>Those checks can certainly be turned off if you're not using nagios; and we should certainly look at not installing them if nagios is not in use.</p>
+<p>But I'm also curious about the cause of the spikes, since I'm not seeing them myself.  What version of Zulip?  What does <code>time /home/zulip/deployments/current/scripts/nagios/check-rabbitmq-queue</code> say?  What about <code>time /home/zulip/deployments/current/scripts/nagios/check-rabbitmq-consumers</code>?</p>
+
+
+
+<a name="1027487"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nagios%20scripts/near/1027487" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nagios.20scripts.html#1027487">(Sep 29 2020 at 20:09)</a>:</h4>
+<p>I'm assuming that we do this run-in-cron, then read-in-nagios trick because rabbitmqctl must be run as root or rabbitmq?</p>
+
+
+
+<a name="1027508"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nagios%20scripts/near/1027508" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nagios.20scripts.html#1027508">(Sep 29 2020 at 20:28)</a>:</h4>
+<p>One potential fix is to enable <a href="https://www.rabbitmq.com/prometheus.html">the prometheus plugin</a>, which makes the consumer and queue list available via HTTP, and is much more performant than <code>rabbitmqctl</code>.  This <a href="https://www.rabbitmq.com/prometheus.html#overview-prometheus">requires upgrading to Rabbitmq 3.8</a>, though, which would mean <a href="https://www.rabbitmq.com/install-debian.html">pinning to the rabbitmq apt repos</a>, since <a href="https://packages.ubuntu.com/bionic-backports/net/rabbitmq-server">while it is in bionic-backports</a>, <a href="https://packages.debian.org/search?keywords=rabbitmq-server">I don't see it in buster-backports</a>.</p>
+<p>We do want Prometheus exports for better monitoring in general, though, so that may be the way forward.  Short-term, of course, we can remove the cron jobs for folks not using nagios.</p>
+
+
+
+<a name="1027648"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nagios%20scripts/near/1027648" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nagios.20scripts.html#1027648">(Sep 29 2020 at 23:32)</a>:</h4>
+<p>I agree it'd be reasonable to disable those monitoring scripts by default; <code>rabbitmqctl</code> is indeed quite slow though I'd not have expected such a visible CPU spike.  Alex is correct for why we use that cron+nagios strategy.  Potentially it's simplest to just move the code to run them into the <code>zulip_ops</code> manifests.</p>
+
+
+
+<a name="1027663"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nagios%20scripts/near/1027663" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nagios.20scripts.html#1027663">(Sep 29 2020 at 23:39)</a>:</h4>
+<p>Yeah, I'm testing that move (and a perf improvement to them) right now; PR once I get them tested.</p>
+
+
+
+<a name="1027735"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nagios%20scripts/near/1027735" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nagios.20scripts.html#1027735">(Sep 30 2020 at 00:10)</a>:</h4>
+<p>Awesome!</p>
+
+
+
+<a name="1028300"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nagios%20scripts/near/1028300" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nagios.20scripts.html#1028300">(Sep 30 2020 at 22:34)</a>:</h4>
+<p>Closing the loop: <span class="user-mention" data-user-id="15241">@Jerome Charaoui</span>, <span class="user-mention" data-user-id="15808">@Felix (strifel)</span>, merged as <a href="https://github.com/zulip/zulip/pull/16439">https://github.com/zulip/zulip/pull/16439</a> (primarily <a href="https://github.com/zulip/zulip/commit/57d88eedd80771f28d05746f4d7fe84e2424bff5">57d88eedd80771f28d05746f4d7fe84e2424bff5</a>)</p>
+
+
+
+<a name="1028364"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nagios%20scripts/near/1028364" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jerome Charaoui <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nagios.20scripts.html#1028364">(Sep 30 2020 at 23:38)</a>:</h4>
+<p>Whoa, excellent, thanks for the quick turnaround!</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

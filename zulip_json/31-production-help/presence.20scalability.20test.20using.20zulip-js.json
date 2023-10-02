@@ -1,0 +1,62 @@
+[
+    {
+        "content": "<p>Hello,</p>\n<p>I'm evaluating Zulip for a project where:<br>\n1) we'd like to use the API (namely zulip-js) for our client implementation<br>\n2) we need to create many realms with anywhere from 1 to 500 users per realm<br>\n3) users will be fairly active, both in terms of messaging and presence (we'd like an \"on the phone\" state...)</p>\n<p>To that end, I created a test application using zulip-js that creates a user, registers an event queue (for \"presence\" and \"user_status\"), and then enters a loop where it sets self presence to something new every 20 seconds. (I realize this is a pretty stressful test, but ...  I need to understand bottlenecks). (Also note, I did need to extend zulip-js to support this).</p>\n<p>I'm testing against an instance of Zulip installed per the instructions at <a href=\"https://zulip.readthedocs.io/en/latest/production/install.html\">https://zulip.readthedocs.io/en/latest/production/install.html</a> on a GCP VM instance.</p>\n<p>I'm attaching a screenshot showing 500 instances of my test application running (all users in the same realm). The screenshot is taken <em>after</em> the user creation phase has completed -- so basically at the point where the clients are just flipping presence every 20 seconds.</p>\n<p>The CPU usage is definitely higher than I'd hoped, and I'm wondering about a couple of things:<br>\n1) Is using the API (via zulip-js) a factor here (vs. what we'd see using e.g. the default web interface?)<br>\n2) Am I inadvertently doing something heavy/wrong in my creation of the event queue? (see code snippet below)</p>\n<p>Thanks!<br>\nJeremy</p>\n<p>relevant code snippets:</p>\n<div class=\"codehilite\"><pre><span></span><code>(async () =&gt; {\n  const zulip = await zulipInit(config);\n  // The zulip object now initialized with config\n  //console.log(await zulip.streams.subscriptions.retrieve());\n  //console.log(await zulip.users.retrieve());\n\n    let randUsername = randomBase64Id(12);\n\n    const user_params = {\n        email: randUsername + &quot;@zulip1.example.com&quot;,\n        password: &quot;&quot;,\n        full_name: randUsername,\n    };\n\n    console.log(await zulip.users.create(user_params));\n\n    const newUserConfig = {\n        username: user_params.email,\n        password: user_params.password,\n        realm: &quot;https://zulip1.example.com&quot;\n    };\n    const userZulip = await zulipInit(newUserConfig);\n\n    console.log(await userZulip.users.me.status.update(false));\n    console.log(await userZulip.users.me.presence.update(&#39;active&#39;));\n\n    const params = {\n        event_types: [&quot;presence&quot;, &quot;user_status&quot;],\n    };\n\n    var regResponse = await userZulip.queues.register(params);\n    if (regResponse.result === &#39;success&#39;) {\n        //console.log(regResponse.presences);\n        subscribePresence(userZulip, regResponse.queue_id, -1);\n        //console.log(regResponse);\n    }\n\n    for (var i=0; i&lt;100; i++) {\n        await new Promise(r =&gt; setTimeout(r, 20000));\n        await userZulip.users.me.status.update(i % 2 === 0);\n        await userZulip.users.me.presence.update((i % 2 === 0 ? &#39;active&#39; : &#39;inactive&#39;));\n    }\n})();\n\n\nasync function subscribePresence(zulip, queue_id, last_event_id) {\n    const eventParams = {\n      queue_id: queue_id,\n      last_event_id: last_event_id\n    };\n    let resp = await zulip.events.retrieve(eventParams);\n    if (resp.result === &#39;success&#39;) {\n        //console.log(resp);\n        let lastEvtId = -1;\n        resp.events.forEach(function(evt) {\n            //console.log(evt);\n            lastEvtId = evt.id;\n        });\n        await subscribePresence(zulip, queue_id, lastEvtId);\n    }\n}\n</code></pre></div>\n<p><a href=\"/user_uploads/2/34/0Qvmqg7dyb1xQIk5PEevw7w1/Zulip8cores500users_presenceEvery20secondsSsh.png\">Zulip8cores500users_presenceEvery20secondsSsh.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/34/0Qvmqg7dyb1xQIk5PEevw7w1/Zulip8cores500users_presenceEvery20secondsSsh.png\" title=\"Zulip8cores500users_presenceEvery20secondsSsh.png\"><img src=\"/user_uploads/2/34/0Qvmqg7dyb1xQIk5PEevw7w1/Zulip8cores500users_presenceEvery20secondsSsh.png\"></a></div>",
+        "id": 1249746,
+        "sender_full_name": "Jeremy Geras",
+        "timestamp": 1629852180
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21312\">@Jeremy Geras</span> We have an unmerged PR changing how presence works behind the scene to be less resource intensive at <a href=\"https://github.com/zulip/zulip/pull/16381\">https://github.com/zulip/zulip/pull/16381</a> Let me know if you'd be willing to test it (I think I'll have to rebase again to make the database migrations have the correct numbering )</p>",
+        "id": 1249807,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1629891064
+    },
+    {
+        "content": "<p>Sure, I can give it a try.</p>",
+        "id": 1249838,
+        "sender_full_name": "Jeremy Geras",
+        "timestamp": 1629906764
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21312\">@Jeremy Geras</span> Does this generate a worst-case situation where every user changes state near-simultaneously?<br>\nHave you explored offsetting (randomly or otherwise) the switch time?<br>\nThis is not to say that a worst-case situation isn't worth exploring, but perhaps switches will be more uniformly spread in most situations?</p>",
+        "id": 1249841,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1629910306
+    },
+    {
+        "content": "<p>I don't believe so; the script I use to start the 500 instances pauses for 1 second at each iteration. (The user creation phase is also pretty heavy, so I wanted to make sure things were spaced out...)</p>",
+        "id": 1249846,
+        "sender_full_name": "Jeremy Geras",
+        "timestamp": 1629912200
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21312\">@Jeremy Geras</span> I've rebased the pull request, so you can you can use it for running your tests. Let me know if it's useful for me to to write up some instructions on how to install/upgrade to the PR version</p>",
+        "id": 1250364,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1630171342
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21312\">@Jeremy Geras</span> I'd be very curious to hear what sort of project you're hoping to use Zulip for, if you're willing to share (either here or in PMs). :)</p>",
+        "id": 1251156,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1630447173
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21312\">@Jeremy Geras</span> just to be clear, do you have 500 realms each with 100 users, for a total of 50K user accounts?  I don't see the 500 in your script anywhere.</p>",
+        "id": 1251285,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1630455845
+    },
+    {
+        "content": "<p>You can shard some parts of the system to improve scalability of this sort of thing, but 50K users flipping presence every 20s is pretty intense load.  (Note that official Zulip clients send presence updates once a minute).</p>",
+        "id": 1251287,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1630455903
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"21312\">Jeremy Geras</span> <a href=\"#narrow/stream/31-production-help/topic/presence.20scalability.20test.20using.20zulip-js/near/1249746\">said</a>:</p>\n<blockquote>\n<p>...<br>\n1) we'd like to use the API (namely zulip-js) for our client implementation<br>\n2) we need to create many realms with anywhere from 1 to 500 users per realm<br>\n3) users will be fairly active, both in terms of messaging and presence (we'd like an \"on the phone\" state...)<br>\n...</p>\n</blockquote>\n<p>Tim, I think <span class=\"user-mention silent\" data-user-id=\"21312\">Jeremy Geras</span> is only testing with one realm/org - the 100 is the state switching, the 500 the number of users?</p>",
+        "id": 1251355,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1630462801
+    }
+]

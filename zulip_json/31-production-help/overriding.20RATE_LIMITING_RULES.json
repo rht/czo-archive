@@ -1,0 +1,476 @@
+[
+    {
+        "content": "<p>I need to overwrite <code>RATE_LIMITING_RULES </code> set in <code>computed_settings.py</code>, can I just add the <code>dict</code> to <code>/etc/zulip/settings.py</code>? The docs weren't clear (<a href=\"https://zulip.readthedocs.io/en/latest/subsystems/settings.html\">https://zulip.readthedocs.io/en/latest/subsystems/settings.html</a>).</p>",
+        "id": 1458919,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667492782
+    },
+    {
+        "content": "<p>(i'm getting users with API limit exceed having just the client open)</p>",
+        "id": 1458921,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667492834
+    },
+    {
+        "content": "<p>It's very much not expected that clients that are logged in are hitting those limits.  Do you know what requests are causing them?  In the access logs, they should be status code 429.</p>",
+        "id": 1458922,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667492942
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>2022-11-03 14:39:23.209 INFO [zr] x.x.x.x    POST    429   5ms (+start: 7ms) /json/users/me/presence (15@root via ZulipElectron/5.9.3)\n2022-11-03 14:39:23.209 INFO [zr] status=429, data=b&#39;{&quot;result&quot;:&quot;error&quot;,&quot;msg&quot;:&quot;API usage exceeded rate limit&quot;,&quot;code&quot;:&quot;RATE_LIMIT_HIT&quot;,&quot;retry-after&quot;:59.04740309715271}\\n&#39;, uid=15@root\n</code></pre></div>",
+        "id": 1458923,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667493008
+    },
+    {
+        "content": "<p>And then it appears the client isn't adhering to the retry because it just spams the endpoint</p>",
+        "id": 1458924,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667493032
+    },
+    {
+        "content": "<p>Since those settings are in <code>computed_settings.py</code>, there's no way to adjust them without changing that file.  This is probably a bug (ref earlier discussion in <a href=\"#narrow/stream/31-production-help/topic/new.20user.20rate.20limit/near/1434214\">https://chat.zulip.org/#narrow/stream/31-production-help/topic/new.20user.20rate.20limit/near/1434214</a>).</p>",
+        "id": 1458925,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667493082
+    },
+    {
+        "content": "<p>That looks like a client bug of some sort -- upping the limit is just going to hose your server.  The rate-limit is protecting you. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1458926,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667493156
+    },
+    {
+        "content": "<p>What version of Zulip?</p>",
+        "id": 1458927,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667493200
+    },
+    {
+        "content": "<p>And is this just one client, or more than one?</p>",
+        "id": 1458928,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667493373
+    },
+    {
+        "content": "<p>We don't do any retries on presence submission:</p>\n<div class=\"codehilite\" data-code-language=\"JavaScript\"><pre><span></span><code><span class=\"w\">    </span><span class=\"nx\">channel</span><span class=\"p\">.</span><span class=\"nx\">post</span><span class=\"p\">({</span><span class=\"w\"></span>\n<span class=\"w\">        </span><span class=\"nx\">url</span><span class=\"o\">:</span><span class=\"w\"> </span><span class=\"s2\">\"/json/users/me/presence\"</span><span class=\"p\">,</span><span class=\"w\"></span>\n<span class=\"w\">        </span><span class=\"nx\">data</span><span class=\"o\">:</span><span class=\"w\"> </span><span class=\"p\">{</span><span class=\"w\"></span>\n<span class=\"w\">            </span><span class=\"nx\">status</span><span class=\"o\">:</span><span class=\"w\"> </span><span class=\"nx\">compute_active_status</span><span class=\"p\">(),</span><span class=\"w\"></span>\n<span class=\"w\">            </span><span class=\"nx\">ping_only</span><span class=\"o\">:</span><span class=\"w\"> </span><span class=\"o\">!</span><span class=\"nx\">want_redraw</span><span class=\"p\">,</span><span class=\"w\"></span>\n<span class=\"w\">            </span><span class=\"nx\">new_user_input</span><span class=\"p\">,</span><span class=\"w\"></span>\n<span class=\"w\">            </span><span class=\"nx\">slim_presence</span><span class=\"o\">:</span><span class=\"w\"> </span><span class=\"kc\">true</span><span class=\"p\">,</span><span class=\"w\"></span>\n<span class=\"w\">        </span><span class=\"p\">},</span><span class=\"w\"></span>\n<span class=\"w\">        </span><span class=\"nx\">success</span><span class=\"p\">(</span><span class=\"nx\">data</span><span class=\"p\">)</span><span class=\"w\"> </span><span class=\"p\">{</span><span class=\"w\"></span>\n<span class=\"w\">            </span><span class=\"c1\">// ...</span><span class=\"w\"></span>\n<span class=\"w\">        </span><span class=\"p\">},</span><span class=\"w\"></span>\n<span class=\"w\">    </span><span class=\"p\">});</span><span class=\"w\"></span>\n</code></pre></div>",
+        "id": 1458930,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667493463
+    },
+    {
+        "content": "<p>The only route to this sort of behaviour I can potentially see is if something decides to play catch-up with <code>setInterval</code>s that it missed?</p>\n<div class=\"codehilite\" data-code-language=\"JavaScript\"><pre><span></span><code><span class=\"cm\">/* Time between keep-alive pings */</span><span class=\"w\"></span>\n<span class=\"kd\">const</span><span class=\"w\"> </span><span class=\"nx\">ACTIVE_PING_INTERVAL_MS</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span><span class=\"mf\">50</span><span class=\"w\"> </span><span class=\"o\">*</span><span class=\"w\"> </span><span class=\"mf\">1000</span><span class=\"p\">;</span><span class=\"w\"></span>\n\n<span class=\"k\">export</span><span class=\"w\"> </span><span class=\"kd\">function</span><span class=\"w\"> </span><span class=\"nx\">initialize</span><span class=\"p\">()</span><span class=\"w\"> </span><span class=\"p\">{</span><span class=\"w\"></span>\n<span class=\"w\">    </span><span class=\"c1\">// ...</span><span class=\"w\"></span>\n\n<span class=\"w\">    </span><span class=\"c1\">// Let the server know we're here, but pass \"false\" for</span><span class=\"w\"></span>\n<span class=\"w\">    </span><span class=\"c1\">// want_redraw, since we just got all this info in page_params.</span><span class=\"w\"></span>\n<span class=\"w\">    </span><span class=\"nx\">send_presence_to_server</span><span class=\"p\">(</span><span class=\"kc\">false</span><span class=\"p\">);</span><span class=\"w\"></span>\n\n<span class=\"w\">    </span><span class=\"kd\">function</span><span class=\"w\"> </span><span class=\"nx\">get_full_presence_list_update</span><span class=\"p\">()</span><span class=\"w\"> </span><span class=\"p\">{</span><span class=\"w\"></span>\n<span class=\"w\">        </span><span class=\"nx\">send_presence_to_server</span><span class=\"p\">(</span><span class=\"kc\">true</span><span class=\"p\">);</span><span class=\"w\"></span>\n<span class=\"w\">    </span><span class=\"p\">}</span><span class=\"w\"></span>\n\n<span class=\"w\">    </span><span class=\"nx\">setInterval</span><span class=\"p\">(</span><span class=\"nx\">get_full_presence_list_update</span><span class=\"p\">,</span><span class=\"w\"> </span><span class=\"nx\">ACTIVE_PING_INTERVAL_MS</span><span class=\"p\">);</span><span class=\"w\"></span>\n<span class=\"p\">}</span><span class=\"w\"></span>\n</code></pre></div>",
+        "id": 1458931,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667493567
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"25152\">Peter Kieser</span> <a href=\"#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1458924\">said</a>:</p>\n<blockquote>\n<p>And then it appears the client isn't adhering to the retry because it just spams the endpoint</p>\n</blockquote>\n<p>As a side note, I wonder if there's any generic backoff code we could put in <code>channel.js</code>' <code>call</code> function when it sees a 429.  I don't know that there's one reasonable behaviour to have -- I guess it could cache the 429 for the <code>retry-after</code> seconds, and return a synthetic 429 to its caller?  Maybe caching the 429 data on a per-request-path basis?</p>",
+        "id": 1458932,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667493826
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1458927\">said</a>:</p>\n<blockquote>\n<p>What version of Zulip?<br>\nAnd is this just one client, or more than one?</p>\n</blockquote>\n<p><span class=\"user-mention\" data-user-id=\"25152\">@Peter Kieser</span>: In case you didn't see my questions above.</p>\n<p>(I moved a couple messages here from you which got mis-placed into <a class=\"stream-topic\" data-stream-id=\"31\" href=\"/#narrow/stream/31-production-help/topic/users.20removed.20from.20LDAP.20and.20sync\">#production help &gt; users removed from LDAP and sync</a>)</p>",
+        "id": 1458933,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667494050
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1458928\">said</a>:</p>\n<blockquote>\n<p>And is this just one client, or more than one?</p>\n</blockquote>\n<p>One client, so far. </p>\n<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1458927\">said</a>:</p>\n<blockquote>\n<p>What version of Zulip?</p>\n</blockquote>\n<p>5.6</p>",
+        "id": 1458969,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667496834
+    },
+    {
+        "content": "<p>Sorry for the delayed response, was in a meeting.</p>",
+        "id": 1458970,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667496841
+    },
+    {
+        "content": "<p>RE: Hosing the server, it looks like there was 1024 requests that returned a rate limit error from the one client. I'd rather the client not get any rate limiting messages.</p>",
+        "id": 1458973,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667496925
+    },
+    {
+        "content": "<p>Could this be possible if the person suspended their laptop or switched from to WiFi or to wired?</p>",
+        "id": 1458987,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667499133
+    },
+    {
+        "content": "<p>This occurred when the person brought their MacBook out of sleep. They would have been connected to a VPN as well. Wonder if rapid interface changes could cause this?</p>",
+        "id": 1458995,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667499635
+    },
+    {
+        "content": "<p>I have definitely experienced client anomalies when coming out of sleep or hibernation with Zulip, and other \"connected\" applications.</p>",
+        "id": 1458998,
+        "sender_full_name": "Matt",
+        "timestamp": 1667499972
+    },
+    {
+        "content": "<p>Browsers do <em>weird</em> stuff around suspend.  The <code>setInterval</code> theory I had above is consistent with that.</p>",
+        "id": 1458999,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667499985
+    },
+    {
+        "content": "<p>This is via the Electron app, FWIW. (Not that that changes anything.)</p>",
+        "id": 1459001,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667500066
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"25152\">Peter Kieser</span> <a href=\"#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1458973\">said</a>:</p>\n<blockquote>\n<p>RE: Hosing the server, it looks like there was 1024 requests that returned a rate limit error from the one client. I'd rather the client not get any rate limiting messages.</p>\n</blockquote>\n<p>I'm not clear how sending 1024 requests at the ~same time saying \"hi, I'm active\" is helping the server or the client in this context -- the 429's seem perfectly reasonable as a way for the server to protect itself against a client which isn't actually being helpful.</p>\n<p>Were there any user-visible signs that they were getting throttled?</p>",
+        "id": 1459002,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667500086
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1459002\">said</a>:</p>\n<div class=\"codehilite\"><pre><span></span><code>Were there any user-visible signs that they were getting throttled?\n</code></pre></div>\n<p>Yes, they received an error. (Attached)<br>\n<a href=\"/user_uploads/2/6a/CbOTxFiyZHHIX1Y0Ut9NR621/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/6a/CbOTxFiyZHHIX1Y0Ut9NR621/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/6a/CbOTxFiyZHHIX1Y0Ut9NR621/image.png\"></a></div>",
+        "id": 1459003,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667500145
+    },
+    {
+        "content": "<p>Hm!  OK, understood that you want to prevent <em>that</em>.</p>",
+        "id": 1459004,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667500223
+    },
+    {
+        "content": "<p>OK, so my guess:</p>\n<ol>\n<li>Client is connected</li>\n<li>Laptop suspends</li>\n<li>Laptop unsuspends</li>\n<li>Client fires off a slew of presence POSTS</li>\n<li>Meanwhile, our logic to detect suspends fires, which forces a full-page reload</li>\n<li>The full-page reload happens, and gets 429'd.</li>\n</ol>",
+        "id": 1459005,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667500343
+    },
+    {
+        "content": "<p>Can you look in the access logs and show the history of all of the request from the client -- ideally starting with a couple before they suspended?  Feel free to redact IPs, etc -- I think we mostly care about the URLs they hit, in what order.</p>",
+        "id": 1459007,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667500524
+    },
+    {
+        "content": "<p>Do you need the rate limit messages (seems theres no way to correlate them with a particular client) or is the 429 enough?</p>",
+        "id": 1459013,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667500874
+    },
+    {
+        "content": "<p>Just the access lines is enough</p>",
+        "id": 1459014,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667500959
+    },
+    {
+        "content": "<p><a href=\"https://crash.pfak.org/~peter/server-2022-11-03-ratelimit.log\">https://crash.pfak.org/~peter/server-2022-11-03-ratelimit.log</a></p>",
+        "id": 1459016,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667501072
+    },
+    {
+        "content": "<p>I checked all of 14:xx timetamp for the IP, that's all the results.</p>",
+        "id": 1459017,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667501102
+    },
+    {
+        "content": "<p>Great, thanks!</p>\n<p>Can you also show the final couple requests from the user before they suspended?  You should be able to grep for <code>15@root</code> to find all requests from that user.</p>",
+        "id": 1459019,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667501605
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1459019\">said</a>:</p>\n<blockquote>\n<p>Can you also show the final couple requests from the user before they suspended?  You should be able to grep for <code>15@root</code> to find all requests from that user.</p>\n</blockquote>\n<p>Just from <code>server.log</code>?</p>",
+        "id": 1459021,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667501804
+    },
+    {
+        "content": "<p>Yup!  We don't need all of them, I'm just curious to verify that the client behaviour looks reasonable before the suspend and IP change</p>",
+        "id": 1459023,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667501845
+    },
+    {
+        "content": "<p>But this does look like bad <code>setInterval</code> behaviour:</p>\n<div class=\"codehilite\"><pre><span></span><code>2022-11-03 14:39:22.276 INFO [zr] x.x.x.76    POST    200  23ms (db: 10ms/2q) /json/users/me/presence (15@root via ZulipElectron/5.9.3)\n2022-11-03 14:39:22.285 INFO [zr] x.x.x.76    POST    200  18ms (db: 7ms/2q) (+start: 12ms) /json/users/me/presence (15@root via ZulipElectron/5.9.3)\n</code></pre></div>\n<p>We took 18ms to serve the second request, so that started at 14:39:22.267, <em>before</em> the first request had finished.  So the browser is clearly just triggering these calls as fast as it could, in parallel.</p>",
+        "id": 1459027,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667501965
+    },
+    {
+        "content": "<p><a href=\"https://crash.pfak.org/~peter/server-2022-11-02-ratelimit.log\">https://crash.pfak.org/~peter/server-2022-11-02-ratelimit.log</a></p>",
+        "id": 1459028,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667501995
+    },
+    {
+        "content": "<p>Those are the last calls prior, nothing for 14 hours.</p>",
+        "id": 1459031,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667502029
+    },
+    {
+        "content": "<p>OK, that all looks perfectly reasonable.</p>",
+        "id": 1459032,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667502057
+    },
+    {
+        "content": "<p>(odd for this particular user to be offline for 14 hours, TBH)</p>",
+        "id": 1459033,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667502071
+    },
+    {
+        "content": "<p>Does this not include mobile clients? is <code>15@root</code> associated with a particular session?</p>",
+        "id": 1459034,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667502147
+    },
+    {
+        "content": "<p>(Sorry this is my second week using Zulip.)</p>",
+        "id": 1459035,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667502156
+    },
+    {
+        "content": "<p><code>15@root</code> is their user-id, so that's across all devices.</p>",
+        "id": 1459036,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667502169
+    },
+    {
+        "content": "<p>Huh. Gonna ask them if they have it on their phone.</p>",
+        "id": 1459038,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667502200
+    },
+    {
+        "content": "<p>I don't think that's relevant here -- these all show ZulipElectron as their user-agent.</p>",
+        "id": 1459039,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667502239
+    },
+    {
+        "content": "<p>Okay.</p>",
+        "id": 1459040,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667502263
+    },
+    {
+        "content": "<p>Yeah, they were offline for those hours.</p>",
+        "id": 1459043,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667502393
+    },
+    {
+        "content": "<p>To answer your original question -- I wouldn't suggest raising your rate-limit thresholds in response to this.  This is a weird race condition I've never seen before and a misbehaving browser, and the server being able to do some push-back to a misbehaving client, generally, is good for your bottom-line availability.</p>\n<p>If you do want to change the rate limits, it is unfortunately not entirely straightforward, since they're in <code>computed_settings.py</code>.  Your best bet would be to <a href=\"https://zulip.readthedocs.io/en/stable/production/upgrade-or-modify.html#modifying-zulip\">make a fork</a> with a change to that file -- or we'd certainly take a patch to move those settings to <code>default_settings.py</code> as long as we <a href=\"#narrow/stream/31-production-help/topic/new.20user.20rate.20limit/near/1434214\">can override parts of them reasonably</a>.</p>\n<p>And we'll dig more into if we can address the browser-going-haywire aspect of this -- thank you for that bug report!</p>",
+        "id": 1459046,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667502527
+    },
+    {
+        "content": "<p>Agreed re: misbehaving client. Is there any response I can do? Because the two avenues I see to resolve this: 1. Up the rate limit, or 2. Ditch Zulip.</p>",
+        "id": 1459048,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667502609
+    },
+    {
+        "content": "<p>We do have a change adjacent to this codepath in <code>main</code>, or in <code>5.x</code>.  I'm not 100% convinced that it affects the behaviour here, but it does adjust the un-suspend behaviour in a way that <em>may</em> help.  You get that code by following our instructions to <a href=\"https://zulip.readthedocs.io/en/stable/production/upgrade-or-modify.html#upgrading-from-a-git-repository\">upgrade to git</a> and pass either <code>5.x</code> (if you want minimal changes) or <code>main</code> (if you want what will be released as 6.0 in a week or so).</p>",
+        "id": 1459057,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667502753
+    },
+    {
+        "content": "<p>The instructions for how to up the rate limit were in my previous message, if you want to go that route.</p>",
+        "id": 1459061,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667502807
+    },
+    {
+        "content": "<p>Okay, I can give that a go (and i see I can just edit the file if I want to just adjust the rate limit.)<br>\nBased on what you just said: It sounds like the client is served by the server and wrapped in an electron app? Anything I can do to help fix the unsuspend behaviour?</p>",
+        "id": 1459065,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667502888
+    },
+    {
+        "content": "<p>Yup, you can just edit the file, and then run <code>~zulip/deployments/current/scripts/restart-server</code> to pick up that change.  However, that change will be lost on your next upgrade.</p>",
+        "id": 1459069,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667502966
+    },
+    {
+        "content": "<p>(Should I open a Github issue?)</p>",
+        "id": 1459079,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667503437
+    },
+    {
+        "content": "<p>The electron app is just the same JS and HTML that we serve for all web clients.</p>\n<p>The relevant code here is in <code>static/js/activity.js</code>, which is what does the <code>setInterval</code> which the browser is mistakenly triggering to catch-up for all of the suspended time, and <code>static/js/watchdog.js</code> which is what controls the unsuspend detection.</p>\n<p>I'm not 100% sure I follow why we call <code> watchdog.check_for_unsuspend()</code> in there, but don't appear to care about <code>watchdog.suspects_user_is_offline</code>, its output.</p>",
+        "id": 1459081,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667503460
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"25152\">Peter Kieser</span> <a href=\"#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1459079\">said</a>:</p>\n<blockquote>\n<p>(Should I open a Github issue?)</p>\n</blockquote>\n<p>Please do!</p>",
+        "id": 1459082,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667503463
+    },
+    {
+        "content": "<p>I'll note that Electron has a <a href=\"https://www.electronjs.org/docs/latest/api/power-monitor/\">whole API dedicated</a> to dealing with power...</p>",
+        "id": 1459085,
+        "sender_full_name": "Matt",
+        "timestamp": 1667503736
+    },
+    {
+        "content": "<p>Yeah.  But that won't help us on plain Chrome, which doubtless has the same potential problem.</p>",
+        "id": 1459129,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667507300
+    },
+    {
+        "content": "<p>We should use <code>setTimeout</code> instead—don’t enqueue the next ping until the current ping is finished or at least started.</p>",
+        "id": 1459136,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1667507571
+    },
+    {
+        "content": "<p>I wonder if that also may explain some of the <code>/</code> fetch storms we've seen, from:</p>\n<div class=\"codehilite\" data-code-language=\"JavaScript\"><pre><span></span><code><span class=\"w\">    </span><span class=\"nx\">setInterval</span><span class=\"p\">(()</span><span class=\"w\"> </span><span class=\"p\">=&gt;</span><span class=\"w\"> </span><span class=\"p\">{</span><span class=\"w\"></span>\n<span class=\"w\">        </span><span class=\"nx\">blueslip</span><span class=\"p\">.</span><span class=\"nx\">log</span><span class=\"p\">(</span><span class=\"s2\">\"Retrying page reload due to 30s timer\"</span><span class=\"p\">);</span><span class=\"w\"></span>\n<span class=\"w\">        </span><span class=\"nb\">window</span><span class=\"p\">.</span><span class=\"nx\">location</span><span class=\"p\">.</span><span class=\"nx\">reload</span><span class=\"p\">(</span><span class=\"kc\">true</span><span class=\"p\">);</span><span class=\"w\"></span>\n<span class=\"w\">    </span><span class=\"p\">},</span><span class=\"w\"> </span><span class=\"mf\">30000</span><span class=\"p\">);</span><span class=\"w\"></span>\n</code></pre></div>\n<p>...where we start down the \"please reload\" path, get suspended a second time, and come out with thousands of <code>window.location.reload(true)</code>s enqueued.</p>",
+        "id": 1459152,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667509332
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1459082\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"25152\">Peter Kieser</span> <a href=\"#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1459079\">said</a>:</p>\n<blockquote>\n<p>(Should I open a Github issue?)</p>\n</blockquote>\n<p>Please do!</p>\n</blockquote>\n<p><a href=\"https://github.com/zulip/zulip/issues/23438\">https://github.com/zulip/zulip/issues/23438</a></p>",
+        "id": 1459180,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667511412
+    },
+    {
+        "content": "<p>I think it might be wise to audit all use of setInterval in the app following this investigation...</p>",
+        "id": 1459237,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1667516871
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1458925\">said</a>:</p>\n<blockquote>\n<p>Since those settings are in <code>computed_settings.py</code>, there's no way to adjust them without changing that file.  This is probably a bug (ref earlier discussion in <a href=\"#narrow/stream/31-production-help/topic/new.20user.20rate.20limit/near/1434214\">https://chat.zulip.org/#narrow/stream/31-production-help/topic/new.20user.20rate.20limit/near/1434214</a>).</p>\n</blockquote>\n<p>I ended up opening <a href=\"https://github.com/zulip/zulip/pull/22956\">https://github.com/zulip/zulip/pull/22956</a> for that back then, perhaps it'd make sense to try to get it merged for 6.0?</p>",
+        "id": 1459362,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1667563455
+    },
+    {
+        "content": "<p>Oooh, nice.  Left a couple comments, but that'd be a great fix to sneak into 6.0.</p>",
+        "id": 1459373,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667571472
+    },
+    {
+        "content": "<p>I was looking over the code, it doesn't look like I can set a specific override for presence, can i? (i.e. i'm at the mercy of a fix going in for the suspend issue client-side.)</p>",
+        "id": 1459410,
+        "sender_full_name": "Peter Kieser",
+        "timestamp": 1667579011
+    },
+    {
+        "content": "<p>That's controlled by <code>api_by_user</code>.  There's one bucket for each user's authenticated traffic, which is why hammering on presence means they get 429'd on a request to <code>/</code></p>",
+        "id": 1459412,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667579499
+    },
+    {
+        "content": "<p>I've tagged <a href=\"https://github.com/zulip/zulip/pull/23438\">#23438</a> as a release goal; <span class=\"user-mention\" data-user-id=\"10242\">@Sahil Batra</span> do you perhaps have time to work removing the <code>setInterval</code> in favor of <code>setTimeout</code> here?</p>",
+        "id": 1461036,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1667928031
+    },
+    {
+        "content": "<p>Yeah sure. Will do it.</p>",
+        "id": 1461058,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1667929390
+    },
+    {
+        "content": "<p>I guess given this analysis, all of our <code>setInterval</code> calls are probably things we should consider switching to a <code>setTimeout</code> approach.</p>\n<div class=\"codehilite\"><pre><span></span><code>static/js/activity.js:    setInterval(get_full_presence_list_update, ACTIVE_PING_INTERVAL_MS);\nstatic/js/message_edit.js:        const countdown_timer = setInterval(() =&gt; {\nstatic/js/reload.js:    setInterval(() =&gt; {\nstatic/js/timerender.ts:setInterval(update_timestamps, 60 * 1000);\nstatic/js/watchdog.ts:setInterval(check_for_unsuspend, 5000);\n</code></pre></div>",
+        "id": 1461103,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1667933276
+    },
+    {
+        "content": "<p>Back to the main topic here, <a href=\"https://github.com/zulip/zulip/pull/22956\">#22956</a> was merged, so in Zulip 6.0 there will be a documented interface for overriding rate-limiting rules.</p>",
+        "id": 1461107,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1667933427
+    },
+    {
+        "content": "<p>I'd appreciate additional reviews/feedback on this <code>setInterval</code> replacement PR: <a href=\"https://github.com/zulip/zulip/pull/23508\">#23508</a></p>",
+        "id": 1462475,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668112852
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> <span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> can you both review <a href=\"https://github.com/zulip/zulip/pull/23508\">#23508</a>? I think I'm happy with this implementation, though probably want to rename the variable and add a block comment; but it's a particularly sensitive code path, so I'd like extra eyes on it.</p>",
+        "id": 1463644,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668454642
+    },
+    {
+        "content": "<p>I pushed an update with comments/variable name changes.</p>",
+        "id": 1463651,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668455018
+    },
+    {
+        "content": "<p>I'm not clear why this isn't more like (totally untested):</p>\n<div class=\"codehilite\" data-code-language=\"Diff\"><pre><span></span><code><span class=\"gh\">diff --git static/js/activity.js static/js/activity.js</span><span class=\"w\"></span>\n<span class=\"gh\">index 99154c169e..a29ab7d98a 100644</span><span class=\"w\"></span>\n<span class=\"gd\">--- static/js/activity.js</span><span class=\"w\"></span>\n<span class=\"gi\">+++ static/js/activity.js</span><span class=\"w\"></span>\n<span class=\"gu\">@@ -247,9 +247,10 @@ export function initialize() {</span><span class=\"w\"></span>\n\n<span class=\"w\"> </span>    function get_full_presence_list_update() {<span class=\"w\"></span>\n<span class=\"w\"> </span>        send_presence_to_server(true);<span class=\"w\"></span>\n<span class=\"gi\">+        setTimeout(get_full_presence_list_update, ACTIVE_PING_INTERVAL_MS);</span><span class=\"w\"></span>\n<span class=\"w\"> </span>    }<span class=\"w\"></span>\n\n<span class=\"gd\">-    setInterval(get_full_presence_list_update, ACTIVE_PING_INTERVAL_MS);</span><span class=\"w\"></span>\n<span class=\"gi\">+    setTimeout(get_full_presence_list_update, ACTIVE_PING_INTERVAL_MS);</span><span class=\"w\"></span>\n<span class=\"w\"> </span>}<span class=\"w\"></span>\n\n<span class=\"w\"> </span>export function update_presence_info(user_id, info, server_time) {<span class=\"w\"></span>\n</code></pre></div>",
+        "id": 1463659,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1668455128
+    },
+    {
+        "content": "<p>Which seems cleaner than another parameter</p>",
+        "id": 1463660,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1668455152
+    },
+    {
+        "content": "<p>Hmm.</p>",
+        "id": 1463668,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668455435
+    },
+    {
+        "content": "<p>I think that would work (Though I'd do the <code>setTimeout</code> first, so we don't need to think about an exception in <code>send_presence_to_server</code> killing your presernce feed), and might be more readable.</p>",
+        "id": 1463672,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668455542
+    },
+    {
+        "content": "<p>Yeah, that version works and passes the test written for this; I'll try pushing that up.</p>",
+        "id": 1463680,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668455815
+    },
+    {
+        "content": "<p>Done.</p>",
+        "id": 1463690,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668456064
+    },
+    {
+        "content": "<p>LGTM.</p>",
+        "id": 1463702,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1668456460
+    },
+    {
+        "content": "<p>OK, I feel pretty good about the risk associated with this change to the preexisting code; will proceed with merging it.</p>",
+        "id": 1463714,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668456771
+    }
+]

@@ -1,0 +1,122 @@
+[
+    {
+        "content": "<p>My streams keep appearing and disappearing (disappearing meaning: getting pushed to bottom) due to GCI traffic. How hard would it be to have a heuristic like:</p>\n<ul>\n<li>If a stream has gotten a message in the last two weeks, don't push it to the bottom?</li>\n</ul>",
+        "id": 366694,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1512540929
+    },
+    {
+        "content": "<p>I'm pretty sure this would be challenging.  The mechanism on the frontend is basically just seeing if any of your last N messages are in the stream, and we have one tiny workaround for streams that are literally newly subscribed.  We don't have a great backend way to find all of your streams that have gotten messages in the last N weeks, and picking N for realms is kind of tricky (some realms are way more active).</p>",
+        "id": 367492,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1512569584
+    },
+    {
+        "content": "<p>I still think we should just stop putting streams below the line.  Any condition for putting streams below the line is kind of arbitrary and hard to communicate to users.</p>",
+        "id": 367495,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1512569669
+    },
+    {
+        "content": "<p>it's possible this is being exacerbated by some bug that is causing streams to be marked as inactive when they really aren't. E.g. I have a ton of streams marked as inactive right now that got messages in the last day, and I'm getting far, far less than 10000 messages a day.</p>",
+        "id": 368348,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1512585112
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span> <span class=\"mi\">20</span> <span class=\"nx\">exports</span><span class=\"p\">.</span><span class=\"nx\">is_active</span> <span class=\"o\">=</span> <span class=\"kd\">function</span> <span class=\"p\">(</span><span class=\"nx\">sub</span><span class=\"p\">)</span> <span class=\"p\">{</span>\n <span class=\"mi\">21</span>     <span class=\"k\">return</span> <span class=\"nx\">topic_data</span><span class=\"p\">.</span><span class=\"nx\">stream_has_topics</span><span class=\"p\">(</span><span class=\"nx\">sub</span><span class=\"p\">.</span><span class=\"nx\">stream_id</span><span class=\"p\">)</span> <span class=\"o\">||</span> <span class=\"nx\">sub</span><span class=\"p\">.</span><span class=\"nx\">newly_subscribed</span><span class=\"p\">;</span>\n <span class=\"mi\">22</span> <span class=\"p\">};</span>\n <span class=\"mi\">23</span>\n</pre></div>",
+        "id": 368802,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1512603201
+    },
+    {
+        "content": "<p>and then in <code>topic_data</code>:</p>\n<div class=\"codehilite\"><pre><span></span>  <span class=\"mi\">7</span> <span class=\"nx\">exports</span><span class=\"p\">.</span><span class=\"nx\">stream_has_topics</span> <span class=\"o\">=</span> <span class=\"kd\">function</span> <span class=\"p\">(</span><span class=\"nx\">stream_id</span><span class=\"p\">)</span> <span class=\"p\">{</span>\n  <span class=\"mi\">8</span>     <span class=\"k\">return</span> <span class=\"nx\">stream_dict</span><span class=\"p\">.</span><span class=\"nx\">has</span><span class=\"p\">(</span><span class=\"nx\">stream_id</span><span class=\"p\">);</span>\n  <span class=\"mi\">9</span> <span class=\"p\">};</span>\n</pre></div>",
+        "id": 368805,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1512603248
+    },
+    {
+        "content": "<p>And <code>stream_dict</code> should be populated for every incoming message.  <span class=\"user-mention\" data-user-email=\"rishig@zulipchat.com\" data-user-id=\"131\">@Rishi Gupta</span> We can try playing around with your console to see what <code>topic_data.stream_has_topics(stream_id)</code> returns, etc.</p>",
+        "id": 368811,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1512603535
+    },
+    {
+        "content": "<p>cool. E.g. right now <a class=\"stream\" data-stream-id=\"2\" href=\"/#narrow/stream/general\">#general</a> is not active for me, so that could be a good one to test with</p>",
+        "id": 368812,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1512603572
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/82/Hhb1WHK4QKKRse-UOYG1bfwS/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">pasted image</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/82/Hhb1WHK4QKKRse-UOYG1bfwS/pasted_image.png\" target=\"_blank\" title=\"pasted image\"><img src=\"/user_uploads/2/82/Hhb1WHK4QKKRse-UOYG1bfwS/pasted_image.png\"></a></div>",
+        "id": 368817,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1512603691
+    },
+    {
+        "content": "<p>cool, so topic_data.stream_has_topics(2) is at least false for me</p>",
+        "id": 368819,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1512603764
+    },
+    {
+        "content": "<p>hm, the last message there was 2 days old, though</p>",
+        "id": 368820,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1512603804
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/fd/K0P_b7xSbMoIY00oUdmQyOst/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">pasted image</a> suggest not quite 10K messages since Dec 4</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/fd/K0P_b7xSbMoIY00oUdmQyOst/pasted_image.png\" target=\"_blank\" title=\"pasted image\"><img src=\"/user_uploads/2/fd/K0P_b7xSbMoIY00oUdmQyOst/pasted_image.png\"></a></div>",
+        "id": 368824,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1512603866
+    },
+    {
+        "content": "<p>here is what my general looks like:<br>\n<a href=\"/user_uploads/2/97/QLOxpZUZAnS5sHcr1UhpKV2m/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">pasted image</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/97/QLOxpZUZAnS5sHcr1UhpKV2m/pasted_image.png\" target=\"_blank\" title=\"pasted image\"><img src=\"/user_uploads/2/97/QLOxpZUZAnS5sHcr1UhpKV2m/pasted_image.png\"></a></div>",
+        "id": 368825,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1512603909
+    },
+    {
+        "content": "<p>for me:</p>\n<div class=\"codehilite\"><pre><span></span>topic_data.find_or_create(2).get_recent_names()\nArray [ &quot;Problems with realm link&quot;, &quot;Broken link&quot;, &quot;Number of attachment in a message&quot;, &quot;rafael cascalho&quot;, &quot;Scaling&quot;, &quot;random unread message&quot;, &quot;Screen Sharing&quot; ]\n</pre></div>",
+        "id": 368826,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1512603919
+    },
+    {
+        "content": "<p>same, minus the last one:<br>\n<code>topic_data.find_or_create(2).get_recent_names()</code></p>\n<blockquote>\n<p>15:45:35.420 (6) [\"Problems with realm link\", \"Broken link\", \"Number of attachment in a message\", \"rafael cascalho\", \"Scaling\", \"random unread message\"]</p>\n</blockquote>",
+        "id": 368828,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1512603962
+    },
+    {
+        "content": "<p>huh, it's hard to see how those would be different, looking at the code, unless you got more messages coming in</p>",
+        "id": 368829,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1512604120
+    },
+    {
+        "content": "<p>maybe later, try the same two console things in opposite order</p>",
+        "id": 368830,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1512604135
+    },
+    {
+        "content": "<p>for later, but currently stream_has_topics is returning true, and <code>#general</code> is still greyed out</p>",
+        "id": 368846,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1512604797
+    },
+    {
+        "content": "<p>yeah, you might want to try at reload time (and be ready to be quick with up-arrow in the console)...possibly you <strong>don't</strong> have general messages for the initial batch of messages, and then 10s later (or whatever the interval is) you get more historical messages but they don't trigger a sidebar redraw</p>",
+        "id": 368853,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1512605013
+    },
+    {
+        "content": "<p>and I still think we should just eliminate this feature and simplify <span class=\"emoji emoji-1f604\" title=\"smile\">:smile:</span></p>",
+        "id": 368854,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1512605048
+    }
+]

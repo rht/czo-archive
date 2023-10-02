@@ -1,0 +1,113 @@
+<html>
+<head><meta charset="utf-8"><title>enable bot to see real email addresses · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/enable.20bot.20to.20see.20real.20email.20addresses.html">enable bot to see real email addresses</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1433943"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/enable%20bot%20to%20see%20real%20email%20addresses/near/1433943" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ron Bertino <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/enable.20bot.20to.20see.20real.20email.20addresses.html#1433943">(Sep 12 2022 at 04:49)</a>:</h4>
+<p>I'm running a self hosted installation of Zulip.</p>
+<p>I've currently got the setting:<br>
+<code>Organization permissions =&gt; User identity =&gt; Who can access user email addresses</code><br>
+set to "Admins only"</p>
+<p>I've just created a bot and I want this bot to be able to see the real user email addresses rather than the fake email addresses via API calls.</p>
+<p>Which command do I need to issue in order to get this configured?</p>
+
+
+
+<a name="1433978"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/enable%20bot%20to%20see%20real%20email%20addresses/near/1433978" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ron Bertino <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/enable.20bot.20to.20see.20real.20email.20addresses.html#1433978">(Sep 12 2022 at 06:22)</a>:</h4>
+<p>I've also tried to set the "Who can access user email addresses" in the org setting to "Admins and moderators" and then trying to manually configure the bot account to be an admin.</p>
+<div class="codehilite"><pre><span></span><code>su zulip -c &#39;/home/zulip/deployments/current/manage.py change_user_role -r &lt;realmID&gt; &lt;botemail&gt; admin&#39;
+</code></pre></div>
+<p>but this didn't work.</p>
+<p>The API call is still returning fake email addresses for all users.</p>
+
+
+
+<a name="1433981"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/enable%20bot%20to%20see%20real%20email%20addresses/near/1433981" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ron Bertino <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/enable.20bot.20to.20see.20real.20email.20addresses.html#1433981">(Sep 12 2022 at 06:38)</a>:</h4>
+<p>The only way I can get it to work is to set the "Who can access user email addresses" in the org setting to:<br>
+"Admins, moderators, members and guests"</p>
+<p>I'd like to keep that set to "Admins only" but manually configure the bot account to be able to see the real email addresses.</p>
+
+
+
+<a name="1434071"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/enable%20bot%20to%20see%20real%20email%20addresses/near/1434071" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/enable.20bot.20to.20see.20real.20email.20addresses.html#1434071">(Sep 12 2022 at 14:11)</a>:</h4>
+<p><span class="user-mention" data-user-id="24719">@Ron Bertino</span> The real email is in the <code>delivery_email</code> attribute.  <code>email</code> gets set to these dummy values when email address visibility is restricted</p>
+
+
+
+<a name="1434127"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/enable%20bot%20to%20see%20real%20email%20addresses/near/1434127" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ron Bertino <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/enable.20bot.20to.20see.20real.20email.20addresses.html#1434127">(Sep 12 2022 at 17:09)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> , yes, I can see the <code>delivery_email</code> attribute as holding the correct/valid email address, but I still have an issue.</p>
+<p>The problem is that the <a href="https://zulip.com/api/get-user-by-email">Get a user by email endpoint</a> hooks into the <code>email</code> field and not the <code>display_email</code> field.<br>
+Therefore when my API call (with the context of the bot) tries to look up a user by their real email address, this fails.</p>
+<p>This implies that I need to configure the bot's security permissions in order to allow it to see valid email addresses within the <code>email</code> field of member objects.</p>
+<p>Note that I'm not using the Python library in order to do the API calls.<br>
+I'm looking to build an automation workflow in <a href="https://make.com">Make</a>, so I need to use the equivalent of <code>curl</code> access.</p>
+
+
+
+<a name="1434132"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/enable%20bot%20to%20see%20real%20email%20addresses/near/1434132" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/enable.20bot.20to.20see.20real.20email.20addresses.html#1434132">(Sep 12 2022 at 17:15)</a>:</h4>
+<p><span class="user-mention" data-user-id="24719">@Ron Bertino</span> Hmm, to make sure I understand - is your point that you'd need an API endpoint where a bot with admin permission would be able to look up a User by their <code>delivery_email</code> (the real email)?</p>
+<p>If so, wouldn't a reasonable workaround be to just use the get ALL users endpoint (<a href="https://zulip.com/api/get-users">https://zulip.com/api/get-users</a>) and iterate through it to find the users with the relevant <code>delivery_email</code> value?</p>
+
+
+
+<a name="1434136"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/enable%20bot%20to%20see%20real%20email%20addresses/near/1434136" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ron Bertino <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/enable.20bot.20to.20see.20real.20email.20addresses.html#1434136">(Sep 12 2022 at 17:29)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="10349">Mateusz Mandera</span> <a href="#narrow/stream/31-production-help/topic/enable.20bot.20to.20see.20real.20email.20addresses/near/1434132">said</a>:</p>
+<blockquote>
+<p>Hmm, to make sure I understand - is your point that you'd need an API endpoint where a bot with admin permission would be able to look up a User by their <code>delivery_email</code> (the real email)?</p>
+</blockquote>
+<p>Yes, I need a bot to be able to get the details of a user by specifying their email address.</p>
+<blockquote>
+<p>If so, wouldn't a reasonable workaround be to just use the get ALL users endpoint (<a href="https://zulip.com/api/get-users">https://zulip.com/api/get-users</a>) and iterate through it to find the users with the relevant <code>delivery_email</code> value?</p>
+</blockquote>
+<p>That would work, but it's a pretty inefficient way to go about it, especially since the Zulip devs have already built an endpoint to do exactly what's required.</p>
+<p>The simplest thing would be to just be able to give the bot account the required permission such that it can see real email addresses listed in the <code>email</code> fielf of a user/member object.</p>
+
+
+
+<a name="1434143"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/enable%20bot%20to%20see%20real%20email%20addresses/near/1434143" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/enable.20bot.20to.20see.20real.20email.20addresses.html#1434143">(Sep 12 2022 at 17:44)</a>:</h4>
+<blockquote>
+<p>The simplest thing would be to just be able to give the bot account the required permission such that it can see real email addresses listed in the email fielf of a user/member object.</p>
+</blockquote>
+<p>The thing is that the <code>email</code> value is intended to be in the dummy format for organizations with visibility restricted. That's how it shows up for anyone using the API, regardless of them being a Member or Admin etc.. What having sufficiently high permissions gives you, is having the <code>delivery_email</code> attribute in the response. If you make this request via a bot that's not allowed to see real emails, <code>delivery_email</code> won't be in the response. </p>
+<p>So, essentially, this comes down to needing a new API endpoint that allows user lookups by <code>delivery_email</code> value (rather than this being a bot permissions issue). If i'm understanding the discussion correctly. Tbh that looks to me like quite a natural API endpoint to have, <span class="user-mention" data-user-id="7">@Tim Abbott</span> is this intentional that we don't want it for some reason?</p>
+
+
+
+<a name="1434193"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/enable%20bot%20to%20see%20real%20email%20addresses/near/1434193" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ron Bertino <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/enable.20bot.20to.20see.20real.20email.20addresses.html#1434193">(Sep 12 2022 at 18:49)</a>:</h4>
+<p>Looking up a user object based on their email address is likely going to be my most used API call.<br>
+The basic workflow is that when someone buys one of my courses on Teachable, this initiates a webhook that's sent to <a href="https://make.com">Make</a>, and this is where I run my automation workflows.<br>
+One of the workflows would be to join the user to the Zulip private channel that I have created for that specific course.<br>
+I would therefore need to be able to reference the Zulip user who has an email address that matches the Teachable user account that just purchased my course.</p>
+<p>I've got around 1000 members in my private community and they don't want their email addresses to be displayed anywhere, including within the private community.<br>
+I therefore have to restrict showing real email addresses to Admins only.</p>
+<p>As it stands, the current <a href="https://zulip.com/api/get-user-by-email">Get user by email endpoint</a> is of no use since the bot account (which is an admin) can only see fake email addresses listed in the <code>email</code> field.</p>
+<p>The only work-around, as suggested by Mateuz, is to query the <a href="https://zulip.com/api/get-users">Get all users endpoint</a> in order to get a dump of all of these 1000 users and then loop through each of those user objects hunting through the <code>delivery_email</code> field, looking for a match to the Teachable email address provided via the webhook.<br>
+This is quite inefficient.</p>
+
+
+
+<a name="1435670"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/enable%20bot%20to%20see%20real%20email%20addresses/near/1435670" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/enable.20bot.20to.20see.20real.20email.20addresses.html#1435670">(Sep 14 2022 at 22:26)</a>:</h4>
+<p><span class="user-mention" data-user-id="24719">@Ron Bertino</span> thanks, that's helpful context. </p>
+<p>I think you should be fine doing the "Get all users endpoint" for now -- it's doing an inefficient thing but only in a relatively infrequent operation.</p>
+<p>I feel like we had an issue somewhere for adding a parameter to <a href="https://zulip.com/api/get-user-by-email">https://zulip.com/api/get-user-by-email</a> to request using the <code>delivery_email</code> for the lookup for users where you have the appropriate permission. I think there's a decent change of that happening after an upcoming overhaul of how these permissions work.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

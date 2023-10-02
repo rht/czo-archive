@@ -1,0 +1,140 @@
+[
+    {
+        "content": "<p>I am attempting to set up a quick install of Zulip to demo to the powers that be, and have run into an issue time and again during the install script process related to starting nginx / ssl cert issues.</p>\n<p>The self-signed cert was created as follows;</p>\n<p>openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/zulip.key.key -out /etc/ssl/private/zulip.combined-chain.crt</p>\n<p>systemctl status nginx shows;</p>\n<p>● nginx.service - A high performance web server and a reverse proxy server<br>\n   Loaded: loaded (/lib/systemd/system/nginx.service; enabled; vendor preset: enabled)<br>\n   Active: failed (Result: exit-code) since Fri 2017-01-20 08:33:27 CST; 6s ago<br>\n  Process: 27897 ExecStartPre=/usr/sbin/nginx -t -q -g daemon on; master_process on; (code=exited, status=1/FAILURE)<br>\n Main PID: 16882 (code=exited, status=0/SUCCESS)</p>\n<p>Jan 20 08:33:26 luke systemd[1]: Starting A high performance web server and a reverse proxy server...<br>\nJan 20 08:33:27 luke nginx[27897]: nginx: [emerg] BIO_new_file(\"/etc/ssl/certs/zulip.combined-chain.crt\") failed (SSL: error:02001002:system library:fopen:<br>\nJan 20 08:33:27 luke nginx[27897]: nginx: configuration file /etc/nginx/nginx.conf test failed<br>\nJan 20 08:33:27 luke systemd[1]: nginx.service: Control process exited, code=exited status=1<br>\nJan 20 08:33:27 luke systemd[1]: Failed to start A high performance web server and a reverse proxy server.<br>\nJan 20 08:33:27 luke systemd[1]: nginx.service: Unit entered failed state.<br>\nJan 20 08:33:27 luke systemd[1]: nginx.service: Failed with result 'exit-code'.</p>",
+        "id": 133411,
+        "sender_full_name": "Keith Snape",
+        "timestamp": 1484923461
+    },
+    {
+        "content": "<p>Oops, I noticed one mistake I had made putting the .crt in ../private instead of ../certs/,  rectified that but still fail on loading nginx, error now reads ; </p>\n<p>Jan 20 08:54:32 luke nginx[28764]: nginx: [emerg] SSL_CTX_use_PrivateKey_file(\"/etc/ssl/private/zulip.key\") failed (SSL: error:02001002:system library:fo... </p>",
+        "id": 133467,
+        "sender_full_name": "Keith Snape",
+        "timestamp": 1484924133
+    },
+    {
+        "content": "<p>does that indicate that a self signed cert is insufficient for nginx / zulip?</p>",
+        "id": 133469,
+        "sender_full_name": "Keith Snape",
+        "timestamp": 1484924152
+    },
+    {
+        "content": "<p>haha, nevermind, the other issue was that I mistyped the ssl key creation as ../private/zulip.key.key.  Extra .key in there was the issue.  Feel free to ignore this :D</p>",
+        "id": 133471,
+        "sender_full_name": "Keith Snape",
+        "timestamp": 1484924253
+    },
+    {
+        "content": "<p>No worries!  It's always good to know where the tricky spots are in the install, even if it comes down to human error (we've all been there!).</p>",
+        "id": 133476,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1484924752
+    },
+    {
+        "content": "<p>Well, to continue on the 'reporting problems experienced' train, I've gotten as far as creating the one time organization creation link with manage.py,  but when I visit that URL in a browser I get a 400 Bad Request.</p>",
+        "id": 133496,
+        "sender_full_name": "Keith Snape",
+        "timestamp": 1484925993
+    },
+    {
+        "content": "<p>I guess I also technically get the 400 bad request going directly to the root server url too.</p>",
+        "id": 133497,
+        "sender_full_name": "Keith Snape",
+        "timestamp": 1484926089
+    },
+    {
+        "content": "<p>Just a wild guess, but maybe <code>ALLOWED_HOSTS</code> needs adjustment?</p>",
+        "id": 133498,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1484926557
+    },
+    {
+        "content": "<p>I thought so too.  Is CIDR notation acceptable, ie; 10.227.16.1/24? or should it be 10.227.16.* ?</p>",
+        "id": 133499,
+        "sender_full_name": "Keith Snape",
+        "timestamp": 1484926736
+    },
+    {
+        "content": "<p>Hmm I've even gone so far as to change the hostname in settings.py to 10.227.16.62 and set the ALLOWED_HOSTS to 10.227.16.31 which is where I'm setting it up from, still getting the 400.</p>",
+        "id": 133501,
+        "sender_full_name": "Keith Snape",
+        "timestamp": 1484927067
+    },
+    {
+        "content": "<p>Ok, likely yet another case of id-10-t or pebkac on my part today.  I tunneled in and came at the instance from localhost, and the org creation process is working properly.  I'll revisit the allowed hosts stuff later to see if it's something stupid on my end :)</p>",
+        "id": 133509,
+        "sender_full_name": "Keith Snape",
+        "timestamp": 1484927769
+    },
+    {
+        "content": "<p><a href=\"https://docs.djangoproject.com/en/1.10/ref/settings/#allowed-hosts\" target=\"_blank\" title=\"https://docs.djangoproject.com/en/1.10/ref/settings/#allowed-hosts\">https://docs.djangoproject.com/en/1.10/ref/settings/#allowed-hosts</a></p>",
+        "id": 133510,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1484927799
+    },
+    {
+        "content": "<p>(I think we mostly use ALLOWED_HOSTS in a vanilla Django way.)</p>",
+        "id": 133511,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1484927819
+    },
+    {
+        "content": "<p>Next issue, I'm able to send a test email using manage.py send_test_email and it goes through, but when I enter in the <a href=\"mailto:username@company.com\" title=\"mailto:username@company.com\">username@company.com</a> in the initial step of creating the organization, it fails, gives a 500: Internal server error.  /var/log/zulip/server.log seems to indicate it's failing sending the email (despite it testing fine manually);</p>\n<p>File \"/usr/lib/python2.7/smtplib.py\", line 747, in sendmail<br>\n    raise SMTPRecipientsRefused(senderrs)<br>\nSMTPRecipientsRefused: {u'<a href=\"mailto:user@company.com\" title=\"mailto:user@company.com\">user@company.com</a>': (554, '5.7.1 &lt;S0106c8be19dedf18.mj.shawcable.net[70.64.220.148]&gt;: Client host rejected: Access denied')}<br>\n2017-01-20 11:42:46,377 INFO     127.0.0.1       POST    500  2.6s (db: 1ms/5q) /create_realm/f2f548107aee334eb352e490c984e5953e0ec017 (unauth via ?)<br>\n2017-01-20 11:42:46,378 ERROR    Internal Server Error: /create_realm/f2f548107aee334eb352e490c984e5953e0ec017</p>",
+        "id": 133517,
+        "sender_full_name": "Keith Snape",
+        "timestamp": 1484931298
+    },
+    {
+        "content": "<p>And I've actually got the mail handler set up to use a gmail address on <a href=\"http://smtp.gmail.com\" target=\"_blank\" title=\"http://smtp.gmail.com\">smtp.gmail.com</a> currently, but as I said it tests fine manually so I'm not sure why it fails during organization creation.</p>",
+        "id": 133518,
+        "sender_full_name": "Keith Snape",
+        "timestamp": 1484931439
+    },
+    {
+        "content": "<p>One of those days.... so despite it giving the 500 error and that showing in the logs, I noticed that a signup confirmation email was generated and sent, so the creation process appears to have worked.</p>\n<p>Sorry for the false start issues I keep posting :)</p>",
+        "id": 133521,
+        "sender_full_name": "Keith Snape",
+        "timestamp": 1484931639
+    },
+    {
+        "content": "<p>Argh my frustration level is rising.  I really want this to just work, but for whatever reason its not.  I followed through the registration confirmation, entered my full name and organization and submitted -- to another 500 internal error.</p>\n<p>I don't suppose there's prebuilt images for Zulip I can just throw at VMware and be done with, at least for the short term process of demoing it?</p>",
+        "id": 133522,
+        "sender_full_name": "Keith Snape",
+        "timestamp": 1484931870
+    },
+    {
+        "content": "<p>I'm not sure a prebuilt image would help here--it seems to be some kind of problem related to the email configuration.</p>",
+        "id": 133542,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1484932971
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\">@Tim Abbott</span> usually comes online about this time of the morning; he may have some insight into this.</p>",
+        "id": 133543,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1484933025
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"snapek@gmail.com\">@Keith Snape</span> when you say it tests fine manually, do you mean <code>manage.py send_test_email</code> works?  If so, you probably just need to restart the server (<code>scripts/restart-server</code>) for your last settings changes to take effect</p>",
+        "id": 133616,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1484935067
+    },
+    {
+        "content": "<p>The fundamental problems with prebuilt images are:<br>\n(1) Needs to be some way to authenticate users (either outgoing email, which needs auth to not get spam filtering, or something like google auth)<br>\n(2) Needs an SSL certificate<br>\nAnd we can't really provide either of those automatically :/</p>",
+        "id": 133620,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1484935181
+    },
+    {
+        "content": "<p>(We did recently make ALLOWED_HOSTS be automatically configured to include EXTERNAL_HOST, which saves a bit of possible configuration error)</p>",
+        "id": 133622,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1484935210
+    },
+    {
+        "content": "<p>o execute operation: No such file or directory<br>\nError: systemctl enable supervisor returned 1 instead of one of [0]<br>\nError: /Stage[main]/Zulip::Supervisor/Exec[enable supervisor]/returns: change fr                                                                                        om notrun to 0 failed: systemctl enable supervisor returned 1 instead of one of                                                                                         [0]</p>",
+        "id": 139521,
+        "sender_full_name": "jawwad hussain",
+        "timestamp": 1485581512
+    }
+]

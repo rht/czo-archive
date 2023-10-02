@@ -1,0 +1,176 @@
+[
+    {
+        "content": "<p>hello is this an appropriate place for me to post some error logging from installation?</p>",
+        "id": 1516500,
+        "sender_full_name": "ftpmvp",
+        "timestamp": 1677721036
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26249\">@ftpmvp</span> yep!</p>",
+        "id": 1516535,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1677722295
+    },
+    {
+        "content": "<p>Traceback (most recent call last):<br>\n  File \"/home/zulip/deployments/current/scripts/setup/../stop-server\", line 53, in &lt;module&gt;<br>\n    services = list_supervisor_processes(services, only_running=True)<br>\n  File \"/home/zulip/deployments/current/scripts/setup/../../scripts/lib/supervisor.py\", line 34, in list_supervisor_processes<br>\n    processes = rpc().supervisor.getAllProcessInfo()<br>\n  File \"/usr/lib/python3.10/xmlrpc/client.py\", line 1122, in __call__<br>\n    return self.__send(self.__name, args)<br>\n  File \"/usr/lib/python3.10/xmlrpc/client.py\", line 1464, in __request<br>\n    response = self.__transport.request(<br>\n  File \"/usr/lib/python3.10/xmlrpc/client.py\", line 1166, in request<br>\n    return self.single_request(host, handler, request_body, verbose)<br>\n  File \"/usr/lib/python3.10/xmlrpc/client.py\", line 1178, in single_request<br>\n    http_conn = self.send_request(host, handler, request_body, verbose)<br>\n  File \"/usr/lib/python3.10/xmlrpc/client.py\", line 1291, in send_request<br>\n    self.send_content(connection, request_body)<br>\n  File \"/usr/lib/python3.10/xmlrpc/client.py\", line 1321, in send_content<br>\n    connection.endheaders(request_body)<br>\n  File \"/usr/lib/python3.10/http/client.py\", line 1277, in endheaders<br>\n    self._send_output(message_body, encode_chunked=encode_chunked)<br>\n  File \"/usr/lib/python3.10/http/client.py\", line 1037, in _send_output<br>\n    self.send(msg)<br>\n  File \"/usr/lib/python3.10/http/client.py\", line 975, in send<br>\n    self.connect()<br>\n  File \"/home/zulip/deployments/current/scripts/setup/../../scripts/lib/supervisor.py\", line 10, in connect<br>\n    self.sock.connect(<a href=\"http://self.host\">self.host</a>)<br>\nPermissionError: [Errno 13] Permission denied</p>\n<p>Zulip installation failed (exit code 1)!</p>",
+        "id": 1516554,
+        "sender_full_name": "ftpmvp",
+        "timestamp": 1677723322
+    },
+    {
+        "content": "<p>If you could use <a href=\"https://zulip.com/help/code-blocks\">code blocks</a> to make logs more readable, that'd be helpful!</p>\n<p><span class=\"user-mention\" data-user-id=\"26249\">@ftpmvp</span>: Can you tell us more about the host you're installing this on?  It looks like it's restricted from talking to itself via UNIX socket.</p>",
+        "id": 1516581,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677724737
+    },
+    {
+        "content": "<p>sorry &amp; thanks i was looking for the code block inserter on the ui. no there are no restrictions of this kind on my host. running ubuntu 22.04</p>",
+        "id": 1516903,
+        "sender_full_name": "ftpmvp",
+        "timestamp": 1677773882
+    },
+    {
+        "content": "<p>Is this Ubuntu 22.04 in some sort of VM?</p>\n<p>Can you show the full output of the install, not just the end?</p>",
+        "id": 1516932,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677778373
+    },
+    {
+        "content": "<p>Hm, this looks to be <a href=\"https://github.com/zulip/zulip/pull/23725\">#23725</a> / <a class=\"stream-topic\" data-stream-id=\"31\" href=\"/#narrow/stream/31-production-help/topic/trouble.20with.20zulip.20install.20at.20list_supervisor_processes\">#production help &gt; trouble with zulip install at list_supervisor_processes</a>.</p>",
+        "id": 1516933,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677778494
+    },
+    {
+        "content": "<p>Can you show:</p>\n<div class=\"codehilite\"><pre><span></span><code>ls -l /var/run/supervisor.sock\nhead /etc/supervisor/supervisord.conf\n</code></pre></div>",
+        "id": 1516934,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677778530
+    },
+    {
+        "content": "<p>I suspect it's owned by the wrong user somehow due to some puppet shenanigans.  If so, I'll want to see all of <code>/var/log/supervisor/supervisord.log</code> and <code>/var/log/zulip/install.log</code> to figure out where the ordering went wrong.  It <em>looks</em> right:</p>\n<div class=\"codehilite\" data-code-language=\"Puppet\"><pre><span></span><code><span class=\"w\">   </span><span class=\"k\">file</span><span class=\"w\"> </span><span class=\"p\">{</span><span class=\"w\"> </span><span class=\"nv\">$zulip::common::supervisor_conf_file:</span>\n<span class=\"w\">     </span><span class=\"na\">ensure</span><span class=\"w\">  </span><span class=\"o\">=&gt;</span><span class=\"w\"> </span><span class=\"k\">file</span><span class=\"p\">,</span>\n<span class=\"w\">     </span><span class=\"na\">require</span><span class=\"w\"> </span><span class=\"o\">=&gt;</span><span class=\"w\"> </span><span class=\"k\">Package</span><span class=\"p\">[</span><span class=\"na\">supervisor</span><span class=\"p\">],</span>\n<span class=\"w\">     </span><span class=\"na\">owner</span><span class=\"w\">   </span><span class=\"o\">=&gt;</span><span class=\"w\"> </span><span class=\"s\">'root'</span><span class=\"p\">,</span>\n<span class=\"w\">     </span><span class=\"na\">group</span><span class=\"w\">   </span><span class=\"o\">=&gt;</span><span class=\"w\"> </span><span class=\"s\">'root'</span><span class=\"p\">,</span>\n<span class=\"w\">     </span><span class=\"na\">mode</span><span class=\"w\">    </span><span class=\"o\">=&gt;</span><span class=\"w\"> </span><span class=\"s\">'0644'</span><span class=\"p\">,</span>\n<span class=\"w\">     </span><span class=\"na\">content</span><span class=\"w\"> </span><span class=\"o\">=&gt;</span><span class=\"w\"> </span><span class=\"k\">template</span><span class=\"p\">(</span><span class=\"s\">'zulip/supervisor/supervisord.conf.erb'</span><span class=\"p\">),</span>\n<span class=\"w\">     </span><span class=\"k\">notify</span><span class=\"w\">  </span><span class=\"o\">=&gt;</span><span class=\"w\"> </span><span class=\"k\">Exec</span><span class=\"p\">[</span><span class=\"s\">'supervisor-restart'</span><span class=\"p\">],</span>\n<span class=\"w\">   </span><span class=\"p\">}</span>\n</code></pre></div>",
+        "id": 1516943,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677779230
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26249\">@ftpmvp</span>: In case you didn't see my above messages, some thoughts on debugging this further.</p>",
+        "id": 1517017,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677787252
+    },
+    {
+        "content": "<p>Is this Ubuntu 22.04 in some sort of VM?<br>\nyes, digital ocean</p>\n<div class=\"codehilite\"><pre><span></span><code>~# ls -l /var/run/supervisor.sock\nhead /etc/supervisor/supervisord.conf\nsrwx------ 1 root root 0 Mar  1 05:47 /var/run/supervisor.sock\n; supervisor config file\n\n[unix_http_server]\nfile=/var/run/supervisor.sock   ; (the path to the socket file)\nchmod=0700                       ; socket file mode (default 0700)\nchown=zulip:zulip\n\n[supervisord]\nlogfile=/var/log/supervisor/supervisord.log ; (main log file;default $CWD/supervisord.log)\npidfile=/var/run/supervisord.pid ; (supervisord pidfile;default supervisord.pid)\nroot@digitalocean-ubuntu-blr1-s-1vcpu-3gb:~\n</code></pre></div>",
+        "id": 1517378,
+        "sender_full_name": "ftpmvp",
+        "timestamp": 1677809485
+    },
+    {
+        "content": "<p>OK, that's what I suspected (<code>/var/run/supervisor.sock</code> has the wrong owner -- not what <code>/etc/supervisor/supervisord.conf</code> says it should have)</p>\n<p>Can you show <code>/var/log/supervisor/supervisord.log</code>?</p>",
+        "id": 1517380,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677809526
+    },
+    {
+        "content": "<p>thanks alex  <br>\n2023-03-01 07:07:17,067 INFO exited: zulip_events (exit status 127; not expected)<br>\n2023-03-01 07:07:18,070 INFO spawned: 'zulip_events' with pid 42848<br>\n2023-03-01 07:07:19,217 INFO success: zulip_events entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 07:07:19,218 INFO exited: zulip_events (exit status 127; not expected)<br>\n2023-03-01 07:07:20,221 INFO spawned: 'zulip_events' with pid 42849<br>\n2023-03-01 07:07:21,299 INFO success: zulip_events entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 07:07:21,300 INFO exited: zulip_events (exit status 127; not expected)<br>\n2023-03-01 07:07:22,303 INFO spawned: 'zulip_events' with pid 42850<br>\n2023-03-01 07:07:23,377 INFO success: zulip_events entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 07:07:23,378 INFO exited: zulip_events (exit status 127; not expected)<br>\n2023-03-01 07:07:24,381 INFO spawned: 'zulip_events' with pid 42851<br>\n2023-03-01 07:07:25,455 INFO success: zulip_events entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 07:07:25,455 INFO exited: zulip_events (exit status 127; not expected)<br>\n2023-03-01 07:07:26,458 INFO spawned: 'zulip_events' with pid 42930<br>\n2023-03-01 07:07:27,463 INFO success: zulip_events entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)</p>",
+        "id": 1517402,
+        "sender_full_name": "ftpmvp",
+        "timestamp": 1677811016
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26249\">@ftpmvp</span> You need to restart the server and run the installation command again to solve this problem</p>",
+        "id": 1517561,
+        "sender_full_name": "TwoDogs2",
+        "timestamp": 1677831833
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"25948\">@TwoDogs2</span>: While that may fix the issue, that won't help us find out what the problem is to prevent it from happening to more people.</p>",
+        "id": 1517687,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677854388
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26249\">@ftpmvp</span>: I'm most interested in the very <em>top</em> of the file.  Can you show the first 100 lines or so?</p>",
+        "id": 1517690,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677854437
+    },
+    {
+        "content": "<p>I'd also like to see <code>/var/log/zulip/install.log</code></p>",
+        "id": 1517691,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677854476
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> ok，I have installed it twice. I have encountered this problem every time. After restarting the server, the problem is solved. I haven't studied this problem</p>",
+        "id": 1518491,
+        "sender_full_name": "TwoDogs2",
+        "timestamp": 1677943903
+    },
+    {
+        "content": "<p>thanks alex here you are</p>\n<p>2023-03-01 05:47:30,482 WARN No file matches via include \"/etc/supervisor/conf.d/*.conf\"<br>\n2023-03-01 05:47:30,498 INFO RPC interface 'supervisor' initialized<br>\n2023-03-01 05:47:30,502 CRIT Server 'unix_http_server' running without any HTTP authentication checking<br>\n2023-03-01 05:47:30,503 INFO supervisord started with pid 29681<br>\n2023-03-01 06:18:55,098 INFO spawned: 'go-camo' with pid 37559<br>\n2023-03-01 06:18:55,114 INFO spawned: 'smokescreen' with pid 37560<br>\n2023-03-01 06:18:55,129 INFO spawned: 'zulip-django' with pid 37561<br>\n2023-03-01 06:18:55,147 INFO spawnerr: can't find command '/home/zulip/deployments/current/manage.py'<br>\n2023-03-01 06:18:55,157 INFO spawned: 'zulip_deliver_scheduled_emails' with pid 37562<br>\n2023-03-01 06:18:55,180 INFO spawned: 'zulip_deliver_scheduled_messages' with pid 37563<br>\n2023-03-01 06:18:55,217 INFO spawned: 'process-fts-updates' with pid 37564<br>\n2023-03-01 06:18:55,270 INFO spawned: 'zulip_events' with pid 37565<br>\n2023-03-01 06:18:55,977 INFO exited: zulip-django (exit status 127; not expected)<br>\n2023-03-01 06:18:56,040 INFO exited: zulip_deliver_scheduled_emails (exit status 127; not expected)<br>\n2023-03-01 06:18:56,164 INFO success: go-camo entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 06:18:56,167 INFO success: smokescreen entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 06:18:56,168 INFO spawnerr: can't find command '/home/zulip/deployments/current/manage.py'<br>\n2023-03-01 06:18:56,168 INFO exited: zulip_deliver_scheduled_messages (exit status 127; not expected)<br>\n2023-03-01 06:18:56,406 INFO success: process-fts-updates entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 06:18:56,411 INFO success: zulip_events entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 06:18:56,411 INFO exited: zulip_events (exit status 127; not expected)<br>\n2023-03-01 06:18:56,420 INFO spawned: 'zulip_events' with pid 37577<br>\n2023-03-01 06:18:56,818 INFO exited: zulip_events (exit status 127; not expected)<br>\n2023-03-01 06:18:57,872 INFO spawned: 'zulip-django' with pid 37610<br>\n2023-03-01 06:18:57,877 INFO spawned: 'zulip_deliver_scheduled_emails' with pid 37611<br>\n2023-03-01 06:18:57,886 INFO spawned: 'zulip_deliver_scheduled_messages' with pid 37612<br>\n2023-03-01 06:18:57,915 INFO spawned: 'zulip_events' with pid 37613<br>\n2023-03-01 06:18:57,919 INFO exited: process-fts-updates (exit status 1; not expected)<br>\n2023-03-01 06:18:58,160 INFO spawned: 'process-fts-updates' with pid 37614<br>\n2023-03-01 06:18:58,165 INFO exited: zulip-django (exit status 127; not expected)<br>\n2023-03-01 06:18:58,167 INFO exited: zulip_deliver_scheduled_emails (exit status 127; not expected)<br>\n2023-03-01 06:18:58,179 INFO spawnerr: can't find command '/home/zulip/deployments/current/manage.py'<br>\n2023-03-01 06:18:58,186 INFO exited: zulip_deliver_scheduled_messages (exit status 127; not expected)<br>\n2023-03-01 06:18:58,384 INFO exited: zulip_events (exit status 127; not expected)<br>\n2023-03-01 06:18:59,411 INFO success: process-fts-updates entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 06:18:59,412 INFO exited: process-fts-updates (exit status 1; not expected)<br>\n2023-03-01 06:19:00,416 INFO spawned: 'zulip-django' with pid 37616<br>\n2023-03-01 06:19:00,424 INFO spawned: 'zulip_deliver_scheduled_emails' with pid 37617<br>\n2023-03-01 06:19:00,437 INFO spawned: 'zulip_deliver_scheduled_messages' with pid 37618<br>\n2023-03-01 06:19:00,453 INFO spawned: 'process-fts-updates' with pid 37619<br>\n2023-03-01 06:19:00,490 INFO spawned: 'zulip_events' with pid 37620<br>\n2023-03-01 06:19:00,868 INFO exited: zulip-django (exit status 127; not expected)<br>\n2023-03-01 06:19:00,881 INFO exited: zulip_deliver_scheduled_emails (exit status 127; not expected)<br>\n2023-03-01 06:19:00,887 INFO exited: zulip_deliver_scheduled_messages (exit status 127; not expected)<br>\n2023-03-01 06:19:01,060 INFO exited: zulip_events (exit status 127; not expected)<br>\n2023-03-01 06:19:02,092 INFO spawnerr: can't find command '/home/zulip/deployments/current/manage.py'<br>\n2023-03-01 06:19:02,093 INFO gave up: zulip-tornado entered FATAL state, too many start retries too quickly<br>\n2023-03-01 06:19:02,094 INFO success: process-fts-updates entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 06:19:02,094 INFO exited: process-fts-updates (exit status 1; not expected)<br>\n2023-03-01 06:19:03,098 INFO spawned: 'process-fts-updates' with pid 37622<br>\n2023-03-01 06:19:04,332 INFO spawned: 'zulip-django' with pid 37872<br>\n2023-03-01 06:19:04,348 INFO spawned: 'zulip_deliver_scheduled_emails' with pid 37876<br>\n2023-03-01 06:19:04,379 INFO spawned: 'zulip_deliver_scheduled_messages' with pid 37877<br>\n2023-03-01 06:19:04,380 INFO success: process-fts-updates entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 06:19:04,396 INFO spawned: 'zulip_events' with pid 37883<br>\n2023-03-01 06:19:04,423 INFO exited: process-fts-updates (exit status 1; not expected)<br>\n2023-03-01 06:19:05,426 INFO success: zulip-django entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 06:19:05,431 INFO success: zulip_deliver_scheduled_emails entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 06:19:05,431 INFO success: zulip_deliver_scheduled_messages entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 06:19:05,433 INFO spawned: 'process-fts-updates' with pid 38132<br>\n2023-03-01 06:19:05,434 INFO success: zulip_events entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 06:19:05,612 INFO exited: zulip_deliver_scheduled_emails (exit status 127; not expected)<br>\n2023-03-01 06:19:05,632 INFO spawned: 'zulip_deliver_scheduled_emails' with pid 38158<br>\n2023-03-01 06:19:05,665 INFO exited: zulip-django (exit status 127; not expected)<br>\n2023-03-01 06:19:05,665 INFO exited: zulip_deliver_scheduled_messages (exit status 127; not expected)<br>\n2023-03-01 06:19:05,698 INFO spawned: 'zulip-django' with pid 38160<br>\n2023-03-01 06:19:05,729 INFO spawned: 'zulip_deliver_scheduled_messages' with pid 38161<br>\n2023-03-01 06:19:05,771 INFO exited: zulip_events (exit status 127; not expected)<br>\n2023-03-01 06:19:05,782 INFO spawned: 'zulip_events' with pid 38163<br>\n2023-03-01 06:19:06,425 INFO exited: zulip_deliver_scheduled_emails (exit status 127; not expected)<br>\n2023-03-01 06:19:06,432 INFO success: process-fts-updates entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 06:19:06,435 INFO exited: zulip_deliver_scheduled_messages (exit status 127; not expected)<br>\n2023-03-01 06:19:06,448 INFO exited: zulip-django (exit status 127; not expected)<br>\n2023-03-01 06:19:06,739 INFO exited: zulip_events (exit status 127; not expected)<br>\n2023-03-01 06:19:07,807 INFO spawned: 'zulip-django' with pid 38188<br>\n2023-03-01 06:19:07,824 INFO spawned: 'zulip_deliver_scheduled_emails' with pid 38189<br>\n2023-03-01 06:19:07,838 INFO spawned: 'zulip_deliver_scheduled_messages' with pid 38190<br>\n2023-03-01 06:19:07,900 INFO spawned: 'zulip_events' with pid 38191<br>\n2023-03-01 06:19:07,915 INFO exited: process-fts-updates (exit status 1; not expected)<br>\n2023-03-01 06:19:08,619 INFO spawned: 'process-fts-updates' with pid 38192<br>\n2023-03-01 06:19:08,635 INFO exited: zulip_deliver_scheduled_emails (exit status 127; not expected)<br>\n2023-03-01 06:19:08,645 INFO exited: zulip-django (exit status 127; not expected)<br>\n2023-03-01 06:19:08,713 INFO exited: zulip_deliver_scheduled_messages (exit status 127; not expected)<br>\n2023-03-01 06:19:09,149 INFO success: zulip_events entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 06:19:09,150 INFO exited: zulip_events (exit status 127; not expected)<br>\n2023-03-01 06:19:09,157 INFO spawned: 'zulip_events' with pid 38195<br>\n2023-03-01 06:19:09,408 INFO exited: process-fts-updates (exit status 1; not expected)<br>\n2023-03-01 06:19:10,419 INFO spawned: 'process-fts-updates' with pid 38210<br>\n2023-03-01 06:19:10,420 INFO success: zulip_events entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)<br>\n2023-03-01 06:19:10,420 INFO exited: zulip_events (exit status 127; not expected)<br>\n2023-03-01 06:19:10,941 INFO spawned: 'zulip-django' with pid 38222<br>\n2023-03-01 06:19:10,979 INFO spawned: 'zulip_deliver_scheduled_emails' with pid 38223</p>",
+        "id": 1518734,
+        "sender_full_name": "ftpmvp",
+        "timestamp": 1678043356
+    },
+    {
+        "content": "<p>Ok!  And can you show me:</p>\n<div class=\"codehilite\"><pre><span></span><code>grep -C20 -i supervisor /var/log/zulip/install.log\n</code></pre></div>",
+        "id": 1518746,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678044881
+    },
+    {
+        "content": "<p>A message was moved from this topic to <a class=\"stream-topic\" data-stream-id=\"31\" href=\"/#narrow/stream/31-production-help/topic/Zulip.20Offline.20installation\">#production help &gt; Zulip Offline installation</a> by <span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span>.</p>",
+        "id": 1519079,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1678113987
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26249\">@ftpmvp</span>: Just @'ing you in case you didn't see my message above.</p>",
+        "id": 1519087,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678114546
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/installation.20help/near/1518746\">said</a>:</p>\n<blockquote>\n<p>Ok!  And can you show me:</p>\n<p><div class=\"codehilite\"><pre><span></span><code>grep -C20 -i supervisor /var/log/zulip/install.log\n</code></pre></div><br>\n</p>\n</blockquote>\n<p>sure which lines alex?</p>",
+        "id": 1519151,
+        "sender_full_name": "ftpmvp",
+        "timestamp": 1678118171
+    },
+    {
+        "content": "<p>All of the output that command produces.  Is it a lot?</p>",
+        "id": 1519153,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678118193
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/installation.20help/near/1519153\">said</a>:</p>\n<blockquote>\n<p>All of the output that command produces.  Is it a lot?</p>\n</blockquote>\n<blockquote>\n<p>66k <span aria-label=\"big smile\" class=\"emoji emoji-1f604\" role=\"img\" title=\"big smile\">:big_smile:</span></p>\n</blockquote>",
+        "id": 1519167,
+        "sender_full_name": "ftpmvp",
+        "timestamp": 1678118990
+    },
+    {
+        "content": "<p>Uh. That's mot exactly expected. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>\n<p>Maybe give me a sampling of the start?</p>\n<div class=\"codehilite\"><pre><span></span><code>grep -C20 -i supervisor /var/log/zulip/install.log | head -n100\n</code></pre></div>",
+        "id": 1519169,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678119709
+    },
+    {
+        "content": "<p>thats still over the limit but this is pretty close.  thank you</p>\n<div class=\"codehilite\"><pre><span></span><code>Notice: /usr/lib/nagios/plugins/zulip_base: Would have triggered &#39;refresh&#39; from 2 events\nNotice: Class[Zulip::Profile::Base]: Would have triggered &#39;refresh&#39; from 17 events\nNotice: /Stage[main]/Zulip::Nginx/Package[nginx-full]/ensure: current_value &#39;purged&#39;, should be &#39;present&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/etc/nginx/zulip-include/]/ensure: current_value &#39;absent&#39;, should be &#39;directory&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/etc/nginx/zulip-include/api_headers]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/etc/nginx/zulip-include/certbot]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/etc/nginx/zulip-include/headers]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/etc/nginx/zulip-include/proxy]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/etc/nginx/zulip-include/proxy_longpolling]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /etc/nginx/zulip-include/: Would have triggered &#39;refresh&#39; from 6 events\nNotice: /Stage[main]/Zulip::Nginx/File[/etc/nginx/dhparam.pem]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/etc/nginx/nginx.conf]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/etc/nginx/uwsgi_params]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/var/log/nginx]/ensure: current_value &#39;absent&#39;, should be &#39;directory&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/etc/logrotate.d/nginx]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/Package[certbot]/ensure: current_value &#39;purged&#39;, should be &#39;present&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/var/lib/zulip]/owner: current_value &#39;root&#39;, should be &#39;zulip&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/var/lib/zulip]/group: current_value &#39;root&#39;, should be &#39;adm&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/var/lib/zulip]/mode: current_value &#39;0755&#39;, should be &#39;0770&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/var/lib/zulip/certbot-webroot]/ensure: current_value &#39;absent&#39;, should be &#39;directory&#39; (noop)\nNotice: /Stage[main]/Zulip::Supervisor/Package[supervisor]/ensure: current_value &#39;purged&#39;, should be &#39;present&#39; (noop)\nNotice: /Stage[main]/Zulip::Supervisor/File[/etc/supervisor/conf.d]/ensure: current_value &#39;absent&#39;, should be &#39;directory&#39; (noop)\nNotice: /Stage[main]/Zulip::Supervisor/File[/etc/supervisor/conf.d/zulip]/ensure: current_value &#39;absent&#39;, should be &#39;directory&#39; (noop)\nNotice: /Stage[main]/Zulip::Supervisor/File[/etc/supervisor/supervisord.conf]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::Supervisor/File[/usr/local/bin/secret-env-wrapper]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::Tornado_sharding/File[/etc/zulip/nginx_sharding_map.conf]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::Tornado_sharding/File[/etc/zulip/sharding.json]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::Tornado_sharding/File[/etc/nginx/zulip-include/tornado-upstreams]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: Class[Zulip::Tornado_sharding]: Would have triggered &#39;refresh&#39; from 3 events\nNotice: /Stage[main]/Zulip::App_frontend_base/File[/etc/nginx/zulip-include/app]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::App_frontend_base/File[/etc/nginx/zulip-include/uploads.types]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::App_frontend_base/File[/etc/nginx/zulip-include/app.d/]/ensure: current_value &#39;absent&#39;, should be &#39;directory&#39; (noop)\nNotice: /Stage[main]/Zulip::Nginx/File[/etc/nginx/zulip-include/app.d/uploads-internal.conf]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::App_frontend_base/File[/etc/nginx/zulip-include/upstreams]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::App_frontend_base/File[/etc/supervisor/conf.d/zulip/zulip.conf]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::App_frontend_base/File[/etc/zulip/uwsgi.ini]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::App_frontend_base/File[/etc/sysctl.d/40-uwsgi.conf]/ensure: current_value &#39;absent&#39;, should be &#39;file&#39; (noop)\nNotice: /Stage[main]/Zulip::App_frontend_base/Exec[sysctl_p_uwsgi]: Would have triggered &#39;refresh&#39; from 1 event\nNotice: /Stage[main]/Zulip::App_frontend_base/File[/home/zulip/tornado]/ensure: current_value &#39;absent&#39;, should be &#39;directory&#39; (noop)\nNotice: /Stage[main]/Zulip::App_frontend_base/File[/home/zulip/logs]/ensure: current_value &#39;absent&#39;, should be &#39;directory&#39; (noop)\nNotice: /Stage[main]/Zulip::App_frontend_base/File[/home/zulip/prod-static]/ensure: current_value &#39;absent&#39;, should be &#39;directory&#39; (noop)\nNotice: /Stage[main]/Zulip::App_frontend_base/File[/home/zulip/deployments]/ensure: current_value &#39;absent&#39;, should be &#39;di\n```\n</code></pre></div>",
+        "id": 1519175,
+        "sender_full_name": "ftpmvp",
+        "timestamp": 1678120413
+    },
+    {
+        "content": "<p>I don't understand how that would result in so many matching lines.  Have you repeatedly redone this install, by chance?</p>\n<p>Let's see:</p>\n<div class=\"codehilite\"><pre><span></span><code>grep -i supervisor /var/log/zulip/install.log | head -n80\n</code></pre></div>",
+        "id": 1519179,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678120569
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/installation.20help/near/1519179\">said</a>:</p>\n<blockquote>\n<p>I don't understand how that would result in so many matching lines.  Have you repeatedly redone this install, by chance?</p>\n<p>Let's see:</p>\n<p><div class=\"codehilite\"><pre><span></span><code>grep -i supervisor /var/log/zulip/install.log | head -n80\n````\n a zillion times or so\n</code></pre></div><br>\n</p>\n</blockquote>",
+        "id": 1519187,
+        "sender_full_name": "ftpmvp",
+        "timestamp": 1678120955
+    }
+]

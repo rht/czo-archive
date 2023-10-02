@@ -1,0 +1,68 @@
+[
+    {
+        "content": "<p>Hi there !<br>\nStill trying to plug our new Zulip instance to a single SAML IdP for multiple orgs.<br>\nI've configured an auth realm (but not created it as a real realm) which seems to be doing the trick.<br>\nWhen trying to authenticate with SAML button on org <code>corporate</code>, I'm redirected to <a href=\"https://auth.zulip.mydomain.com/login/saml/?subdomain=corporate&amp;is_signup=0&amp;multiuse_object_key=&amp;next=%2F&amp;idp=saml\">https://auth.zulip.mydomain.com/login/saml/?subdomain=corporate&amp;is_signup=0&amp;multiuse_object_key=&amp;next=%2F&amp;idp=saml</a> which then redirects to SSO IdP with something like <a href=\"https://sso.mydomain.com/saml/singleSignOn?SAMLRequest=.......&amp;RelayState=%7B%22state_token%22%3A%22saml_token_....%22%7D\">https://sso.mydomain.com/saml/singleSignOn?SAMLRequest=.......&amp;RelayState=%7B%22state_token%22%3A%22saml_token_....%22%7D</a></p>",
+        "id": 1329887,
+        "sender_full_name": "Benjamin MALYNOVYTCH",
+        "timestamp": 1645003783
+    },
+    {
+        "content": "<p>SSO confirmes auth and redirects back with the SAML Response to the auth realm, which ends up with a \"/complete/saml/: Can't figure out subdomain for this authentication request. relayed_params: {}\" in Zulip's logs</p>",
+        "id": 1329890,
+        "sender_full_name": "Benjamin MALYNOVYTCH",
+        "timestamp": 1645003911
+    },
+    {
+        "content": "<p>my understanding is that when the auth realm generates the SAML Request, it should also provide a <code>subdomain</code> value in the RelayState (there is no such value), which will then be used to redirect the user when coming back with the SAML Response</p>",
+        "id": 1329893,
+        "sender_full_name": "Benjamin MALYNOVYTCH",
+        "timestamp": 1645004000
+    },
+    {
+        "content": "<p>never mind, I gave up and switched to dedicated SAML configurations per org <span aria-label=\"confused\" class=\"emoji emoji-1f615\" role=\"img\" title=\"confused\">:confused:</span></p>",
+        "id": 1329964,
+        "sender_full_name": "Benjamin MALYNOVYTCH",
+        "timestamp": 1645017556
+    },
+    {
+        "content": "<p>Grumbl ... I can't even have dedicated configurations pointing to a single IdP<br>\nI'm back to <code>Can't figure out subdomain for this authentication request.</code> <span aria-label=\"frown\" class=\"emoji emoji-1f641\" role=\"img\" title=\"frown\">:frown:</span></p>",
+        "id": 1330692,
+        "sender_full_name": "Benjamin MALYNOVYTCH",
+        "timestamp": 1645117396
+    },
+    {
+        "content": "<p>I don't understand why RelayState doesn't contain <code>subdomain</code> when leaving Zulip with SAML Request <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>",
+        "id": 1330693,
+        "sender_full_name": "Benjamin MALYNOVYTCH",
+        "timestamp": 1645117484
+    },
+    {
+        "content": "<p>I guess code is messed up somewhere around here <a href=\"https://github.com/zulip/zulip/blob/e1f42c1ac54f74176fa69c360791f4cca3c7c87d/zproject/backends.py#L2326\">https://github.com/zulip/zulip/blob/e1f42c1ac54f74176fa69c360791f4cca3c7c87d/zproject/backends.py#L2326</a> but can't figure out why</p>",
+        "id": 1330694,
+        "sender_full_name": "Benjamin MALYNOVYTCH",
+        "timestamp": 1645117572
+    },
+    {
+        "content": "<p>k ... so the subdomain should be stored in the session</p>",
+        "id": 1330695,
+        "sender_full_name": "Benjamin MALYNOVYTCH",
+        "timestamp": 1645117733
+    },
+    {
+        "content": "<p>hmmm ... I might have found what's wrong, IdP seems to be eating the RelayState (and not forwarding it in the SAML Response) <span aria-label=\"face palm\" class=\"emoji emoji-1f926\" role=\"img\" title=\"face palm\">:face_palm:</span></p>",
+        "id": 1330699,
+        "sender_full_name": "Benjamin MALYNOVYTCH",
+        "timestamp": 1645117983
+    },
+    {
+        "content": "<p>just in case someones falls here, it seems to be due to <a href=\"https://gitlab.ow2.org/lemonldap-ng/lemonldap-ng/-/issues/2671\">https://gitlab.ow2.org/lemonldap-ng/lemonldap-ng/-/issues/2671</a><br>\nfixed release isn't ready yet, I'll try with latest sources tomorrow</p>",
+        "id": 1330720,
+        "sender_full_name": "Benjamin MALYNOVYTCH",
+        "timestamp": 1645119808
+    },
+    {
+        "content": "<p>sorry for the noise</p>",
+        "id": 1330721,
+        "sender_full_name": "Benjamin MALYNOVYTCH",
+        "timestamp": 1645119813
+    }
+]

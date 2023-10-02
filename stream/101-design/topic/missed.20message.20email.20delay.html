@@ -1,0 +1,173 @@
+<html>
+<head><meta charset="utf-8"><title>missed message email delay · design · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/101-design/index.html">design</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html">missed message email delay</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1226912"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1226912" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1226912">(Jul 07 2021 at 18:02)</a>:</h4>
+<p>I'm really excited about <a href="https://github.com/zulip/zulip/pull/19119">#19119</a> by <span class="user-mention" data-user-id="16839">@Abhijeet Bodas</span>, which rewrites our missed-message email queue worker to use a better data structure, which will allow us to make "How long to wait before sending email notifications for a mention" configurable.  (Currently it is hardcoded to 2 minutes).  </p>
+<p>There's a design/semantics question that I'd like to ask that affects exactly how we do this: What should happen with mentions sent during the last few minutes if you change this parameter?</p>
+
+
+
+<a name="1226913"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1226913" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1226913">(Jul 07 2021 at 18:03)</a>:</h4>
+<p>The first option is that any messages you had already received at the moment you make that change have the old setting applied, and any new messages you receive after the change have the new setting applied.</p>
+
+
+
+<a name="1226915"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1226915" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1226915">(Jul 07 2021 at 18:04)</a>:</h4>
+<p>The second option is that we apply the new setting to any potential missed-message emails that have not yet been sent (I.e. if you had previously configured 30 minutes and change it to 10, a mention that had been been tracked since 20 minutes ago would immediately email you).</p>
+
+
+
+<a name="1226916"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1226916" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1226916">(Jul 07 2021 at 18:05)</a>:</h4>
+<p>(I guess I'm assuming here that you've configured email notifications for messages you haven't read yet regardless of whether you're offline, for simplicity of not having to think about that configuration detail).</p>
+
+
+
+<a name="1226918"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1226918" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1226918">(Jul 07 2021 at 18:07)</a>:</h4>
+<p>Basically, which option we pick determines how we store the data.  I think I prefer the second option, since structurally it is applying your settings change more immediately.</p>
+
+
+
+<a name="1226919"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1226919" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1226919">(Jul 07 2021 at 18:08)</a>:</h4>
+<div class="codehilite" data-code-language="Python"><pre><span></span><code>    <span class="c1"># List of event dictionaries</span>
+    <span class="n">events</span><span class="p">:</span> <span class="nb">object</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">JSONField</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+</code></pre></div>
+<p>That is an…let’s go with “unusual”…database schema, especially in the light of the way it gets updated, which uses quadratic time and database garbage. Is there a reason for this choice?</p>
+
+
+
+<a name="1226922"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1226922" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1226922">(Jul 07 2021 at 18:11)</a>:</h4>
+<p>I think how to story the list of events is a good (separate) question; maybe we should take that to <a class="stream" data-stream-id="3" href="/#narrow/stream/3-backend">#backend</a>?  I think for this audience I mostly want to answer the above UX question.</p>
+
+
+
+<a name="1226923"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1226923" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1226923">(Jul 07 2021 at 18:11)</a>:</h4>
+<p>(The above UX question determines what the right interface is for the <code>next_process_time</code> field, whereas how we store the events has purely technical implications)</p>
+
+
+
+<a name="1226925"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1226925" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1226925">(Jul 07 2021 at 18:13)</a>:</h4>
+<p>Started that technical thread <a href="#narrow/stream/3-backend/topic/MissedMessageWorker/near/1226924">here</a>.</p>
+
+
+
+<a name="1226961"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1226961" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1226961">(Jul 07 2021 at 18:49)</a>:</h4>
+<p>I agree with the preference for the second option.</p>
+
+
+
+<a name="1227320"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1227320" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1227320">(Jul 08 2021 at 03:34)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/101-design/topic/missed.20message.20email.20delay/near/1226912">said</a>:</p>
+<blockquote>
+<p>allow us to make "How long to wait before sending email notifications for a mention" configurable.  (Currently it is hardcoded to 2 minutes).  </p>
+</blockquote>
+<p><span aria-label="tada" class="emoji emoji-1f389" role="img" title="tada">:tada:</span> That sounds great!</p>
+
+
+
+<a name="1227932"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1227932" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1227932">(Jul 08 2021 at 18:51)</a>:</h4>
+<p>Yeah, I'm excited about that one; I imagine <span class="user-mention" data-user-id="16839">@Abhijeet Bodas</span> might work on it immediately after the technical migration completes, while we have momentum.</p>
+
+
+
+<a name="1231658"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1231658" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Abhijeet Bodas <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1231658">(Jul 15 2021 at 09:01)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/3-backend/topic/MissedMessageWorker/near/1231146">said</a>:</p>
+<blockquote>
+<p>I'm actually not entirely sure what the product experience we want is on that front.  Certainly the current algorithm with just making the 2 minutes a variable is a plausible user experience, but I at least haven't grappled with whether that's what users want/expect.</p>
+</blockquote>
+<p>Continuing this here. Do I understand the question correctly as the following...?</p>
+<ul>
+<li>If Alice sends Bob a PM at 10:30 AM</li>
+<li>and mentions Bob <strong>twice</strong> in a stream #Denmark at 11 AM and 11:05 AM</li>
+<li>and if Bob has set his email notifications timer to be 1 hour,</li>
+</ul>
+<p>how do we want Bob to receive emails?</p>
+<ol>
+<li>A single email at 11 AM for "Alice mentioned you in #Denmark and PMed you"</li>
+<li>
+<p>Two emails-</p>
+<ul>
+<li>One email at 11:30 AM (10:30 AM + 1 hour) for the PM ("Alice PMed you")</li>
+<li>and another at 12 noon (11 AM + 1 hour) for both the mentions ("Alice mentioned you twice in #Denmark").</li>
+</ul>
+</li>
+</ol>
+
+
+
+<a name="1231660"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1231660" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Abhijeet Bodas <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1231660">(Jul 15 2021 at 09:04)</a>:</h4>
+<ol>
+<li>seems more like digest emails but for active users, so I would lean towards 2.</li>
+</ol>
+<p>But 2. might feel spammy, and give rise to frustrations like "I have my settings to send me at most one email every ___ minutes/hours/days, but even then I get so many emails" if we don't word it correctly in the settings page/user docs.</p>
+
+
+
+<a name="1231993"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1231993" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1231993">(Jul 15 2021 at 19:29)</a>:</h4>
+<p>I think we're going to send 2 emails in any case -- our email designs rightly don't try to mix content from unrelated threads (We let you reply from your email client, and that means your email client has to know what thread it is).</p>
+<p>So the design question here is whether Bob gets both emails at 11:30AM or one at 11:30AM (for the PM) and one at noon (for the stream notice).</p>
+
+
+
+<a name="1232464"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1232464" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Abhijeet Bodas <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1232464">(Jul 16 2021 at 09:08)</a>:</h4>
+<p>Oh! I didn't know that, thanks. I think then the later makes more sense to me, since the intent behind batching is preventing multiple messages sent consecutively <strong>in a thread</strong> not generate a bunch of emails? Sending all emails together (for cross-thread messages) seems unnecessary in that case.</p>
+
+
+
+<a name="1232465"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1232465" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Abhijeet Bodas <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1232465">(Jul 16 2021 at 09:09)</a>:</h4>
+<p>/poll Should notification emails for messages from different threads be necessarily sent at the same time?<br>
+Yes<br>
+No</p>
+
+
+
+<a name="1233230"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1233230" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1233230">(Jul 16 2021 at 19:53)</a>:</h4>
+<p>I guess a downside of trying to batch by thread is that we have to think about topic/stream editing changing the situation for which messages are in the same thread.</p>
+
+
+
+<a name="1233481"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1233481" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Abhijeet Bodas <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1233481">(Jul 17 2021 at 03:19)</a>:</h4>
+<p>Hmm, yeah. Does it then make sense to implement "all emails at the same time" first (since that seems easier) and then iterate from there towards the other model if we end up not liking what we have?</p>
+
+
+
+<a name="1233776"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1233776" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1233776">(Jul 18 2021 at 18:52)</a>:</h4>
+<p>That's what we have implemented right now, right?  I think it's OK to preserve that model and add the setting and then we can think about whether it's worth changing the model; I'm pretty sure those two changes should mostly commute.</p>
+
+
+
+<a name="1234034"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/missed%20message%20email%20delay/near/1234034" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Abhijeet Bodas <a href="https://rht.github.io/czo-archive/stream/101-design/topic/missed.20message.20email.20delay.html#1234034">(Jul 19 2021 at 07:31)</a>:</h4>
+<p>Yeah, I meant adding the setting for the current model <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

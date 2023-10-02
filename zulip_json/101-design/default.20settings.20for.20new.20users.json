@@ -1,0 +1,176 @@
+[
+    {
+        "content": "<p>This week, we integrated support for organization administrators changing defaults of personal preference settings (primarily display and notification settings) for new users!  This feature at present does not give organization administrators any control over settings for existing user accounts, but one could readily imagine extending the <a href=\"/#organization/organization-level-user-defaults\">new UI</a> to support that if we thought it a good idea.</p>\n<p>The last PR is <a href=\"https://github.com/zulip/zulip/pull/19769\">#19769</a>.  Huge thanks to <span class=\"user-mention\" data-user-id=\"10242\">@Sahil Batra</span> for making this happen.  There's likely to be several follow-ups before we consider the feature done:</p>\n<ul>\n<li>Documenting it in the /help/ documentation and linking to that from the tip at the top of the page, which I imagine <span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span> will drive.  This probably should include adding some indication on the pages for settings whose defaults are now modifiable by an organization administrator.</li>\n<li>Potentially migrating the two existing \"defaults for new users\" organization settings (Time format and language) to use this framework.  Language might actually not make sense to migrate, since it's different in a couple ways (it's probably better to auto-detect from the browser, and also we use that language in places like Notification Bot messages).</li>\n<li>Various internal code/implementation cleanups.</li>\n<li>Thinking through labels that we may want to change.  <a href=\"https://github.com/zulip/zulip/commit/26d9854a5a62f7f1370bbf7ab8ae6cca7c9be6ce\">26d9854a5a62f7f1370bbf7ab8ae6cca7c9be6ce</a> shows a few labels that we modified for the \"organization page\" to avoid using \"you\" in a context where that would be confusing; but we should consider specifically whether we want to change any of those labels.</li>\n<li>We should discuss whether <code>enable_login_emails</code> belongs in the set of settings that can be controlled by organization administrators this way; since it's a security-related setting, it's possible that we want the default to always be \"enabled\".</li>\n</ul>",
+        "id": 1256394,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1631834617
+    },
+    {
+        "content": "<p>This is super exciting! I've had multiple users ask if they could set the default for their organization to night mode, and now they can. :)</p>",
+        "id": 1256429,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1631836290
+    },
+    {
+        "content": "<blockquote>\n<p>Potentially migrating the two existing \"defaults for new users\" organization settings (Time format and language) to use this framework. Language might actually not make sense to migrate, since it's different in a couple ways (it's probably better to auto-detect from the browser, and also we use that language in places like Notification Bot messages).</p>\n</blockquote>\n<p>I don't follow why we might not want to migrate language? Are you saying we will implement auto-detection soon and no longer have a default language setting?</p>",
+        "id": 1256430,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1631836424
+    },
+    {
+        "content": "<p>There's a PR implementing better auto-detection, and if we were to merge that, then I don't think the default language setting would affect the language for new users (instead it'd only be used for contexts where we don't know who the language preference of the receiving user, like outgoing invitation emails).</p>",
+        "id": 1256446,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1631837741
+    },
+    {
+        "content": "<p>So it'd certainly need a special label to explain that it doesn't work like all the other defaults (though perhaps it still belongs on this page).</p>",
+        "id": 1256447,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1631837770
+    },
+    {
+        "content": "<p>I agree we should discuss about <code>enable_login_emails</code>.</p>\n<p>And for <code>default_language</code> if we would use it for special cases like invitation emails, it will probably be better to keep it in different section as it is not technically for new users. Or it can be the case we cannot detect the user 's browser language.</p>",
+        "id": 1256618,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1631880481
+    },
+    {
+        "content": "<p>OK, I guess that's reasonable; we'll definitely want to clarify what setting the language does.</p>",
+        "id": 1256699,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1631891476
+    },
+    {
+        "content": "<p>Documentation PR: <a href=\"https://github.com/zulip/zulip/pull/19795\">#19795</a></p>",
+        "id": 1257366,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1632164181
+    },
+    {
+        "content": "<p>I merged the documentation pull request.</p>",
+        "id": 1257736,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632268721
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> <span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> <span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span> thoughts on the security model question of whether organization administrators should be able to change our default of <code>enable_login_emails=True</code> for their organization?</p>",
+        "id": 1257738,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632268766
+    },
+    {
+        "content": "<p>Do we know that we’ve validated the email address we’d be sending those login emails to, even if the organization administrator has configured a screwy LDAP or SAML authentication mechanism?</p>",
+        "id": 1257742,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1632268945
+    },
+    {
+        "content": "<p>I guess that’d be more a concern for overriding it in the other direction.</p>",
+        "id": 1257748,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1632269016
+    },
+    {
+        "content": "<p>That's this setting, right?</p>\n<blockquote>\n<p>Send email notifications for new logins to my account</p>\n</blockquote>\n<p>I don't love having that be something that could be disabled for a user without them ever seeing it. If we can exclude it from this mechanism without a lot of code, I think excluding it would probably be a better result.</p>",
+        "id": 1258445,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1632427987
+    },
+    {
+        "content": "<p>I don't love that we have this as a setting at all. For comparison I just poked around my Google account settings, and I'm pretty sure their corresponding emails cannot be disabled.</p>\n<p>But the setting is kind of made necessary by the fact that we send way too many of these. Even when they're enabled, their security value is reduced quite a bit by being so spammy -- people will tune them out, either mentally or with a filter or with their mail client learning to filter them.</p>\n<p>Google won't let you disable these emails… but my work Google account has gotten a total of one of them in the past year, and it was when I logged in from a machine I'd never used before. By contrast I used to get a ton of these from Zulip, until we added this setting and I used it to disable them.</p>",
+        "id": 1258448,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1632428263
+    },
+    {
+        "content": "<p>We log you out after two inactive weeks. Google probably sets a cookie to remember who you were forever even if you explicitly log out.</p>",
+        "id": 1258450,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1632428689
+    },
+    {
+        "content": "<p>Yeah, seems likely.</p>\n<p><a href=\"https://github.com/zulip/zulip/pull/5854\">#5854</a> is the issue for making these emails less spammy.</p>",
+        "id": 1258458,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1632430022
+    },
+    {
+        "content": "<p>I added a comment there, the first since we added the setting three years ago. It'd be good to try the long-term-cookie thing, or to otherwise make progress on that issue.</p>",
+        "id": 1258468,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1632430851
+    },
+    {
+        "content": "<p>Yeah, the long-term cookie idea seems worth adding as a next step here.  <span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> <span class=\"user-mention\" data-user-id=\"13362\">@Dinesh Ch</span> do either of you have time to prototype that?</p>",
+        "id": 1259406,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632777985
+    },
+    {
+        "content": "<p>But I think probably the conclusion for the main question is that this shouldn't be a setting in the \"defaults for new users\" system.  <span class=\"user-mention\" data-user-id=\"10242\">@Sahil Batra</span> can you execute that decision?  Probably it can go in the same bucket as <code>enable_marketing_emails</code> for how it works.</p>",
+        "id": 1259407,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632778081
+    },
+    {
+        "content": "<p>I do think that it's kinda bad form to have any email that doesn't have an \"unsubscribe\" link, which this setting does correspond to.</p>",
+        "id": 1259409,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632778125
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"699\">Anders Kaseorg</span> <a href=\"#narrow/stream/101-design/topic/default.20settings.20for.20new.20users/near/1257742\">said</a>:</p>\n<blockquote>\n<p>Do we know that we’ve validated the email address we’d be sending those login emails to, even if the organization administrator has configured a screwy LDAP or SAML authentication mechanism?</p>\n</blockquote>\n<p>For Zulip Cloud, yes aside from folks who have SAML configured there, which is not many and also very likely to be validated.  It's certainly possible when self-hosting to do other things for validation of the email address, but then it's that server sending the emails, not us.</p>",
+        "id": 1259411,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632778213
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/default.20settings.20for.20new.20users/near/1259406\">said</a>:</p>\n<blockquote>\n<p>Yeah, the long-term cookie idea seems worth adding as a next step here.  <span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <span class=\"user-mention silent\" data-user-id=\"13362\">Dinesh Ch</span> do either of you have time to prototype that?</p>\n</blockquote>\n<p>Is just a cookie sufficient? I don't know but would expect that Google does something more fancy like also looking at fingerprinting data, so that logging in with a stolen cookie would still trigger an email if the device/browser doesn't match. I think a simple-enough thing we could do is requiring both the cookie and IP address to match to consider this a \"verified identity\" and not send an email?</p>",
+        "id": 1259668,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1632837371
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/default.20settings.20for.20new.20users/near/1259407\">said</a>:</p>\n<blockquote>\n<p>But I think probably the conclusion for the main question is that this shouldn't be a setting in the \"defaults for new users\" system.  <span class=\"user-mention silent\" data-user-id=\"10242\">Sahil Batra</span> can you execute that decision?  Probably it can go in the same bucket as <code>enable_marketing_emails</code> for how it works.</p>\n</blockquote>\n<p>Opened <a href=\"https://github.com/zulip/zulip/pull/19853\">#19853</a>.</p>",
+        "id": 1259671,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1632839792
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <a href=\"#narrow/stream/101-design/topic/default.20settings.20for.20new.20users/near/1259668\">said</a>:</p>\n<blockquote>\n<p>Is just a cookie sufficient? I don't know but would expect that Google does something more fancy like also looking at fingerprinting data, so that logging in with a stolen cookie would still trigger an email if the device/browser doesn't match. I think a simple-enough thing we could do is requiring both the cookie and IP address to match to consider this a \"verified identity\" and not send an email?</p>\n</blockquote>\n<p>Yes, I think the idea is to encode data such as IP, browser etc (perhaps as a JWT?)  and store it as a cookie looking at Tim's comment on <a href=\"https://github.com/zulip/zulip/pull/5854\">#5854</a> :</p>\n<blockquote>\n<p>My belief is we probably just want a long-lived signed cookie containing a list of dicts with e.g. User ID, IP, and any other data we eventually choose to add to this security feature (it can just be a JSON dict that grows over time). We do a list so we can handle the user having multiple accounts they use regularly. </p>\n</blockquote>\n<p>This project sounds like a good learning opportunity. I can try prototyping an initial version once we're clear about how we want this to be implemented (Tim's comment above or any other way) and  then we can collaborate on this, Mateusz <span aria-label=\"grinning face with smiling eyes\" class=\"emoji emoji-1f601\" role=\"img\" title=\"grinning face with smiling eyes\">:grinning_face_with_smiling_eyes:</span></p>",
+        "id": 1259701,
+        "sender_full_name": "Dinesh Ch",
+        "timestamp": 1632848559
+    },
+    {
+        "content": "<p>Checking based on IP would mean that every time somebody, eg, brings their laptop to a new coffee shop this would fire, right? That seems problematic.</p>",
+        "id": 1259829,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1632867251
+    },
+    {
+        "content": "<p>Is this only at login time? It's maybe unlikely that somebody would steal the long-lived cookie but not the session cookie, so I'm not sure that an IP check adds much.</p>",
+        "id": 1259830,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1632867294
+    },
+    {
+        "content": "<p>Yeah, calling it a \"new\" login every time the IP address is different would guarantee it stayed pretty spammy for a lot of people.</p>",
+        "id": 1259880,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1632873195
+    },
+    {
+        "content": "<p>I think stealing the long-lived cookie is a threat model we don't super have to worry about. An attacker who can do that, if you're logged in at the time then they can steal the session cookie itself. In any case it probably means they've compromised your computer.</p>\n<p>The big thing that these login notifications are to protect against is someone stealing your password, because you reused it or you got phished. Phishing, or trying stolen passwords from some other service that got breached and seeing if people reused them, are both pretty common, at least on services somewhat bigger than Zulip. For someone to have your password, <em>and also</em> have broken into your computer and stolen cookies, is a lot less common.</p>",
+        "id": 1259883,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1632874064
+    },
+    {
+        "content": "<blockquote>\n<p>(perhaps as a JWT?)</p>\n</blockquote>\n<p>No. JWT is a <a href=\"https://www.f5.com/labs/articles/threat-intelligence/jwt--a-how-not-to-guide\">cryptographic</a> <a href=\"https://news.ycombinator.com/item?id=14292223\">misengineering</a> <a href=\"https://paragonie.com/blog/2017/03/jwt-json-web-tokens-is-bad-standard-that-everyone-should-avoid\">disaster</a>, and Django already has a <a href=\"https://docs.djangoproject.com/en/3.2/topics/signing/\">signing API</a> for this purpose.</p>",
+        "id": 1259884,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1632874262
+    }
+]

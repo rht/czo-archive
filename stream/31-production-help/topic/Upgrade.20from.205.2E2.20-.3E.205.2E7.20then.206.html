@@ -1,0 +1,665 @@
+<html>
+<head><meta charset="utf-8"><title>Upgrade from 5.2 -&gt; 5.7 then 6 · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html">Upgrade from 5.2 -&gt; 5.7 then 6</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1467658"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1467658" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steven <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1467658">(Nov 20 2022 at 02:20)</a>:</h4>
+<p>I'm trying to upgrade our production server (currently at 5.2) to 5.7 with the goal of going to 6 (was not sure if I should go directly to 6 so was stepping through the latest in the 5.x branch</p>
+
+
+
+<a name="1467659"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1467659" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steven <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1467659">(Nov 20 2022 at 02:20)</a>:</h4>
+<p>at current I'm getting the following error using the release upgrade:</p>
+<div class="codehilite"><pre><span></span><code>The following packages were automatically installed and are no longer required:
+  libevent-core-2.1-7 libevent-pthreads-2.1-7 libopts25 libreadline7
+  monitoring-plugins-basic monitoring-plugins-common postgresql-client-13
+  postgresql-client-14 python-pkg-resources sntp
+Use &#39;apt autoremove&#39; to remove them.
+The following NEW packages will be installed:
+  libllvm9 libxmlb2 postgresql-15 postgresql-client-15 postgresql-doc-15
+The following packages have been kept back:
+  postgresql-client-common postgresql-common
+The following packages will be upgraded:
+  fwupd libfwupd2 libfwupdplugin5 postgresql postgresql-client
+  postgresql-contrib postgresql-doc
+The following packages will be DOWNGRADED:
+  postgresql-12
+7 upgraded, 5 newly installed, 1 downgraded, 0 to remove and 2 not upgraded.
+E: Packages were downgraded and -y was used without --allow-downgrades.
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2022-11-20-02-13-10/scripts/lib/upgrade-zulip-stage-2&quot;, line 231, in &lt;module&gt;
+    subprocess.check_call([&quot;apt-get&quot;, &quot;-y&quot;, &quot;--with-new-pkgs&quot;, &quot;upgrade&quot;])
+  File &quot;/usr/lib/python3.8/subprocess.py&quot;, line 364, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;apt-get&#39;, &#39;-y&#39;, &#39;--with-new-pkgs&#39;, &#39;upgrade&#39;]&#39; returned non-zero exit status 100.
+````
+</code></pre></div>
+
+
+
+<a name="1467660"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1467660" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steven <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1467660">(Nov 20 2022 at 02:22)</a>:</h4>
+<p>It seems like it wants to downgrade postgresql and --allow-downgrades was missing from the script... Current version of postgres on the server is 14. I went in to /etc/zulip/zulip.conf and noticed postgresql was set to 12 so I changed it to 14 and re ran the uprgade command but I get the same error</p>
+
+
+
+<a name="1467661"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1467661" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steven <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1467661">(Nov 20 2022 at 02:23)</a>:</h4>
+<p>Do I maybe need to restart zulip after the config change for the upgrade script to see the change? is there something now cached because I ran it with the config set to 12 the first time?</p>
+
+
+
+<a name="1467667"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1467667" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steven <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1467667">(Nov 20 2022 at 03:19)</a>:</h4>
+<p>so after some digging it seems zulip uses pgcluster to allow it to run older versions of pgsql on newer daemons? if I run</p>
+<div class="codehilite"><pre><span></span><code>pg_lsclusters -h
+12 main 5432 online postgres /var/lib/postgresql/12/main /var/log/postgresql/postgresql-%Y-%m-%d_%H%M%S.log
+</code></pre></div>
+<p>I can see that I have a cluster of pgsql v12 running eventhough my daemon is v14?<br>
+I'm guessing I have to set the /etc/zulip/zulip.conf back to 12 (since it is v12) and run the Postgresql upgrade process?</p>
+<div class="codehilite"><pre><span></span><code>/home/zulip/deployments/current/scripts/setup/upgrade-postgresql
+</code></pre></div>
+<p>is that correct? is this safe to do in production with a backup as shown in the docs?</p>
+
+
+
+<a name="1467671"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1467671" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steven <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1467671">(Nov 20 2022 at 04:06)</a>:</h4>
+<p>I followed the online instructions for the db upgrade and rad the upgrade from 12x to 14x with success and just started the upgrade to zulip 5.7 which now runs without trying / failing at the downgrade. Now just waiting for the 5.7 upgrade to complete</p>
+
+
+
+<a name="1467672"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1467672" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steven <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1467672">(Nov 20 2022 at 04:12)</a>:</h4>
+<p>Success to 5.7 upgrade! not going to upgrade to 6.0</p>
+
+
+
+<a name="1467673"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1467673" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steven <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1467673">(Nov 20 2022 at 04:39)</a>:</h4>
+<p>Success with upgrade to 6.0!</p>
+
+
+
+<a name="1468528"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1468528" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1468528">(Nov 22 2022 at 17:13)</a>:</h4>
+<p><span class="user-mention" data-user-id="15835">@Steven</span> the upgrade process you followed is correct. I'm curious if there's something we could tweak in the documentation that would have helped you feel more confidence in proceeding.</p>
+
+
+
+<a name="1468530"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1468530" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1468530">(Nov 22 2022 at 17:14)</a>:</h4>
+<p>I guess there's also something to investigate in why the system wanted to change the postgres version during the apt update step...</p>
+
+
+
+<a name="1469136"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1469136" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1469136">(Nov 23 2022 at 15:20)</a>:</h4>
+<p>There's no need to stop at 5.7 when upgrading from 5.2 -&gt; 6.0, unless there are errors in 5.2 in the bootstrapping part of the upgrade script -- which I don't think there were.</p>
+<blockquote>
+<p>I can see that I have a cluster of pgsql v12 running eventhough my daemon is v14?</p>
+</blockquote>
+<p>Do you remember what led you to believe that the "my daemon is v14"?  I feel like we've seen a few cases where <code>postgresql-14</code> or just <code>postgresql-client-14</code> are installed, but the former sits happily empty alongside the real postgres, and the latter is 100% compatible with earlier versions of the server.</p>
+<p>My <em>suspicion</em> is that the "downgrade" notice is related to <a href="https://github.com/zulip/zulip/commit/9c8d2b7be39314b41f04a1e1356942afe21ab223">9c8d2b7be39314b41f04a1e1356942afe21ab223</a> somehow.</p>
+
+
+
+<a name="1469138"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1469138" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1469138">(Nov 23 2022 at 15:22)</a>:</h4>
+<p>Oho.  OK, I think I understand.</p>
+<p>In <a href="https://github.com/zulip/zulip/commit/472e216cecc4538a57f2e60ee6629f57fdda6539">472e216cecc4538a57f2e60ee6629f57fdda6539</a> (which is in 5.7) we dropped the <code>--allow-downgrades</code> flag.  Except the pin that we installed earlier (in <a href="https://github.com/zulip/zulip/commit/9c8d2b7be39314b41f04a1e1356942afe21ab223">9c8d2b7be39314b41f04a1e1356942afe21ab223</a>, which is in 5.2) doesn't get removed until we run <code>setup-apt-repo</code>, which happens when we run puppet.</p>
+
+
+
+<a name="1469139"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1469139" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1469139">(Nov 23 2022 at 15:24)</a>:</h4>
+<p>I would have been very interested to see <code>apt-cache policy postgresql-12</code> when this was failing.</p>
+
+
+
+<a name="1469140"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1469140" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1469140">(Nov 23 2022 at 15:26)</a>:</h4>
+<p>Because I'm not certain what version of <code>postrgesql-12</code> that implies you were running, and how it got into that state -- because if you were on 5.2, that means that pin should have already been in effect and you should still have been on 12.9.</p>
+
+
+
+<a name="1469141"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1469141" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1469141">(Nov 23 2022 at 15:26)</a>:</h4>
+<p>I guess I'll briefly try installing a 5.2 and see what happens on the upgrade to 5.7.</p>
+
+
+
+<a name="1470489"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1470489" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1470489">(Nov 28 2022 at 15:56)</a>:</h4>
+<p>Hi, was there any update on this error?</p>
+<div class="codehilite"><pre><span></span><code>The following packages will be DOWNGRADED:
+  postgresql-12
+51 upgraded, 31 newly installed, 1 downgraded, 0 to remove and 2 not upgraded.
+E: Packages were downgraded and -y was used without --allow-downgrades.
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2022-11-28-15-15-54/scripts/lib/upgrade-zulip-stage-2&quot;, line 237, in &lt;module&gt;
+    subprocess.check_call([&quot;apt-get&quot;, &quot;-y&quot;, &quot;--with-new-pkgs&quot;, &quot;upgrade&quot;])
+  File &quot;/usr/lib/python3.8/subprocess.py&quot;, line 364, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;apt-get&#39;, &#39;-y&#39;, &#39;--with-new-pkgs&#39;, &#39;upgrade&#39;]&#39; returned non-zero exit status 100.
+</code></pre></div>
+<p>I was also attempting to upgrade from 5.2 &gt; 6 and ran into the same error</p>
+<p>I was unable to upgrade postgres manually due to errors about locale</p>
+<div class="codehilite"><pre><span></span><code>+ rm -rf /tmp/tmp.Artfkkl2Vu
+++ mktemp /var/log/zulip/upgrade-postgresql-12-14.XXXXXXXXX.log
++ UPGRADE_LOG=/var/log/zulip/upgrade-postgresql-12-14.0ocsEg1VY.log
++ pg_upgradecluster -v 14 12 main --method=upgrade --link
++ tee /var/log/zulip/upgrade-postgresql-12-14.0ocsEg1VY.log
+Stopping old cluster...
+perl: warning: Setting locale failed.
+perl: warning: Please check that your locale settings:
+        LANGUAGE = (unset),
+        LC_ALL = (unset),
+        LC_CTYPE = &quot;UTF-8&quot;,
+        LANG = &quot;C.UTF-8&quot;
+    are supported and installed on your system.
+perl: warning: Falling back to a fallback locale (&quot;C.UTF-8&quot;).
+Error: The locale requested by the environment is invalid:
+  LANG: C.UTF-8
+  LC_CTYPE: UTF-8
+Error: Could not create target cluster
+</code></pre></div>
+
+
+
+<a name="1470511"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1470511" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1470511">(Nov 28 2022 at 16:45)</a>:</h4>
+<p>Sorry, the holidays and some planning last week interfered.  Let me get back to replicating the issue.</p>
+
+
+
+<a name="1470512"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1470512" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1470512">(Nov 28 2022 at 16:46)</a>:</h4>
+<p><span class="user-mention" data-user-id="17540">@Sean Yuan</span>: What were you running to upgrade postgres "manually"?</p>
+
+
+
+<a name="1470902"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1470902" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1470902">(Nov 29 2022 at 02:00)</a>:</h4>
+<p>Hi <span class="user-mention" data-user-id="12178">@Alex Vandiver</span> <br>
+I followed the upgrade instructions here: <br>
+<a href="https://zulip.readthedocs.io/en/6.0/production/upgrade-or-modify.html#upgrading-postgresql">https://zulip.readthedocs.io/en/6.0/production/upgrade-or-modify.html#upgrading-postgresql</a></p>
+
+
+
+<a name="1474644"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1474644" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1474644">(Dec 06 2022 at 01:53)</a>:</h4>
+<p><span class="user-mention" data-user-id="17540">@Sean Yuan</span>: I can't replicate with a clean 5.2 with PostgreSQL 12 -- it upgrades to 5.7 with PostgreSQL 12 just fine.  Specifically, it upgrades from 12.9-2.pgdg20.04+1 to 12.13-1.pgdg20.04+1.</p>
+<p>If you're still in this situation, can you show the output of <code>apt-cache policy postgresql-12</code> ?</p>
+
+
+
+<a name="1474645"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1474645" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1474645">(Dec 06 2022 at 01:58)</a>:</h4>
+<p>The locale question is also really odd, since <code>LC_CTYPE = "UTF-8"</code> is not valid.  I think this is <a href="https://unix.stackexchange.com/questions/503110/valid-values-for-lc-ctype">https://unix.stackexchange.com/questions/503110/valid-values-for-lc-ctype</a></p>
+
+
+
+<a name="1474647"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1474647" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1474647">(Dec 06 2022 at 02:03)</a>:</h4>
+<p>We can force a known <code>LC_ALL=C.UTF-8</code> in <code>scripts/setup/upgrade-postgresql</code>, I suppose.</p>
+
+
+
+<a name="1474655"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1474655" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1474655">(Dec 06 2022 at 02:11)</a>:</h4>
+<p><a href="https://github.com/zulip/zulip/pull/23755">#23755</a>.</p>
+
+
+
+<a name="1474695"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1474695" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1474695">(Dec 06 2022 at 06:00)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1474644">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="17540">Sean Yuan</span>: I can't replicate with a clean 5.2 with PostgreSQL 12 -- it upgrades to 5.7 with PostgreSQL 12 just fine.  Specifically, it upgrades from 12.9-2.pgdg20.04+1 to 12.13-1.pgdg20.04+1.</p>
+<p>If you're still in this situation, can you show the output of <code>apt-cache policy postgresql-12</code> ?</p>
+</blockquote>
+<p>Hi, thanks for attempting to replicate it. Our install had been upgraded in the past from 4.x versions, so I'm not sure if it was a cumulative upgrade error.</p>
+<p>After running <code>apt-cache policy postgresql-12</code></p>
+<div class="codehilite"><pre><span></span><code>apt-cache policy postgresql-12
+postgresql-12:
+  Installed: 12.11-1.pgdg20.04+1
+  Candidate: 12.9-2.pgdg20.04+1
+  Version table:
+     12.13-1.pgdg20.04+1 500
+        500 http://apt.postgresql.org/pub/repos/apt focal-pgdg/main amd64 Packages
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.12-1.pgdg20.04+1 500
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.12-0ubuntu0.20.04.1 500
+        500 http://asia-east1.gce.archive.ubuntu.com/ubuntu focal-updates/main amd64 Packages
+        500 http://security.ubuntu.com/ubuntu focal-security/main amd64 Packages
+ *** 12.11-1.pgdg20.04+1 500
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+        100 /var/lib/dpkg/status
+     12.10-1.pgdg20.04+1+b1 500
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.10-1.pgdg20.04+1 500
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.9-2.pgdg20.04+1 1000
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.9-1.pgdg20.04+1 1000
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.8-1.pgdg20.04+1 500
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.7-1.pgdg20.04+1 500
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.6-1.pgdg20.04+1 500
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.5-1.pgdg20.04+1 500
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.4-1.pgdg20.04+1 500
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.3-1.pgdg20.04+1 500
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.2-4 500
+        500 http://asia-east1.gce.archive.ubuntu.com/ubuntu focal/main amd64 Packages
+     12.2-3.pgdg20.04+1 500
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.2-2.pgdg20.04+1+b1 500
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.2-2.pgdg20.04+1 500
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+     12.2-1.pgdg20.04+1 500
+        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages
+</code></pre></div>
+
+
+
+<a name="1474696"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1474696" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1474696">(Dec 06 2022 at 06:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="12178">@Alex Vandiver</span></p>
+
+
+
+<a name="1474697"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1474697" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1474697">(Dec 06 2022 at 06:03)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1474647">said</a>:</p>
+<blockquote>
+<p>We can force a known <code>LC_ALL=C.UTF-8</code> in <code>scripts/setup/upgrade-postgresql</code>, I suppose.</p>
+</blockquote>
+<p>Oh I never considered that the SSH client might set the locale ENV. Yes I am doing ssh from a mac machine</p>
+
+
+
+<a name="1475673"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1475673" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1475673">(Dec 07 2022 at 04:02)</a>:</h4>
+<p>Hm -- that's interesting.  It shouldn't be <em>possible</em> to have Zulip 5.2 and have PostgreSQL 12.11 -- Zulip 4.10 through 5.2 (inclusive) pin PostgreSQL 12.9 (<a href="https://github.com/zulip/zulip/commit/9c8d2b7be39314b41f04a1e1356942afe21ab223">9c8d2b7be39314b41f04a1e1356942afe21ab223</a>).</p>
+<p>Do you take upgrades with <code>--skip-puppet</code> by any chance?  I think that would result in having the pin (which you clearly have in place) but not have forced the downgrade when you took the upgrade to 5.2.</p>
+
+
+
+<a name="1475674"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1475674" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1475674">(Dec 07 2022 at 04:04)</a>:</h4>
+<p>Regardless, you should be able to upgrade PostgreSQL if you follow <a href="https://zulip.readthedocs.io/en/6.0/production/upgrade-or-modify.html#upgrading-postgresql">the instructions</a> but substitute for step 4:</p>
+<div class="codehilite"><pre><span></span><code># Run as root:
+LC_ALL=C.UTF-8 /home/zulip/deployments/current/scripts/setup/upgrade-postgresql
+</code></pre></div>
+
+
+
+<a name="1475675"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1475675" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1475675">(Dec 07 2022 at 04:04)</a>:</h4>
+<p>Alternately, 6.1 will be out in the next ~week which will make the instructions-as-documented work for your situation.</p>
+
+
+
+<a name="1475676"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1475676" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1475676">(Dec 07 2022 at 04:05)</a>:</h4>
+<p>Oh, though that won't help, because you need to have the newer PostgreSQL to take the Zulip 6 upgrade, right.</p>
+
+
+
+<a name="1475677"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1475677" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1475677">(Dec 07 2022 at 04:06)</a>:</h4>
+<p>Once you're on PostgreSQL 14, you should be able to take the upgrade to 6.0 (or 6.1, if you wait) without issue.</p>
+
+
+
+<a name="1475828"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1475828" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1475828">(Dec 07 2022 at 10:12)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1475673">said</a>:</p>
+<blockquote>
+<p>Hm -- that's interesting.  It shouldn't be <em>possible</em> to have Zulip 5.2 and have PostgreSQL 12.11 -- Zulip 4.10 through 5.2 (inclusive) pin PostgreSQL 12.9 (<a href="https://github.com/zulip/zulip/commit/9c8d2b7be39314b41f04a1e1356942afe21ab223">9c8d2b7be39314b41f04a1e1356942afe21ab223</a>).</p>
+<p>Do you take upgrades with <code>--skip-puppet</code> by any chance?  I think that would result in having the pin (which you clearly have in place) but not have forced the downgrade when you took the upgrade to 5.2.</p>
+</blockquote>
+<p>I have done all updates verbatim as documented in the upgrade guides, so I didn't use <code>--skip-puppet</code></p>
+<p>Thank you for the Postgres update instructions, I'll give them a go</p>
+
+
+
+<a name="1475947"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1475947" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1475947">(Dec 07 2022 at 17:54)</a>:</h4>
+<p>Well, drat. There goes my only theory for how things could have gotten into that state, then.</p>
+<p>We can possibly reconstruct the order of events by looking through the logs:</p>
+<div class="codehilite"><pre><span></span><code>(zcat /var/log/apt/term.log.{10,9,8,7,7,6,5,4,3,2,1}.gz; cat /var/log/apt/term.log) | perl -nle &#39;$p=&quot;$_\n&quot; if /Log started/;print &quot;$p$_&quot; and $p=&quot;&quot; if /postgresql-12/&#39;
+</code></pre></div>
+<p>and:</p>
+<div class="codehilite"><pre><span></span><code>egrep &#39;upgrade-zulip(-from-git)?:|Upgrade complete&#39; /var/log/zulip/upgrade.log
+</code></pre></div>
+
+
+
+<a name="1475952"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1475952" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1475952">(Dec 07 2022 at 17:55)</a>:</h4>
+<p>The latter unfortunately won't give us what version those upgrades were, but we can find out those manually.</p>
+
+
+
+<a name="1480588"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480588" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480588">(Dec 15 2022 at 15:10)</a>:</h4>
+<p>Hi sorry it took me a long time to get to it<br>
+Here are the results of running the debug commands</p>
+<div class="codehilite"><pre><span></span><code>seanyuan-work@zulip-v6:~$ (zcat /var/log/apt/term.log.{10,9,8,7,7,6,5,4,3,2,1}.gz; cat /var/log/apt/term.log) | perl -nle &#39;$p=&quot;$_\n&quot; if /Log started/;print &quot;$p$_&quot; and $p=&quot;&quot; if /postgresql-12/&#39;
+Log started: 2022-02-06  18:32:50
+Preparing to unpack .../25-postgresql-12-pgdg-pgroonga_2.3.3-1_amd64.deb ...
+Unpacking postgresql-12-pgdg-pgroonga (2.3.3-1) over (2.3.1-1) ...
+Setting up postgresql-12-pgdg-pgroonga (2.3.3-1) ...
+Log started: 2022-03-17  06:19:47
+Preparing to unpack .../22-postgresql-12-pgdg-pgroonga_2.3.5-1_amd64.deb ...
+Unpacking postgresql-12-pgdg-pgroonga (2.3.5-1) over (2.3.3-1) ...
+Setting up postgresql-12-pgdg-pgroonga (2.3.5-1) ...
+Log started: 2022-05-13  16:11:19
+Preparing to unpack .../25-postgresql-12_12.11-1.pgdg20.04+1_amd64.deb ...
+Unpacking postgresql-12 (12.11-1.pgdg20.04+1) over (12.9-0ubuntu0.20.04.1) ...
+Preparing to unpack .../26-postgresql-12-pgdg-pgroonga_2.3.6-1_amd64.deb ...
+Unpacking postgresql-12-pgdg-pgroonga (2.3.6-1) over (2.3.5-1) ...
+Setting up postgresql-12 (12.11-1.pgdg20.04+1) ...
+Setting up postgresql-12-pgdg-pgroonga (2.3.6-1) ...
+Log started: 2022-05-13  16:11:19
+Preparing to unpack .../25-postgresql-12_12.11-1.pgdg20.04+1_amd64.deb ...
+Unpacking postgresql-12 (12.11-1.pgdg20.04+1) over (12.9-0ubuntu0.20.04.1) ...
+Preparing to unpack .../26-postgresql-12-pgdg-pgroonga_2.3.6-1_amd64.deb ...
+Unpacking postgresql-12-pgdg-pgroonga (2.3.6-1) over (2.3.5-1) ...
+Setting up postgresql-12 (12.11-1.pgdg20.04+1) ...
+Setting up postgresql-12-pgdg-pgroonga (2.3.6-1) ...
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>sudo egrep &#39;upgrade-zulip(-from-git)?:|Upgrade complete&#39; /var/log/zulip/upgrade.log
+2021-04-18 15:47:45,122 upgrade-zulip-from-git: Cloning the repository
+2021-04-18 15:48:31,639 upgrade-zulip-from-git: Fetching the latest commits
+2021-04-18 15:56:30,545 upgrade-zulip-stage-2: Upgrade complete!
+2021-05-24 13:14:23,787 upgrade-zulip: Archiving the tarball under /home/zulip/archives
+2021-05-24 13:14:23,939 upgrade-zulip: Unpacking the tarball
+2021-05-24 13:21:57,095 upgrade-zulip-stage-2: Upgrade complete!
+2021-08-16 10:13:38,543 upgrade-zulip: Archiving the tarball under /home/zulip/archives
+2021-08-16 10:13:38,892 upgrade-zulip: Unpacking the tarball
+2021-08-16 10:16:54,082 upgrade-zulip-stage-2: Upgrade complete!
+2022-02-06 18:32:33,268 upgrade-zulip: Archiving the tarball under /home/zulip/archives
+2022-02-06 18:32:33,687 upgrade-zulip: Unpacking the tarball
+2022-02-06 18:38:27,685 upgrade-zulip-stage-2: Upgrade complete!
+2022-05-13 16:11:00,977 upgrade-zulip: Archiving the tarball under /home/zulip/archives
+2022-05-13 16:11:01,432 upgrade-zulip: Unpacking the tarball
+2022-05-13 16:18:41,965 upgrade-zulip-stage-2: Upgrade complete!
+</code></pre></div>
+
+
+
+<a name="1480596"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480596" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480596">(Dec 15 2022 at 16:04)</a>:</h4>
+<p>Ok!  To get the versions of those Zulip upgrades, can you run:</p>
+<div class="codehilite"><pre><span></span><code>ls -l /home/zulip/archives
+</code></pre></div>
+
+
+
+<a name="1480597"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480597" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480597">(Dec 15 2022 at 16:24)</a>:</h4>
+<p>As for attempting to upgrade Postgres first, that also didn't work so well<br>
+Even with all locale ENVs set, the end still errored</p>
+<div class="codehilite"><pre><span></span><code>LC_ALL=C.UTF-8 LANG=C.UTF-8 LANGUAGE=C.UTF-8 LC_CTYPE=C.UTF-8 /home/zulip/deployments/current/scripts/setup/upgrade-postgresql
+
+Upgrade Complete
+----------------
+Optimizer statistics are not transferred by pg_upgrade.
+Once you start the new server, consider running:
+    /usr/lib/postgresql/14/bin/vacuumdb --all --analyze-in-stages
+
+Running this script will delete the old cluster&#39;s data files:
+    ./delete_old_cluster.sh
+pg_upgrade output scripts are in /var/log/postgresql/pg_upgradecluster-12-14-main.elkN
+Disabling automatic startup of old cluster...
+
+Success. Please check that the upgraded cluster works. If it does,
+you can remove the old cluster with
+    pg_dropcluster 12 main
+
+Ver Cluster Port Status Owner    Data directory              Log file
+12  main    5433 down   postgres /var/lib/postgresql/12/main /var/log/postgresql/postgresql-%Y-%m-%d_%H%M%S.log
+Ver Cluster Port Status Owner    Data directory              Log file
+14  main    5432 down   postgres /var/lib/postgresql/14/main /var/log/postgresql/postgresql-%Y-%m-%d_%H%M%S.log
+++ grep -o &#39;/var/log/postgresql/pg_upgradecluster-12-14-main.*&#39; /var/log/zulip/upgrade-postgresql-12-14.OsZPiGMLS.log
++ SCRIPTS_PATH=/var/log/postgresql/pg_upgradecluster-12-14-main.elkN
++ crudini --set /etc/zulip/zulip.conf postgresql version 14
++ su postgres -c &#39;/usr/lib/postgresql/14/bin/vacuumdb --all --analyze-only --jobs 10&#39;
+vacuumdb: error: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: No such file or directory
+        Is the server running locally and accepting connections on that socket?
+</code></pre></div>
+
+
+
+<a name="1480598"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480598" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480598">(Dec 15 2022 at 16:25)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>ls -l /home/zulip/archives
+total 90568
+-rw-rw-r-- 1 zulip zulip 92737433 Dec 15 16:18 zulip-server-latest.tar.gz
+</code></pre></div>
+
+
+
+<a name="1480601"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480601" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480601">(Dec 15 2022 at 16:26)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>root@zulip-v6:/home/zulip/archives# ls -la /home/zulip/archives
+total 90576
+drwxr-xr-x  2 zulip zulip     4096 May 24  2021 .
+drwxr-xr-x 12 zulip zulip     4096 Mar 19  2022 ..
+-rw-rw-r--  1 zulip zulip 92737433 Dec 15 16:18 zulip-server-latest.tar.gz
+</code></pre></div>
+
+
+
+<a name="1480602"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480602" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480602">(Dec 15 2022 at 16:28)</a>:</h4>
+<p><span class="user-mention" data-user-id="12178">@Alex Vandiver</span></p>
+
+
+
+<a name="1480611"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480611" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480611">(Dec 15 2022 at 16:46)</a>:</h4>
+<p>Uh, well, I guess <code>/home/zulip/archives</code> isn't going to be helpful here.  Makes some sense in retrospect, but maybe we should think about making that more useful. <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<a name="1480613"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480613" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480613">(Dec 15 2022 at 16:46)</a>:</h4>
+<p><span class="user-mention" data-user-id="17540">@Sean Yuan</span>: Huh, postgres 14 looks like it's installed, just not running?</p>
+
+
+
+<a name="1480615"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480615" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480615">(Dec 15 2022 at 16:47)</a>:</h4>
+<p>Does <code>pg_ctlcluster 14 main start</code> work?</p>
+
+
+
+<a name="1480616"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480616" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480616">(Dec 15 2022 at 16:50)</a>:</h4>
+<p>And got extracting the versions, can you run:</p>
+<div class="codehilite"><pre><span></span><code>grep &#39;ZULIP_VERSION = &quot;&#39;  ~zulip/deployments/2*/version.py
+</code></pre></div>
+
+
+
+<a name="1480625"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480625" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480625">(Dec 15 2022 at 17:21)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>grep &#39;ZULIP_VERSION = &quot;&#39;  ~zulip/deployments/2*/version.py
+/home/zulip/deployments/2022-02-06-18-32-33/version.py:ZULIP_VERSION = &quot;4.9&quot;
+/home/zulip/deployments/2022-05-13-16-11-01/version.py:ZULIP_VERSION = &quot;5.2&quot;
+/home/zulip/deployments/2022-12-15-16-18-39/version.py:ZULIP_VERSION = &quot;6.0&quot;
+</code></pre></div>
+
+
+
+<a name="1480626"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480626" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480626">(Dec 15 2022 at 17:23)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1480615">said</a>:</p>
+<blockquote>
+<p>Does <code>pg_ctlcluster 14 main start</code> work?</p>
+</blockquote>
+<p>It does not have output. <br>
+When I run status command I get</p>
+<div class="codehilite"><pre><span></span><code>pg_ctlcluster 14 main status
+pg_ctl: server is running (PID: 885)
+/usr/lib/postgresql/14/bin/postgres &quot;-D&quot; &quot;/var/lib/postgresql/14/main&quot; &quot;-c&quot; &quot;config_file=/etc/postgresql/14/main/postgresql.conf&quot;
+</code></pre></div>
+
+
+
+<a name="1480630"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480630" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480630">(Dec 15 2022 at 17:26)</a>:</h4>
+<p>OK, I think you should be able to run the last steps:</p>
+<div class="codehilite"><pre><span></span><code>su postgres -c &#39;/usr/lib/postgresql/14/bin/vacuumdb --all --analyze-only --jobs 10&#39;
+~zulip/scripts/zulip-puppet-apply -f
+</code></pre></div>
+
+
+
+<a name="1480631"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480631" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480631">(Dec 15 2022 at 17:27)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="17540">Sean Yuan</span> <a href="#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1480597">said</a>:</p>
+<blockquote>
+<p>As for attempting to upgrade Postgres first, that also didn't work so well<br>
+Even with all locale ENVs set, the end still errored</p>
+<p><div class="codehilite"><pre><span></span><code>LC_ALL=C.UTF-8 LANG=C.UTF-8 LANGUAGE=C.UTF-8 LC_CTYPE=C.UTF-8 /home/zulip/deployments/current/scripts/setup/upgrade-postgresql
+
+Upgrade Complete
+[...]
+</code></pre></div><br>
+</p>
+</blockquote>
+<p>Was this the start of the output from the command?  I'd have expected more above that.</p>
+
+
+
+<a name="1480632"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480632" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480632">(Dec 15 2022 at 17:28)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1480631">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="17540">Sean Yuan</span> <a href="#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1480597">said</a>:</p>
+<blockquote>
+<p>As for attempting to upgrade Postgres first, that also didn't work so well<br>
+Even with all locale ENVs set, the end still errored</p>
+<p><div class="codehilite"><pre><span></span><code>LC_ALL=C.UTF-8 LANG=C.UTF-8 LANGUAGE=C.UTF-8 LC_CTYPE=C.UTF-8 /home/zulip/deployments/current/scripts/setup/upgrade-postgresql
+
+Upgrade Complete
+[...]
+</code></pre></div><br>
+</p>
+</blockquote>
+<p>Was this the start of the output from the command?  I'd have expected more above that.</p>
+</blockquote>
+<p>There was more, but I didn't paste them in</p>
+
+
+
+<a name="1480633"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480633" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480633">(Dec 15 2022 at 17:29)</a>:</h4>
+<p>OK, seeing that might be helpful in knowing how it got into the state where postgres wasn't running</p>
+
+
+
+<a name="1480634"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480634" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480634">(Dec 15 2022 at 17:32)</a>:</h4>
+<p><a href="https://pastebin.com/21FfEDqB">https://pastebin.com/21FfEDqB</a></p>
+
+
+
+<a name="1480635"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480635" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480635">(Dec 15 2022 at 17:32)</a>:</h4>
+<p>Here is the full output</p>
+
+
+
+<a name="1480637"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480637" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480637">(Dec 15 2022 at 17:34)</a>:</h4>
+<p>Ah, OK.  Having half-completed the upgrade previously left things in a bad state.  And apparently we don't assert in puppet that postgres has to be ... running?  We can drop in a <code>pg_ctlcluster 14 main start</code> to be sure in <code>upgrade-postgresql</code></p>
+
+
+
+<a name="1480643"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480643" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480643">(Dec 15 2022 at 17:47)</a>:</h4>
+<p>Ok, I think it worked now, I managed to run the upgrade to completion</p>
+<ol>
+<li>upgrade PG to 14 with Locale ENV</li>
+<li>run <code>pg_ctlcluster 14 main start</code></li>
+<li>
+<p>run <code>su postgres -c '/usr/lib/postgresql/14/bin/vacuumdb --all --analyze-only --jobs 10'
+~zulip/scripts/zulip-puppet-apply -f</code></p>
+</li>
+<li>
+<p>run normal upgrade to v6</p>
+</li>
+</ol>
+
+
+
+<a name="1480644"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480644" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Yuan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480644">(Dec 15 2022 at 17:48)</a>:</h4>
+<p>Thank you for your help</p>
+
+
+
+<a name="1480676"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1480676" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1480676">(Dec 15 2022 at 18:44)</a>:</h4>
+<p>And it looks like, from the other information you gave, that the problem started out with an upgrade from 4.9 -&gt; 5.2, which upgraded postgresql 12.9-0ubuntu0.20.04.1 to 12.11-1.pgdg20.04+1.  We'll see if we can track down how that upgrade got us into the bad state.</p>
+
+
+
+<a name="1481408"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1481408" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Fahad Ali <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1481408">(Dec 17 2022 at 16:56)</a>:</h4>
+<p>(deleted)</p>
+
+
+
+<a name="1481409"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1481409" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Fahad Ali <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1481409">(Dec 17 2022 at 17:01)</a>:</h4>
+<p>(deleted)</p>
+
+
+
+<a name="1484091"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1484091" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1484091">(Jan 02 2023 at 21:19)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1480637">said</a>:</p>
+<blockquote>
+<p>Ah, OK.  Having half-completed the upgrade previously left things in a bad state.  And apparently we don't assert in puppet that postgres has to be ... running?  We can drop in a <code>pg_ctlcluster 14 main start</code> to be sure in <code>upgrade-postgresql</code></p>
+</blockquote>
+<p><span class="user-mention" data-user-id="12178">@Alex Vandiver</span> do we have an open issue for this potential follow-up?</p>
+
+
+
+<a name="1484362"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1484362" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1484362">(Jan 03 2023 at 15:59)</a>:</h4>
+<p>Nope.  Pushed <a href="https://github.com/zulip/zulip/pull/23963">#23963</a> just now.</p>
+
+
+
+<a name="1484559"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20from%205.2%20-%3E%205.7%20then%206/near/1484559" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206.html#1484559">(Jan 03 2023 at 19:46)</a>:</h4>
+<p>Excellent, integrated and backported.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

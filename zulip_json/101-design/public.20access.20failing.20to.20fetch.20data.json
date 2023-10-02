@@ -1,0 +1,98 @@
+[
+    {
+        "content": "<p>So I'd like to start a design discussion on <a href=\"https://github.com/zulip/zulip/pull/25683\">#25683</a>:</p>\n<blockquote>\n<p>The POST requests that spectators make to <code>/json/register</code> may fail, and we should handle those failures in some way.  <a href=\"https://github.com/zulip/zulip/pull/25682\">#25682</a> changed the callback to log an error, but did not address the UI issue of how to tell end-users that the page would not load.</p>\n<p>In practice, we see failures for things like:</p>\n<ul>\n<li><code>readyState</code> is 0, because the request was cancelled by the user or browser (for instance, pressing <code>Esc</code>, or navigating away)</li>\n<li>HTTP 403 because the CSRF cookie was not sent with the request</li>\n<li>HTTP 502 because django was restarting</li>\n<li>HTTP 503 because our CDN decided they're a bot and making requests unreasonably quickly</li>\n</ul>\n<p>Only in the 502 case is a retry going to be potentially useful.</p>\n<p>Regardless, we should provide some feedback to the user that loading the application has failed.  See also <a href=\"https://github.com/zulip/zulip/pull/24815\">#24815</a> if we try to look at the contents of the response in any way.</p>\n</blockquote>",
+        "id": 1581472,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685490847
+    },
+    {
+        "content": "<p>Basically, there's a failure mode that only is possible for public access users. When you load the Zulip web application as a normal user, basically either you get the web app frame and its data together, or you get neither, because the server embeds the initial data (what users exist, etc.) in the initial API request.</p>\n<p>But for public access users, we fetch the data in a separate API request for caching reasons, so it's possible for you to get the web app frame without getting any data. We may eventually move to this model for all users; it basically has a caching vs. number of round-trips trade-off that's a bit complicated in terms of its performance implications. But we don't need to discuss that here.</p>\n<p>The question is what the Zulip web app should do if the request for data fails.</p>",
+        "id": 1581473,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685491067
+    },
+    {
+        "content": "<p>I think probably the simplest ideas are either to continue displaying our loading page, with some new text of the form \"the app failed to load\", or do change the display to try to look like the existing \"server error\" page (currently, the octopus holding the logo: <br>\n<a href=\"/user_uploads/2/d7/3gSXoPu8S0azJKANYIfufyfn/image.png\">image.png</a>), which is what you currently get for failures here as a normal user.</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/d7/3gSXoPu8S0azJKANYIfufyfn/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/d7/3gSXoPu8S0azJKANYIfufyfn/image.png\"></a></div>",
+        "id": 1581475,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685491181
+    },
+    {
+        "content": "<p>I think my thinking is the \"make your window look like the 500 page\" option is probably the better user experience, and probably not super hard to do, even though it likely would be mostly duplicated code to implement?</p>",
+        "id": 1581476,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685491254
+    },
+    {
+        "content": "<p>(BTW, <a href=\"http://localhost:9991/errors/5xx/\">http://localhost:9991/errors/5xx/</a> is a way to see the 500 error page in the development environment without ; and <a href=\"http://localhost:9991/devtools\">http://localhost:9991/devtools</a> documents a bunch of similar useful pages)</p>",
+        "id": 1581477,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685491300
+    },
+    {
+        "content": "<p>Long-term solution: we serve the page with a component framework that supports server-side rendering (for better load times and search engine indexability), and this issue does not come up. Until then, I don’t think the details of what we do here are critical.</p>",
+        "id": 1581478,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1685491380
+    },
+    {
+        "content": "<p>The logged-in app has an analogous problem if the page stops loading in the middle of <code>&lt;div id=\"page-params\"&gt;</code> being transferred. I think there we just let the loading spinner keep spinning and it eventually suggests you reload.</p>",
+        "id": 1581480,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1685491518
+    },
+    {
+        "content": "<p>I will note that anything involving loading additional resources like the distraught octopus is pretty likely to fail for the same reason that caused the original load failure.</p>",
+        "id": 1581481,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1685491616
+    },
+    {
+        "content": "<p>I don't see how a different framework eliminates the product decision. If we want the web application to be loaded and cacheable (without caching the user data), then we'll have the state where fetching the user data fails.</p>\n<p>At least it's not at all clear to me that combining the user data with the application on the server with server-side rendering is how we'll want to do things -- I guess it'll depend on performance characteristics that we won't know until we do it. (I have definitely talked to people who switched to React server-side rendering and found it made latencies worse and also cost a lot of CPU resources on their servers, but of course that's a different framework and a few years ago).</p>\n<p>But I suppose the main argument that the assets probably don't load is what really matters here; so I think the right answer is probably just to make sure the loading page lands in its usual failure-to-load state.</p>",
+        "id": 1581490,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685492232
+    },
+    {
+        "content": "<p>I think I agree that rendering the octopus is probably the right thing.  There's a question of how we fetch that resource if the reason that the <code>/json/register</code> call failed is network-related, however.</p>",
+        "id": 1585534,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1685993601
+    },
+    {
+        "content": "<p>So following <a href=\"https://github.com/zulip/zulip/pull/26116\">#26116</a>, we now have a page that looks like this:</p>\n<div class=\"message_inline_image\"><a href=\"https://user-images.githubusercontent.com/5634097/248594938-9f885df9-a73c-45c0-b84c-9b8cdc9c7d7c.gif\"><img src=\"/external_content/84c61ca233ac73163fcb0837b6007beab5778f20/68747470733a2f2f757365722d696d616765732e67697468756275736572636f6e74656e742e636f6d2f353633343039372f3234383539343933382d39663838356466392d613733632d343563302d623834632d3962386364633963376437632e676966\"></a></div><p>I think this is basically fine for rare situations like a web crawler that has outgoing network requests to fetch data disabled.</p>\n<p>But if an actual user sees this page (which I mainly expect to happen during outages of the Zulip server in question), it's a pretty unfortunate error page, with no status page or way to report the issue to the server's administrators.</p>",
+        "id": 1610964,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1689614738
+    },
+    {
+        "content": "<p>So we should probably do a little bit more of a design pass on this to address that -- or at least a copy-editing pass to add the server's support email, since we don't have a <code>status_page_url</code> setting yet.</p>",
+        "id": 1610966,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1689614762
+    },
+    {
+        "content": "<p>How about adding a line similar to what we have on the <code>500</code> error page linked above? <a href=\"http://localhost:9991/errors/5xx/\">http://localhost:9991/errors/5xx/</a> </p>\n<div class=\"codehilite\"><pre><span></span><code>                        {% if corporate_enabled %}\n                            {% trans %}\n                            In the meantime, you can &lt;a href=&quot;mailto:{{support_email}}&quot;&gt;contact Zulip support&lt;/a&gt;.\n                            {% endtrans %}\n                        {% else %}\n                            {% trans %}\n                            In the meantime, you can &lt;a href=&quot;mailto:{{support_email}}&quot;&gt;contact\n                            this server&#39;s administrators&lt;/a&gt; for support.\n                            {% endtrans %}\n                        {% endif %}\n</code></pre></div>\n<p>Something like:</p>\n<ul>\n<li>Zulip Cloud: \"If the problem continues, you can &lt;a href=\"mailto:{{support_email}}\"&gt;contact Zulip support&lt;/a&gt;.\"</li>\n<li>Self-hosted: \"If the problem continues, you can &lt;a href=\"mailto:{{support_email}}\"&gt;contact this server's administrators&lt;/a&gt; for support.</li>\n</ul>",
+        "id": 1638500,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694470816
+    },
+    {
+        "content": "<p>Yeah, that seems fine. I like it better than the <code>In the meantime</code> language; we might just want to figure out a phrase that we like for both situations to avoid adding extra translated strings.</p>",
+        "id": 1638524,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694472441
+    },
+    {
+        "content": "<p>\"If the problem continues,...\" might be fine for the 5xx pages as well?</p>",
+        "id": 1638532,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694472661
+    },
+    {
+        "content": "<p>Yeah, likely; the main potential downside is if we want the user to report the issue immediately, but I think it's fine. (And in the future we'll want to add a link to an automated status page for Zulip Cloud at least)</p>",
+        "id": 1638541,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694474390
+    }
+]

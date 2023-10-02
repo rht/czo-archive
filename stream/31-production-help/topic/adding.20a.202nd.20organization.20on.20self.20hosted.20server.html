@@ -1,0 +1,127 @@
+<html>
+<head><meta charset="utf-8"><title>adding a 2nd organization on self hosted server · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/adding.20a.202nd.20organization.20on.20self.20hosted.20server.html">adding a 2nd organization on self hosted server</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1121230"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/adding%20a%202nd%20organization%20on%20self%20hosted%20server/near/1121230" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonas F <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/adding.20a.202nd.20organization.20on.20self.20hosted.20server.html#1121230">(Feb 19 2021 at 13:57)</a>:</h4>
+<p>Hi! I'm running zulip on a virtual private server and want to add a second organization (I don't know how to check the server version, but I updated to master on November 14, so it's not ancient). From the documentation I can see more or less how to do it, but before starting I want to write out the steps here. I hope someone knowledgeable will point out if I got something wrong, or fill in missing details.</p>
+<p><a href="https://zulip.readthedocs.io/en/latest/production/multiple-organizations.html#the-root-domain">Here</a> it says </p>
+<div class="codehilite"><pre><span></span><code>You can mix having an organization on the root domain and some others on subdomains (e.g. subdivision.zulip.example.com),
+but this only works well if there are no users in common between the two organizations, because the auth cookies for the root
+domain are visible to the subdomain (so it’s not possible for a single browser/client to be logged into both). So we don’t
+recommend that configuration.
+</code></pre></div>
+<p>I want to have overlapping users, so I have to move the existing organization to a subdomain first.  It says <a href="https://zulip.com/help/change-organization-url#self-hosting">here</a> how that works:</p>
+<div class="codehilite"><pre><span></span><code>If you&#39;re self-hosting, you can change the root domain of your server by changing the EXTERNAL_HOST setting. If you&#39;re hosting
+multiple organizations and want to change the subdomain for one of them, you can use
+do_change_realm_subdomain(realm, &quot;new_subdomain&quot;) in a management shell.
+</code></pre></div>
+<p>Is that the right way to do it? Strictly speaking I don't want to "change" the subdomain, but move the only existing organization from root to sub.</p>
+<p>Assuming that's the correct way, is it enough to tell existing users to update their URLs after that? Isn't there some certificate registered externally that is bound to the URL? I thought I remembered something like that from the install process, but maybe I got it wrong.</p>
+<p>Assuming I successfully moved the existing organization to a subdomain with the previous steps, the next step is to create a new organization on another subdomain. This is described <a href="https://zulip.readthedocs.io/en/latest/production/multiple-organizations.html">here</a>, the relevant steps seem to be the following:</p>
+<div class="codehilite"><pre><span></span><code>* Make sure you have SSL certificates for all of the subdomains you’re going to use. If you’re using our Let’s
+Encrypt instructions, it’s easy to just specify multiple subdomains in your certificate request.
+
+* If necessary, modify your nginx configuration to use your new certificates.
+
+* Use ./manage.py generate_realm_creation_link again to create your new organization. Review the install
+instructions if you need a refresher on how this works.
+</code></pre></div>
+<p>OK so it seems like I have to deal with certificates after all. So do I have to request certificates for both subdomains I'm creating in the process? How do I do that using LetsEncrypt/Certbot ? In the <a href="https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html">documentation page</a> I can only see how to "enable automation".</p>
+<p>The second step says to modify nginx configuration if necessary. I don't know what that means. Will it be necessary?</p>
+<p>Thanks a lot in advance!</p>
+
+
+
+<a name="1121404"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/adding%20a%202nd%20organization%20on%20self%20hosted%20server/near/1121404" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/adding.20a.202nd.20organization.20on.20self.20hosted.20server.html#1121404">(Feb 19 2021 at 17:56)</a>:</h4>
+<p><span class="user-mention" data-user-id="17356">@Jonas F</span> yes, that is the correct way to move from the root domain to a subdomain.</p>
+
+
+
+<a name="1121406"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/adding%20a%202nd%20organization%20on%20self%20hosted%20server/near/1121406" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/adding.20a.202nd.20organization.20on.20self.20hosted.20server.html#1121406">(Feb 19 2021 at 17:57)</a>:</h4>
+<p>If you use <code>scripts/setup/setup-certbot</code> to get Certbot certs, you can pass multiple domains and it'll get certificates for all of them.</p>
+
+
+
+<a name="1121407"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/adding%20a%202nd%20organization%20on%20self%20hosted%20server/near/1121407" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/adding.20a.202nd.20organization.20on.20self.20hosted.20server.html#1121407">(Feb 19 2021 at 17:57)</a>:</h4>
+<p>(Wildcart certs are more of a pain and not supported by that script, I think, but also not necessary if you just need 2)</p>
+
+
+
+<a name="1121455"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/adding%20a%202nd%20organization%20on%20self%20hosted%20server/near/1121455" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonas F <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/adding.20a.202nd.20organization.20on.20self.20hosted.20server.html#1121455">(Feb 19 2021 at 18:54)</a>:</h4>
+<p>Thanks! I'll give it a try and come back if I get stuck.</p>
+
+
+
+<a name="1121517"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/adding%20a%202nd%20organization%20on%20self%20hosted%20server/near/1121517" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonas F <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/adding.20a.202nd.20organization.20on.20self.20hosted.20server.html#1121517">(Feb 19 2021 at 22:51)</a>:</h4>
+<p>Am I supposed to get the certificates for the subdomain that I want to move the organization to before or after doing <code>do_change_realm_subdomain(realm, "new_subdomain")</code>? I just tried to get the certificate first and it didn't work. Specifically I did <code>setup-certbot --email=EMAIL subdomain.xxx-xxx-xx-xxx.hosting-provider-rdns.com</code>, where <code>xxx-xx-xxx-xxx.hosting-provider-rdns.com</code> is the url under which we currently access our zulip server, and <code>xxx-xxx-xx-xxx</code> the ip-address (with fields the 4 fiels in reverse order for some reason). The <code>setup-certbot</code> command gives the error message</p>
+<div class="codehilite"><pre><span></span><code>Challenge failed for domain subdomain.xxx-xx-xxx-xxx.hosting-provider-rdns.com
+http-01 challenge for subdomain.xxx-xx-xxx-xxx.hosting-provider-rdns.com
+Cleaning up challenges
+Some challenges have failed.
+
+IMPORTANT NOTES:
+ - The following errors were reported by the server:
+
+   Domain: subdomain.xxx-xx-xxx-xxx.hosting-provider-rdns.com
+   Type:   dns
+   Detail: DNS problem: NXDOMAIN looking up A for
+  subdomain.xxx-xx-xxx-xxx.hosting-provider-rdns.com - check that a DNS record
+   exists for this domain
+</code></pre></div>
+<p>Is the problem maybe that the original URL is already a subdomain? Would I have to get my own domain-name instead of using the autogenerated URL from the hosting provider? </p>
+<p>If it's relevant, doing just <code>setup-certbot --email=EMAIL xxx-xxx-xx-xxx.hosting-provider-rdns.com</code> without the subdomain prefix results in the warning <code>You have an existing certificate that has exactly the same domains or certificate name you requested and isn't close to expiry.</code>.</p>
+
+
+
+<a name="1122543"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/adding%20a%202nd%20organization%20on%20self%20hosted%20server/near/1122543" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/adding.20a.202nd.20organization.20on.20self.20hosted.20server.html#1122543">(Feb 22 2021 at 23:49)</a>:</h4>
+<p><span class="user-mention" data-user-id="17356">@Jonas F</span> this is purely a DNS configuration issue -- the state of the Zulip server's configuration isn't relevant to whether Certbot will issue a certificate or not.</p>
+
+
+
+<a name="1122544"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/adding%20a%202nd%20organization%20on%20self%20hosted%20server/near/1122544" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/adding.20a.202nd.20organization.20on.20self.20hosted.20server.html#1122544">(Feb 22 2021 at 23:50)</a>:</h4>
+<p>(Zulip's <code>nginx</code> configuration, which is what integrates with Certbot, doesn't interact with what organizations are configured in the database).</p>
+
+
+
+<a name="1122550"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/adding%20a%202nd%20organization%20on%20self%20hosted%20server/near/1122550" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonas F <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/adding.20a.202nd.20organization.20on.20self.20hosted.20server.html#1122550">(Feb 23 2021 at 00:00)</a>:</h4>
+<p>Thanks but what does that mean for me? Do I have to change something in the configuartion console of the hosting provider? Do I have to get my own domain name? I know that I can reach the server under the url <code>xxx-xxx-xx-xxx.hosting-provider-rdns.com</code>, so something with DNS seems to work.</p>
+<p>Sorry for the confused question, any help is highly appreciated.</p>
+
+
+
+<a name="1122555"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/adding%20a%202nd%20organization%20on%20self%20hosted%20server/near/1122555" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/adding.20a.202nd.20organization.20on.20self.20hosted.20server.html#1122555">(Feb 23 2021 at 00:10)</a>:</h4>
+<p>You likely need to contact your hosting provider and/or use their panel to configure the subdomain to point to your server in DNS.</p>
+
+
+
+<a name="1122557"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/adding%20a%202nd%20organization%20on%20self%20hosted%20server/near/1122557" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/adding.20a.202nd.20organization.20on.20self.20hosted.20server.html#1122557">(Feb 23 2021 at 00:10)</a>:</h4>
+<p>Without configuring it explicitly, nothing would cause <code>subdomain.example.com</code> to exist if you've only configured <code>example.com</code> previously.</p>
+
+
+
+<a name="1122577"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/adding%20a%202nd%20organization%20on%20self%20hosted%20server/near/1122577" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonas F <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/adding.20a.202nd.20organization.20on.20self.20hosted.20server.html#1122577">(Feb 23 2021 at 00:46)</a>:</h4>
+<p>I see, thanks again!</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

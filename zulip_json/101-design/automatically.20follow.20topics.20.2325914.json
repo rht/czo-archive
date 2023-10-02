@@ -1,0 +1,374 @@
+[
+    {
+        "content": "<p>I wanted to discuss the default values for when to automatically follow topics. The issue which Alya opened (<a href=\"https://github.com/zulip/zulip/pull/25914\">#25914</a>) mentions the following:</p>\n<blockquote>\n<p>Option 1:<br>\n    Label: Automatically follow topics<br>\n    Options: Topics I participate in, Topics I start [default], Never</p>\n</blockquote>\n<p>IMO, the default for this new setting should be the NEVER value, for two reasons:</p>\n<ol>\n<li>\n<p>If, after a server upgrade, user start getting notifications all of a sudden (when they didn't change any notification settings), that could get annoying. And these are going to be a lot of notifications in number (much more than mentions/PMs, for which we have the default notification setting as ON).<br>\nSetting this to NEVER might hinder feature discovery, but I think we can find other ways to advertise this feature (for example, in <code>settings/topics</code>, or in the topic popover)</p>\n</li>\n<li>\n<p>The other (technical) reason is that having the default as \"Topics I start\" skews a lot of our tests, which now need to take into account extra events and notifications. To avoid this, <a href=\"https://github.com/zulip/zulip/pull/26054#discussion_r1233942081\">I suggested we set the value to NEVER for our test users</a>, but even that is a bit hacky, since it means the real scenario is not reflected in the tests.</p>\n</li>\n</ol>",
+        "id": 1600092,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1687933833
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"16839\">Abhijeet Bodas</span> mentioned this topic in <strong><a href=\"#narrow/stream/101-design/topic/Follow%20Topics/near/1600101\">#design &gt; Follow Topics</a></strong>.</p>",
+        "id": 1600102,
+        "sender_full_name": "Topic Bridge Bot",
+        "timestamp": 1687934848
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span> <span class=\"user-mention\" data-user-id=\"22341\">@Prakhar Pratyush</span> so there's two defaults worth talking about here -- the long-term default value that we aim to provide for new users, which I think we don't want to be NEVER, and what we are willing to migrate existing users to before the feature is finished (and clearly displayed in the UI, etc.), which we probably do want to be NEVER. I think for that reason, probably it makes sense for the PR introducing the setting to use NEVER as the default, and we'd plan to do a future migration once it is finished to change the defaults.</p>\n<p>That said, I like the idea of setting this default to NEVER for test users to make the test behavior independent of what we end up configuring as the defaults, which may change over time in any case.</p>",
+        "id": 1602170,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1688152664
+    },
+    {
+        "content": "<blockquote>\n<p>it makes sense for the PR introducing the setting to use NEVER as the default, and we'd plan to do a future migration once it is finished to change the defaults.</p>\n</blockquote>\n<p>Cool, makes sense!</p>",
+        "id": 1602432,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1688210838
+    },
+    {
+        "content": "<blockquote>\n<p>I like the idea of setting this default to NEVER for test users to make the test behavior independent of what we end up configuring as the defaults, which may change over time in any case.</p>\n</blockquote>\n<p>As <span class=\"user-mention silent\" data-user-id=\"16839\">Abhijeet Bodas</span> mentioned above:</p>\n<blockquote>\n<p>but even that is a bit hacky, since it means the real scenario is not reflected in the tests.</p>\n</blockquote>\n<p>If we set the default to NEVER for test users, the tests themselves won't verify the correct behavior when we change the default value to something other than NEVER. <br>\nFor example: </p>\n<ul>\n<li>Let's say the default value is changed to \"Topics I start\" in the future.</li>\n<li>We have set the default value as NEVER for test users.</li>\n<li>Now a test verifying the 'query count + events generated' for the message send operation won't verify the actual increase in query count + extra events generated (queries + events involved in following a topic) as the test user has the default value as NEVER. But for a real user, those extra queries and events will be involved.</li>\n</ul>",
+        "id": 1602441,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1688211838
+    },
+    {
+        "content": "<p>Should we create separate tests with each policy to verify the query count and events sent? and set it to NEVER in ZulipTestCase.set_up()</p>",
+        "id": 1602446,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1688211958
+    },
+    {
+        "content": "<p>I don't have all the context here, but you should never feel overly constrained when it comes to writing tests.  You can easily manipulate settings in each test.  When it comes to <code>ZulipTestCase.set_up()</code>, I would think carefully about whether it's actually necessary.  Generally I have found it easier when writing (and reading) tests to just explicitly set up the data in individual tests.  The <code>set_up()</code> methods can be kind of tricky for future developers who don't realize right away that there is action-at-a-distance.</p>",
+        "id": 1602472,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1688217903
+    },
+    {
+        "content": "<p>For the reason I mentioned above and as per <span class=\"user-mention silent\" data-user-id=\"58\">Steve Howell</span> 's suggestion, we should avoid setting the default value as <code>NEVER</code> in <code>ZulipTestCase.set_up()</code> right?</p>",
+        "id": 1609288,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1689270920
+    },
+    {
+        "content": "<p>Yes, that's correct -- we can set a defaults during the creation of test users in <code>populate_db</code>, though.</p>",
+        "id": 1609293,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1689271031
+    },
+    {
+        "content": "<p>(Since that's where those users are created in the first place)</p>",
+        "id": 1609294,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1689271063
+    },
+    {
+        "content": "<p><strong>Question</strong>:</p>\n<p>We're introducing two new settings:</p>\n<ul>\n<li><code>automatically_follow_topics_policy</code></li>\n<li><code>automatically_unmute_topics_policy</code></li>\n</ul>\n<p>Options for both:</p>\n<ul>\n<li>Topics I participate in</li>\n<li>Topics I start</li>\n<li>Never (default)</li>\n</ul>",
+        "id": 1614384,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1690113950
+    },
+    {
+        "content": "<p>Suppose a user has</p>\n<ul>\n<li><code>automatically_follow_topics_policy</code> set to <code>Topics I start</code></li>\n<li><code>automatically_unmute_topics_policy</code> set to <code>Topics I start</code></li>\n</ul>",
+        "id": 1614385,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1690114040
+    },
+    {
+        "content": "<p>In this case, I think we should prefer <code>FOLLOW</code> over <code>UNMUTE</code>.</p>\n<p>Reason: We should lean towards showing more notifications (and visually) instead of restricting. Thoughts?</p>",
+        "id": 1614386,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1690114361
+    },
+    {
+        "content": "<p><strong>Another point to discuss:</strong></p>\n<p>Suppose a user has:</p>\n<ul>\n<li><code>automatically_follow_topics_policy</code> set to <code>Topics I start</code></li>\n<li><code>automatically_unmute_topics_policy</code> set to <code>Topics I participate in</code></li>\n</ul>\n<p>Now, when a user starts a topic (sends first message to the topic), he is <code>participating</code> as well as <code>starting the topic</code><br>\nIn this case also I think we should prefer <code>FOLLOW</code> over <code>UNMUTE</code> (for the same reason)</p>",
+        "id": 1614387,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1690114552
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>automatically_follow_topics_policy | automatically_unmute_topics_policy | visibility_policy\n       ON_PARTICIPATION            |           ON_INITIATION           |     FOLLOW\n       ON_PARTICIPATION            |         ON_PARTICIPATION          |     FOLLOW\n       ON_PARTICIPATION            |              NEVER                |     FOLLOW\n\n        ON_INITIATION              |           ON_INITIATION           |     FOLLOW\n        ON_INITIATION              |         ON_PARTICIPATION          |     FOLLOW\n        ON_INITIATION              |              NEVER                |     FOLLOW\n\n            NEVER                  |           ON_INITIATION           |     UNMUTE\n            NEVER                  |         ON_PARTICIPATION          |     UNMUTE\n            NEVER                  |              NEVER                |        NA\n</code></pre></div>",
+        "id": 1614388,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1690114776
+    },
+    {
+        "content": "<blockquote>\n<p>Now, when a user starts a topic (sends first message to the topic), he is participating as well as starting the topic</p>\n</blockquote>\n<p>I think, for our own clarity and simplicity, let's just define <code>PARTICIPATION</code> and <code>INITIATION</code> to be mutually exclusive. That is, let's define \"PARTICIPATION\" to only mean sending a <strong>non-first message</strong>/reacting/other-stuff planned, and use this definition when writing the logic as well as in docs/discussion here. Thoughts?</p>",
+        "id": 1614416,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1690124691
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"22341\">Prakhar Pratyush</span> <a href=\"#narrow/stream/101-design/topic/automatically.20follow.20topics.20.2325914/near/1614387\">said</a>:</p>\n<blockquote>\n<p>Now, when a user starts a topic (sends first message to the topic), he is <code>participating</code> as well as <code>starting the topic</code><br>\nIn this case also I think we should prefer <code>FOLLOW</code> over <code>UNMUTE</code> (for the same reason)</p>\n</blockquote>\n<p>That is a very good catch. It makes me wonder if the other alternative which <span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> mentioned in the issue write-up would serve as a better arrangement:</p>\n<blockquote>\n<p>Alternatives:</p>\n<ul>\n<li>An alternative arrangement would be to cut the options by action instead, e.g., \"what to do when I participate in a topic\" (nothing, unmute, subscribe). This is more flexible, but seems harder to explain/understand.</li>\n</ul>\n</blockquote>\n<hr>\n<p>If we want to stick to the current scheme of settings, one option is to add constraints at the UI/API/DB level to make sure that at most only one setting is assigned each of <code>INITIATE</code> and <code>PARTICIPATE</code>. Basically, just don't allow setting <code>Topics I start</code> for both the settings at the same time. And also don't allow setting <code>Topics I participate in</code> for both the settings at once.</p>",
+        "id": 1614417,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1690125297
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"22341\">Prakhar Pratyush</span> <a href=\"#narrow/stream/101-design/topic/automatically.20follow.20topics.20.2325914/near/1614386\">said</a>:</p>\n<blockquote>\n<p>In this case, I think we should prefer <code>FOLLOW</code> over <code>UNMUTE</code>.</p>\n<p>Reason: We should lean towards showing more notifications (and visually) instead of restricting. Thoughts?</p>\n</blockquote>\n<p>Yeah, I think that's the right resolution, though it does make me worry we're cutting the options the wrong way.</p>",
+        "id": 1624050,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1691801227
+    },
+    {
+        "content": "<p>I'll chat with <span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span> about this and see if we can up with a good path forward here, since this is sorta the core remaining part of the feature that we need to settle.</p>",
+        "id": 1624051,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1691801264
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> Let us know if we have any better approaches here!</p>",
+        "id": 1626452,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1692213129
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"22341\">@Prakhar Pratyush</span> OK after talking it through briefly, I think the API design as written is what we should go with. If it's a lot of extra work, the \"unmute\" dropdown is probably only 20% of the value, but it's probably also not much added work to do them both together -- most of it will be parallel code followed by some hard thinking about wording in the settings UI.</p>\n<p>I think we'll probably have 4 values for the dropdowns, ordered from most to least aggressive:</p>\n<ul>\n<li>Topics I participate in (defined by a <code>help_link_widget</code>) [possibly this will be the future default]</li>\n<li>Topics I send a message to</li>\n<li>Topics I start</li>\n<li>Never (default for now while we get the whole follow topics system/UI implemented)</li>\n</ul>\n<p>(With some tense/phrasing as appropriate )</p>",
+        "id": 1627144,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692301834
+    },
+    {
+        "content": "<p>OK, the PR <a href=\"https://github.com/zulip/zulip/pull/26054\">#26054</a> is mostly ready. Apart from two blockers:</p>\n<ol>\n<li>a test failure help -  <a class=\"stream-topic\" data-stream-id=\"49\" href=\"/#narrow/stream/49-development-help/topic/test_custom_email_with_dry_run\">#development help &gt; test_custom_email_with_dry_run</a> </li>\n<li>Design Question:</li>\n</ol>\n<p>Suppose a user has the following setting:</p>\n<ul>\n<li><code>automatically_unmute_topics_policy</code> - <code>ON_PARTICIPATION</code></li>\n</ul>\n<p>A user has manually <code>followed</code> a topic (from topic popover etc)</p>\n<p>Now, when the user sends a message to the topic, the state will change to <code>UNMUTED</code>. Is this behavior fine?</p>",
+        "id": 1628495,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1692619408
+    },
+    {
+        "content": "<p>Another important example would be:</p>\n<ul>\n<li><code>automatically_unmute_topics_policy</code> - <code>ON_PARTICIPATION</code></li>\n<li><code>automatically_follow_topics_policy</code> - <code>ON_INITIATION</code></li>\n</ul>\n<p>When a user starts a topic -- the state will be <code>FOLLOWED</code>. Now when the user sends an another message, the state will change to <code>UNMUTED</code>.</p>",
+        "id": 1628496,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1692619570
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"22341\">@Prakhar Pratyush</span> no, I think the intent of these \"automatically do X\" policies should be that they can only increase the user's visibility policy for the topic.</p>",
+        "id": 1629059,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692664106
+    },
+    {
+        "content": "<p>We should be clear about that in the documentation, but I'm pretty sure that's what a user is going to expect if we don't write it down.</p>",
+        "id": 1629060,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692664137
+    },
+    {
+        "content": "<p>So we're sticking to the <code>f(action) = visibility policy change</code> scheme (meaning, settings will be for what to do when a particular action is done (send message, participate etc), and not the inverse, right?</p>",
+        "id": 1629976,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1692802158
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"22341\">Prakhar Pratyush</span> <a href=\"#narrow/stream/101-design/topic/automatically.20follow.20topics.20.2325914/near/1614385\">said</a>:</p>\n<blockquote>\n<p>Suppose a user has</p>\n<ul>\n<li><code>automatically_follow_topics_policy</code> set to <code>Topics I start</code></li>\n<li><code>automatically_unmute_topics_policy</code> set to <code>Topics I start</code></li>\n</ul>\n</blockquote>\n<p>In that case, should we have UI and/or API level constraints to disallow combinations of settings like this (meaning, disallow <code>f</code> from being one-to-many?)<br>\nIf we're going to add constraints, it would be better to do that now, rather than later when some data which does not follow the constraint gets into the DB (and would thus need a custom migration to clean).</p>",
+        "id": 1629977,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1692802260
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span> yeah, that's correct.</p>",
+        "id": 1630141,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692816259
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"22341\">@Prakhar Pratyush</span> FYI as well in case you're still up -- what I'm thinking is that we'd have these as the effectively descriptions:</p>\n<ul>\n<li>\"Automatically follow topics when ...\"</li>\n<li>\"Automatically unmute topics when the topic or stream is muted and ...\"</li>\n</ul>",
+        "id": 1630142,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692816395
+    },
+    {
+        "content": "<p>And if you set the first policy to cover every situation the second policy would apply, that's fine -- from a user standpoint, having the end result be \"followed\" is equivalent to unmuting the topic and then following it.</p>",
+        "id": 1630143,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692816433
+    },
+    {
+        "content": "<p>I think we should discuss this also,</p>\n<p>As <span class=\"user-mention silent\" data-user-id=\"16839\">Abhijeet Bodas</span> mentioned:</p>\n<blockquote>\n<p>I think, for our own clarity and simplicity, let's just define PARTICIPATION and INITIATION to be mutually exclusive. That is, let's define \"PARTICIPATION\" to only mean sending a non-first message/reacting/other-stuff planned, and use this definition when writing the logic as well as in docs/discussion here.</p>\n</blockquote>\n<p>The current implementation in the PR treats \"sending the first message to a topic\" action as \"INITIATION\"  as well as \"PARTICIPATION\".</p>",
+        "id": 1632828,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1693281791
+    },
+    {
+        "content": "<p>So, while sending the first message to a topic:</p>\n<p>Case 1:</p>\n<ul>\n<li>automatically_follow_policy = ON_INITIATION</li>\n<li>automatically_unmute_policy = ON_PARTICIPATION</li>\n</ul>\n<p>result: Follow the topic</p>\n<p>Case 2:</p>\n<ul>\n<li>automatically_follow_policy = ON_PARTICIPATION</li>\n<li>automatically_unmute_policy = ON_INITIATION</li>\n</ul>\n<p>result: Follow the topic</p>\n<p>We prioritise Follow over Unmute (as discussed earlier)</p>",
+        "id": 1632829,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1693282150
+    },
+    {
+        "content": "<p>I think, the current approach will help us to  <strong>not define</strong> the \"PARTICIPATION\" as sending a \"non-first\" message.</p>\n<p>I think we should keep the doc as simple as PARTICIPATION means sending a message &amp; other stuffs.</p>",
+        "id": 1632830,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1693282337
+    },
+    {
+        "content": "<p>Or will it create a confusion, i.e. </p>\n<ul>\n<li>automatically_follow_policy = ON_PARTICIPATION</li>\n<li>automatically_unmute_policy = ON_INITIATION</li>\n</ul>\n<p>I started a topic, then why I am Following the topic instead of Unmute.</p>",
+        "id": 1632831,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1693282693
+    },
+    {
+        "content": "<p>Well, I think even in the Case 2:</p>\n<p>With Abhijeet's reasoning,</p>\n<p>If a user Unmutes a topic on starting a topic, then as soon as they send the second message, the topic will be followed.</p>",
+        "id": 1632832,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1693282953
+    },
+    {
+        "content": "<p>It is very very less probable that - you are not going to send another message to a topic you started (or react to any messages)</p>",
+        "id": 1632833,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1693283155
+    },
+    {
+        "content": "<p>Also the second case configuration in itself seems to be of very less use. It is weird to have a configuration where you want more notifications for messages in topics you participated, but less notifications for topics you started.</p>\n<p><span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span> your thoughts?</p>",
+        "id": 1632837,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1693283428
+    },
+    {
+        "content": "<p>I still think it would be better to define \"participate\" as send a not-first message. How can one participate in something that doesn't exist (ie,  topic just before sending the first message)?</p>",
+        "id": 1633664,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1693446201
+    },
+    {
+        "content": "<p>And especially for the case you described above, this behaviour might come out as unexpected/surprising to users. We could document it well in the user docs, but that doesn't mean users will read it.</p>",
+        "id": 1633665,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1693446286
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span> we have a small blocker here. Your thoughts on <a href=\"#narrow/stream/101-design/topic/automatically.20follow.20topics.20.2325914/near/1632828\">this question</a>?</p>",
+        "id": 1636164,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1694088721
+    },
+    {
+        "content": "<p>Hm, my intuition is as <span class=\"user-mention silent\" data-user-id=\"22341\">Prakhar Pratyush</span> suggested above -- sending the first message seems like a form of participation to me.</p>",
+        "id": 1636492,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694122725
+    },
+    {
+        "content": "<p>So I think the user should automatically follow topics they start given:</p>\n<ul>\n<li>automatically_follow_policy = ON_PARTICIPATION</li>\n<li>automatically_unmute_policy = ON_INITIATION</li>\n</ul>",
+        "id": 1636494,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694122834
+    },
+    {
+        "content": "<p>We may want to give a hint in the settings UI when the two options have interactions that might be confusing? Not sure.</p>",
+        "id": 1636499,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694122968
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/automatically.20follow.20topics.20.2325914/near/1636499\">said</a>:</p>\n<blockquote>\n<p>We may want to give a hint in the settings UI when the two options have interactions that might be confusing? Not sure.</p>\n</blockquote>\n<p>Yeah, I think we can explain how it works in a /help/ page linked from the setting UI. </p>\n<p>But fundamentally the model described above is the cleanest version that most closely matches what users might expect/assume.</p>",
+        "id": 1637771,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694360483
+    },
+    {
+        "content": "<p>In terms of the code logic, I think the type of logic I'd write is:</p>\n<div class=\"codehilite\"><pre><span></span><code>new_visibility_policy = None\n# check unmute topic policy -- if applies set `new_visibility_policy = UNMUTED`\n# check followed topic policy -- if applies set `new_visibility_policy = FOLLOWED`\n# check `new_visibility_policy is not None` -- if true, change the visibility policy\n</code></pre></div>",
+        "id": 1637772,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694360561
+    },
+    {
+        "content": "<p>The \"follow topics\" policy is the main feature here; the \"unmute topics\" policy is a pretty minor feature that will probably be described something like \"Automatically unmute topics when doing the following activity in muted streams/topics\" -- framing it as a relatively low importance corner case.</p>",
+        "id": 1637773,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694360636
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/26054\">#26054</a> is ready to review (or a QA review first).</p>",
+        "id": 1639367,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1694592858
+    },
+    {
+        "content": "<p>One more question to discuss:<br>\nAs mentioned earlier, we plan to introduce a UI constraint to not allow both settings to have the same value, except NEVER.</p>\n<p>Both <code>automatically_follow_topics_policy</code> and <code>automatically_unmute_topics_policy</code>can't have the same value</p>\n<ul>\n<li>Topics I start (or)</li>\n<li>Topics I participate in</li>\n</ul>\n<p>at the same time.</p>\n<p>The PR currently has the following approach:</p>\n<ul>\n<li>When one of the settings has the value set to \"Topics I start\"</li>\n</ul>\n<p>Other setting's dropdown has the following options:</p>\n<ul>\n<li>\"Topics I participate in\"</li>\n<li>\"Never\"</li>\n</ul>\n<p>Also, both can have the \"Never\" value at the same time.</p>\n<p>This leads to a problem, if one of the settings has the value \"Topics I start\" and another setting is set to \"Topics I participate in\". Now, to change the value of the first setting to \"Topics I participate in\", a user first needs to make sure that the other setting doesn't have that value. So it will be a two-step process in this case.</p>",
+        "id": 1639373,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1694593167
+    },
+    {
+        "content": "<p>Hm, hiding menu options doesn't seem great. For example, it can be confusing why you saw a menu option just now, and it has disappeared from the list.</p>\n<p>A couple of alternatives would be:</p>\n<ol>\n<li>Disable options rather than hiding them. We'd need to give an explanation of why the option is disabled (e.g., in smaller font on that option in the dropdown); I don't know how easy that is to do.</li>\n<li>Allow users to pick whatever they want in the UI after all. (I chatted with <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> just now, and he proposed this one, despite his earlier comments.) </li>\n</ol>\n<p>With (2), we could just have a note in the settings that explains how the options interact. E.g.,  something like: \"You will automatically follow topics that you have configured to both follow and unmute.\"</p>",
+        "id": 1639570,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694623489
+    },
+    {
+        "content": "<p>(2) seems simpler to me, and not particularly confusing to users.</p>",
+        "id": 1639571,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694623531
+    },
+    {
+        "content": "<p>Okay, 2nd option looks better to me. We can add an explanation like:</p>\n<p>We prioritise \"Follow\" over \"Unmute\" if:</p>\n<ul>\n<li>both the settings have the same value</li>\n<li>follow-policy set to on-participation and unmute-policy set to on-initiation/start. -- <a href=\"#narrow/stream/101-design/topic/automatically.20follow.20topics.20.2325914/near/1636492\">related discussion</a></li>\n</ul>",
+        "id": 1639582,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1694624800
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/26054\">#26054</a> is finally ready for a QA review :)</p>",
+        "id": 1640288,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1694697949
+    },
+    {
+        "content": "<p>Playing with the PR, I think we should change the unmute option to \"Automatically unmute topics in muted streams\", and have it only do something in muted streams. Otherwise, you potentially end up with a bunch of topics in unmuted streams marked as unmuted rather than default, which feels confusing.</p>",
+        "id": 1642367,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695061790
+    },
+    {
+        "content": "<p>The only practical difference this will make is that if you mute a stream, you won't automatically be subscribed to, e.g., topics you participated in previously. That seems OK, and might actually be desirable, since you're indicating reduced interest in what's going on in that stream.</p>",
+        "id": 1642370,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695061882
+    },
+    {
+        "content": "<p>Yeah, that sounds good to me -- it certainly matches how I've been thinking about the purpose of the \"automatically unmute topic\" feature -- offering a way to automate the existing prompt (in a compose banner) that we have when you send a message to a muted stream/topic offering to let you mute it..</p>\n<p><span class=\"user-mention\" data-user-id=\"22341\">@Prakhar Pratyush</span> can you make that tweak?</p>",
+        "id": 1642429,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1695065450
+    },
+    {
+        "content": "<p>To update this thread, I have updated the PR <a href=\"https://github.com/zulip/zulip/pull/26054\">#26054</a> with the changes <span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> suggested above.</p>",
+        "id": 1645839,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1695427156
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"22341\">@Prakhar Pratyush</span> cool, just posted another review.</p>",
+        "id": 1645900,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1695430547
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span>  Addressed the review comments. A quick feedback to <a href=\"https://github.com/zulip/zulip/pull/26054#discussion_r1337766088\">this comment</a> would be helpful.</p>",
+        "id": 1647584,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1695762233
+    },
+    {
+        "content": "<p>Since users are going to be automatically following topics, it would probably be helpful to let them know when this happens. I was thinking we could try:</p>\n<ol>\n<li>\n<p>A compose box banner when you start automatically following a topic because you sent a message to it. E.g., \"You're automatically following <a class=\"stream-topic\" data-stream-id=\"101\" href=\"/#narrow/stream/101-design/topic/automatically.20follow.20topics.20.2325914\">#design &gt; automatically follow topics #25914</a> .\" Maybe with a link to the help center from \"following\"?</p>\n</li>\n<li>\n<p>When you start following a topic because of a message feed interaction (e.g., reacting to a message),  a tooltip on the bell in the message header bar for that message? Something like \"Automatically following topic\", similar to the \"Saved as draft\" tooltip we have on Drafts.</p>\n</li>\n</ol>\n<p>And the corresponding banner/tooltip for automatically unmuting topics.</p>\n<p>Thoughts?</p>",
+        "id": 1648875,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695910014
+    },
+    {
+        "content": "<p>Oh, I guess <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> already filed <a href=\"https://github.com/zulip/zulip/pull/26900\">#26900</a>. Anyway, seems worth chatting about if folks have thoughts.</p>",
+        "id": 1648941,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695914134
+    },
+    {
+        "content": "<p>Regarding <a href=\"https://github.com/zulip/zulip/pull/26054#issuecomment-1738244891\">this comment</a> to add another option \"Topics I send a message to\".</p>\n<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"https://github.com/zulip/zulip/pull/26054#issuecomment-1738128281\">said</a>: </p>\n<blockquote>\n<p>I kinda feel like \"participation\" might feel a bit aggressive for \"automatically unmute\" -- I'm now wondering if we want an intermediate \"Send a message\" that doesn't include reactions/etc</p>\n</blockquote>\n<p>I have slightly different thoughts here:<br>\nSince the topic will be automatically marked as unmuted ONLY in muted streams. The participation option doesn't look aggressive to me.</p>\n<p>If a user participates in a poll or reacts to a message in muted stream, I think the topic is of more importance to them, unmuting is not a bad option here.</p>\n<p>For example: I have muted the \"api documentation\" stream, but whenever <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> mentions me in that stream, I unmute that topic, because that topic needs my attention now. Most of the times I react with a thumbs-up to acknowledge that I will work on that, so if it gets automatically unmuted that's good for me.</p>\n<p>How other folks interact with default / muted topics in muted streams?</p>",
+        "id": 1650898,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1696073419
+    },
+    {
+        "content": "<p>Yeah I'm not entirely sure what we want the default to be, but the option to only trigger on sending messages seems useful for some situations/roles within a team that I can imagine.</p>",
+        "id": 1651144,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1696173635
+    }
+]

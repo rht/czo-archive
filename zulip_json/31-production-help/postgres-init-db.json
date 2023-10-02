@@ -1,0 +1,44 @@
+[
+    {
+        "content": "<p>Got a help ticket from someone trying to do a prod install on 16.04:</p>\n<p>When the postgres-init-db script runs, this happens:</p>\n<div class=\"codehilite\"><pre>root@zulip:~# /root/zulip/scripts/setup/postgres-init-db\n+ POSTGRES_USER=postgres\n++ su postgres -c &#39;psql -Atc &#39;\\&#39;&#39;SELECT COUNT(*) FROM zulip.zerver_message;&#39;\\&#39;&#39; zulip&#39;\n++ cat\ncould not change directory to &quot;/root&quot;: Permission denied\npsql: could not connect to server: No such file or directory\n    Is the server running locally and accepting\n    connections on Unix domain socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot;?\n+ records=\n+ [[ &#39;&#39; -gt 200 ]]\n+ &#39;[&#39; -e /var/run/supervisor.sock &#39;]&#39;\n+ supervisorctl stop all\n++ dirname /root/zulip/scripts/setup/postgres-init-db\n+ source /root/zulip/scripts/setup/terminate-psql-sessions postgres zulip zulip_base\n++ set -e\n++ set -x\n++ DEFAULT_USER=postgres\n+++ uname\n++ &#39;[&#39; Linux = OpenBSD &#39;]&#39;\n++ cd /\n++ &#39;[&#39; 0 -eq 0 &#39;]&#39;\n+++ sudo -u postgres sh -c &#39;psql -A -t -d postgres -c &quot;show server_version&quot;&#39;\npsql: could not connect to server: No such file or directory\n    Is the server running locally and accepting\n    connections on Unix domain socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot;?\n++ version=\n</pre></div>\n\n\n<p>\"I can see why this happens.  The /root directory is not accessible by the postgres user, but I don't know how to fix this in the context of that script that runs. </p>\n<p>What should I do and is this an incorrect instruction?\"</p>\n<p>(And then)</p>\n<p>Actually, Postgresql runs:</p>\n<div class=\"codehilite\"><pre>root@zulip:~# service postgresql status\n* postgresql.service - PostgreSQL RDBMS\n   Loaded: loaded (/lib/systemd/system/postgresql.service; enabled; vendor preset: enabled)\n   Active: active (exited) since Sun 2016-08-28 21:15:11 UTC; 21h ago\n  Process: 12465 ExecStart=/bin/true (code=exited, status=0/SUCCESS)\n Main PID: 12465 (code=exited, status=0/SUCCESS)\n   CGroup: /system.slice/postgresql.service\n\nAug 28 21:15:11 zulip systemd[1]: Starting PostgreSQL RDBMS...\nAug 28 21:15:11 zulip systemd[1]: Started PostgreSQL RDBMS.\n</pre></div>\n\n\n<p>Any ideas?</p>",
+        "id": 21819,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1473119208
+    },
+    {
+        "content": "<p>Should they be running as the \"zulip\" user instead of \"root\"?</p>",
+        "id": 21820,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1473119946
+    },
+    {
+        "content": "<p>Generally, you don't run <code>postgres-init-db</code> directly unless <code>su zulip -c /home/zulip/deployments/current/scripts/setup/initialize-database</code> has failed.</p>",
+        "id": 21884,
+        "sender_full_name": "Christie Koehler",
+        "timestamp": 1473181664
+    },
+    {
+        "content": "<p>in which case, you need to <code>supervisorctl stop all</code> and then <code>scripts/setup/postgres-init-db</code></p>",
+        "id": 21885,
+        "sender_full_name": "Christie Koehler",
+        "timestamp": 1473181701
+    },
+    {
+        "content": "<p>On my zulip production instance, which is 14.04, <code>/</code> is world-readable. same on my laptop running 16.04</p>",
+        "id": 21886,
+        "sender_full_name": "Christie Koehler",
+        "timestamp": 1473181998
+    },
+    {
+        "content": "<p>I had an issue recently where I overwrote the auto-generated secrets file with a backup, not realizing unique passwords were generated upon install. This caused errors whenever a command was run as the postgres user b/c it couldn't login.</p>",
+        "id": 21887,
+        "sender_full_name": "Christie Koehler",
+        "timestamp": 1473182173
+    },
+    {
+        "content": "<p>For the archives, this issue sounds a lot like postgres not running at the time the script was run (at least, that's the error message you get when postgres is not running, firewalled, or similar).</p>",
+        "id": 21929,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1473185002
+    }
+]

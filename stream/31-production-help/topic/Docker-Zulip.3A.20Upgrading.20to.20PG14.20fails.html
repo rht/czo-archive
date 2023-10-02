@@ -1,0 +1,235 @@
+<html>
+<head><meta charset="utf-8"><title>Docker-Zulip: Upgrading to PG14 fails · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html">Docker-Zulip: Upgrading to PG14 fails</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1510005"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1510005" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1510005">(Feb 20 2023 at 00:41)</a>:</h4>
+<p>Having trouble upgrading Docker-Zulip from 5.7 to 6, the part where the database is supposed to be upgraded to PostGreSQL 14 via the provided upgrade script.</p>
+<p>What do I have?</p>
+<ul>
+<li>Standard Docker-Zulip 5.7-0 with PostGreSQL 10.</li>
+</ul>
+<p>What did I do?</p>
+<ol>
+<li>Pulled the docker-zulip 6.1-0 image.</li>
+<li>Stopped all containers via <code>docker-compose stop</code>.</li>
+<li>Updated <code>docker-compose.yml</code> to use 6.1-0.</li>
+<li>Ran the <a href="https://github.com/zulip/docker-zulip/blob/main/upgrade-postgresql">provided</a> upgrade-postgresql.</li>
+</ol>
+<p>The latter resulted in:</p>
+<blockquote>
+<p>Error response from daemon: remove docker-zulip_postgresql-14: volume is in use</p>
+</blockquote>
+<p>(Full output <a href="https://pastebin.com/ZV5Kf3xT">here.</a>)</p>
+<p>I had not created any volumes (e.g. not upgraded to have Zulip use Docker volmes).</p>
+<p>(Of course, 6.1-0 doesn't start with the old Postgres resulting in <code>django.db.utils.NotSupportedError: PostgreSQL 11 or later is required (found 10.11).</code>.)</p>
+<p>Any help/hint is highly appreciated! Happy to provide more details if needed.</p>
+
+
+
+<a name="1510006"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1510006" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Josh Klar <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1510006">(Feb 20 2023 at 00:56)</a>:</h4>
+<p>Hi <span class="user-mention" data-user-id="14475">@Roman Bannack</span> - looks like you hit the slightly less happy path out of the upgrade options and need to run the longer set of instructions. <a href="https://github.com/zulip/docker-zulip/blob/main/UPGRADING.md#upgrading-zulipzulip-postgresql-to-14-version-60-0-and-above">Here is the full upgrade guide</a> for upgrading to 6.x+; notably, you'll need the part after <code>If the tool does not work, or you would prefer to perform the steps manually, see the steps below</code></p>
+
+
+
+<a name="1510010"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1510010" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1510010">(Feb 20 2023 at 01:40)</a>:</h4>
+<p><span class="user-mention" data-user-id="25085">@Josh Klar</span> </p>
+<p>Thank you. I failed for now, server went up but was constantly reloading with some <code>hostname.com/#reload:238237515944</code>-URL. Will retry later. The instructions don't say that you, probably, must upgrade to use volumes before (declaring only the PG14 volume didn't help in my case).</p>
+
+
+
+<a name="1510011"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1510011" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Josh Klar <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1510011">(Feb 20 2023 at 01:42)</a>:</h4>
+<p>Oh interesting - where are you storing your PG data currently if not a volume? Bind mounting a host directory?</p>
+
+
+
+<a name="1510012"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1510012" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Josh Klar <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1510012">(Feb 20 2023 at 01:42)</a>:</h4>
+<p>(I ask in part so that we can start shaping our Docker/OCI stack to the usecases folks have in the wild and reduce friction in this area)</p>
+
+
+
+<a name="1510013"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1510013" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1510013">(Feb 20 2023 at 01:43)</a>:</h4>
+<p>PG10 was/is, as the old default was, in a host directory: <code>/opt/docker/zulip/postgresql/data</code>.</p>
+
+
+
+<a name="1510014"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1510014" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1510014">(Feb 20 2023 at 01:45)</a>:</h4>
+<p>I'm happy that I can revert to 5.7 and PG10 without any problems, by the way.</p>
+
+
+
+<a name="1510609"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1510609" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1510609">(Feb 21 2023 at 16:11)</a>:</h4>
+<p><span class="user-mention" data-user-id="14475">@Roman Bannack</span>: The first failure in the output you show is a failure of <code>docker-compose up --wait database</code> -- it looks like it doesn't understand the arguments.</p>
+<p>Can you show <code>docker-compose --version</code> ?</p>
+
+
+
+<a name="1510610"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1510610" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1510610">(Feb 21 2023 at 16:15)</a>:</h4>
+<p>Looks like <code>docker-compose up --wait</code> was introduced in <a href="https://github.com/docker/compose/releases/tag/v2.1.1">2.1.1</a>, in November 2021.  Try upgrading to a more recent <code>docker-compose</code> and trying again?</p>
+
+
+
+<a name="1510611"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1510611" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1510611">(Feb 21 2023 at 16:15)</a>:</h4>
+<p>I'll add a version check to the code.</p>
+
+
+
+<a name="1510612"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1510612" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1510612">(Feb 21 2023 at 16:18)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="14475">Roman Bannack</span> <a href="#narrow/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails/near/1510010">said</a>:</p>
+<blockquote>
+<p>The instructions don't say that you, probably, must upgrade to use volumes before (declaring only the PG14 volume didn't help in my case).</p>
+</blockquote>
+<p>I don't believe there's a required ordering between these steps.</p>
+
+
+
+<a name="1510633"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1510633" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1510633">(Feb 21 2023 at 16:53)</a>:</h4>
+<p>Pushed <a href="https://github.com/zulip/docker-zulip/pull/388">#DZ388</a>.</p>
+
+
+
+<a name="1510832"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1510832" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1510832">(Feb 21 2023 at 19:54)</a>:</h4>
+<p>And <a href="https://github.com/zulip/docker-zulip/pull/389">#DZ389</a> has a commit to address your question about ordering the PostgreSQL upgrade with respect to the Docker volume change.</p>
+
+
+
+<a name="1511100"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1511100" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1511100">(Feb 22 2023 at 01:32)</a>:</h4>
+<p>Thank you, <span class="user-mention" data-user-id="12178">@Alex Vandiver</span>! Indeed, I had <code>docker-compose version 1.25.0, build 0a186604</code>. After upgrading it, the (new) upgrade script worked fine.</p>
+<p>With Zulip 6.1, though, I encountered CSFR issues (being behind a reverse proxy), similar to those that were addressed in <a class="stream-topic" data-stream-id="9" href="/#narrow/stream/9-issues/topic/Zulip.206.2E0.20behind.20reverse.20proxy.20-.20CSRF.20verification.20failed">#issues &gt; Zulip 6.0 behind reverse proxy - CSRF verification failed</a>. Have yet to find a way to solve that. Interestingly, for getting 5.7 to run again, I had to disable the Docker managed volume for the Zulip container and go back to bind mounting a volume.</p>
+
+
+
+<a name="1511377"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1511377" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1511377">(Feb 22 2023 at 18:08)</a>:</h4>
+<p>I expect the reason you had to go back to a bind-mounted directory is that the volume had PostgreSQL 14 data -- they're not interchangeable.</p>
+
+
+
+<a name="1511381"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1511381" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1511381">(Feb 22 2023 at 18:09)</a>:</h4>
+<p>If you want to start a new topic with the CSRF issues, we can attempt to help debug those.  We're not aware of any relevant changes that should have affected behaviour there -- my best guess is that there's a Django upgrade as part of 6.x which changed behaviour in some way.</p>
+
+
+
+<a name="1511694"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1511694" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1511694">(Feb 22 2023 at 23:25)</a>:</h4>
+<p>I think it's actually more likely that something in the configuration was changed while working on the upgrade that broke CSRF than that anything changed in Zulip at all there -- Django CSRF has been AFAIK unchanged for years.</p>
+
+
+
+<a name="1514005"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1514005" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1514005">(Feb 25 2023 at 01:41)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails/near/1511381">schrieb</a>:</p>
+<blockquote>
+<p>If you want to start a new topic with the CSRF issues, we can attempt to help debug those.  We're not aware of any relevant changes that should have affected behaviour there -- my best guess is that there's a Django upgrade as part of 6.x which changed behaviour in some way.</p>
+</blockquote>
+<p>Appreciated! I still have to figure out whether these are, indeed, real CSRF issues. For now, I occasionally get "invalid subdomain" errors, and most (not all) of the older file uploads/images leading to 404 (static content, however, works). It seems something is going wrong with migrating to Docker managed volumes (that alone, without even the PG upgrade, leads to the 404 phenomenon). I can't pin that down narrow enough for asking meaningful questions at the moment. Will keep you updated.</p>
+
+
+
+<a name="1514012"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1514012" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1514012">(Feb 25 2023 at 01:48)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="14475">Roman Bannack</span> <a href="#narrow/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails/near/1514005">said</a>:</p>
+<blockquote>
+<p>For now, I occasionally get "invalid subdomain" errors</p>
+</blockquote>
+<p>Do you host more than one Zulip organization ("realm" is the internal name for them) on this server, or just one?</p>
+<blockquote>
+<p>and most (not all) of the older file uploads/images leading to 404 (static content, however, works</p>
+</blockquote>
+<p>Are you using <a href="https://zulip.readthedocs.io/en/latest/production/upload-backends.html">the file upload backend, or the S3 backend</a>?</p>
+
+
+
+<a name="1514726"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1514726" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Notification Bot <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1514726">(Feb 27 2023 at 12:53)</a>:</h4>
+<p>4 messages were moved from this topic to <a class="stream-topic" data-stream-id="31" href="/#narrow/stream/31-production-help/topic/upgrading.20to.206.2E1">#production help &gt; upgrading to 6.1</a> by <span class="user-mention silent" data-user-id="21836">Lauryn Menard</span>.</p>
+
+
+
+<a name="1517255"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1517255" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1517255">(Mar 02 2023 at 23:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="12178">@Alex Vandiver</span> </p>
+<p>There's only one Zulip organization. And no, no file upload backends or S3 involved. I think we can forget the 404 I mentioned above for now. I made a clean start and now it looks a bit different.</p>
+<p>Unfortunately, I could not fix it, yet. What I know so far:</p>
+<p>First, I migrated to Docker-managed volumes. Went well.</p>
+<p>Now, running <code>upgrade-postgresql</code> finishes successfully, but throws two warnings and an error on its way:</p>
+<div class="codehilite" data-code-language="Bash"><pre><span></span><code>WARN<span class="o">[</span><span class="m">0000</span><span class="o">]</span><span class="w"> </span>volume<span class="w"> </span><span class="s2">"docker-zulip_postgresql-10"</span><span class="w"> </span>already<span class="w"> </span>exists<span class="w"> </span>but<span class="w"> </span>was<span class="w"> </span>not<span class="w"> </span>created<span class="w"> </span>by<span class="w"> </span>Docker<span class="w"> </span>Compose.<span class="w"> </span>Use<span class="w"> </span><span class="sb">`</span>external:<span class="w"> </span><span class="nb">true</span><span class="sb">`</span><span class="w"> </span>to<span class="w"> </span>use<span class="w"> </span>an<span class="w"> </span>existing<span class="w"> </span>volume
+
+<span class="o">(</span>...<span class="o">)</span>
+
++<span class="w"> </span>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-i<span class="w"> </span>d8ebf0235887ba43d16d8622f430c3cc4b7f051707d78df15cd6dc2c09ed87c2<span class="w"> </span>psql<span class="w"> </span>-U<span class="w"> </span>zulip
+invalid<span class="w"> </span><span class="nb">command</span><span class="w"> </span><span class="se">\"</span><span class="s2">":</span>
+<span class="s2">ERROR:  syntax error at or near "</span>OCI<span class="s2">"</span>
+<span class="s2">LINE 1: OCI runtime exec failed: exec failed: container_linux.go:346...</span>
+<span class="s2">        ^</span>
+
+<span class="s2">WARN[0000] volume "</span>docker-zulip_postgresql-14<span class="s2">" already exists but was not created by Docker Compose. Use `external: true` to use an existing volume</span>
+</code></pre></div>
+<p>(Full output <a href="https://pastebin.com/3TYm5LEW">here</a>.)</p>
+<p>On a side note, the shortcut for <code>docker_compose_version</code> doesn't seem to work in my case. It is defined in line 13, but line 14 throws an error: <code>./upgrade-postgresql: Zeile 14: docker_compose_version: Befehl nicht gefunden</code> (command not found). Checked it on the command line (Ubuntu Server 18.04), it gives the same error. I guess you could just do it with <code>alias docker_compose_version="docker-compose --version --short"</code> which works.</p>
+<p>Now, starting the stack of containers with Zulip 6.1 and PG14, everything goes up good, but Zulip now keeps saying that no organisation exists on this subdomain. Only when I try to log in, it results in a CSRF error.</p>
+<p>I am running Zulip behind a reverse proxy (Apache2) with custom <code>SETTING_EXTERNAL_HOST</code>, <code>SETTING_USE_X_FORWARDED_HOST</code>, <code>DISABLE_HTTPS: "True"</code>, etc., which all work just fine with 5.7 and PG10. All this lives on a subdomain, e.g. "<a href="http://team.myserver.de">team.myserver.de</a>".</p>
+<p>What I didn't try again was the manual PG14 upgrade. Maybe this will give some more insight.</p>
+
+
+
+<a name="1517372"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1517372" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1517372">(Mar 03 2023 at 02:07)</a>:</h4>
+<p>The "Command not found" is a stupid mistake on my part -- <a href="https://github.com/zulip/docker-zulip/pull/392">#DZ392</a>.</p>
+
+
+
+<a name="1517376"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1517376" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1517376">(Mar 03 2023 at 02:10)</a>:</h4>
+<p>The warning is likely the major contributing cause of the error later -- that <code>OCI runtime exec failed: exec failed: container_linux.go:346</code> is the start of a message saying that running commands in the container failed, because <code>docker-compose exec database pg_dumpall -U zulip</code> failed because the disk wasn't mountable.</p>
+
+
+
+<a name="1517382"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1517382" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1517382">(Mar 03 2023 at 02:13)</a>:</h4>
+<p><span class="user-mention" data-user-id="14475">@Roman Bannack</span>: What version of <code>docker-compose</code> is this?</p>
+<p>i.e. can you show the output of:</p>
+<div class="codehilite"><pre><span></span><code>docker-compose --version --short
+</code></pre></div>
+
+
+
+<a name="1517388"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1517388" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1517388">(Mar 03 2023 at 02:16)</a>:</h4>
+<p>Ah, 2.16.0, it's in the full log.</p>
+
+
+
+<a name="1517823"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Docker-Zulip%3A%20Upgrading%20to%20PG14%20fails/near/1517823" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Docker-Zulip.3A.20Upgrading.20to.20PG14.20fails.html#1517823">(Mar 03 2023 at 19:04)</a>:</h4>
+<p>OK, verified that that warning is just a warning, and it keeps going.</p>
+<p><span class="user-mention" data-user-id="14475">@Roman Bannack</span>: Can you show me the output of:</p>
+<div class="codehilite"><pre><span></span><code>docker-compose up --wait database
+docker-compose exec database pg_dumpall -U zulip | head
+</code></pre></div>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

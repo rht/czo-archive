@@ -1,0 +1,188 @@
+[
+    {
+        "content": "<p>Hey! We have a personal notification setting to \"Include organization name in subject of message notification emails\". This puts the name of the organization <em>at the end</em> of the subject line, i.e. <code>#stream &gt; topic [Organization Name]</code> or <code>PMs with X  [Organization Name]</code>.</p>\n<p>Thoughts on moving the organization name to the beginning of the subject line?</p>",
+        "id": 1428471,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1661927967
+    },
+    {
+        "content": "<p>Seems fine to me, and helpful when the rest of the subject line is long.</p>",
+        "id": 1428476,
+        "sender_full_name": "Chris Bobbe",
+        "timestamp": 1661928180
+    },
+    {
+        "content": "<p>I think the one risk with this sort of change is that text in brackets at the start of a subject line can have special handling in email clients (For example, Gmail it might thread together two unrelated conversations with different content there). So your <code># general &gt; off topic</code> from two different organizations might get threaded together.</p>",
+        "id": 1433315,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662768810
+    },
+    {
+        "content": "<p>I haven't tested this sort of thing recently, but I think that'd be an unfortunate outcome. I don't know whether some of the things we do with headers, like the <code>List-Id: Zulip community &lt;chat.zulip.org&gt;</code> would prevent that outcome.</p>",
+        "id": 1433318,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662768897
+    },
+    {
+        "content": "<p>Hm, I'm not finding clear answers about how threading works with a few minutes of googling, so it would be good for someone else to chime in. I guess someone experienced the potential problem Tim describes with another product: <a href=\"https://github.com/getsentry/sentry/issues/4374\">https://github.com/getsentry/sentry/issues/4374</a></p>",
+        "id": 1434287,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1663016601
+    },
+    {
+        "content": "<p>From that thread it looks like the List-Id header may not help:</p>\n<blockquote>\n<p>The list headers work for filtering, but subject based threading seems to override them.</p>\n</blockquote>",
+        "id": 1435336,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1663162870
+    },
+    {
+        "content": "<p>Yeah, so I think moving the organization name to the beginning is likely not an option. There may still be other things we can improve here subject to the constraints imposed by email clients.</p>",
+        "id": 1437065,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663371151
+    },
+    {
+        "content": "<p>What if we put the organization name in front without the square brackets? E.g. <code>Zulip Community - #stream &gt; topic</code>?</p>",
+        "id": 1437172,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1663390882
+    },
+    {
+        "content": "<p>That's an option; my worry is it'd make the experience significantly worse on mobile Gmail and similar UIs. Right now, on my relatively mobile large device held horizonal, there's space for:</p>\n<ul>\n<li>#design &gt; Recent topics UI [Zulip commu...</li>\n<li>#automated testing &gt; <a href=\"http://chat.zulip.org\">chat.zulip.org</a> failin...</li>\n</ul>\n<p>I think that means one would have the topic cut off pretty quickly, even with a short stream name like this one. Something like:</p>\n<ul>\n<li>Zulip community - #design &gt; Recent topic...</li>\n<li>Zulip community - #automated testing&gt;ch...</li>\n</ul>\n<p>I think that'd feel like a pretty bad experience.</p>",
+        "id": 1437355,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663461605
+    },
+    {
+        "content": "<p>From that standpoint, it'd be a better plan to instead put the organization name in the sender name, i.e. replacing \"Zulip notifications\" with something like \"{organization_name} notifications\". </p>\n<p>The downside of trying to move the organization name to the sender name is that we'll run into the email client threading issue again if the same stream/topic name pair appear in different organizations. </p>\n<p>A solution could be to have <code>#{stream} &gt; {topic} [{organization_name}]</code> as the subject line.</p>",
+        "id": 1437356,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663461782
+    },
+    {
+        "content": "<p>I think possibly the best option within this range of constraints is:</p>\n<ul>\n<li>Put the organization name in the email sender name, unconditionally; maybe something like \"Rust community Zulip notifications\", or \"Zulip community Zulip notifications\" for this specific organization.</li>\n<li>Keep the existing optional, default-off setting for putting the organization name at the end of the subject line as well, so that there's a solution for anyone who runs into the threading collision issue across multiple organizations, which is probably going to be rare. So you'd usually have just <code>#{stream} &gt; {topic}</code> in the subject line, but you can do <code>#{stream} &gt; {topic} [{organization_name}]</code> if you're worried about collisions.</li>\n</ul>",
+        "id": 1437357,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663461870
+    },
+    {
+        "content": "<p>That might work...</p>\n<p>We could also make that <code>#{stream} &gt; {topic} - {organization_name}</code> instead of using the square brackets? Or some other separator? There's more risk of the org name blending with the topic, but it seems a bit friendlier.</p>",
+        "id": 1437539,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1663561963
+    },
+    {
+        "content": "<p>I don't like <code>-</code> because it's a character that might plausible be in the middle of a topic; something like <code>|</code> that's less likely could be OK.</p>",
+        "id": 1438464,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663720802
+    },
+    {
+        "content": "<p>Options:<br>\n#design &gt; Recent topics UI © Zulip community<br>\n#design &gt; Recent topics UI <span aria-label=\"eyes\" class=\"emoji emoji-1f440\" role=\"img\" title=\"eyes\">:eyes:</span> Zulip community<br>\n#design &gt; Recent topics UI ★ Zulip community<br>\n#design &gt; Recent topics UI ← Zulip community<br>\n#design &gt; Recent topics UI ◀︎ Zulip community<br>\n#design &gt; Recent topics UI ✸ Zulip community<br>\n#design &gt; Recent topics UI ⨀ Zulip community<br>\n#design &gt; Recent topics UI · Zulip community</p>",
+        "id": 1438487,
+        "sender_full_name": "Vlad Korobov",
+        "timestamp": 1663727965
+    },
+    {
+        "content": "<p>design &gt; Recent topics UI ・Zulip community — we already discussed that in another topic <span aria-label=\"wink\" class=\"emoji emoji-1f609\" role=\"img\" title=\"wink\">:wink:</span><br>\ndesign &gt; Recent topics UI ❖ Zulip community</p>",
+        "id": 1438488,
+        "sender_full_name": "Vlad Korobov",
+        "timestamp": 1663728179
+    },
+    {
+        "content": "<p>Hm, playing with it in Gmail, I feel like I like having more horizontal distance between the topic and the org name than you get with <code>|</code> or a dot. I'm not sure if the other symbols are too interesting? :)</p>\n<p>What about a <code>~</code>?</p>",
+        "id": 1438513,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1663735308
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/e4/vxYu10IfGhIbTblr9bQTktOU/Screen-Shot-2022-09-20-at-9.42.03-PM.png\">Screen-Shot-2022-09-20-at-9.42.03-PM.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/e4/vxYu10IfGhIbTblr9bQTktOU/Screen-Shot-2022-09-20-at-9.42.03-PM.png\" title=\"Screen-Shot-2022-09-20-at-9.42.03-PM.png\"><img src=\"/user_uploads/2/e4/vxYu10IfGhIbTblr9bQTktOU/Screen-Shot-2022-09-20-at-9.42.03-PM.png\"></a></div>",
+        "id": 1438515,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1663735344
+    },
+    {
+        "content": "<p>Does it work to add extra spaces on either side of the dot/pipe options? If not, the <code>~</code> looks fairly reasonable to me visually, though I feel like semantically, it probably will feel like that choice of character means something.</p>",
+        "id": 1438970,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663787427
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/organization.20name.20in.20email.20subjects/near/1438970\">said</a>:</p>\n<blockquote>\n<p>Does it work to add extra spaces on either side of the dot/pipe options? If not, the <code>~</code> looks fairly reasonable to me visually, though I feel like semantically, it probably will feel like that choice of character means something.</p>\n</blockquote>\n<p>Gmail, at least, doesn't seem to display extra spaces. 1 vs. 3 on each side of the dot look the same:</p>\n<p><a href=\"/user_uploads/2/24/XK3VjAA4h6i2frcrCLgPAO-b/Screen-Shot-2022-09-21-at-2.40.31-PM.png\">Screen-Shot-2022-09-21-at-2.40.31-PM.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/24/XK3VjAA4h6i2frcrCLgPAO-b/Screen-Shot-2022-09-21-at-2.40.31-PM.png\" title=\"Screen-Shot-2022-09-21-at-2.40.31-PM.png\"><img src=\"/user_uploads/2/24/XK3VjAA4h6i2frcrCLgPAO-b/Screen-Shot-2022-09-21-at-2.40.31-PM.png\"></a></div>",
+        "id": 1439024,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1663796464
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/organization.20name.20in.20email.20subjects/near/1438970\">said</a>:</p>\n<blockquote>\n<p>Does it work to add extra spaces on either side of the dot/pipe options? If not, the <code>~</code> looks fairly reasonable to me visually, though I feel like semantically, it probably will feel like that choice of character means something.</p>\n</blockquote>\n<p>Do other folks think the <code>~</code> would seem puzzling?</p>",
+        "id": 1439025,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1663796491
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/organization.20name.20in.20email.20subjects/near/1439024\">said</a>:</p>\n<blockquote>\n<p>Gmail, at least, doesn't seem to display extra spaces. 1 vs. 3 on each side of the dot look the same:</p>\n</blockquote>\n<p>Makes sense; that's the default whitespace behavior for HTML in general.</p>",
+        "id": 1439082,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663800927
+    },
+    {
+        "content": "<p>I thought of suggesting <code>~</code> but it looks like a dash and doesn't separate company name enough.<br>\nYou can use 3 dots <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span><br>\n<a href=\"/user_uploads/2/64/PqFJ9tRmzCZtzU_-r-yl7D7N/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/64/PqFJ9tRmzCZtzU_-r-yl7D7N/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/64/PqFJ9tRmzCZtzU_-r-yl7D7N/image.png\"></a></div>",
+        "id": 1439147,
+        "sender_full_name": "Vlad Korobov",
+        "timestamp": 1663806384
+    },
+    {
+        "content": "<p>There's also parens/brackets/etc. around the organization name, like </p>\n<ul>\n<li><code>#design &gt; organization name in email subjects (Zulip community)</code></li>\n</ul>",
+        "id": 1439149,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663807683
+    },
+    {
+        "content": "<p>I support that too</p>",
+        "id": 1439158,
+        "sender_full_name": "Vlad Korobov",
+        "timestamp": 1663808554
+    },
+    {
+        "content": "<p>Parens would  be OK, but of course you can have parens in a topic name, too. ;)</p>",
+        "id": 1439186,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1663820927
+    },
+    {
+        "content": "<p>Maybe someone with Zulip Cloud admin access could run some queries to see how likely various separators/brackets are to be in topics?</p>",
+        "id": 1439612,
+        "sender_full_name": "Cyphase",
+        "timestamp": 1663877169
+    },
+    {
+        "content": "<p>I just searched Recent Topics (with an oldest unread message from June 2020), and <code>&lt; &gt;</code> has a lot fewer results than <code>( )</code>; in fact the angle bracket results fit on one screen. And not all of the topics have them at the end.</p>",
+        "id": 1439617,
+        "sender_full_name": "Cyphase",
+        "timestamp": 1663877267
+    },
+    {
+        "content": "<p>Also, just to throw some thoughts out there, maybe this could be admin-configurable in case certain options work better for different organizations as far as not conflicting with common topic formats? Maybe a choice from a dropdown that's populated from a <code>settings.py</code> setting, so self-hosters can do what they want but Zulip Cloud isn't allowing free-form options that could be abused. Or if it's not an org-admin configurable option, then at least a config file option for self-hosters.</p>\n<p>I'm sure I'm ignoring some considerations there.</p>",
+        "id": 1439623,
+        "sender_full_name": "Cyphase",
+        "timestamp": 1663877590
+    },
+    {
+        "content": "<table>\n<thead>\n<tr>\n<th>Bracket</th>\n<th>Total</th>\n<th>Ends with the closing bracket</th>\n<th>Comment</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>( )</td>\n<td>~187</td>\n<td>150</td>\n<td>18 are <code>(no topic)</code></td>\n</tr>\n<tr>\n<td>&lt; &gt;</td>\n<td>14</td>\n<td>4</td>\n<td></td>\n</tr>\n<tr>\n<td>{ }</td>\n<td>6</td>\n<td>2</td>\n<td></td>\n</tr>\n</tbody>\n</table>",
+        "id": 1439632,
+        "sender_full_name": "Cyphase",
+        "timestamp": 1663878508
+    },
+    {
+        "content": "<p>I think probably they're all going to be rare enough, especially as the last thing in a topic, that we should just pick whichever we feel is the best visual design.</p>",
+        "id": 1439740,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663886524
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"22433\">Vlad Korobov</span> <a href=\"#narrow/stream/101-design/topic/organization.20name.20in.20email.20subjects/near/1438488\">said</a>:</p>\n<blockquote>\n<p>design &gt; Recent topics UI ・Zulip community — we already discussed that in another topic ;)</p>\n</blockquote>\n<p>If a goal is to have plenty of space between the topic and the org name, I think this \"・\" character would be a good one. That's<br>\n・ U+30FB KATAKANA MIDDLE DOT<br>\nwhich is by definition supposed to be a \"wide\" character, to match the width of a kanji in Japanese text.</p>",
+        "id": 1448808,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1665613179
+    }
+]

@@ -1,0 +1,128 @@
+[
+    {
+        "content": "<p>My Zulip-server uses an Internet connection via proxy. It seems that because of this, push notifications are not sent. I have these messages in my \"/var/log/zulip/events_missedmessage_mobile_notifications.log\"</p>\n<div class=\"codehilite\"><pre><span></span><code>2020-04-28 18:56:48.968 INFO [zerver.lib.push_notifications] Sending push notifications to mobile clients for user 18\n2020-04-28 18:56:59.024 INFO [zerver.lib.push_notifications] Sending push notifications to mobile clients for user 18\n2020-04-28 18:57:09.063 INFO [zerver.lib.push_notifications] Sending push notifications to mobile clients for user 18\n2020-04-28 18:57:19.117 INFO [zerver.lib.push_notifications] Sending push notifications to mobile clients for user 18\n2020-04-28 18:57:29.130 WARN [zerver.worker.queue_processors] Maximum retries exceeded for trigger:18 event:push_notification\n</code></pre></div>\n\n\n<p>How can I fix it?</p>",
+        "id": 864579,
+        "sender_full_name": "Aggr",
+        "timestamp": 1588103027
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10714\">@Aggr</span> likely you need to set the <code>http_proxy</code> type environment variables in the context that the queue workers run in.</p>",
+        "id": 864596,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1588105364
+    },
+    {
+        "content": "<p>I think if you end <code>/etc/supervisor/conf.d/zulip.conf</code> to run the push_notifications worker with <code>env http_proxy=...</code>, and then <code>service supervisord restart</code>, that will probably work?</p>",
+        "id": 864601,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1588105475
+    },
+    {
+        "content": "<p>We'll want to provide a better API for maintaining it; just want to test that's your problem first.</p>",
+        "id": 864602,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1588105491
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  I already have <code>http_proxy</code> variable in <code>/etc/enviroment</code>this was enough for registration command <code>/home/zulip/deployments/current/manage.py register_server</code>.<br>\nCant find <code>push_notifications</code> In <code>/etc/supervisor/conf.d/zulip.conf</code> <span aria-label=\"sad\" class=\"emoji emoji-2639\" role=\"img\" title=\"sad\">:sad:</span></p>",
+        "id": 864627,
+        "sender_full_name": "Aggr",
+        "timestamp": 1588106381
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10714\">@Aggr</span> search for <code>mobile</code> in that file.</p>",
+        "id": 864636,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1588106647
+    },
+    {
+        "content": "<p>If you added that to <code>/etc/environment</code>, maybe just <code>supervisorctl restart all</code> will be good enough.</p>",
+        "id": 864637,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1588106660
+    },
+    {
+        "content": "<p>Erm, no, <code>service stop supervisord; service start supervisord</code> is more guaranteed to replace the environment.</p>",
+        "id": 864638,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1588106685
+    },
+    {
+        "content": "<p>ok. Trying do this now ...</p>",
+        "id": 864639,
+        "sender_full_name": "Aggr",
+        "timestamp": 1588106719
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>root@zserver:/etc/supervisor/conf.d# service stop supervisord; service start supervisord\nstop: unrecognized service\nstart: unrecognized service\nroot@zserver:/etc/supervisor/conf.d#\n</code></pre></div>\n\n\n<p><span aria-label=\"sad\" class=\"emoji emoji-2639\" role=\"img\" title=\"sad\">:sad:</span></p>",
+        "id": 864649,
+        "sender_full_name": "Aggr",
+        "timestamp": 1588107299
+    },
+    {
+        "content": "<p>I think it might be spelled <code>supervisor</code> there.</p>",
+        "id": 864654,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1588107503
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>root@zserver:/etc/supervisor/conf.d# service stop supervisor; service start supervisor\nstop: unrecognized service\nstart: unrecognized service\nroot@zserver:/etc/supervisor/conf.d#\n</code></pre></div>",
+        "id": 864659,
+        "sender_full_name": "Aggr",
+        "timestamp": 1588107787
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/push.20notification.20using.20proxy/near/864601\" title=\"#narrow/stream/31-production-help/topic/push.20notification.20using.20proxy/near/864601\">said</a>:</p>\n<blockquote>\n<p>I think if you end <code>/etc/supervisor/conf.d/zulip.conf</code> to run the push_notifications worker with <code>env http_proxy=...</code>, and then <code>service supervisord restart</code>, that will probably work?</p>\n</blockquote>\n<p>Have <code>[program:zulip_events_missedmessage_mobile_notifications]</code> in <code>/etc/supervisor/conf.d/zulip.conf</code> is that it? Should I change the \"command\" line?</p>",
+        "id": 864663,
+        "sender_full_name": "Aggr",
+        "timestamp": 1588108037
+    },
+    {
+        "content": "<p>Yeah, change the <code>command</code> line there.</p>",
+        "id": 864669,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1588108335
+    },
+    {
+        "content": "<p>I change line </p>\n<div class=\"codehilite\"><pre><span></span><code>command=/home/zulip/deployments/current/manage.py process_queue --queue_name=$_name=missedmessage_mobile_notifications\n</code></pre></div>\n\n\n<p>to</p>\n<div class=\"codehilite\"><pre><span></span><code>command=env HTTP_PROXY=http://MyProxyAddress:MyProxyPort HTTPS_PROXY=http://MyProxyAddress:MyProxyPort /home/zulip/deployments/current/manage.py process_queue --queue_name=$_name=missedmessage_mobile_notifications\n</code></pre></div>\n\n\n<p>Now in <code>/var/log/zulip/events_missedmessage_mobile_notifications.log</code> i have only one message per push without errors. But notifications still don't arrive on mobile devices.</p>",
+        "id": 865007,
+        "sender_full_name": "Aggr",
+        "timestamp": 1588157342
+    },
+    {
+        "content": "<p>In  access.log of my proxy-server i see messages like<br>\n<code>2020.04.29 13:18:12    981 MyZulipServerAddress TCP_TUNNEL/200 3994 CONNECT push.zulipchat.com:443 - HIER_DIRECT/push.zulipchat.com -</code><br>\nwhen Zulip server sends push-notification.</p>",
+        "id": 865010,
+        "sender_full_name": "Aggr",
+        "timestamp": 1588157538
+    },
+    {
+        "content": "<p>I also noticed messages </p>\n<div class=\"codehilite\"><pre><span></span><code>2020-04-29 13:36:57.122 INFO [] Slow query: X.X.X.X  POST    502 10.0s /api/v1/users/me/android_gcm_reg_id (UserMail@Here.com via ZulipMobile)\n</code></pre></div>\n\n\n<p>in<code>/var/log/zulip/workers.log </code> when users register in the mobile app.</p>",
+        "id": 865101,
+        "sender_full_name": "Aggr",
+        "timestamp": 1588167915
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10714\">@Aggr</span> ahh, great!  This means your approach worked.  Now you'll want to do the same thing with the <code>zulip-django</code> workers.</p>",
+        "id": 865191,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1588181958
+    },
+    {
+        "content": "<p>And then re-login to your mobile devices, and I think it'll work.</p>",
+        "id": 865192,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1588181968
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> It work! Finally! Thank you very much!</p>",
+        "id": 865240,
+        "sender_full_name": "Aggr",
+        "timestamp": 1588184191
+    },
+    {
+        "content": "<p>Great!</p>",
+        "id": 865274,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1588185923
+    }
+]

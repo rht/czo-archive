@@ -1,0 +1,452 @@
+[
+    {
+        "content": "<p>When trying to start up docker-zulip with the latest Zulip 3.2.0, I see this:</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip_1       | Generating LetsEncrypt/certbot certificate ...\nzulip_1       | + rm -f /data/certs/zulip.key /data/certs/zulip.combined-chain.crt\nzulip_1       | + ZULIP_CERTBOT_DEPLOY_HOOK=/sbin/certbot-deploy-hook\nzulip_1       | + /home/zulip/deployments/current/scripts/setup/setup-certbot --agree-tos --email=foo --deploy-hook /sbin/certbot-deploy-hook -- cha\nt.foo.com\nzulip_1       | + case &quot; $os_id $os_id_like &quot; in\nzulip_1       | + apt-get install -y certbot\nzulip_1       | Reading package lists...\nzulip_1       | Building dependency tree...\nzulip_1       | Reading state information...\nzulip_1       | E: Unable to locate package certbot\nzulip_1       | 2020-09-17 22:32:28,988 INFO reaped unknown pid 57\n</code></pre></div>\n\n\n<p>Did the Docker base image for Zulip change so that it doesn't have access to certbot?</p>",
+        "id": 1019505,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600382594
+    },
+    {
+        "content": "<p>I've been running this instance just fine for a couple of years,  but now I can't renew the cert and thus the chat can't be used.</p>",
+        "id": 1019506,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600382759
+    },
+    {
+        "content": "<p>What version were you running before?  3.1?</p>",
+        "id": 1019507,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600382809
+    },
+    {
+        "content": "<p>3.0</p>",
+        "id": 1019508,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600382952
+    },
+    {
+        "content": "<p>Oh, man. I added an <code>apt-get update</code> in <code>entrypoint.sh</code>, prior to certbot setup. Now it finds certbot, and my cert is generated properly, but I get internal server errors when I try to use Zulip.</p>\n<div class=\"codehilite\" data-codehilite-language=\"Bash\"><pre><span></span><code>    <span class=\"c1\"># Accept the terms of service automatically.</span>\n    apt-get update\n    /home/zulip/deployments/current/scripts/setup/setup-certbot <span class=\"se\">\\</span>\n        --agree-tos <span class=\"se\">\\</span>\n        --email<span class=\"o\">=</span><span class=\"s2\">\"</span><span class=\"nv\">$SETTING_ZULIP_ADMINISTRATOR</span><span class=\"s2\">\"</span> <span class=\"se\">\\</span>\n        --deploy-hook <span class=\"s2\">\"</span><span class=\"nv\">$ZULIP_CERTBOT_DEPLOY_HOOK</span><span class=\"s2\">\"</span> <span class=\"se\">\\</span>\n        -- <span class=\"se\">\\</span>\n        <span class=\"s2\">\"</span><span class=\"nv\">$SETTING_EXTERNAL_HOST</span><span class=\"s2\">\"</span>\n</code></pre></div>",
+        "id": 1019512,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600383487
+    },
+    {
+        "content": "<p>Can you try 3.1?</p>",
+        "id": 1019521,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600383914
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> Ok, so downgrade the Zulip version in the docker file and rebuild everything?</p>",
+        "id": 1019529,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600384534
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>  zulip:\n    image: &#39;zulip/docker-zulip:3.1-0&#39;\n    build:\n      context: .\n      args:\n        # Change these if you want to build zulip from a different repo/branch\n        ZULIP_GIT_URL: https://github.com/zulip/zulip.git\n        ZULIP_GIT_REF: 3.1\n        # Set this up if you plan to use your own CA certificate bundle for building\n        # CUSTOM_CA_CERTIFICATES:\n</code></pre></div>",
+        "id": 1019530,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600384569
+    },
+    {
+        "content": "<p>That should do it, right?</p>",
+        "id": 1019531,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600384573
+    },
+    {
+        "content": "<p>Will Zulip handle the downgrade properly?</p>",
+        "id": 1019533,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600384600
+    },
+    {
+        "content": "<p>In this case, there are no schema changes between 3.2 and 3.1, so I believe it to be safe.</p>",
+        "id": 1019534,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600384634
+    },
+    {
+        "content": "<p>Take a backup just in case.  Never hurts to have on hand. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1019535,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600384664
+    },
+    {
+        "content": "<p>I don't see anything evident in 3.2 that would affect this -- but IO also don't see anything in 3.0 -&gt; 3.1 that might, either.</p>",
+        "id": 1019539,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600384738
+    },
+    {
+        "content": "<p>The addition of the <code>apt-get update</code> fixed the certbot package not being found issue, but the internal server errors are more troubling.</p>",
+        "id": 1019544,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600384789
+    },
+    {
+        "content": "<p>Can you pull up <code>/var/log/zulip/errors.log</code> from the container?</p>",
+        "id": 1019548,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600384826
+    },
+    {
+        "content": "<p>Already spinning up 3.1</p>",
+        "id": 1019550,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600384878
+    },
+    {
+        "content": "<p>Mostly I suggest 3.1 because we've not heard of any such reports on 3.1, but you may be the first to spin up 3.2 -- so rolling back to 3.1 may be the fastest route to being back in service.  We'll certainly want to get logs from the 3.2 instance regardless (eventually).</p>",
+        "id": 1019552,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600384966
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> Was there a schema update in 3.0 -&gt; 3.1?</p>",
+        "id": 1019564,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600385356
+    },
+    {
+        "content": "<p>Maybe I should just go back to that.</p>",
+        "id": 1019565,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600385360
+    },
+    {
+        "content": "<p>There was.</p>",
+        "id": 1019566,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600385368
+    },
+    {
+        "content": "<p>Has 3.1 built yet?</p>",
+        "id": 1019567,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600385384
+    },
+    {
+        "content": "<p>Still going.</p>",
+        "id": 1019570,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600385477
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> Alright, it finished.</p>",
+        "id": 1019579,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600386121
+    },
+    {
+        "content": "<p>Not positively, though.</p>",
+        "id": 1019580,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600386126
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>Collecting coverage==5.2\n  Using cached coverage-5.2-cp36-cp36m-manylinux1_x86_64.whl (229 kB)\nCollecting cryptography==2.9.2\n  Using cached cryptography-2.9.2-cp35-abi3-manylinux2010_x86_64.whl (2.7 MB)\nCollecting cssselect2==0.3.0\n  Using cached cssselect2-0.3.0-py3-none-any.whl (31 kB)\nCollecting cssselect==1.1.0\n  Using cached cssselect-1.1.0-py2.py3-none-any.whl (16 kB)\nCollecting cssutils==1.0.2\n  Using cached cssutils-1.0.2-py3-none-any.whl (406 kB)\nCollecting dataclasses==0.7\n  Using cached dataclasses-0.7-py3-none-any.whl (18 kB)\nCollecting decorator==4.4.2\n  Using cached decorator-4.4.2-py2.py3-none-any.whl (9.2 kB)\nCollecting defusedxml==0.6.0\n  Using cached defusedxml-0.6.0-py2.py3-none-any.whl (23 kB)\nCollecting disposable-email-domains==0.0.64\n  Using cached disposable_email_domains-0.0.64-py2.py3-none-any.whl (21 kB)\nCollecting distro==1.5.0\n  Using cached distro-1.5.0-py2.py3-none-any.whl (18 kB)\nCollecting django-auth-ldap==2.0.0zulip1\n  Using cached https://github.com/zulip/django-auth-ldap/archive/e26d0ef2a7ff77ab3fdd7b6578a76081f780778c.zip\n  WARNING: Requested django-auth-ldap==2.0.0zulip1 from https://github.com/zulip/django-auth-ldap/archive/e26d0ef2a7ff77ab3fdd7b6578a76081f780778c.zip#egg=django-auth-ldap==2.0.0zulip1 (from -r /home/zulip/zulip/requirements/dev.txt (line 269)), but installing version 2.0.0\nCollecting django-bitfield==2.0.1\n  Using cached django_bitfield-2.0.1-py2.py3-none-any.whl (17 kB)\nERROR: Could not find a version that satisfies the requirement django-cookies-samesite==0.6.6 (from -r /home/zulip/zulip/requirements/dev.txt (line 276)) (from versions: 0.1.0, 0.1.1, 0.1.2, 0.2.0, 0.3.0, 0.4.0, 0.5.0, 0.5.1, 0.6.0, 0.6.1, 0.6.2, 0.6.3, 0.6.4, 0.6.5, 0.7.0)\nERROR: No matching distribution found for django-cookies-samesite==0.6.6 (from -r /home/zulip/zulip/requirements/dev.txt (line 276))\nWARNING: You are using pip version 20.1.1; however, version 20.2.3 is available.\nYou should consider upgrading via the &#39;/srv/zulip-venv-cache/80dd17368e1c6223bec688e01247d651baa0abb2/zulip-py3-venv/bin/python3 -m pip install --upgrade pip&#39; command.\n\nError running a subcommand of ./lib/provision.py: /srv/zulip-venv-cache/80dd17368e1c6223bec688e01247d651baa0abb2/zulip-py3-venv/bin/pip install --no-deps --require-hashes --requirement /home/zulip/zulip/requirements/dev.txt\nActual error output for the subcommand is just above this.\n\nTraceback (most recent call last):\n  File &quot;/home/zulip/zulip/scripts/lib/setup_venv.py&quot;, line 335, in do_setup_virtualenv\n    install_venv_deps(pip, requirements_file)\n  File &quot;/home/zulip/zulip/scripts/lib/setup_venv.py&quot;, line 101, in install_venv_deps\n    run([pip, &quot;install&quot;, &quot;--no-deps&quot;, &quot;--require-hashes&quot;, &quot;--requirement&quot;, requirements_file])\n  File &quot;/home/zulip/zulip/scripts/lib/zulip_tools.py&quot;, line 198, in run\n    subprocess.check_call(args, **kwargs)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 311, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/srv/zulip-venv-cache/80dd17368e1c6223bec688e01247d651baa0abb2/zulip-py3-venv/bin/pip&#39;, &#39;install&#39;, &#39;--no-deps&#39;, &#39;--require-hashes&#39;, &#39;--requirement&#39;, &#39;/home/zulip/zulip/requirements/dev.txt&#39;]&#39; returned non-zero exit status 1.\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File &quot;./lib/provision.py&quot;, line 450, in &lt;module&gt;\n    main(options)\n  File &quot;./lib/provision.py&quot;, line 397, in main\n    setup_venvs.main()\n  File &quot;/home/zulip/zulip/tools/setup/setup_venvs.py&quot;, line 22, in main\n    VENV_PATH, DEV_REQS_FILE, patch_activate_script=True)\n  File &quot;/home/zulip/zulip/scripts/lib/setup_venv.py&quot;, line 294, in setup_virtualenv\n    do_setup_virtualenv(cached_venv_path, requirements_file)\n  File &quot;/home/zulip/zulip/scripts/lib/setup_venv.py&quot;, line 339, in do_setup_virtualenv\n    install_venv_deps(pip, requirements_file)\n  File &quot;/home/zulip/zulip/scripts/lib/setup_venv.py&quot;, line 101, in install_venv_deps\n    run([pip, &quot;install&quot;, &quot;--no-deps&quot;, &quot;--require-hashes&quot;, &quot;--requirement&quot;, requirements_file])\n  File &quot;/home/zulip/zulip/scripts/lib/zulip_tools.py&quot;, line 198, in run\n    subprocess.check_call(args, **kwargs)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 311, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/srv/zulip-venv-cache/80dd17368e1c6223bec688e01247d651baa0abb2/zulip-py3-venv/bin/pip&#39;, &#39;install&#39;, &#39;--no-deps&#39;, &#39;--require-hashes&#39;, &#39;--requirement&#39;, &#39;/home/zulip/zulip/requirements/dev.txt&#39;]&#39; returned non-zero exit status 1.\n\nProvisioning failed (exit code 1)!\n\n* Look at the traceback(s) above to find more about the errors.\n* Resolve the errors or get help on chat.\n* If you can fix this yourself, you can re-run tools/provision at any time.\n* Logs are here: zulip/var/log/provision.log\n\nERROR: Service &#39;zulip&#39; failed to build: The command &#39;/bin/sh -c ./tools/provision --build-release-tarball-only&#39; returned a non-zero code: 1\n</code></pre></div>",
+        "id": 1019581,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600386131
+    },
+    {
+        "content": "<p>So, I'm unable to even <code>docker-compose up</code> now, since the zulip container fails to build.</p>",
+        "id": 1019582,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600386176
+    },
+    {
+        "content": "<p>Gah, right, this is the package we pinned that pulled itself from pypi.  Sorry, I should have known that wouldn't work.  That's one of the reasons we released 3.2</p>\n<p>Well, let's look at at the 3.2 error logs.</p>",
+        "id": 1019585,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600386191
+    },
+    {
+        "content": "<p>Ok, I'll spin up 3.2 again and then ping you.</p>",
+        "id": 1019588,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600386238
+    },
+    {
+        "content": "<p>Thank you for the support.</p>",
+        "id": 1019591,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600386248
+    },
+    {
+        "content": "<p>Sure thing.  Sorry for the trouble it's giving you!</p>",
+        "id": 1019594,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600386272
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> Ok, I'm back to seeing the internal server error.</p>",
+        "id": 1019600,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600386540
+    },
+    {
+        "content": "<p>Is the error log mapped to a host directory, or only within the container?</p>",
+        "id": 1019601,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600386574
+    },
+    {
+        "content": "<p>The docker logs for zulip don't have anything after the cert generation.</p>",
+        "id": 1019610,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600386656
+    },
+    {
+        "content": "<p><code>docker-compose exec zulip bash</code> and looking in <code>/var/log/zulip</code> doesn't find anything of note?</p>",
+        "id": 1019611,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600386707
+    },
+    {
+        "content": "<p>Is the 500 from nginx, or Django?</p>",
+        "id": 1019612,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600386800
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>bmemcached.exceptions.MemcachedException: (&quot;Code: 32 Message: b&#39;Auth failure.&#39;&quot;, 32)\n2020-09-17 23:50:52.179 ERR  [django.request] Internal Server Error: /login/\nTraceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/django/core/handlers/exception.py&quot;, line 34, in inner\n    response = get_response(request)\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/django/core/handlers/base.py&quot;, line 115, in _get_response\n    response = self.process_exception_by_middleware(e, request)\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/django/core/handlers/base.py&quot;, line 113, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File &quot;./zerver/lib/request.py&quot;, line 366, in _wrapped_view_func\n    return view_func(request, *args, **kwargs)\n  File &quot;./zerver/views/auth.py&quot;, line 717, in login_page\n    extra_context.update(login_context(request))\n  File &quot;./zerver/context_processors.py&quot;, line 160, in login_context\n    realm_description = get_realm_rendered_description(realm)\n  File &quot;./zerver/lib/cache.py&quot;, line 196, in func_with_caching\n    val = func(*args, **kwargs)\n  File &quot;./zerver/lib/realm_description.py&quot;, line 15, in get_realm_rendered_description\n    no_previews=True)\n  File &quot;./zerver/lib/markdown/__init__.py&quot;, line 2392, in markdown_convert\n    no_previews=no_previews)\n  File &quot;./zerver/lib/markdown/__init__.py&quot;, line 2270, in do_convert\n    maybe_update_markdown_engines(realm_filters_key, email_gateway)\n  File &quot;./zerver/lib/markdown/__init__.py&quot;, line 2084, in maybe_update_markdown_engines\n    realm_filters = realm_filters_for_realm(realm_filters_key)\n  File &quot;./zerver/models.py&quot;, line 761, in realm_filters_for_realm\n    per_request_realm_filters_cache[realm_id] = realm_filters_for_realm_remote_cache(realm_id)\n  File &quot;./zerver/lib/cache.py&quot;, line 173, in func_with_caching\n    val = cache_get(ke\n    value, cas = server.get(key)\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/bmemcached/protocol.py&quot;, line 432, in get\n    self._send(data)\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/bmemcached/protocol.py&quot;, line 244, in _send\n    self._open_connection()\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/bmemcached/protocol.py&quot;, line 158, in _open_connection\n    self._send_authentication()\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/bmemcached/protocol.py&quot;, line 319, in _send_authentication\n    raise MemcachedException(&#39;Code: %d Message: %s&#39; % (status, extra_content), status)\nbmemcached.exceptions.MemcachedException: (&quot;Code: 32 Message: b&#39;Auth failure.&#39;&quot;, 32)\n2020-09-17 23:51:47.805 ERR  [django.request] Internal Server Error: /\nTraceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/django/contrib/sessions/backends/base.py&quot;, line 189, in _get_session\n    return self._session_cache\nAttributeError: &#39;SessionStore&#39; object has no attribute &#39;_session_cache&#39;\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/django/core/handlers/exception.py&quot;, line 34, in inner\n    response = get_response(request)\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/django/utils/deprecation.py&quot;, line 93, in __call__\n    response = self.process_request(request)\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/django/middleware/locale.py&quot;, line 21, in process_request\n    language = translation.get_language_from_request(request, check_path=i18n_patterns_used)\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/django/utils/translation/__init__.py&quot;, line 236, in get_language_from_request\n    return _trans.get_language_from_request(request, check_path)\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/django/utils/translation/trans_real.py&quot;, line 532, in get_language_from_request\n    lang_code = request.session.get(LANGUAGE_SESSION_KEY)\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/django/contrib/sessions/backends/base.py&quot;, line 65, in get\n    return self._session.get(key, default)\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/django/contrib/sessions/backends/base.py&quot;, line 194, in _get_session\n    self._session_cache = self.load()\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/django/contrib/sessions/backends/cached_db.py&quot;, line 38, in load\n    self._cache.set(self.cache_key, data, self.get_expiry_age(expiry=s.expire_date))\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/django/core/cache/backends/memcached.py&quot;, line 83, in set\n    if not self._cache.set(key, value, self.get_backend_timeout(timeout)):\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/bmemcached/client/replicating.py&quot;, line 112, in set\n    returns.append(server.set(key, value, time, compress_level=compress_level))\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/bmemcached/protocol.py&quot;, line 602, in set\n    return self._set_add_replace(&#39;set&#39;, key, value, time, compress_level=compress_level)\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/bmemcached/protocol.py&quot;, line 569, in _set_add_replace\n    time, keybytes, value))\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/bmemcached/protocol.py&quot;, line 244, in _send\n    self._open_connection()\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/bmemcached/protocol.py&quot;, line 158, in _open_connection\n    self._send_authentication()\n  File &quot;/srv/zulip-venv-cache/dddfc59148762faff83805e2153db65fe18c6d3c/zulip-py3-venv/lib/python3.6/site-packages/bmemcached/protocol.py&quot;, line 319, in _send_authentication\n    raise MemcachedException(&#39;Code: %d Message: %s&#39; % (status, extra_content), status)\nbmemcached.exceptions.MemcachedException: (&quot;Code: 32 Message: b&#39;Auth failure.&#39;&quot;, 32)\n</code></pre></div>",
+        "id": 1019613,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600386824
+    },
+    {
+        "content": "<p>That's from <code>docker cp f4cc2127bd6f:/var/log/zulip/errors.log .</code></p>",
+        "id": 1019614,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600386840
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span>: This looks related to the libmemcached switch, I think?</p>",
+        "id": 1019620,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600386877
+    },
+    {
+        "content": "<p>So, looks like memcached auth isn't working.</p>",
+        "id": 1019621,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600386881
+    },
+    {
+        "content": "<p>3.2 switched the backend that we use to talk to memcached, to a pure-python one.</p>",
+        "id": 1019623,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600386931
+    },
+    {
+        "content": "<p>I had a custom <code>SECRETS_memcached_password</code> set up prior to upgrading. Perhaps it wasn't migrated properly?</p>",
+        "id": 1019624,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600386932
+    },
+    {
+        "content": "<p>There's a somewhat common failure mode with Docker where one ends up with a different password for memcached in the Zulip contained vs. memcached container; I'd investigate that possibility first.</p>",
+        "id": 1019625,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1600386933
+    },
+    {
+        "content": "<p>(I believe the upstream <code>memcached</code> container we use doesn't update if you change the value; I know at least the postgres one has that behavior)</p>",
+        "id": 1019627,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1600386967
+    },
+    {
+        "content": "<p>I have not changed any of my secrets.</p>",
+        "id": 1019630,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600386990
+    },
+    {
+        "content": "<p>Well, worth double-checking that the passwords agree; I could also imagine some sort of character set issue with the new library encoding characters differently.</p>",
+        "id": 1019632,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1600387023
+    },
+    {
+        "content": "<p>Removing the memcached container and building it again should resolve that problem, if it is the problem, right?</p>",
+        "id": 1019633,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600387077
+    },
+    {
+        "content": "<p>That doesn't seem to've solved anything. I did a <code>docker stop &lt;memcached&gt;; docker rm &lt;memcached&gt;</code> and then <code>docker-compose up</code> again to start it.</p>",
+        "id": 1019643,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600387332
+    },
+    {
+        "content": "<p>Yeah, the secret isn't built into the image, so it should only come down to if it agrees in the two places in the docker-compose.yml file.</p>",
+        "id": 1019644,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600387362
+    },
+    {
+        "content": "<p>Oh, I see.</p>",
+        "id": 1019646,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600387419
+    },
+    {
+        "content": "<p>You can try switching the secret out for something simple in case it's an encoding problem of some sort.</p>",
+        "id": 1019648,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600387432
+    },
+    {
+        "content": "<p>So, if I stop memcached, Zulip loads properly. That's good news, at least.</p>",
+        "id": 1019650,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600387503
+    },
+    {
+        "content": "<p>I changed both of the secrets to be something else, and to be the same, and then rebuilt the stopped memcached service and I can still load Zulip now.</p>",
+        "id": 1019652,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600387645
+    },
+    {
+        "content": "<p>So, hopefully we're all good.</p>",
+        "id": 1019653,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600387649
+    },
+    {
+        "content": "<p>Thanks for the help. :)</p>",
+        "id": 1019656,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600387682
+    },
+    {
+        "content": "<p>I still have a patch in there which was needed to get going, which is adding <code>apt-get update</code> before the certbot setup so the <code>certbot</code> package can be found.</p>",
+        "id": 1019661,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600387740
+    },
+    {
+        "content": "<p>OK, so this does point to an escaping issue of some sort exposed by the new memcached library.  If your secret has now been changed, and you're not using it elsewhere, can you share it?</p>",
+        "id": 1019662,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600387740
+    },
+    {
+        "content": "<p>Yeah.  I think that's likely because we clean out the apt directories at the end of the Dockerfile, but on an upgrade we might need to install things.  I'll make an issue for that.</p>",
+        "id": 1019663,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600387790
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> I've asked about this before, but will you guys <strong>please</strong> look into implementing certbot renewals? This whole thing started because the cert expired again and I have some manual hacks in my <code>entrypoint.sh</code> to force the renewal if I restart zulip.</p>",
+        "id": 1019665,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600387843
+    },
+    {
+        "content": "<p>When I asked last, you said it's implemented, but it's not. I'm the one who added certbot to docker-zulip in the first place and the PR didn't include renewal support. <a href=\"https://github.com/zulip/docker-zulip/pull/139\">https://github.com/zulip/docker-zulip/pull/139</a></p>",
+        "id": 1019668,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600387965
+    },
+    {
+        "content": "<p>We run renewals in cron in normal Zulip; it's possible the bug is we're not installing that cron job properly?  Or is it more complex than that?</p>",
+        "id": 1019669,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1600387987
+    },
+    {
+        "content": "<p>I'm not sure. Every few months, my team tells me they can't connect anymore and I need to force the renewal of the certs.</p>",
+        "id": 1019671,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600388079
+    },
+    {
+        "content": "<p>(On the secrets point, what I'd really like to us do is write a templating tool that uses the Zulip <code>generate_secrets.py</code> code to generate secrets and writes out a docker-compose.yml with valid values inserted for all the secrets, so we don't need to deal with users picking the wrong character set or whatnot.</p>",
+        "id": 1019675,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1600388118
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> The pass was in this shape: <code>dd1ddddbddddddddddddddddddddddddddddddddddddd1dddddddddd8dd0dddd</code></p>",
+        "id": 1019677,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600388146
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> if you're interested in doing a mini-sprint to make our Docker system better, I think it'd have a lot of value.</p>",
+        "id": 1019678,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1600388151
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"8742\">Jeaye</span> <a href=\"#narrow/stream/31-production-help/topic/certbot.20error/near/1019677\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> The pass was in this shape: <code>dd1ddddbddddddddddddddddddddddddddddddddddddd1dddddddddd8dd0dddd</code></p>\n</blockquote>\n<p>Anything non <code>[a-zA-Z0-9]</code> in there?</p>",
+        "id": 1019684,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600388182
+    },
+    {
+        "content": "<p>And is the new password shorter?  This may be truncation somewhere.</p>",
+        "id": 1019685,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600388210
+    },
+    {
+        "content": "<p>Nope, only within that regex and the same length.</p>",
+        "id": 1019687,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600388251
+    },
+    {
+        "content": "<p>Hm.</p>",
+        "id": 1019688,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600388274
+    },
+    {
+        "content": "<p>Honestly, it's possible that I just had them mismatched and my upgrade to 3.2 accidentally changed one.</p>",
+        "id": 1019689,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600388285
+    },
+    {
+        "content": "<p>I won't discount PEBKAC here.</p>",
+        "id": 1019690,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600388304
+    },
+    {
+        "content": "<p>:nod:  Reducing that via templating or yaml references would certainly help here.</p>",
+        "id": 1019691,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600388320
+    },
+    {
+        "content": "<p>One thing Tim and I discussed back when I was adding certbot was that the secrets shouldn't be put into the docker compose file at all. They should be stored in some git ignored file, ideally, so that they don't conflict with pulling new changes from git.</p>",
+        "id": 1019692,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600388439
+    },
+    {
+        "content": "<p>Right now, I need to stash, pull, stash apply, resolve conflicts, and probably end up mismatching my memcached passes.</p>",
+        "id": 1019693,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600388468
+    },
+    {
+        "content": "<p>That would be my ideal case, anyway. I think docker compose has some support for this with .env files or something similar.</p>",
+        "id": 1019694,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1600388536
+    },
+    {
+        "content": "<p>@Jeaye Is it possible that you lost <a href=\"https://github.com/zulip/docker-zulip/commit/0810e2ba67ddf34f59f619cb07c60a40c08de235\">https://github.com/zulip/docker-zulip/commit/0810e2ba67ddf34f59f619cb07c60a40c08de235</a> when resolving conflicts?</p>",
+        "id": 1020525,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1600485279
+    }
+]

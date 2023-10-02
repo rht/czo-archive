@@ -1,0 +1,87 @@
+<html>
+<head><meta charset="utf-8"><title>sudo su confusion · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/sudo.20su.20confusion.html">sudo su confusion</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1021737"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/sudo%20su%20confusion/near/1021737" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Robert (ro-i) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/sudo.20su.20confusion.html#1021737">(Sep 21 2020 at 20:27)</a>:</h4>
+<p>Hi :-) <code>Ubuntu 20.04.1 LTS</code> here...</p>
+<p>Installation went fine. Server restart was OK, too. After that, the test email failed. Now, I cannot execute anything using <code>sudo su zulip -c</code> (or <code>su zulip -c</code>from root). I <em>have</em> to change to the zulip user in order to be able to execute the scripts.</p>
+<p>Examples:<br>
+works:</p>
+<div class="codehilite"><pre><span></span><code>user@host:~$ sudo su zulip
+zulip@host:/home/user$ /home/zulip/deployments/current/manage.py send_test_email mail@host.de
+If you run into any trouble, read:
+
+  https://zulip.readthedocs.io/en/latest/production/email.html#troubleshooting
+
+The most common error is not setting `ADD_TOKENS_TO_NOREPLY_ADDRESS=False` when
+using an email provider that doesn&#39;t support that feature.
+
+Sending 2 test emails from:
+  * mail@host.de
+  * noreply-kbqe9o4kgcvdq21w5we2rti4@host.de
+
+Successfully sent 2 emails to mail@host.de!
+</code></pre></div>
+
+
+<p>does not work:</p>
+<div class="codehilite"><pre><span></span><code>user@host:~$ sudo su zulip -c ‘/home/zulip/deployments/current/manage.py send_test_email mail@host.de’
+send_test_email: ‘/home/zulip/deployments/current/manage.py: No such file or directory
+</code></pre></div>
+
+
+<p>Same thing for the server_restart script.<br>
+Are there any reasons for this? I am a bit confused...</p>
+
+
+
+<a name="1022000"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/sudo%20su%20confusion/near/1022000" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/sudo.20su.20confusion.html#1022000">(Sep 21 2020 at 23:03)</a>:</h4>
+<p><span class="user-mention" data-user-id="17322">@Robert</span> I think the <code>sudo su</code> pattern you're using isn't quoted properly.</p>
+
+
+
+<a name="1022001"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/sudo%20su%20confusion/near/1022001" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/sudo.20su.20confusion.html#1022001">(Sep 21 2020 at 23:03)</a>:</h4>
+<p>So your <code>-c</code> argument, which is meant to by processed by <code>su</code>, is being processed by <code>sudo</code>.</p>
+
+
+
+<a name="1022002"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/sudo%20su%20confusion/near/1022002" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/sudo.20su.20confusion.html#1022002">(Sep 21 2020 at 23:03)</a>:</h4>
+<p>Maybe <code>sudo -- su ...</code> would work?</p>
+
+
+
+<a name="1022035"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/sudo%20su%20confusion/near/1022035" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/sudo.20su.20confusion.html#1022035">(Sep 21 2020 at 23:18)</a>:</h4>
+<p>No, your problem is that you typed Unicode curly quotes <code>‘’</code> instead of ASCII quotes <code>'</code>.</p>
+
+
+
+<a name="1022037"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/sudo%20su%20confusion/near/1022037" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/sudo.20su.20confusion.html#1022037">(Sep 21 2020 at 23:19)</a>:</h4>
+<p>However, you can also just write <code>sudo -u zulip /home/zulip/deployments/current/manage.py send_test_email mail@host.de</code> and skip the <code>su</code>.</p>
+
+
+
+<a name="1022325"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/sudo%20su%20confusion/near/1022325" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Robert (ro-i) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/sudo.20su.20confusion.html#1022325">(Sep 22 2020 at 07:13)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="699">Anders Kaseorg</span> <a href="#narrow/stream/31-production-help/topic/sudo.20su.20confusion/near/1022035">said</a>:</p>
+<blockquote>
+<p>No, your problem is that you typed Unicode curly quotes <code>‘’</code> instead of ASCII quotes <code>'</code>.</p>
+</blockquote>
+<p>OMG, thank you so much!!! That was a copy&amp;paste error... Now, everything works as expected. :-)</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,248 @@
+[
+    {
+        "content": "<p>I am trying to setup zulip from scratch but using a reverse proxy</p>",
+        "id": 1362032,
+        "sender_full_name": "George",
+        "timestamp": 1649354213
+    },
+    {
+        "content": "<p>I've ran the setup line: ./zulip-server-*/scripts/setup/install   but with --self-signed command, and that completed properly</p>",
+        "id": 1362034,
+        "sender_full_name": "George",
+        "timestamp": 1649354241
+    },
+    {
+        "content": "<p>I then switched zulip from https to http using this guide: <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#configuring-zulip-to-allow-http\">https://zulip.readthedocs.io/en/latest/production/deployment.html#configuring-zulip-to-allow-http</a></p>",
+        "id": 1362035,
+        "sender_full_name": "George",
+        "timestamp": 1649354260
+    },
+    {
+        "content": "<p>basically I modified zulip.conf to use http and gave it the nginx proxy IP that sits in front of it</p>",
+        "id": 1362036,
+        "sender_full_name": "George",
+        "timestamp": 1649354287
+    },
+    {
+        "content": "<p>I configured my front nginx as described here: <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy\">https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy</a>  and restarted everything</p>",
+        "id": 1362037,
+        "sender_full_name": "George",
+        "timestamp": 1649354316
+    },
+    {
+        "content": "<p>however, whenever I make any request through my front nginx, zulip replies with HTTP/1.1 400 Bad Request</p>",
+        "id": 1362039,
+        "sender_full_name": "George",
+        "timestamp": 1649354356
+    },
+    {
+        "content": "<p>What does <code>/var/log/zulip/errors.log</code> say?</p>",
+        "id": 1362040,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649354373
+    },
+    {
+        "content": "<p>I ran tcpdump on my front nginx and I see the request going to zulip, it has all the X-headers properly set</p>",
+        "id": 1362041,
+        "sender_full_name": "George",
+        "timestamp": 1649354377
+    },
+    {
+        "content": "<p>Likely you need to adjust the <code>ALLOWED_HOSTS</code> in <code>/etc/zulip/settings.py</code></p>",
+        "id": 1362043,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649354401
+    },
+    {
+        "content": "<p>nothing at all. it's the first file I checked</p>",
+        "id": 1362044,
+        "sender_full_name": "George",
+        "timestamp": 1649354405
+    },
+    {
+        "content": "<p>Huh.  <code>/var/log/zulip/django.log</code> say anything more?</p>",
+        "id": 1362045,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649354428
+    },
+    {
+        "content": "<p>one moment, I adjusted ALLOWED_HOSTS and restarted. Let me see now</p>",
+        "id": 1362046,
+        "sender_full_name": "George",
+        "timestamp": 1649354484
+    },
+    {
+        "content": "<p>didn't help. django.log shows<br>\n[pid: 868|app: 0|req: 4/4] 69.X.250.110 () {68 vars in 1255 bytes} [Thu Apr  7 18:02:48 2022] GET /new/jweha37z5y3neyjaiejs7n2r =&gt; generated 143 bytes in 2 msecs (HTTP/1.1 400) 1 headers in 53 bytes (1 switches on core 0)</p>",
+        "id": 1362047,
+        "sender_full_name": "George",
+        "timestamp": 1649354606
+    },
+    {
+        "content": "<p>And requests to <code>/</code> are no better?</p>",
+        "id": 1362048,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649354643
+    },
+    {
+        "content": "<p><a href=\"https://pastebin.com/prpH6A3W\">https://pastebin.com/prpH6A3W</a></p>",
+        "id": 1362049,
+        "sender_full_name": "George",
+        "timestamp": 1649354769
+    },
+    {
+        "content": "<p>this is the tcpdump packet of what's coming back from zulip server</p>",
+        "id": 1362050,
+        "sender_full_name": "George",
+        "timestamp": 1649354780
+    },
+    {
+        "content": "<p>same thing to /</p>",
+        "id": 1362051,
+        "sender_full_name": "George",
+        "timestamp": 1649354804
+    },
+    {
+        "content": "<p>What are your <code>ALLOWED_HOSTS</code> set to?</p>",
+        "id": 1362052,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649354842
+    },
+    {
+        "content": "<p>Though I think that would show up in the logs.</p>",
+        "id": 1362053,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649354850
+    },
+    {
+        "content": "<p>wait, I got something in server.log</p>",
+        "id": 1362054,
+        "sender_full_name": "George",
+        "timestamp": 1649354875
+    },
+    {
+        "content": "<p>ERR  [django.security.DisallowedHost] Invalid HTTP_HOST header: '69.X.250.110'. You may need to add '69.X.250.110' to ALLOWED_HOSTS.</p>",
+        "id": 1362055,
+        "sender_full_name": "George",
+        "timestamp": 1649354902
+    },
+    {
+        "content": "<p>but that IP is my connecting IP, the client. it's not the server's IP</p>",
+        "id": 1362057,
+        "sender_full_name": "George",
+        "timestamp": 1649354914
+    },
+    {
+        "content": "<p>if I connect from another IP, it shows that one and tells me to add it to ALLOWED_HOSTS but that can't be right</p>",
+        "id": 1362059,
+        "sender_full_name": "George",
+        "timestamp": 1649355018
+    },
+    {
+        "content": "<p>Then your reverse proxy is sending an incorrect Host header.</p>",
+        "id": 1362060,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1649355042
+    },
+    {
+        "content": "<p>I'm using this as per docs: proxy_set_header Host $http_host;</p>",
+        "id": 1362061,
+        "sender_full_name": "George",
+        "timestamp": 1649355070
+    },
+    {
+        "content": "<p>ok, figured it out</p>",
+        "id": 1362064,
+        "sender_full_name": "George",
+        "timestamp": 1649355142
+    },
+    {
+        "content": "<p>woah. my nginx was also sending proxy_set_header  X-Forwarded-Host $remote_addr; and proxy_set_header  X-Forwarded-For $remote_addr;</p>",
+        "id": 1362067,
+        "sender_full_name": "George",
+        "timestamp": 1649355186
+    },
+    {
+        "content": "<p>and apparently zulip is reading those instead of HTTP_HOST</p>",
+        "id": 1362068,
+        "sender_full_name": "George",
+        "timestamp": 1649355199
+    },
+    {
+        "content": "<p>I removed them and all is good now - thank you Anders!</p>",
+        "id": 1362069,
+        "sender_full_name": "George",
+        "timestamp": 1649355206
+    },
+    {
+        "content": "<p><code>X-Forwarded-For</code> is right, but I'm surprised that Zulip trusted the <code>X-Forwarded-Host</code>.  Did you set <code>USE_X_FORWARDED_HOST</code> in your config?</p>",
+        "id": 1362071,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649355438
+    },
+    {
+        "content": "<p>Per <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#nginx-configuration\">https://zulip.readthedocs.io/en/latest/production/deployment.html#nginx-configuration</a> you <em>do</em> want to have:</p>\n<div class=\"codehilite\" data-code-language=\"Nginx configuration file\"><pre><span></span><code><span class=\"k\">proxy_set_header</span><span class=\"w\">        </span><span class=\"s\">X-Forwarded-For</span><span class=\"w\"> </span><span class=\"nv\">$proxy_add_x_forwarded_for</span><span class=\"p\">;</span><span class=\"w\"></span>\n</code></pre></div>\n<p>...otherwise the access logs will show the proxy for everything.</p>",
+        "id": 1362072,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649355498
+    },
+    {
+        "content": "<p>I did not, I didn't even know about that setting. I just had it in the reverse nginx as a default setting</p>",
+        "id": 1362074,
+        "sender_full_name": "George",
+        "timestamp": 1649355541
+    },
+    {
+        "content": "<p>yes, my bad, I kept X-Forwarded-For I only removed these<br>\nproxy_set_header X-Forwarded-Proto $scheme;<br>\n        proxy_set_header Host $http_host;<br>\n        proxy_set_header Upgrade $http_upgrade;<br>\n        proxy_set_header Connection $connection_upgrade;<br>\n        proxy_set_header X-Forwarded-Proto $scheme;<br>\n        proxy_set_header  X-Forwarded-Host $remote_addr;<br>\n        proxy_set_header  X-Real-IP $remote_addr;</p>",
+        "id": 1362075,
+        "sender_full_name": "George",
+        "timestamp": 1649355620
+    },
+    {
+        "content": "<p>err, didn't remove the Host either :)) sorry, getting confused</p>",
+        "id": 1362076,
+        "sender_full_name": "George",
+        "timestamp": 1649355644
+    },
+    {
+        "content": "<p>basically I left it as it's in the docs:<br>\n        proxy_set_header X-Forwarded-Proto $scheme;<br>\n        proxy_set_header Host $http_host;<br>\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;<br>\n        proxy_http_version 1.1;<br>\n        proxy_buffering off;<br>\n        proxy_read_timeout 20m;</p>",
+        "id": 1362077,
+        "sender_full_name": "George",
+        "timestamp": 1649355682
+    },
+    {
+        "content": "<p>I think X-Forwarded-Host was the one causing the issues</p>",
+        "id": 1362078,
+        "sender_full_name": "George",
+        "timestamp": 1649355708
+    },
+    {
+        "content": "<p>Yeah, most commonly that would be:</p>\n<div class=\"codehilite\" data-code-language=\"Nginx configuration file\"><pre><span></span><code><span class=\"k\">proxy_set_header</span><span class=\"w\"> </span><span class=\"s\">X-Forwarded-Host</span><span class=\"w\"> </span><span class=\"nv\">$http_host</span><span class=\"p\">;</span><span class=\"w\"></span>\n</code></pre></div>\n<p>not:</p>\n<div class=\"codehilite\" data-code-language=\"Nginx configuration file\"><pre><span></span><code><span class=\"k\">proxy_set_header</span><span class=\"w\"> </span><span class=\"s\">X-Forwarded-Host</span><span class=\"w\"> </span><span class=\"nv\">$remote_addr</span><span class=\"p\">;</span><span class=\"w\"></span>\n</code></pre></div>",
+        "id": 1362080,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649356117
+    },
+    {
+        "content": "<p>We apparently default <code>USE_X_FORWARDED_HOST = True</code>, which explains the behaviour you were seeing.</p>",
+        "id": 1362083,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649356314
+    },
+    {
+        "content": "<p>interesting, I better fix that second bug too for x-forwarded-host. thanks for that as well!</p>",
+        "id": 1362084,
+        "sender_full_name": "George",
+        "timestamp": 1649356376
+    },
+    {
+        "content": "<p>You don't need to set <code>X-Forwarded-Host</code> if you're setting <code>Host</code> -- I was just commenting on the configuration you had found in the file.</p>",
+        "id": 1362085,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649356435
+    },
+    {
+        "content": "<p>In that I think it would likely confuse other backends other than Zulip. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1362086,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649356454
+    }
+]

@@ -1,0 +1,50 @@
+[
+    {
+        "content": "<p>We are currently measuring the message processing performance of zulip7.4.<br>\nThe environment is as follows.</p>\n<ul>\n<li>CPU: 4/8/16</li>\n<li>Memory: 8GB</li>\n<li>OS: ubuntu 22.04</li>\n<li>zulip: 7.4 (by installer)</li>\n</ul>\n<p>The measurement uses Apache Jmeter and sends messages to random topics in parallel using REST API.</p>\n<p>The following results are obtained for each number of cores.</p>\n<div class=\"codehilite\"><pre><span></span><code>4core: 150/s\n8core: 280/s\n16core: 420/s\n</code></pre></div>\n<p>The number of uWSGI processes changes each time the number of CPUs increases.<br>\nI didn't make any changes to the memory as I had plenty of space.</p>\n<p>As a result, we found that increasing the number of CPU cores improves performance. However, in all patterns, the usage rate for each CPU core remains low at around 10-20%. There is plenty of memory, and the I/O wait is not high.</p>\n<p>I found that the processes that make up zulip have a nice lower priority, so I experimentally tried setting the priority to 0, but the situation does not change.</p>\n<p>I also adjusted some other parameters, such as uWSGI processes/threads and PostgreSQL memory, but there was no change.</p>\n<p>Is there any reason why zulip can't use up all the resources? Or is there a bottleneck somewhere?</p>",
+        "id": 1649603,
+        "sender_full_name": "shogo",
+        "timestamp": 1695949689
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"27912\">@shogo</span>: If you're not hitting CPU or memory bottlenecks, then it stands to reason that you're hitting some other limits.  Can you share your JMeter test plan?</p>",
+        "id": 1649836,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695998485
+    },
+    {
+        "content": "<p>Can you also explain how you set the number of uwsgi processes?  By default, zulip doesn't scale the number of uwsgi workers by processor count -- it sets up 4 of them in low-memory environments, or 6 when it has more than 3.5GB.</p>",
+        "id": 1649837,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695998708
+    },
+    {
+        "content": "<p>My guess is either that you were saturating uwsgi processes, or nginx connections.</p>",
+        "id": 1649845,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695998853
+    },
+    {
+        "content": "<p>Note that <em>just sending messages with no receivers</em> is not a good model for testing total capacity of the system -- the load also scales up by the number of people that the message has to be delivered to.  So any load-testing model which only hits the <code>POST /api/v1/messages</code> without any clients listening on Tornado is going to give a very skewed sense of capacity.</p>",
+        "id": 1649846,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695998970
+    },
+    {
+        "content": "<p>The uwsgi process has been increased to about the number of CPU cores minus 1.<br>\nnginx has worker_connections of 10000, so I don't think it will exceed this.</p>\n<p>And I understand that testing with a small number of recipients doesn't mean much. What I'm wondering now is, is it correct in my configuration to not exhaust CPU resources with mass delivery of messages?</p>\n<p>By the way, rate limits are also disabled.</p>",
+        "id": 1651373,
+        "sender_full_name": "shogo",
+        "timestamp": 1696205087
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"27912\">@shogo</span> you generally will want significantly more uwsgi processes than cores.</p>",
+        "id": 1651420,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1696207540
+    },
+    {
+        "content": "<p>Try making that 4x as high.</p>",
+        "id": 1651421,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1696207570
+    }
+]

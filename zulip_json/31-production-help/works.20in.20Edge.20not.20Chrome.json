@@ -1,0 +1,98 @@
+[
+    {
+        "content": "<p>I just installed Zulip 2.0.1 via Docker on a 4G linux server behind a series of firewalls.</p>\n<p>It works OK from Microsoft Edge on a Windows client, but from Google Chrome all I get is \"Internal Server Error\".</p>\n<p>Looked in the zulip container at the log files the most obvious error this when a Chrome client tries to connect.</p>\n<div class=\"codehilite\"><pre><span></span>==&gt; django.log &lt;==\ninvalid request block size: 8183 (max 4096)...skip\ninvalid request block size: 8124 (max 4096)...skip\n</pre></div>",
+        "id": 718720,
+        "sender_full_name": "Wayne Scott",
+        "timestamp": 1552527963
+    },
+    {
+        "content": "<p>googling it appears I need to increase the size in <code>/etc/zulip/uwsgi.ini</code> to something like 16k.  I tried to do that in the Docker container, but it didn't work and the error message suggested I didn't really change the size.</p>",
+        "id": 718725,
+        "sender_full_name": "Wayne Scott",
+        "timestamp": 1552528907
+    },
+    {
+        "content": "<p>Wrong size.  Instead, in the zulip container, I added <code>buffer-size=32768</code> to /etc/zulip/uwsgi.ini and then ran <code>/home/zulip/deployments/current/scripts/restart-server</code>. And now it works on Chrome.  The problem is that Chrome was sending a lot more headers than my mostly unused Edge install.  I also found that Chrome worked in Incognito mode.</p>\n<p>Now, how do I make these changes stick when I restart the container?</p>",
+        "id": 718789,
+        "sender_full_name": "Wayne Scott",
+        "timestamp": 1552555922
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11605\">@Wayne Scott</span> is your Zulip server behind a proxy of some sort?</p>",
+        "id": 719155,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1552592433
+    },
+    {
+        "content": "<p>I'm surprised that you need more than 8KB of headers; we only recently changed this from 4KB.</p>",
+        "id": 719156,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1552592469
+    },
+    {
+        "content": "<p>I'm open to increasing these default values, but also want to understand what's going on before doing so.</p>",
+        "id": 719158,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1552592500
+    },
+    {
+        "content": "<p>No explicit proxy.  I did configure nginx as a reverse proxy to talk to the docker container but that didn't change anything.</p>",
+        "id": 719397,
+        "sender_full_name": "Wayne Scott",
+        "timestamp": 1552604427
+    },
+    {
+        "content": "<p>This is internally at <a href=\"http://zulip.sub.company.com\" target=\"_blank\" title=\"http://zulip.sub.company.com\">zulip.sub.company.com</a>, but my browser has a pile of domain cookies for <a href=\"http://company.com\" target=\"_blank\" title=\"http://company.com\">company.com</a> that I suspect get tacked on for all requests.  Not sure what I can do about that.</p>",
+        "id": 719523,
+        "sender_full_name": "Wayne Scott",
+        "timestamp": 1552644023
+    },
+    {
+        "content": "<p>my hope is that I can spark a zulip addiction inside this large corporation and switch to enterprise support to build a version that will scale.</p>",
+        "id": 719524,
+        "sender_full_name": "Wayne Scott",
+        "timestamp": 1552644592
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11605\">@Wayne Scott</span> ok, that makes sense, I guess.</p>",
+        "id": 719645,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1552670622
+    },
+    {
+        "content": "<p>I don't get the sense that increasing that parameter has major downsides, so I'm sorta tempted to just do so rather than adding an override setting.</p>",
+        "id": 719646,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1552670658
+    },
+    {
+        "content": "<p>Though 32K is kinda crazy as a minimum buffer size, so maybe we should do the work to make it a parameter..</p>",
+        "id": 719647,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1552670689
+    },
+    {
+        "content": "<p>OK, let's try this.  <span class=\"user-mention\" data-user-id=\"11605\">@Wayne Scott</span> can you try applying these changes to your zulip checkout:</p>\n<div class=\"codehilite\"><pre><span></span>diff --git a/puppet/zulip/manifests/app_frontend_base.pp b/puppet/zulip/manifests/app_frontend_base.pp\nindex a071dc2297..2f726ec16f 100644\n--- a/puppet/zulip/manifests/app_frontend_base.pp\n+++ b/puppet/zulip/manifests/app_frontend_base.pp\n@@ -89,6 +89,7 @@ class zulip::app_frontend_base {\n     notify  =&gt; Service[$zulip::common::supervisor_service],\n   }\n\n+  $uwsgi_buffer_size = zulipconf(&#39;application_server&#39;, &#39;uwsgi_buffer_size&#39;, 8192)\n   $uwsgi_processes = zulipconf(&#39;application_server&#39;, &#39;uwsgi_processes&#39;, $uwsgi_default_processes)\n   file { &#39;/etc/zulip/uwsgi.ini&#39;:\n     ensure  =&gt; file,\ndiff --git a/puppet/zulip/templates/uwsgi.ini.template.erb b/puppet/zulip/templates/uwsgi.ini.template.erb\nindex 368dc5d8b6..6669795822 100644\n--- a/puppet/zulip/templates/uwsgi.ini.template.erb\n+++ b/puppet/zulip/templates/uwsgi.ini.template.erb\n@@ -7,7 +7,7 @@ chmod-socket=700\n chown-socket=zulip:zulip\n processes=&lt;%= @uwsgi_processes %&gt;\n harakiri=20\n-buffer-size=8192\n+buffer-size=&lt;%= @uwsgi_buffer_size %&gt;\n post-buffering=4096\n env= LANG=en_US.UTF-8\n uid=zulip\n</pre></div>",
+        "id": 719648,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1552670803
+    },
+    {
+        "content": "<p>And then you can set <code>uwsgi_buffer_size = 32768</code> in <code>/etc/zulip/zulip.conf</code> inside the <code>application_server</code> section.</p>",
+        "id": 719649,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1552670828
+    },
+    {
+        "content": "<p>And then run <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code> and see if that's happy to not revert your changes.</p>",
+        "id": 719650,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1552670849
+    },
+    {
+        "content": "<p>will do</p>",
+        "id": 719651,
+        "sender_full_name": "Wayne Scott",
+        "timestamp": 1552670889
+    }
+]

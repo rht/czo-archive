@@ -1,0 +1,481 @@
+<html>
+<head><meta charset="utf-8"><title>✔ Upgrade failed Command exceeded timeout · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html">✔ Upgrade failed Command exceeded timeout</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1333912"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333912" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333912">(Feb 23 2022 at 23:04)</a>:</h4>
+<p>Hello, I'm trying to push this upgrade on a very slow network. When I manually download that URL it works, but takes about 8 minutes. How do I change the timeout to allow for this long download time. <br>
+Our instance is down due to this failure apparently.<br>
+Thank you in advance!</p>
+<p>Error: Command exceeded timeout<br>
+Error: /Stage[main]/Zulip::Golang/Zulip::External_dep[golang]/Zulip::Sha256_tarball_to[golang]/Exec[https://golang.org/dl/go1.17.6.linux-amd64.tar.gz]/returns: change from 'notrun' to ['0'] failed: Command exceeded timeout</p>
+
+
+
+<a name="1333918"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333918" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333918">(Feb 23 2022 at 23:12)</a>:</h4>
+<p>Ooof, that's a real cost of building smokescreen from source. <span aria-label="frown" class="emoji emoji-1f641" role="img" title="frown">:frown:</span></p>
+<p>Try this diff:</p>
+<div class="codehilite" data-code-language="Diff"><pre><span></span><code><span class="gh">diff --git puppet/zulip/manifests/sha256_tarball_to.pp puppet/zulip/manifests/sha256_tarball_to.pp</span><span class="w"></span>
+<span class="gh">index d1f3e8ee5a..8dbbbc8aee 100644</span><span class="w"></span>
+<span class="gd">--- puppet/zulip/manifests/sha256_tarball_to.pp</span><span class="w"></span>
+<span class="gi">+++ puppet/zulip/manifests/sha256_tarball_to.pp</span><span class="w"></span>
+<span class="gu">@@ -11,5 +11,6 @@ define zulip::sha256_tarball_to(</span><span class="w"></span>
+<span class="w"> </span>  exec { $url:<span class="w"></span>
+<span class="w"> </span>    command =&gt; "${::zulip_scripts_path}/setup/sha256-tarball-to ${sha256} ${url} ${install_expanded}",<span class="w"></span>
+<span class="w"> </span>    creates =&gt; $a_file,<span class="w"></span>
+<span class="gi">+    timeout =&gt; 1000,</span><span class="w"></span>
+<span class="w"> </span>  }<span class="w"></span>
+<span class="w"> </span>}<span class="w"></span>
+</code></pre></div>
+
+
+
+<a name="1333924"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333924" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333924">(Feb 23 2022 at 23:17)</a>:</h4>
+<p>Ug i'm not familiar with that, someday maybe.  Think this will work? I am trying this workaround now.. I downloaded the file manually, extracted it, put it in /srv/zulip-golang-1.17.6  (found this looking at my dev server upgrade) and re-ran the git main <br>
+So far <span aria-label="fingers crossed" class="emoji emoji-1f91e" role="img" title="fingers crossed">:fingers_crossed:</span>  its moved past the error and is processing... Thank you for the quick response! Was trying to do this in way off hours to have bandwidth and low user use. I do have a backup/snapshot should it die again I can revert</p>
+
+
+
+<a name="1333925"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333925" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333925">(Feb 23 2022 at 23:20)</a>:</h4>
+<p>Extracting it into there should totally be fine.</p>
+
+
+
+<a name="1333927"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333927" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333927">(Feb 23 2022 at 23:22)</a>:</h4>
+<p>Is the text you listed, a command or a process I would follow? Sorry for my lack of understanding.  Would I edit that timeout to something higher</p>
+
+
+
+<a name="1333928"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333928" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333928">(Feb 23 2022 at 23:23)</a>:</h4>
+<p>Ah, that's a diff, which encodes what changes to make to a file.</p>
+<p>You can make the change by hand by adding a line that looks like:</p>
+<div class="codehilite"><pre><span></span><code>timeout =&gt; 1000,
+</code></pre></div>
+<p>to the <code>puppet/zulip/manifests/sha256_tarball_to.pp</code> file, after the line that looks like:</p>
+<div class="codehilite"><pre><span></span><code>creates =&gt; $a_file,
+</code></pre></div>
+
+
+
+<a name="1333930"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333930" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333930">(Feb 23 2022 at 23:24)</a>:</h4>
+<p>The <code>1000</code> there is a timeout in seconds.  The default, if it's not specified, is 300 seconds.</p>
+
+
+
+<a name="1333931"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333931" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333931">(Feb 23 2022 at 23:25)</a>:</h4>
+<p>Good to know.  My dev system has good internet, so didn't run into this problem there. <br>
+Now waiting on realm_edit_topic policy.</p>
+
+
+
+<a name="1333932"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333932" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333932">(Feb 23 2022 at 23:25)</a>:</h4>
+<p>That should be pretty fast.</p>
+
+
+
+<a name="1333933"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333933" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333933">(Feb 23 2022 at 23:27)</a>:</h4>
+<p>Where is the puppet director by default?</p>
+
+
+
+<a name="1333935"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333935" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333935">(Feb 23 2022 at 23:30)</a>:</h4>
+<p>The path I gave is relative to the deployment root.  In this case, you're trying to fix up the in-progress deployment, so that's <code>~zulip/deployments/next</code>; the active deployment is <code>~zulip/deployments/current</code></p>
+
+
+
+<a name="1333936"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333936" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333936">(Feb 23 2022 at 23:31)</a>:</h4>
+<p>Ok.<br>
+So when you run the diff that updates the file, then you'd run the git main command again or would that just overwrite the file , not sure how to resume a failed update I guess</p>
+
+
+
+<a name="1333937"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333937" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333937">(Feb 23 2022 at 23:34)</a>:</h4>
+<p>To "apply" a diff, you'd use the <code>patch</code> command, like so:</p>
+<div class="codehilite"><pre><span></span><code>cd ~zulip/deployments/next
+patch -p0
+(paste in the 11 lines I showed, which start &quot;diff --git...&quot; and end &quot;}&quot;)
+(press ^D twice)
+</code></pre></div>
+<p>You'd then do the last two steps of the upgrade, which are to apply puppet and start the server:</p>
+<div class="codehilite"><pre><span></span><code>./scripts/zulip-puppet-apply
+./scripts/start-server
+</code></pre></div>
+
+
+
+<a name="1333938"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333938" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333938">(Feb 23 2022 at 23:35)</a>:</h4>
+<p>You can’t paste things directly into <code>patch</code>. This is a long-standing bug in <code>patch</code>.</p>
+
+
+
+<a name="1333939"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333939" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333939">(Feb 23 2022 at 23:35)</a>:</h4>
+<p>Is the placement of the timeout critical, ie if its taking to long to download would it need to be set prior to the exec or the command?</p>
+
+
+
+<a name="1333940"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333940" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333940">(Feb 23 2022 at 23:35)</a>:</h4>
+<p><span class="user-mention" data-user-id="699">@Anders Kaseorg</span>: ? Works for me daily.</p>
+
+
+
+<a name="1333941"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333941" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333941">(Feb 23 2022 at 23:37)</a>:</h4>
+<p>Oh I see, you said <code>press ^D twice</code>, which I guess works around that. Carry on.</p>
+
+
+
+<a name="1333942"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333942" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333942">(Feb 23 2022 at 23:37)</a>:</h4>
+<p>Still stuck on  Applying zerver.0327_realm_edit_topic_policy.<br>
+After it Processed 322001 / 322418</p>
+
+
+
+<a name="1333943"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333943" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333943">(Feb 23 2022 at 23:37)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="18622">Tyson Parker</span>: The line needs to be added before you run <code>zulip-puppet-apply</code>, or before the upgrade step starts running that for you.  But I think you're stuck on a much later step.</p>
+
+
+
+<a name="1333944"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333944" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333944">(Feb 23 2022 at 23:37)</a>:</h4>
+<p>This is great learning. Def not my normal IT realm.</p>
+
+
+
+<a name="1333945"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333945" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333945">(Feb 23 2022 at 23:37)</a>:</h4>
+<p>Can you paste in the full terminal output you've gotten to in the upgrade?</p>
+
+
+
+<a name="1333946"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333946" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333946">(Feb 23 2022 at 23:38)</a>:</h4>
+<p>I've cntl z a few times to see if it was hung, and tailed the log, do you want the log?</p>
+
+
+
+<a name="1333947"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333947" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333947">(Feb 23 2022 at 23:39)</a>:</h4>
+<p>Sure.</p>
+
+
+
+<a name="1333949"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333949" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333949">(Feb 23 2022 at 23:41)</a>:</h4>
+<p>Sec to big.</p>
+
+
+
+<a name="1333950"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333950" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333950">(Feb 23 2022 at 23:42)</a>:</h4>
+<p><a href="/user_uploads/2/fd/WiEODhXc1AaV3KhnWL7UMpvL/upgrade-zulip.txt">upgrade-zulip.txt</a></p>
+
+
+
+<a name="1333951"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333951" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333951">(Feb 23 2022 at 23:44)</a>:</h4>
+<p>It's currently running database migrations.  The one it's stuck on should be nearly instantaneous on all servers except things like Zulip Cloud, when it should still be very very fast.</p>
+
+
+
+<a name="1333953"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333953" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333953">(Feb 23 2022 at 23:45)</a>:</h4>
+<p>The postgresql host is over a good network from the frontend server you're running this on (or <em>is</em> the same server), right?</p>
+
+
+
+<a name="1333954"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333954" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333954">(Feb 23 2022 at 23:45)</a>:</h4>
+<p>Hm its running on a 4 processor 8 gigs of ram debian vm. Noy taking much CPU or ram even.</p>
+
+
+
+<a name="1333955"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333955" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333955">(Feb 23 2022 at 23:48)</a>:</h4>
+<p>Yea on dev it took about 10 minutes from start to the next time a date was in the log. Which had those steps in it. Prod has had a month or so more content put into since I was able to bring back Dev from there.</p>
+
+
+
+<a name="1333957"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333957" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333957">(Feb 23 2022 at 23:50)</a>:</h4>
+<p>Same server.</p>
+
+
+
+<a name="1333960"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333960" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333960">(Feb 23 2022 at 23:51)</a>:</h4>
+<p>python3 seams to be the top process with a few others rotating, redis, beam memcached..</p>
+
+
+
+<a name="1333962"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333962" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333962">(Feb 23 2022 at 23:51)</a>:</h4>
+<p>Can you, as <code>root</code>, run:</p>
+<div class="codehilite"><pre><span></span><code>sudo -u postgres psql -c &#39;select * from pg_stat_activity&#39;
+</code></pre></div>
+
+
+
+<a name="1333964"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333964" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333964">(Feb 23 2022 at 23:53)</a>:</h4>
+<p>If you press <code>c</code> while running <code>top</code>, what's the full command that the <code>python3</code> process is showing taking CPU time?</p>
+
+
+
+<a name="1333965"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333965" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333965">(Feb 23 2022 at 23:54)</a>:</h4>
+<p>Debian doesn't like sudo I guess... sec</p>
+
+
+
+<a name="1333966"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333966" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333966">(Feb 23 2022 at 23:55)</a>:</h4>
+<p>Deliver scheduled emails</p>
+
+
+
+<a name="1333967"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333967" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333967">(Feb 23 2022 at 23:56)</a>:</h4>
+<p>Ug wonder if that has been broken this whole time and is now like OHH I have 1 million emails</p>
+
+
+
+<a name="1333968"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333968" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333968">(Feb 23 2022 at 23:57)</a>:</h4>
+<p>What's more confusing is that it should have stopped that process during the upgrade.  Can you show:</p>
+<div class="codehilite"><pre><span></span><code>supervisorctl status
+</code></pre></div>
+
+
+
+<a name="1333969"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333969" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333969">(Feb 23 2022 at 23:57)</a>:</h4>
+<p>go-camo                                                         RUNNING   pid 4735, uptime 0:41:51<br>
+process-fts-updates                                             STOPPED   Feb 24 12:33 AM<br>
+smokescreen                                                     RUNNING   pid 4743, uptime 0:41:51<br>
+zulip-django                                                    STOPPED   Feb 24 12:33 AM<br>
+zulip-tornado                                                   STOPPED   Feb 24 12:33 AM<br>
+zulip-workers:zulip_events_deferred_work                        RUNNING   pid 4754, uptime 0:41:51<br>
+zulip-workers:zulip_events_digest_emails                        RUNNING   pid 4757, uptime 0:41:51<br>
+zulip-workers:zulip_events_email_mirror                         RUNNING   pid 4750, uptime 0:41:51<br>
+zulip-workers:zulip_events_email_senders                        RUNNING   pid 7900, uptime 0:00:17<br>
+zulip-workers:zulip_events_embed_links                          RUNNING   pid 4755, uptime 0:41:51<br>
+zulip-workers:zulip_events_embedded_bots                        RUNNING   pid 4747, uptime 0:41:51<br>
+zulip-workers:zulip_events_error_reports                        RUNNING   pid 4759, uptime 0:41:51<br>
+zulip-workers:zulip_events_invites                              RUNNING   pid 4746, uptime 0:41:51<br>
+zulip-workers:zulip_events_missedmessage_emails                 RUNNING   pid 4752, uptime 0:41:51<br>
+zulip-workers:zulip_events_missedmessage_mobile_notifications   RUNNING   pid 4756, uptime 0:41:51<br>
+zulip-workers:zulip_events_outgoing_webhooks                    RUNNING   pid 4749, uptime 0:41:51<br>
+zulip-workers:zulip_events_user_activity                        RUNNING   pid 4753, uptime 0:41:51<br>
+zulip-workers:zulip_events_user_activity_interval               RUNNING   pid 4751, uptime 0:41:51<br>
+zulip-workers:zulip_events_user_presence                        RUNNING   pid 4748, uptime 0:41:51<br>
+zulip_deliver_scheduled_emails                                  RUNNING   pid 4760, uptime 0:41:51<br>
+zulip_deliver_scheduled_messages                                RUNNING   pid 4761, uptime 0:41:51</p>
+
+
+
+<a name="1333970"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333970" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333970">(Feb 23 2022 at 23:59)</a>:</h4>
+<p>Huh.  That's ... not right.  You're upgrading to 4.9?</p>
+
+
+
+<a name="1333971"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333971" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333971">(Feb 23 2022 at 23:59)</a>:</h4>
+<p>4.9 to 5</p>
+
+
+
+<a name="1333972"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333972" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333972">(Feb 24 2022 at 00:01)</a>:</h4>
+<p>should I stop the sched email and sched messages?</p>
+
+
+
+<a name="1333973"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333973" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333973">(Feb 24 2022 at 00:01)</a>:</h4>
+<p>Yeah, we don't want anything running while the upgrade is happening.</p>
+<p>In another terminal, as the <code>zulip</code> user, can you run for me:</p>
+<div class="codehilite"><pre><span></span><code>cd ~/deployments/next
+./scripts/stop-server
+</code></pre></div>
+
+
+
+<a name="1333975"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333975" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333975">(Feb 24 2022 at 00:02)</a>:</h4>
+<p>Nothing that starts with <code>zulip</code> should say <code>RUNNING</code> in <code>supervisorctl status</code> after that.</p>
+
+
+
+<a name="1333976"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333976" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333976">(Feb 24 2022 at 00:03)</a>:</h4>
+<p>root@zulip:/home/zulip# su zulip<br>
+zulip@zulip:~$ cd ~/deployments/next<br>
+zulip@zulip:~/deployments/next$ ./scripts/stop-server<br>
+process-fts-updates: ERROR (not running)<br>
+zulip-django: ERROR (not running)<br>
+zulip-workers:zulip_events_email_senders: stopped<br>
+zulip-workers:zulip_events_user_presence: stopped<br>
+zulip-workers:zulip_events_user_activity_interval: stopped<br>
+zulip-workers:zulip_events_embed_links: stopped<br>
+zulip-workers:zulip_events_invites: stopped<br>
+zulip-workers:zulip_events_embedded_bots: stopped<br>
+zulip-workers:zulip_events_outgoing_webhooks: stopped<br>
+zulip-workers:zulip_events_missedmessage_emails: stopped<br>
+zulip-workers:zulip_events_deferred_work: stopped<br>
+zulip-workers:zulip_events_digest_emails: stopped<br>
+zulip-workers:zulip_events_email_mirror: stopped<br>
+zulip-workers:zulip_events_user_activity: stopped<br>
+zulip-workers:zulip_events_missedmessage_mobile_notifications: stopped<br>
+zulip-workers:zulip_events_error_reports: stopped<br>
+zulip_deliver_scheduled_emails: stopped<br>
+zulip_deliver_scheduled_messages: stopped</p>
+
+
+
+<a name="1333977"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333977" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333977">(Feb 24 2022 at 00:03)</a>:</h4>
+<p>Is the upgrade still running in the other terminal?</p>
+
+
+
+<a name="1333978"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333978" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333978">(Feb 24 2022 at 00:04)</a>:</h4>
+<p>Appears to be.</p>
+
+
+
+<a name="1333979"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333979" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333979">(Feb 24 2022 at 00:04)</a>:</h4>
+<p>Making any more progress?</p>
+
+
+
+<a name="1333980"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333980" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333980">(Feb 24 2022 at 00:04)</a>:</h4>
+<p>Yes! Its now blowing through a bunch of tasks.</p>
+
+
+
+<a name="1333981"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333981" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333981">(Feb 24 2022 at 00:05)</a>:</h4>
+<p>And we're back folks!! Wowzer!</p>
+
+
+
+<a name="1333983"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333983" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333983">(Feb 24 2022 at 00:06)</a>:</h4>
+<p>OK, so two action items for us:</p>
+<ul>
+<li>Set a longer timeout on the downloads in puppet</li>
+<li>Figure out why the upgrade didn't actually stop everything.</li>
+</ul>
+
+
+
+<a name="1333984"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333984" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333984">(Feb 24 2022 at 00:06)</a>:</h4>
+<p>AWESOME! Thank you!!!! 5.0-dev-3888-g26ec71c39d</p>
+
+
+
+<a name="1333985"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333985" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333985">(Feb 24 2022 at 00:07)</a>:</h4>
+<p>FYI this worked fine on my dev system from 4.9 to 5 (faster internet and about a month older timewise. Was a restore from Jan 14ish of the entire vm with Veeam.)</p>
+
+
+
+<a name="1333986"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333986" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333986">(Feb 24 2022 at 00:07)</a>:</h4>
+<p>What's interesting is I see:</p>
+<div class="codehilite"><pre><span></span><code>2022-02-23 22:33:43,839 upgrade-zulip-stage-2: Stopping Zulip...
+process-fts-updates: stopped
+zulip-django: stopped
+zulip-tornado: stopped
+zulip-workers:zulip_events_email_senders: stopped
+zulip-workers:zulip_deliver_scheduled_messages: stopped
+zulip-workers:zulip_events_user_activity: stopped
+zulip-workers:zulip_deliver_scheduled_emails: stopped
+zulip-workers:zulip_events_invites: stopped
+zulip-workers:zulip_events_embedded_bots: stopped
+zulip-workers:zulip_events_user_presence: stopped
+zulip-workers:zulip_events_email_mirror: stopped
+zulip-workers:zulip_events_deferred_work: stopped
+zulip-workers:zulip_events_embed_links: stopped
+zulip-workers:zulip_events_missedmessage_mobile_notifications: stopped
+zulip-workers:zulip_events_error_reports: stopped
+zulip-workers:zulip_events_digest_emails: stopped
+zulip-workers:zulip_events_outgoing_webhooks: stopped
+zulip-workers:zulip_events_user_activity_interval: stopped
+zulip-workers:zulip_events_missedmessage_emails: stopped
+
+Zulip stopped successfully!
+</code></pre></div>
+<p>...but later, in the next upgrade attempt:</p>
+<div class="codehilite"><pre><span></span><code>2022-02-23 22:57:28,806 upgrade-zulip-stage-2: Stopping Zulip...
+process-fts-updates: ERROR (not running)
+zulip-django: ERROR (not running)
+
+Zulip stopped successfully!
+</code></pre></div>
+
+
+
+<a name="1333989"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333989" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333989">(Feb 24 2022 at 00:09)</a>:</h4>
+<p>Odd yes?</p>
+
+
+
+<a name="1333993"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333993" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Notification Bot <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333993">(Feb 24 2022 at 00:13)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="18622">Tyson Parker</span> has marked this topic as resolved.</p>
+
+
+
+<a name="1333998"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1333998" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1333998">(Feb 24 2022 at 00:18)</a>:</h4>
+<p>The timestamps on the <code>supervisorctl status</code> you showed imply they started around 23:15, which is right around when the upgrade was trying to stop them.</p>
+<p>Out of curiosity, what does <code>apt-cache policy supervisor</code> say?</p>
+
+
+
+<a name="1334000"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Upgrade%20failed%20Command%20exceeded%20timeout/near/1334000" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tyson Parker <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Upgrade.20failed.20Command.20exceeded.20timeout.html#1334000">(Feb 24 2022 at 00:20)</a>:</h4>
+<p>root@zulip:/home/zulip# apt-cache policy supervisor<br>
+supervisor:<br>
+  Installed: 3.3.5-1<br>
+  Candidate: 3.3.5-1<br>
+  Version table:<br>
+ *** 3.3.5-1 500<br>
+        500 <a href="http://deb.debian.org/debian">http://deb.debian.org/debian</a> buster/main amd64 Packages<br>
+        100 /var/lib/dpkg/status</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

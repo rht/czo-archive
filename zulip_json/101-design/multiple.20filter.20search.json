@@ -1,0 +1,92 @@
+[
+    {
+        "content": "<p>I hope these are constructive observations and not an unwanted ones <span aria-label=\"sweat smile\" class=\"emoji emoji-1f605\" role=\"img\" title=\"sweat smile\">:sweat_smile:</span>.</p>",
+        "id": 705670,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1550828538
+    },
+    {
+        "content": "<p>I've been working on issue <a href=\"https://github.com/zulip/zulip/issues/10592\" target=\"_blank\" title=\"https://github.com/zulip/zulip/issues/10592\">#10592</a> which currently is about having no results in a multi-filter search. Playing around with the search bar has brought up a few things that I'd like to ask about, and while I can understand why most of this happening from a code perspective, I don't understand it from a design perspective:</p>\n<ul>\n<li>\n<p>We allow the user to write out searches of the type: <code>steam:a stream:b</code> <br>\nWhat this returns is a search for messages that belong to both streams which will always be empty. I think allowing the user to create a query that would always return an empty narrow is not productive. Also, we're at a weird in-between where we don't promote this kind of behavior (because we don't autocomplete for the the second <code>stream:</code>), but we acknowledge what the user is trying to do by recognizing the <code>stream: b</code> in the typeahead (which would suggest to the user that this would be a useful thing to do, which currently it isn't and so is a bit misleading.)<br>\nFurther more, we actually show suggestions for topics from the second stream! <br>\nI think this is useless because the results will always be empty and we're suggesting to the user that their actions make sense .  Also, why the last stream only? (as compared to topics from both)<br>\n<a href=\"/user_uploads/2/1a/9GgGFSyDr6l4gegfmM7p-560/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">pasted image</a>:</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/1a/9GgGFSyDr6l4gegfmM7p-560/pasted_image.png\" target=\"_blank\" title=\"pasted image\"><img src=\"/user_uploads/2/1a/9GgGFSyDr6l4gegfmM7p-560/pasted_image.png\"></a></div></li>\n<li>\n<p>Similarly, we allow the user to write out searches of the type: <code>topic:a topic:b</code> </p>\n</li>\n<li>\n<p>We (unintentionally, I believe) handle <code>sender:a sender:b</code> differently since we offer the suggestion <code>sent by a, pm-with:b</code> (I think this also doesn't make much sense since <code>pm-with:</code> should be 1 on 1?)  if we have users with \"b\" in their name or email, but we still recognize <code>sender:a sender:b</code> and if I choose to do so I can still make a query for that.</p>\n</li>\n</ul>\n<p>The possible solutions that I could think of (from worst to best) are:</p>\n<ul>\n<li>Add checks to prevent suggestions that acknowledge this behavior.</li>\n<li>Add checks that prevent the user from making queries like this.</li>\n<li>Flip this bug into a feature by checking to see if this is happening and, in that case, making the searches additive ie showing all the messages from <code>stream:a</code> <em>and</em> <code>stream:b</code> which would make this a sensible query and could also sort of work as an interleaved view of only the streams we've selected! Further more, we could papply any other filters to the messages of these two streams, ie <code>stream:a stream:b topic:cats</code> could show the topic cat from either and both streams, if it exists. (this might be a bit useful to trace \"moved\" topics). If we choose to use this approach, one thing that would need to be handled here is that we shouldn't change the search bar to the color of a single stream, either both or none.</li>\n</ul>\n<p>A similar solution for multiple <code>topic:</code> filters could be possible, however, the solution for multiple <code>sender:</code> filters would be different.<br>\nAlso, all this does translate to more than two uses of the filter ie I could have <code>topic:a topic:b topic:c</code></p>",
+        "id": 705676,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1550830729
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9808\">@Yash RE</span> This is good feedback on the \"stream/stream\" problem.  Right now the behavior is essentially undefined for these searches.  The easiest fix here is probably to make them illegal, or at least communicate better to users that their searches aren't supported in the way they may think.</p>\n<p>I also agree that there's some logic in saying \"stream:a stream:b\" means you want both streams.  I think that would be the user's intuition, and then the challenge is implementing it on the backend.</p>",
+        "id": 705695,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1550844575
+    },
+    {
+        "content": "<p>Thanks for the careful analysis! Agreed that our search currently has lots of funny bugs like this, and would be great to iron them out. I'm not sure exactly what the right solution here is; I agree with Steve that probably the easiest will be to make them illegal (and having the UI, typeahead, etc reflect that).</p>",
+        "id": 705800,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1550860129
+    },
+    {
+        "content": "<p>And I think just removing them from the typeahead, etc (your first suggestion) will be 95% of the benefit</p>",
+        "id": 705802,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1550860192
+    },
+    {
+        "content": "<p>One minor clarification: I don't think typeahead encourages you to do <code>stream:a stream:b</code> in any way.  I think you have to explicitly type that out.  Maybe I'm wrong, not sure.</p>",
+        "id": 705805,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1550860317
+    },
+    {
+        "content": "<blockquote>\n<p>One minor clarification: I don't think typeahead encourages you to do <code>stream:a stream:b</code> in any way.  I think you have to explicitly type that out.  Maybe I'm wrong, not sure.</p>\n</blockquote>\n<p>I believe that's correct.</p>",
+        "id": 706064,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1550872504
+    },
+    {
+        "content": "<p>I don't think we should block users from typing whatever, because that's not really a thing we can do; instead, we should focus on ensuring the typeahead doesn't suggest things that don't make sense.</p>",
+        "id": 706065,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1550872530
+    },
+    {
+        "content": "<blockquote>\n<p>we offer the suggestion sent by a, pm-with:b (I think this also doesn't make much sense since pm-with: should be 1 on 1?) </p>\n</blockquote>\n<p>No, this is a valid suggestion -- I might want every PM that Rishi sent me, without my replies.  Also note <code>pm-with</code> can query a group PM.</p>",
+        "id": 706066,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1550872637
+    },
+    {
+        "content": "<blockquote>\n<blockquote>\n<p>One minor clarification: I don't think typeahead encourages you to do <code>stream:a stream:b</code> in any way.  I think you have to explicitly type that out.  Maybe I'm wrong, not sure.</p>\n</blockquote>\n<p>I believe that's correct.</p>\n</blockquote>\n<p>It is correct that one would have to type out \"stream:\" entirely on their own and that this is not something we can prevent, and also, any less-frequent-user/new user is unlikely to do that because they wouldn't know the search operators that well. However, if a user does do this, they get suggestions like: <a href=\"user_uploads/2/18/L8MjlLcMom2X96ZMI2viPE9Y/addkrdiya.png\" target=\"_blank\" title=\"user_uploads/2/18/L8MjlLcMom2X96ZMI2viPE9Y/addkrdiya.png\">suggestions</a> which indicate recognition of what the user is trying to do and imply that this might be a useful thing to do, which it is not.</p>\n<div class=\"message_inline_image\"><a href=\"user_uploads/2/18/L8MjlLcMom2X96ZMI2viPE9Y/addkrdiya.png\" target=\"_blank\" title=\"suggestions\"><img src=\"user_uploads/2/18/L8MjlLcMom2X96ZMI2viPE9Y/addkrdiya.png\"></a></div>",
+        "id": 706360,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1550903467
+    },
+    {
+        "content": "<blockquote>\n<p>instead, we should focus on ensuring the typeahead doesn't suggest things that don't make sense.</p>\n</blockquote>\n<p>Steve and Rishi also agree with this and it was my first suggestion, I think that means we have consensus that step 1 would definitely be: </p>\n<ul>\n<li>remove suggestions/recognition for queries that don't make sense.</li>\n</ul>\n<p>then, if everyone agrees, part 2 could be:</p>\n<ul>\n<li>prevent the user from sending queries that don't make sense, and show them an error message. [part 2 option 1]</li>\n</ul>\n<p>OR</p>\n<ul>\n<li>Allow the query to go through but then when directing them to an empty narrow, tell them that their combination of search operators does not make sense. [part 2 option 2]</li>\n</ul>\n<blockquote>\n<p>I also agree that there's some logic in saying \"stream:a stream:b\" means you want both streams.  I think that would be the user's intuition, and then the challenge is implementing it on the backend.</p>\n</blockquote>\n<p>then, further, if we decide that this (the behavior in quote) is something we want to have, that could be a step 3 and it would mean slightly going back on step 1 to re-enable the suggestions and also going back on part 2 option 1 to allow the query through (if we go with that option), but I believe that's worth the structure this problem is getting from this approach.</p>",
+        "id": 706368,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1550906872
+    },
+    {
+        "content": "<p>But one thing that I wanted to ask about is, how important it is to actually fix this? <br>\nBecause I could do [part 2 option 2] along with what I'm already working on, <a href=\"https://github.com/zulip/zulip/issues/10592\" target=\"_blank\" title=\"https://github.com/zulip/zulip/issues/10592\">#10592</a> (tell the user about stop words in an empty search query, when there are multiple filters) but that would be before [step 1] and as such, would be in the wrong order... so, I'm not sure if that would okay...</p>",
+        "id": 706378,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1550908757
+    },
+    {
+        "content": "<blockquote>\n<blockquote>\n<p>we offer the suggestion sent by a, pm-with:b (I think this also doesn't make much sense since pm-with: should be 1 on 1?) </p>\n</blockquote>\n<p>No, this is a valid suggestion -- I might want every PM that Rishi sent me, without my replies.</p>\n</blockquote>\n<p>I might be misunderstanding, but wouldn't that be a query of type <code>sender:rishig@.. pm-with:rishig@..</code> i e <code>sender:A pm-with:A</code><br>\nwhile, what I'm saying doesn't make sense is a query of type <code>sender:cordelia@zulip.com pm-with:iago@zulip.com</code> i e <code>sender:A pm-with:B</code> because we're looking for messages sent by \"A\" in 1 to 1 PMs between the user and \"B\"</p>\n<blockquote>\n<p>Also note <code>pm-with</code> can query a group PM.</p>\n</blockquote>\n<p>Again, I might not be understanding this correctly, isn't that if we have <code>pm-with:cordelia@zulip.com,iago@zulip.com,zoe@zulip.com</code> <br>\ni e <code>pm-with:A,B,C</code> and not when we have <code>sender:A pm-with:B</code> which will always be blank. Although I agree that, when one writes this, one might actually be looking for all the messages from \"A\" in any and all group PMs that also involve \"B\" i e <code>sender:A group-pm-with:B</code> and I think we should just make it behave like that rather than returning blank.</p>\n<p>examples: The window on the right is just to show that there exists a group pm between cordelia, iago, Aaron (current user) and Zoe<br>\n<a href=\"/user_uploads/2/e2/e9aKxL-BHwW0WMI3eDGrZ3Qa/sender-pm-combo.png\" target=\"_blank\" title=\"sender-pm-combo.png\">sent-by-me-pm-with-I</a> = No results<br>\n<a href=\"/user_uploads/2/3f/z8EDztMZFOizMmp2zb-ojiem/sent-by-other-pmwith.png\" target=\"_blank\" title=\"sent-by-other-pmwith.png\">sent-by-C-pm-with-I</a>  = No results<br>\n<a href=\"/user_uploads/2/e5/KC3M273adm4g4nm3towVR1Xh/grouppmexample.png\" target=\"_blank\" title=\"grouppmexample.png\">sent-by-C group-pm-with:I</a> = what we may actually be looking for</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/e2/e9aKxL-BHwW0WMI3eDGrZ3Qa/sender-pm-combo.png\" target=\"_blank\" title=\"sent-by-me-pm-with-I\"><img src=\"/user_uploads/2/e2/e9aKxL-BHwW0WMI3eDGrZ3Qa/sender-pm-combo.png\"></a></div><div class=\"message_inline_image\"><a href=\"/user_uploads/2/3f/z8EDztMZFOizMmp2zb-ojiem/sent-by-other-pmwith.png\" target=\"_blank\" title=\"sent-by-C-pm-with-I\"><img src=\"/user_uploads/2/3f/z8EDztMZFOizMmp2zb-ojiem/sent-by-other-pmwith.png\"></a></div><div class=\"message_inline_image\"><a href=\"/user_uploads/2/e5/KC3M273adm4g4nm3towVR1Xh/grouppmexample.png\" target=\"_blank\" title=\"sent-by-C group-pm-with:I\"><img src=\"/user_uploads/2/e5/KC3M273adm4g4nm3towVR1Xh/grouppmexample.png\"></a></div>",
+        "id": 706399,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1550912483
+    },
+    {
+        "content": "<p>Apologies for the massive wall of text, maybe I should have been more concise, but I wanted to be clear... <span aria-label=\"sweat\" class=\"emoji emoji-1f613\" role=\"img\" title=\"sweat\">:sweat:</span> <span aria-label=\"sweat smile\" class=\"emoji emoji-1f605\" role=\"img\" title=\"sweat smile\">:sweat_smile:</span></p>",
+        "id": 706400,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1550912775
+    },
+    {
+        "content": "<p>I'm not sure how important it is to fix the stream/stream problem right away.  It's a strange quirk, but it seems that most folks stay clear of it.  But if there are easy things we can fix, I'm certainly up for improving it.</p>",
+        "id": 706471,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1550926419
+    }
+]

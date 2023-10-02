@@ -1,0 +1,86 @@
+[
+    {
+        "content": "<p>Hey guys, I’m having troubles getting Zulip access over the web. </p>\n<p>My setup is as follows:</p>\n<p>CNAME chat.testing -&gt; testing.my.tld <br>\nCNAME testing -&gt; gateway.my.tld</p>\n<p>Gateway receives a request for gateway.my.tld and Caddy answers it, showing the basic web server page. </p>\n<p>When gateway receives a request for testing.my.tld, it has the rule “reverse_proxy 10.8.0.2” to forward the request over VPN to the testing server.</p>\n<p>Testing server runs Caddy too. When it receives a request for testing.my.tld, it returns the basic web server page.</p>\n<p>When the gateway receives a request for chat.testing.my.tld, it again has the rule “reverse_proxy 10.8.0.2”.</p>\n<p>Testing proxy receives that and has the rule “reverse_proxy http://localhost:1234” where 1234 is the HTTP port configured in Zulip’s docker-compose.yml. The response at chat.testing.my.tld is “Bad Gateway (400)”</p>\n<p>If I change that to “respond “let’s chat”” and access chat.testing.my.tld I do indeed see “let’s chat” in curl and in browser, so the routing is fine. </p>\n<p>If I curl localhost:1234/login/ the login page is returned.</p>\n<p>Also important to mention, I have used DISABLE_HTTPS in Zulip because Caddy will handle it.</p>\n<p>So I know this much:</p>\n<ul>\n<li>the two Caddy servers are working as expedted and routing properly</li>\n<li>the Zulip instance is running and accessible on the local machine</li>\n<li>Zulip from behind Caddy is not happy</li>\n</ul>\n<p>Is it an issue with headers perhaps?</p>",
+        "id": 1474761,
+        "sender_full_name": "Lachie Chapman",
+        "timestamp": 1670315678
+    },
+    {
+        "content": "<p>You’ll need to read the documentation about <a href=\"https://zulip.readthedocs.io/en/stable/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy\">Putting the Zulip application behind a reverse proxy</a>.</p>",
+        "id": 1474764,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1670316010
+    },
+    {
+        "content": "<p>Alright, nice, I didn't see the right way to edit /etc/zulip/zulip.conf so I did it via Dockerfile. I also found the documentation of docker-zulip which told me everything else. Thanks!</p>",
+        "id": 1474817,
+        "sender_full_name": "Lachie Chapman",
+        "timestamp": 1670329001
+    },
+    {
+        "content": "<p>Is SAML something I can configure within docker-compose? Or do I need to add more to my Dockerfile? It seems like docker-compose supports editing variables such as SOCIAL_AUTH_SAML_ORG_INFO by setting SETTING_SOCIAL_AUTH_SAML_ORG_INFO but what form should the string take when I'm trying to pass in a Python dict?</p>",
+        "id": 1474868,
+        "sender_full_name": "Lachie Chapman",
+        "timestamp": 1670330862
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/Issues.20with.20Zulip.20behind.20Caddy.20servers.20as.20reverse.20proxies\">#issues &gt; Issues with Zulip behind Caddy servers as reverse proxies</a> by <span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span>.</p>",
+        "id": 1474954,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1670347933
+    },
+    {
+        "content": "<p>I believe for docker-compose, you provide a string literal which is inlined verbatim, e.g.:</p>\n<div class=\"codehilite\" data-code-language=\"YAML\"><pre><span></span><code><span class=\"nt\">SETTINGS_SOCIAL_AUTH_OIDC_ENABLED_IDPS</span><span class=\"p\">:</span><span class=\"w\"> </span><span class=\"s\">'{</span><span class=\"nv\"> </span><span class=\"s\">\"idp_name\":</span><span class=\"nv\"> </span><span class=\"s\">{\"oidc_url\":</span><span class=\"nv\"> </span><span class=\"s\">\"...\",</span><span class=\"nv\"> </span><span class=\"s\">\"client_id\":</span><span class=\"nv\"> </span><span class=\"s\">\"...\"}}'</span><span class=\"w\"></span>\n</code></pre></div>",
+        "id": 1475000,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670349635
+    },
+    {
+        "content": "<p><code>entrypoint.sh</code> has some gross magic to hardcode the types of some settings, and I believe will try to just guess if you set ... looks like <code>SPECIAL_SETTING_DETECTION_MODE: True</code>.</p>\n<p>You may need to use <code>ZULIP_CUSTOM_SETTINGS</code> which is just verbatim added to the file.</p>",
+        "id": 1475002,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670349903
+    },
+    {
+        "content": "<p>Alright, progress update:</p>\n<p>In the .env file:<br>\n<code>OIDC_SETTINGS={\"idp_name\":{\"oidc_url\":\"https://authentik.my.tld/application/o/zulip\",\"display_name\":\"App Portal\",\"display_icon\":None,\"client_id\":\"xxx\",\"secret\":\"zzz\",\"auto_signup\":True}}</code></p>\n<p>In docker-compose.yml:</p>\n<div class=\"codehilite\"><pre><span></span><code>    environment:\n      ...\n      SPECIAL_SETTING_DETECTION_MODE: &quot;True&quot;\n      SETTING_AUTHENTICATION_BACKENDS: &#39;[&quot;zproject.backends.EmailAuthBackend&quot;, &quot;zproject.backends.GenericOpenIdConnectBackend&quot;]&#39;\n      SETTING_SOCIAL_AUTH_OIDC_ENABLED_IDPS: &#39;$OIDC_SETTINGS&#39;\n</code></pre></div>\n<p>Launch log of docker:</p>\n<div class=\"codehilite\"><pre><span></span><code>...\nzulip-zulip-1      | Zulip secrets configuration succeeded.\nzulip-zulip-1      | Activating authentication backends ...\nzulip-zulip-1      | Setting key &quot;AUTHENTICATION_BACKENDS&quot;, type &quot;array&quot; in file &quot;/etc/zulip/settings.py&quot;.\nzulip-zulip-1      | Adding authentication backend &quot;EmailAuthBackend&quot;.\nzulip-zulip-1      | Authentication backend activation succeeded.\nzulip-zulip-1      | Executing Zulip configuration ...\nzulip-zulip-1      | Setting key &quot;AUTHENTICATION_BACKENDS&quot;, type &quot;array&quot; in file &quot;/etc/zulip/settings.py&quot;.\n...\nzulip-zulip-1      | Setting key &quot;SOCIAL_AUTH_OIDC_ENABLED_IDPS&quot;, type &quot;string&quot; in file &quot;/etc/zulip/settings.py&quot;.\nzulip-zulip-1      | Setting key &quot;SOCIAL_AUTH_OIDC_FULL_NAME_VALIDATED&quot;, type &quot;bool&quot; in file &quot;/etc/zulip/settings.py&quot;.\nzulip-zulip-1      | Setting key &quot;ZULIP_ADMINISTRATOR&quot;, type &quot;string&quot; in file &quot;/etc/zulip/settings.py&quot;.\nzulip-zulip-1      | Traceback (most recent call last):\nzulip-zulip-1      |   File &quot;/home/zulip/deployments/current/manage.py&quot;, line 157, in &lt;module&gt;\nzulip-zulip-1      |     execute_from_command_line(sys.argv)\nzulip-zulip-1      |   File &quot;/home/zulip/deployments/current/manage.py&quot;, line 122, in execute_from_command_line\nzulip-zulip-1      |     utility.execute()\nzulip-zulip-1      |   File &quot;/srv/zulip-venv-cache/aec974d63b86e7862ff0e1a8ce127e9401e4a346/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/__init__.py&quot;, line 413, in execute\nzulip-zulip-1      |     self.fetch_command(subcommand).run_from_argv(self.argv)\nzulip-zulip-1      |   File &quot;/srv/zulip-venv-cache/aec974d63b86e7862ff0e1a8ce127e9401e4a346/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 354, in run_from_argv\nzulip-zulip-1      |     self.execute(*args, **cmd_options)\nzulip-zulip-1      |   File &quot;/srv/zulip-venv-cache/aec974d63b86e7862ff0e1a8ce127e9401e4a346/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 393, in execute\nzulip-zulip-1      |     self.check()\nzulip-zulip-1      |   File &quot;/srv/zulip-venv-cache/aec974d63b86e7862ff0e1a8ce127e9401e4a346/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 419, in check\nzulip-zulip-1      |     all_issues = checks.run_checks(\nzulip-zulip-1      |   File &quot;/srv/zulip-venv-cache/aec974d63b86e7862ff0e1a8ce127e9401e4a346/zulip-py3-venv/lib/python3.8/site-packages/django/core/checks/registry.py&quot;, line 76, in run_checks\nzulip-zulip-1      |     new_errors = check(app_configs=app_configs, databases=databases)\nzulip-zulip-1      |   File &quot;/srv/zulip-venv-cache/aec974d63b86e7862ff0e1a8ce127e9401e4a346/zulip-py3-venv/lib/python3.8/site-packages/django/core/checks/urls.py&quot;, line 13, in check_url_config\nzulip-zulip-1      |     return check_resolver(resolver)\nzulip-zulip-1      |   File &quot;/srv/zulip-venv-cache/aec974d63b86e7862ff0e1a8ce127e9401e4a346/zulip-py3-venv/lib/python3.8/site-packages/django/core/checks/urls.py&quot;, line 23, in check_resolver\nzulip-zulip-1      |     return check_method()\nzulip-zulip-1      |   File &quot;/srv/zulip-venv-cache/aec974d63b86e7862ff0e1a8ce127e9401e4a346/zulip-py3-venv/lib/python3.8/site-packages/django/urls/resolvers.py&quot;, line 416, in check\nzulip-zulip-1      |     for pattern in self.url_patterns:\nzulip-zulip-1      |   File &quot;/srv/zulip-venv-cache/aec974d63b86e7862ff0e1a8ce127e9401e4a346/zulip-py3-venv/lib/python3.8/site-packages/django/utils/functional.py&quot;, line 48, in __get__\nzulip-zulip-1      |     res = instance.__dict__[self.name] = self.func(instance)\nzulip-zulip-1      |   File &quot;/srv/zulip-venv-cache/aec974d63b86e7862ff0e1a8ce127e9401e4a346/zulip-py3-venv/lib/python3.8/site-packages/django/urls/resolvers.py&quot;, line 602, in url_patterns\nzulip-zulip-1      |     patterns = getattr(self.urlconf_module, &quot;urlpatterns&quot;, self.urlconf_module)\nzulip-zulip-1      |   File &quot;/srv/zulip-venv-cache/aec974d63b86e7862ff0e1a8ce127e9401e4a346/zulip-py3-venv/lib/python3.8/site-packages/django/utils/functional.py&quot;, line 48, in __get__\nzulip-zulip-1      |     res = instance.__dict__[self.name] = self.func(instance)\nzulip-zulip-1      |   File &quot;/srv/zulip-venv-cache/aec974d63b86e7862ff0e1a8ce127e9401e4a346/zulip-py3-venv/lib/python3.8/site-packages/django/urls/resolvers.py&quot;, line 595, in urlconf_module\nzulip-zulip-1      |     return import_module(self.urlconf_name)\nzulip-zulip-1      |   File &quot;/usr/lib/python3.8/importlib/__init__.py&quot;, line 127, in import_module\nzulip-zulip-1      |     return _bootstrap._gcd_import(name[level:], package, level)\nzulip-zulip-1      |   File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 1014, in _gcd_import\nzulip-zulip-1      |   File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 991, in _find_and_load\nzulip-zulip-1      |   File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 975, in _find_and_load_unlocked\nzulip-zulip-1      |   File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 671, in _load_unlocked\nzulip-zulip-1      |   File &quot;&lt;frozen importlib._bootstrap_external&gt;&quot;, line 848, in exec_module\nzulip-zulip-1      |   File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 219, in _call_with_frames_removed\nzulip-zulip-1      |   File &quot;/home/zulip/deployments/2022-11-16-16-21-02/zproject/urls.py&quot;, line 18, in &lt;module&gt;\nzulip-zulip-1      |     from zerver.forms import LoggingSetPasswordForm\nzulip-zulip-1      |   File &quot;/home/zulip/deployments/2022-11-16-16-21-02/zerver/forms.py&quot;, line 45, in &lt;module&gt;\nzulip-zulip-1      |     from zproject.backends import check_password_strength, email_auth_enabled, email_belongs_to_ldap\nzulip-zulip-1      |   File &quot;/home/zulip/deployments/2022-11-16-16-21-02/zproject/backends.py&quot;, line 2654, in &lt;module&gt;\nzulip-zulip-1      |     class GenericOpenIdConnectBackend(SocialAuthMixin, OpenIdConnectAuth):\nzulip-zulip-1      |   File &quot;/home/zulip/deployments/2022-11-16-16-21-02/zproject/backends.py&quot;, line 2662, in GenericOpenIdConnectBackend\nzulip-zulip-1      |     settings.SOCIAL_AUTH_OIDC_ENABLED_IDPS.values() or [{}]\nzulip-zulip-1      | AttributeError: &#39;str&#39; object has no attribute &#39;values&#39;\nzulip-zulip-1      | Error in the Zulip configuration. Exiting.\nzulip-zulip-1 exited with code 1\n</code></pre></div>",
+        "id": 1475654,
+        "sender_full_name": "Lachie Chapman",
+        "timestamp": 1670382133
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>Setting key &quot;SOCIAL_AUTH_OIDC_ENABLED_IDPS&quot;, type &quot;string&quot; [...]\n</code></pre></div>\n<p>Yeah, that's <code>entrypoint.sh</code> being wrong.</p>\n<p>You probably want to set <code>ZULIP_CUSTOM_SETTINGS</code> (using the heredoc syntax for YAML or what-not) to a value like:</p>\n<div class=\"codehilite\"><pre><span></span><code>OIDC_SETTINGS={&quot;idp_name&quot;:{&quot;oidc_url&quot;:&quot;https://authentik.my.tld/application/o/zulip&quot;,&quot;display_name&quot;:&quot;App Portal&quot;,&quot;display_icon&quot;:None,&quot;client_id&quot;:&quot;xxx&quot;,&quot;secret&quot;:&quot;zzz&quot;,&quot;auto_signup&quot;:True}}\n</code></pre></div>",
+        "id": 1475656,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670382422
+    },
+    {
+        "content": "<p>You can also try setting <code>SPECIAL_SETTING_DETECTION_MODE: True</code> and see if that makes it guess the type correctly.</p>",
+        "id": 1475657,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670382453
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Issues.20with.20Zulip.20behind.20Caddy.20servers.20as.20reverse.20proxies/near/1475657\">said</a>:</p>\n<blockquote>\n<p>You can also try setting <code>SPECIAL_SETTING_DETECTION_MODE: True</code> and see if that makes it guess the type correctly.</p>\n</blockquote>\n<p>Have edited previous comment to reflect that I do have that.</p>\n<p>I'm going to edit my Dockerfile to fix that string bit in <a href=\"http://entrypoint.sh\">entrypoint.sh</a> and see how we go.</p>",
+        "id": 1475658,
+        "sender_full_name": "Lachie Chapman",
+        "timestamp": 1670382673
+    },
+    {
+        "content": "<p>Yup, looking again at <code>entrypoint.sh</code>, it only guesses right for <code>(</code> or <code>[</code>.  You'll need <code>ZULIP_CUSTOM_SETTINGS</code> -- which is honestly probably the most reasonable way to set all of these settings.</p>",
+        "id": 1475659,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670382804
+    },
+    {
+        "content": "<p><del>Nice, that works. Accounts that already exist can now sign in with OIDC. Accounts that don't yet exist in Zulip can't though. auto_signup is true but I still see this: <a href=\"/user_uploads/2/28/q_UTprJsCSpZWGEsi7uLFaqM/chrome_acUrePjrn6.png\">chrome_acUrePjrn6.png</a></del></p>\n<p>EDIT: I have turned off email/password signin and turned off invitations, now everybody who has an account with my OIDC provider can sign up and in. Perfect.</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/28/q_UTprJsCSpZWGEsi7uLFaqM/chrome_acUrePjrn6.png\" title=\"chrome_acUrePjrn6.png\"><img src=\"/user_uploads/2/28/q_UTprJsCSpZWGEsi7uLFaqM/chrome_acUrePjrn6.png\"></a></div>",
+        "id": 1475666,
+        "sender_full_name": "Lachie Chapman",
+        "timestamp": 1670383767
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"24643\">Lachie Chapman</span> has marked this topic as resolved.</p>",
+        "id": 1475668,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1670384892
+    }
+]

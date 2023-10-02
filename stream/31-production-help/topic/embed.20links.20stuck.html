@@ -1,0 +1,155 @@
+<html>
+<head><meta charset="utf-8"><title>embed links stuck · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html">embed links stuck</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="661814"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/661814" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tom Daff <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#661814">(Nov 15 2018 at 14:28)</a>:</h4>
+<p>I can't get link previews to appear for new links. If I re-post old links, they show the same previews again, but no previews appear for new links. I've tried restarting Zulip, and turning the previews off and on again but those didn't work. Not sure where to look next as I can't see anything in the logs that indicate a problem... Any help would be appreciated!</p>
+
+
+
+<a name="661881"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/661881" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#661881">(Nov 15 2018 at 20:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="8488">@Tom Daff</span> have you checked <code>/var/log/zulip/errors.log</code>?</p>
+
+
+
+<a name="661882"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/661882" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#661882">(Nov 15 2018 at 20:02)</a>:</h4>
+<p>The issue is almost certainly the <code>zulip-workers:zulip_events_embed_links</code> supervisor process being down or stuck throwing errors, since that's the job that fetches for embeds.</p>
+
+
+
+<a name="661883"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/661883" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#661883">(Nov 15 2018 at 20:02)</a>:</h4>
+<p><code>/var/log/zulip/events_embed_links.log</code> might also be helpful.</p>
+
+
+
+<a name="662246"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/662246" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tom Daff <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#662246">(Nov 16 2018 at 12:22)</a>:</h4>
+<p>Thanks for the reply!</p>
+<p>Unfortunately posting new links doesn't generate any errors in any of the logs, and the worker was restarted yesterday (and was up beforehand):</p>
+<div class="codehilite"><pre><span></span>zulip-workers:zulip_events_embed_links                          RUNNING   pid 8275, uptime 20:11:15
+</pre></div>
+
+
+<p>Previous error was a "Failed to establish a new connection: [Errno -5] No address associated with hostname" but that seems to be a couple of days before the embedding stopped working. </p>
+<p>Is there a way to inspect the queue for that process, <span class="user-mention" data-user-id="7">@Tim Abbott</span> ?</p>
+
+
+
+<a name="662259"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/662259" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#662259">(Nov 16 2018 at 16:48)</a>:</h4>
+<p><span class="user-mention" data-user-id="8488">@Tom Daff</span> <code>rabbitmqctl list_queues</code> is the way to inspect what's in the various queues; the answer should in steady state be 0 for all of them.</p>
+
+
+
+<a name="662261"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/662261" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tom Daff <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#662261">(Nov 16 2018 at 16:59)</a>:</h4>
+<div class="codehilite"><pre><span></span>embed_links 56
+</pre></div>
+
+
+<p><span class="emoji emoji-2757" title="exclamation">:exclamation:</span></p>
+
+
+
+<a name="662270"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/662270" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#662270">(Nov 16 2018 at 17:42)</a>:</h4>
+<p>Great, and you said <code>/var/log/zulip/events_embed_links.log</code> doesn't have anything current in it?</p>
+
+
+
+<a name="662271"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/662271" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#662271">(Nov 16 2018 at 17:43)</a>:</h4>
+<p>I suppose one plausible theory is that the process got stuck hanging on network wait and doesn't have a proper timeout.</p>
+
+
+
+<a name="662272"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/662272" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#662272">(Nov 16 2018 at 17:44)</a>:</h4>
+<p>Try doing a <code>supervisorctl restart zulip-workers:zulip_events_embed_links</code>  and watch wahtwaht happens in the logs.</p>
+
+
+
+<a name="662273"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/662273" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#662273">(Nov 16 2018 at 17:44)</a>:</h4>
+<p>But I think a missing timeout is likely the bug there; going to read a bit more code.</p>
+
+
+
+<a name="662277"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/662277" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#662277">(Nov 16 2018 at 17:53)</a>:</h4>
+<p>OK, about to have a commit that should fix the potential timeout issue here (which is probably your problem, but we haven't confirmed it).</p>
+
+
+
+<a name="662842"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/662842" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tom Daff <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#662842">(Nov 19 2018 at 11:26)</a>:</h4>
+<p>Tail of all logs during restart, (<code>events</code> <code>heartbeat</code> and <code>presence</code> stripped)</p>
+<div class="codehilite"><pre><span></span>==&gt; events_embed_links.log &lt;==
+2018-11-19 10:15:01.200 INFO [process_queue] Worker 0 disconnecting from queue embed_links
+
+==&gt; workers.log &lt;==
+2018-11-19 10:15:01.200 INFO [process_queue] Worker 0 disconnecting from queue embed_links
+
+==&gt; manage.log &lt;==
+2018-11-19 10:15:02,948: Ran &#39;/home/zulip/deployments/current/manage.py process_queue --queue_name=embed_links&#39;
+
+==&gt; events_embed_links.log &lt;==
+2018-11-19 10:15:04.735 INFO [process_queue] Worker 0 connecting to queue embed_links
+
+==&gt; workers.log &lt;==
+2018-11-19 10:15:04.735 INFO [process_queue] Worker 0 connecting to queue embed_links
+
+==&gt; server.log &lt;==
+2018-11-19 10:15:12.360 INFO [] Tornado   0.8% busy over the past 59.1 seconds
+
+==&gt; tornado.log &lt;==
+2018-11-19 10:15:12.360 INFO [] Tornado   0.8% busy over the past 59.1 seconds
+
+==&gt; server.log &lt;==
+2018-11-19 10:15:17.667 INFO [] Tornado   0.8% busy over the past 59.6 seconds
+
+==&gt; tornado.log &lt;==
+2018-11-19 10:15:17.667 INFO [] Tornado   0.8% busy over the past 59.6 seconds
+
+==&gt; server.log &lt;==
+2018-11-19 10:15:22.493 INFO [] Tornado removed 1 idle event queues owned by 1 users in 0.000s.  Now 20 active queues, 17 handlers, latest ID 23426
+
+==&gt; tornado.log &lt;==
+2018-11-19 10:15:22.493 INFO [] Tornado removed 1 idle event queues owned by 1 users in 0.000s.  Now 20 active queues, 17 handlers, latest ID 23426
+</pre></div>
+
+
+
+<a name="662845"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/662845" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tom Daff <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#662845">(Nov 19 2018 at 11:32)</a>:</h4>
+<p>Yes, timeout could be an issue. There are quite a few internal links that get posted which would not be accessible to the zulip server. I'll see if I can inspect the queue and see what is at the top.</p>
+
+
+
+<a name="662856"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/662856" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tom Daff <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#662856">(Nov 19 2018 at 13:25)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> can confirm this is a probably a timeout thing!</p>
+<p>All the tasks were sitting as "unacked" in rabbitmq, so I couldn't <code>get</code> any of their contents. I restarted the queue to see if they would re-queue so that I could inspect them, but my network went down at exactly the same time and caused all the queued embed tasks to fail at the name resolution stage! This means my queue is cleared, but I've been able to extract the offending URL from the error log.</p>
+<p><code>http://www.merckmillipore.com/GB/en/product/Synergy-Water-Purification-System,MM_NF-C9209</code> works fine in a browser but is hanging indefinitely using <code>curl</code> unless you add enough headers to make it look like a browser.</p>
+
+
+
+<a name="663037"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/embed%20links%20stuck/near/663037" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/embed.20links.20stuck.html#663037">(Nov 20 2018 at 02:50)</a>:</h4>
+<p>OK, great.  It seems very likely that I fixed this, then; you can use <code>upgrade-zulip-from-git master</code> to install the patched version now, or wait until the next release.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

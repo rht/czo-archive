@@ -1,0 +1,94 @@
+<html>
+<head><meta charset="utf-8"><title>nagios/check-rabbitmq-consumers fails regulary · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nagios.2Fcheck-rabbitmq-consumers.20fails.20regulary.html">nagios/check-rabbitmq-consumers fails regulary</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="723867"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nagios/check-rabbitmq-consumers%20fails%20regulary/near/723867" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> niels <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nagios.2Fcheck-rabbitmq-consumers.20fails.20regulary.html#723867">(Mar 25 2019 at 17:43)</a>:</h4>
+<p>Every sunday I got an email with:</p>
+<div class="codehilite"><pre><span></span>Error: rabbit application is not running on node zulip@localhost.
+ * Suggestion: start it with &quot;rabbitmqctl start_app&quot; and try again
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/scripts/nagios/check-rabbitmq-consumers&quot;, line 46, in &lt;module&gt;
+    universal_newlines=True)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 336, in check_output
+    **kwargs).stdout
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 418, in run
+    output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command &#39;[&#39;/usr/sbin/rabbitmqctl&#39;, &#39;list_consumers&#39;]&#39; returned non-zero exit status 70.
+</pre></div>
+
+
+<p>If I try <code> /usr/sbin/rabbitmqctl list_consumers</code> manual every thing is correct. Seems that this is a reboot problem, but how can I prevent the mail?</p>
+
+
+
+<a name="723933"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nagios/check-rabbitmq-consumers%20fails%20regulary/near/723933" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nagios.2Fcheck-rabbitmq-consumers.20fails.20regulary.html#723933">(Mar 25 2019 at 18:48)</a>:</h4>
+<p><span class="user-mention" data-user-id="11001">@niels</span> do you reboot your server every Sunday night?</p>
+
+
+
+<a name="723935"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nagios/check-rabbitmq-consumers%20fails%20regulary/near/723935" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nagios.2Fcheck-rabbitmq-consumers.20fails.20regulary.html#723935">(Mar 25 2019 at 18:48)</a>:</h4>
+<p>Can you send what's in <code>/etc/rabbitmq/rabbitmq</code>?  I'm curious if that could be related.</p>
+
+
+
+<a name="724199"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nagios/check-rabbitmq-consumers%20fails%20regulary/near/724199" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> niels <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nagios.2Fcheck-rabbitmq-consumers.20fails.20regulary.html#724199">(Mar 26 2019 at 06:56)</a>:</h4>
+<p>It's no problem to have a short down-time at night. So I backup zulip and update all system components at night. Because I'm to lazy to figure out if a reboot is necessary I reboot each sunday.<br>
+Here the content of <code>/etc/rabbitmq/rabbitmq.config</code></p>
+<div class="codehilite"><pre><span></span>[{kernel, [{inet_dist_use_interface, {127,0,0,1}}]},
+ {rabbit, [{tcp_listeners, [{&quot;127.0.0.1&quot;, 5672}]}]},
+ {rabbitmq_mochiweb, [{listeners, [{mgmt, [{ip, &quot;127.0.0.1&quot;},
+                                           {port, 55672}]}]}]}].
+</pre></div>
+
+
+<p>and  <code>/etc/rabbitmq/rabbitmq-env.conf</code></p>
+<div class="codehilite"><pre><span></span># Defaults to rabbit. This can be useful if you want to run more than one node
+# per machine - RABBITMQ_NODENAME should be unique per erlang-node-and-machine
+# combination. See the clustering on a single machine guide for details:
+# http://www.rabbitmq.com/clustering.html#single-machine
+#
+# By default, we set nodename to rabbit@localhost so it will always resolve
+NODENAME=zulip@localhost
+
+# By default RabbitMQ will bind to all interfaces, on IPv4 and IPv6 if
+# available. Set this if you only want to bind to one network interface or#
+# address family.
+#NODE_IP_ADDRESS=127.0.0.1
+
+# Defaults to 5672.
+#NODE_PORT=5672
+</pre></div>
+
+
+
+<a name="724805"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nagios/check-rabbitmq-consumers%20fails%20regulary/near/724805" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nagios.2Fcheck-rabbitmq-consumers.20fails.20regulary.html#724805">(Mar 27 2019 at 01:53)</a>:</h4>
+<p><span class="user-mention" data-user-id="11783">@Niels</span> ok, it's possible you want to migrate to <a href="mailto:zulip@127.0.0.1" title="mailto:zulip@127.0.0.1">zulip@127.0.0.1</a> here.   On phone so can't provide details now.</p>
+
+
+
+<a name="737787"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nagios/check-rabbitmq-consumers%20fails%20regulary/near/737787" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> niels <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nagios.2Fcheck-rabbitmq-consumers.20fails.20regulary.html#737787">(Apr 30 2019 at 07:33)</a>:</h4>
+<p>Problem is gone, no idea why.</p>
+
+
+
+<a name="737984"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nagios/check-rabbitmq-consumers%20fails%20regulary/near/737984" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nagios.2Fcheck-rabbitmq-consumers.20fails.20regulary.html#737984">(Apr 30 2019 at 19:32)</a>:</h4>
+<p>Thanks for the follow-up; it's likely something hostname-related.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

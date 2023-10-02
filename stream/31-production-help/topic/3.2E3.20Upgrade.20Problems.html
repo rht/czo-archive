@@ -1,0 +1,620 @@
+<html>
+<head><meta charset="utf-8"><title>3.3 Upgrade Problems · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html">3.3 Upgrade Problems</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1557117"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557117" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557117">(Apr 27 2023 at 18:16)</a>:</h4>
+<p>Hey!</p>
+<p>I've been trying to upgrade an old 3.3 version of Zulip for awhile now and I keep running into issues. <br>
+Zulip is running on Ubuntu 18.04 and I've tried to upgrade to a few different newer versions of Zulip. <br>
+On all of the versions I have tried to upgrade to (4.x, 5.x, and 6.x with OS updates when required), I seem to always end up with the same issue.</p>
+<p>Once the server  starts and I go to my URL, I get a page that is rendered with basic HTML: <br>
+<a href="/user_uploads/2/44/gCSOYHGF0Z3R6-JrUlxGYJee/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/44/gCSOYHGF0Z3R6-JrUlxGYJee/image.png" title="image.png"><img src="/user_uploads/2/44/gCSOYHGF0Z3R6-JrUlxGYJee/image.png"></a></div><p>Ignoring this, when I try to login, I am forwarded to this page, where I hang indefinitely:<br>
+<a href="/user_uploads/2/f8/y_mc4TLozcYyG7Edf0wrVfHg/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/f8/y_mc4TLozcYyG7Edf0wrVfHg/image.png" title="image.png"><img src="/user_uploads/2/f8/y_mc4TLozcYyG7Edf0wrVfHg/image.png"></a></div><p>Reloading does not progress anything. <br>
+I've explored every service in <code>/var/log/zulip</code> and nothing seems to be throwing errors. Suffice to say I am a bit stuck. I've read all the upgrade guides and there are no caveats that highlight a similar issue to what I am experiencing. </p>
+<p>Any help or insights would be greatly appreciated.</p>
+
+
+
+<a name="1557168"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557168" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557168">(Apr 27 2023 at 18:55)</a>:</h4>
+<p><span class="user-mention" data-user-id="26887">@Mitchell</span> is your server behind a reverse proxy or something?</p>
+
+
+
+<a name="1557170"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557170" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557170">(Apr 27 2023 at 18:56)</a>:</h4>
+<p>The issue you're seeing is definitely in that flavor -- secondary assets like CSS and JavaScript are not loading. You might have something informative in <code>/var/log/nginx/errors.log</code>.</p>
+
+
+
+<a name="1557173"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557173" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557173">(Apr 27 2023 at 18:57)</a>:</h4>
+<p>That is a good insight. Let me take a look.</p>
+
+
+
+<a name="1557196"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557196" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557196">(Apr 27 2023 at 19:09)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> as per your suggestion, I am seeing a slew of errors in NGINX logs of the pattern:</p>
+<div class="codehilite"><pre><span></span><code>2023/04/27 17:18:01 [error] 9575#9575: *470 connect() to unix:/home/zulip/deployments/uwsgi-socket failed (111: Connection refused) while connecting to upstream, client: xxx.xxx.xxx.xxx, server: , request: &quot;GET / HTTP/1.1&quot;, upstream: &quot;uwsgi://unix:/home/zulip/deployments/uwsgi-socket:&quot;, host: &quot;yyy.yyy.yyy.yyy:443&quot;
+2023/04/27 17:18:04 [crit] 9575#9575: *477 SSL_do_handshake() failed (SSL: error:14209102:SSL routines:tls_early_post_process_client_hello:unsupported protocol) while SSL handshaking, client: xxx.xxx.xxx.xxx, server: 0.0.0.0:443
+</code></pre></div>
+<p>Certificates are in order on the webpage, so I don't think it has to do with that SSL handshake. Perhaps some port numbers changed in a backend service?</p>
+
+
+
+<a name="1557203"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557203" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557203">(Apr 27 2023 at 19:13)</a>:</h4>
+<p>The upstream it is referring to is django as per the nginx config:</p>
+<div class="codehilite"><pre><span></span><code>upstream django {
+    server unix:/home/zulip/deployments/uwsgi-socket;
+}
+</code></pre></div>
+
+
+
+<a name="1557211"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557211" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557211">(Apr 27 2023 at 19:17)</a>:</h4>
+<p>What does <code>supervisorctl status</code> show?</p>
+
+
+
+<a name="1557212"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557212" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557212">(Apr 27 2023 at 19:18)</a>:</h4>
+<p>All  running:</p>
+<div class="codehilite"><pre><span></span><code>process-fts-updates                                             RUNNING   pid 26584, uptime 1:23:10
+zulip-django                                                    RUNNING   pid 26599, uptime 1:23:04
+zulip-tornado                                                   RUNNING   pid 26591, uptime 1:23:08
+zulip-workers:zulip_deliver_scheduled_emails                    RUNNING   pid 26453, uptime 1:23:38
+zulip-workers:zulip_deliver_scheduled_messages                  RUNNING   pid 26458, uptime 1:23:37
+zulip-workers:zulip_events_deferred_work                        RUNNING   pid 26465, uptime 1:23:35
+zulip-workers:zulip_events_digest_emails                        RUNNING   pid 26473, uptime 1:23:33
+zulip-workers:zulip_events_email_mirror                         RUNNING   pid 26483, uptime 1:23:32
+zulip-workers:zulip_events_email_senders                        RUNNING   pid 26493, uptime 1:23:30
+zulip-workers:zulip_events_embed_links                          RUNNING   pid 26500, uptime 1:23:28
+zulip-workers:zulip_events_embedded_bots                        RUNNING   pid 26507, uptime 1:23:26
+zulip-workers:zulip_events_error_reports                        RUNNING   pid 26517, uptime 1:23:24
+zulip-workers:zulip_events_invites                              RUNNING   pid 26525, uptime 1:23:22
+zulip-workers:zulip_events_missedmessage_emails                 RUNNING   pid 26533, uptime 1:23:21
+zulip-workers:zulip_events_missedmessage_mobile_notifications   RUNNING   pid 26542, uptime 1:23:19
+zulip-workers:zulip_events_outgoing_webhooks                    RUNNING   pid 26552, uptime 1:23:16
+zulip-workers:zulip_events_user_activity                        RUNNING   pid 26558, uptime 1:23:15
+zulip-workers:zulip_events_user_activity_interval               RUNNING   pid 26568, uptime 1:23:13
+zulip-workers:zulip_events_user_presence                        RUNNING   pid 26579, uptime 1:23:11
+</code></pre></div>
+
+
+
+<a name="1557219"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557219" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557219">(Apr 27 2023 at 19:21)</a>:</h4>
+<p>Then I don't understand why nginx would be failing to push requests to it.</p>
+<p>What's the system this is running on?  Is it virtualized, have restrictive socket ulimits, or anything like that?</p>
+
+
+
+<a name="1557222"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557222" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557222">(Apr 27 2023 at 19:22)</a>:</h4>
+<p>It is running on Digital Ocean. It is a preconfigured droplet (which we are looking to move away from). It isn't virtualized or anything as far as I can tell. It just looks like a regular service.</p>
+
+
+
+<a name="1557226"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557226" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557226">(Apr 27 2023 at 19:27)</a>:</h4>
+<p>Hmmm.</p>
+
+
+
+<a name="1557228"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557228" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557228">(Apr 27 2023 at 19:27)</a>:</h4>
+<p>And it's working fine when it's on 3.3?</p>
+
+
+
+<a name="1557234"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557234" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557234">(Apr 27 2023 at 19:29)</a>:</h4>
+<p>Yes. I have taken a disk snapshot of 3.3 and updated it away from production. Only thing I have done other than the upgrade to 4.0 (which to me is the path with the fewest changes) is change the domain name for testing as per the documentstion.</p>
+<p>SSL certs have been updated, <code>settings.py</code> has been changed to reflect the new domain. <code>change_realm_subdomain</code> has been run.</p>
+
+
+
+<a name="1557239"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557239" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557239">(Apr 27 2023 at 19:32)</a>:</h4>
+<p>Except for the django socket error, I'd agree that this is something with static assets not getting loaded right.</p>
+<p>If you open the network inspector in your browser, what does it say is happening?</p>
+
+
+
+<a name="1557242"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557242" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557242">(Apr 27 2023 at 19:34)</a>:</h4>
+<p>Getting a lot of 404s, that is about it.</p>
+
+
+
+<a name="1557245"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557245" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557245">(Apr 27 2023 at 19:35)</a>:</h4>
+<p>OK, that's notable.  Can you show the upgrade log?</p>
+
+
+
+<a name="1557246"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557246" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557246">(Apr 27 2023 at 19:36)</a>:</h4>
+<p><code>/var/log/zulip/upgrade.log</code></p>
+
+
+
+<a name="1557247"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557247" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557247">(Apr 27 2023 at 19:36)</a>:</h4>
+<p>sure thing</p>
+
+
+
+<a name="1557248"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557248" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557248">(Apr 27 2023 at 19:36)</a>:</h4>
+<p>It may be long, because it's inclusive of every upgrade since you installed the host</p>
+
+
+
+<a name="1557250"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557250" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557250">(Apr 27 2023 at 19:36)</a>:</h4>
+<p>We only care about the last upgrade, to 4.0.  Feel free to use s gist or pastebin if it's long.</p>
+
+
+
+<a name="1557252"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557252" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557252">(Apr 27 2023 at 19:37)</a>:</h4>
+<p>Fortunatly, this is the first upgrade</p>
+
+
+
+<a name="1557253"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557253" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557253">(Apr 27 2023 at 19:38)</a>:</h4>
+<p>This may be the only point of interest. Everything else looks nominal:</p>
+<div class="codehilite"><pre><span></span><code>2023-04-26 12:58:55,534 upgrade-zulip-stage-2: Restarting Zulip...
+2023-04-26 12:58:58,956 restart-server: Filling memcached caches
+2023-04-26 12:59:01.981 INFO [] Successfully populated user cache!  Consumed 1 remote cache queries (0.0 time)
+2023-04-26 12:59:01.992 INFO [] Successfully populated client cache!  Consumed 1 remote cache queries (0.01 time)
+2023-04-26 12:59:01.998 INFO [] Successfully populated stream cache!  Consumed 1 remote cache queries (0.0 time)
+2023-04-26 12:59:02.035 INFO [] Successfully populated huddle cache!  Consumed 1 remote cache queries (0.03 time)
+2023-04-26 12:59:02.042 INFO [] Successfully populated session cache!  Consumed 1 remote cache queries (0.0 time)
+2023-04-26 12:59:02,552 restart-server: Restarting zulip-workers:zulip_deliver_scheduled_emails
+2023-04-26 12:59:03,730 restart-server: Restarting zulip-workers:zulip_deliver_scheduled_messages
+2023-04-26 12:59:04,890 restart-server: Restarting zulip-workers:zulip_events_deferred_work
+2023-04-26 12:59:06,393 restart-server: Restarting zulip-workers:zulip_events_digest_emails
+2023-04-26 12:59:07,882 restart-server: Restarting zulip-workers:zulip_events_email_mirror
+2023-04-26 12:59:09,511 restart-server: Restarting zulip-workers:zulip_events_email_senders
+2023-04-26 12:59:11,007 restart-server: Restarting zulip-workers:zulip_events_embed_links
+2023-04-26 12:59:13,141 restart-server: Restarting zulip-workers:zulip_events_embedded_bots
+2023-04-26 12:59:14,651 restart-server: Restarting zulip-workers:zulip_events_error_reports
+2023-04-26 12:59:16,157 restart-server: Restarting zulip-workers:zulip_events_invites
+2023-04-26 12:59:17,710 restart-server: Restarting zulip-workers:zulip_events_missedmessage_emails
+2023-04-26 12:59:19,269 restart-server: Restarting zulip-workers:zulip_events_missedmessage_mobile_notifications
+2023-04-26 12:59:20,862 restart-server: Restarting zulip-workers:zulip_events_outgoing_webhooks
+2023-04-26 12:59:22,360 restart-server: Restarting zulip-workers:zulip_events_user_activity
+2023-04-26 12:59:23,808 restart-server: Restarting zulip-workers:zulip_events_user_activity_interval
+2023-04-26 12:59:25,357 restart-server: Restarting zulip-workers:zulip_events_user_presence
+2023-04-26 12:59:26,869 restart-server: Restarting process-fts-updates
+2023-04-26 12:59:28,429 restart-server: Restarting Tornado process
+2023-04-26 12:59:29,933 restart-server: Restarting django server
+2023-04-26 12:59:33,597 restart-server: Done!
+2023-04-26 12:59:33,612 upgrade-zulip-stage-2: Upgrade complete!
+2023-04-26 12:59:33,612 upgrade-zulip-stage-2: Purging old deployments...
++ rm -rf /home/zulip/deployments/2020-12-02-07-42-25
+Traceback (most recent call last):
+  File &quot;./scripts/purge-old-deployments&quot;, line 93, in &lt;module&gt;
+    main()
+  File &quot;./scripts/purge-old-deployments&quot;, line 79, in main
+    [&quot;git&quot;, &quot;worktree&quot;, &quot;prune&quot;], cwd=&quot;/srv/zulip.git&quot;, preexec_fn=su_to_zulip
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 306, in check_call
+    retcode = call(*popenargs, **kwargs)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 287, in call
+    with Popen(*popenargs, **kwargs) as p:
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 729, in __init__
+    restore_signals, start_new_session)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 1364, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: &#39;/srv/zulip.git&#39;: &#39;/srv/zulip.git&#39;
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2023-04-26-12-51-57/scripts/lib/upgrade-zulip-stage-2&quot;, line 324, in &lt;module&gt;
+    subprocess.check_call([&quot;./scripts/purge-old-deployments&quot;])
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 311, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;./scripts/purge-old-deployments&#39;]&#39; returned non-zero exit status 1.
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip&quot;, line 69, in &lt;module&gt;
+    subprocess.check_call(
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 311, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2023-04-26-12-51-57/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2023-04-26-12-51-57&#39;]&#39; returned non-zero exit status 1.
+</code></pre></div>
+
+
+
+<a name="1557255"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557255" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557255">(Apr 27 2023 at 19:38)</a>:</h4>
+<p>Right at the end after the <code>upgrade complete</code> it looks like it doesn't clean up properly</p>
+
+
+
+<a name="1557263"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557263" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557263">(Apr 27 2023 at 19:45)</a>:</h4>
+<p>For reference, 4.11 is probably the right thing to be upgrading to, not 4.0 -- it's got the same OS support, and will solve a bunch of minor tooling bugs, probably including things like that.</p>
+<p>If you pull one of the <code>static/</code> requests your browser is making, do you see the equivalent file in <code>~zulip/prod-static/</code>?  Can you list the request paths, so we can see if they match up with the ones we expect to be in the 4.0 tarball?</p>
+
+
+
+<a name="1557268"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557268" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557268">(Apr 27 2023 at 19:46)</a>:</h4>
+<p>I believe I went through the same logic of trying 4.11 first. Since I don't know enough about the internals at this point I figured 4.0 has a smaller scope of changes to cause problems. In future  attempts I will use 4.11 though.</p>
+
+
+
+<a name="1557276"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557276" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557276">(Apr 27 2023 at 19:48)</a>:</h4>
+<p>Not quite sure what you mean by <code>static/</code> requests I am seeing no such (what I assume is a) path:<br>
+<a href="/user_uploads/2/4d/pasqeeHyFII7S0BAjs-mLB0i/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/4d/pasqeeHyFII7S0BAjs-mLB0i/image.png" title="image.png"><img src="/user_uploads/2/4d/pasqeeHyFII7S0BAjs-mLB0i/image.png"></a></div>
+
+
+
+<a name="1557278"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557278" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557278">(Apr 27 2023 at 19:49)</a>:</h4>
+<p>If you mouseover those (like your first image) you'll see those are requests to <code>/static/webpack-bundles/57b8f91b429ec60d1622.css</code></p>
+
+
+
+<a name="1557279"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557279" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557279">(Apr 27 2023 at 19:50)</a>:</h4>
+<p>Which is the right URL for it to be looking for on 4.0, so the bug is that it's not finding them.</p>
+
+
+
+<a name="1557280"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557280" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557280">(Apr 27 2023 at 19:50)</a>:</h4>
+<p>What does <code>ls -l ~zulip/prod-static/webpack-bundles/57b8f91b429ec60d1622.css</code> show?</p>
+
+
+
+<a name="1557281"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557281" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557281">(Apr 27 2023 at 19:51)</a>:</h4>
+<p>Ah I see.</p>
+
+
+
+<a name="1557282"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557282" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557282">(Apr 27 2023 at 19:51)</a>:</h4>
+<p>She exists.</p>
+
+
+
+<a name="1557283"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557283" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557283">(Apr 27 2023 at 19:51)</a>:</h4>
+<p>OK, so something in nginx-land (or a proxy ahead of it) is causing those to 404.</p>
+
+
+
+<a name="1557284"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557284" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557284">(Apr 27 2023 at 19:52)</a>:</h4>
+<p>If you click on the 404 rows, and show the webserver's response, can you show a screenshot of that?  It should include full headers, which may help here.</p>
+
+
+
+<a name="1557285"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557285" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557285">(Apr 27 2023 at 19:52)</a>:</h4>
+<p>I think I may see the issue. <br>
+On mouseover I am seeing <code>domain-name.network</code> instead of <code>subdomain.domain-name.network</code></p>
+
+
+
+<a name="1557286"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557286" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557286">(Apr 27 2023 at 19:52)</a>:</h4>
+<p>Aha</p>
+
+
+
+<a name="1557289"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557289" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557289">(Apr 27 2023 at 19:52)</a>:</h4>
+<p>Time to check your <code>settings.py</code> configuration.  Do you have more than one organization ("realm") configured on this server?</p>
+
+
+
+<a name="1557292"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557292" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557292">(Apr 27 2023 at 19:54)</a>:</h4>
+<p><a href="/user_uploads/2/81/Yl3XZHO-rFNZA9hXUXu1hApz/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/81/Yl3XZHO-rFNZA9hXUXu1hApz/image.png" title="image.png"><img src="/user_uploads/2/81/Yl3XZHO-rFNZA9hXUXu1hApz/image.png"></a></div>
+
+
+
+<a name="1557293"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557293" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557293">(Apr 27 2023 at 19:54)</a>:</h4>
+<p>the grey boxes hide the differences I described</p>
+
+
+
+<a name="1557294"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557294" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557294">(Apr 27 2023 at 19:54)</a>:</h4>
+<p>I shouldn't but I will double check.</p>
+
+
+
+<a name="1557295"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557295" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557295">(Apr 27 2023 at 19:55)</a>:</h4>
+<p>As <code>zulip</code>:</p>
+<div class="codehilite"><pre><span></span><code>cd ~/deployments/current
+./manage.py list_realms
+</code></pre></div>
+
+
+
+<a name="1557297"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557297" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557297">(Apr 27 2023 at 19:55)</a>:</h4>
+<p>so the configuration is:</p>
+<div class="codehilite"><pre><span></span><code>EXTERNAL_HOST = &#39;domain.network&#39;
+ALLOWED_HOSTS = [&#39;subdomain.domain.network&#39;]
+</code></pre></div>
+
+
+
+<a name="1557298"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557298" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557298">(Apr 27 2023 at 19:56)</a>:</h4>
+<p>And what hostname points to the Zulip server in DNS?</p>
+
+
+
+<a name="1557299"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557299" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557299">(Apr 27 2023 at 19:56)</a>:</h4>
+<p>I suspect <code>EXTERNAL_HOST</code> just needs to be adjusted</p>
+
+
+
+<a name="1557300"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557300" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557300">(Apr 27 2023 at 19:56)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>id    string_id            name                           domain
+--    ---------            ----                           ------
+2     internal-alt         internal                       https://subdomain.domain.network
+1     zulipinternal        None                           https://zulipinternal.domain.network
+</code></pre></div>
+
+
+
+<a name="1557302"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557302" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557302">(Apr 27 2023 at 19:57)</a>:</h4>
+<p>DNS is configured to point to <code>subdomain.domain.network</code></p>
+
+
+
+<a name="1557303"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557303" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557303">(Apr 27 2023 at 19:57)</a>:</h4>
+<p>OK, try adjusting <code>EXTERNAL_HOST</code> to <code>subdomain.domain.network</code>?</p>
+
+
+
+<a name="1557304"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557304" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557304">(Apr 27 2023 at 19:58)</a>:</h4>
+<p>can do</p>
+
+
+
+<a name="1557305"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557305" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557305">(Apr 27 2023 at 19:58)</a>:</h4>
+<p>Though most of the time thr <code>string_id</code> on the realm is <code>""</code>, for just one realm</p>
+
+
+
+<a name="1557308"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557308" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557308">(Apr 27 2023 at 19:59)</a>:</h4>
+<p>Yeah. I am not entirely sure how this was configured (was before my time) but I think since it was on a preconfigured image things might be a touch different.</p>
+
+
+
+<a name="1557309"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557309" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557309">(Apr 27 2023 at 19:59)</a>:</h4>
+<p>Just restarting.</p>
+
+
+
+<a name="1557310"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557310" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557310">(Apr 27 2023 at 20:01)</a>:</h4>
+<p>Well. I thought I had tried every permutation of messing with the DNS names but apparently I missed this. <br>
+I am getting a proper login screen. Logging in gives me a 500, but hey that's progress.</p>
+
+
+
+<a name="1557311"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557311" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557311">(Apr 27 2023 at 20:01)</a>:</h4>
+<p>That'll give us something in the error logs, at least. <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<a name="1557313"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557313" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557313">(Apr 27 2023 at 20:02)</a>:</h4>
+<p>Yep a big fat</p>
+<div class="codehilite"><pre><span></span><code>zerver.models.Realm.DoesNotExist: Realm matching query does not exist.
+</code></pre></div>
+
+
+
+<a name="1557314"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557314" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557314">(Apr 27 2023 at 20:02)</a>:</h4>
+<p>on login</p>
+
+
+
+<a name="1557316"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557316" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557316">(Apr 27 2023 at 20:03)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>./manage.py change_realm_subdomain -r &#39;internal-alt&#39; &#39;&#39;
+</code></pre></div>
+
+
+
+<a name="1557323"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557323" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557323">(Apr 27 2023 at 20:06)</a>:</h4>
+<p>Should it need a restart after that?</p>
+
+
+
+<a name="1557325"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557325" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557325">(Apr 27 2023 at 20:06)</a>:</h4>
+<p>Shouldn't need one.</p>
+
+
+
+<a name="1557327"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557327" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557327">(Apr 27 2023 at 20:07)</a>:</h4>
+<p>Correct. it did not need one. I can now see my messages.</p>
+
+
+
+<a name="1557328"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557328" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557328">(Apr 27 2023 at 20:07)</a>:</h4>
+<p>I think this is the end of my problems.</p>
+
+
+
+<a name="1557329"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557329" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557329">(Apr 27 2023 at 20:07)</a>:</h4>
+<p><span aria-label="fingers crossed" class="emoji emoji-1f91e" role="img" title="fingers crossed">:fingers_crossed:</span></p>
+
+
+
+<a name="1557330"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557330" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557330">(Apr 27 2023 at 20:10)</a>:</h4>
+<p><span class="user-mention" data-user-id="12178">@Alex Vandiver</span> <br>
+Thank ya. You've made my week.</p>
+
+
+
+<a name="1557332"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557332" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557332">(Apr 27 2023 at 20:12)</a>:</h4>
+<p>I think your upgrade path should be:</p>
+<ol>
+<li>Upgrade to Zulip Server 4.11</li>
+<li><a href="https://zulip.readthedocs.io/en/latest/production/upgrade.html#upgrading-from-ubuntu-18-04-bionic-to-20-04-focal">Upgrade to Ubuntu 20.04</a></li>
+<li>Upgrade to Zulip Server 6.1</li>
+<li>Optionally <a href="https://zulip.readthedocs.io/en/latest/production/upgrade.html#upgrading-from-ubuntu-20-04-focal-to-22-04-jammy">upgrade to Ubuntu 22.04</a></li>
+</ol>
+
+
+
+<a name="1557334"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557334" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557334">(Apr 27 2023 at 20:13)</a>:</h4>
+<p>Note the last step in the 20.04 upgrade steps -- the glibc version upgrade causes silent database index corruption unless you complete that.</p>
+
+
+
+<a name="1557350"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557350" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557350">(Apr 27 2023 at 20:31)</a>:</h4>
+<p>That is great. I was avoiding later versions because I assumed that there might be more migration steps, but I am willing to try it out now that I think we have honed in on the issue.</p>
+<p>Thanks again!</p>
+
+
+
+<a name="1557352"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557352" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557352">(Apr 27 2023 at 20:37)</a>:</h4>
+<p>We try very hard to keep upgrades painless - so do report back if you have any issues with that upgrade path.</p>
+
+
+
+<a name="1557401"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557401" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557401">(Apr 27 2023 at 21:19)</a>:</h4>
+<p>Roger that. Will keep you posted.</p>
+
+
+
+<a name="1557739"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557739" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557739">(Apr 28 2023 at 12:57)</a>:</h4>
+<p>As per your request <span class="user-mention" data-user-id="12178">@Alex Vandiver</span> , in trying to upgrade to 4.11 instead of 4.0 and it is throwing errors on the upgrade step:</p>
+<div class="codehilite"><pre><span></span><code>devops@zulip:~$ sudo /home/zulip/deployments/current/scripts/upgrade-zulip ./zulip-server-4.11.tar.gz
+2023-04-28 12:56:26,557 upgrade-zulip: Archiving the tarball under /home/zulip/archives
+2023-04-28 12:56:26,741 upgrade-zulip: Unpacking the tarball
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2023-04-28-12-56-26/scripts/lib/upgrade-zulip-stage-2&quot;, line 106, in &lt;module&gt;
+    rabbitmq_dist_listen = listening_publicly(25672)
+  File &quot;/home/zulip/deployments/2023-04-28-12-56-26/scripts/lib/../../scripts/lib/zulip_tools.py&quot;, line 638, in listening_publicly
+    stderr=subprocess.DEVNULL,
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 356, in check_output
+    **kwargs).stdout
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 438, in run
+    output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command &#39;[&#39;/bin/ss&#39;, &#39;-Hnl&#39;, &#39;sport = :25672 and not src 127.0.0.1:25672 and not src [::1]:25672&#39;]&#39; died with &lt;Signals.SIGSEGV: 11&gt;.
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip&quot;, line 69, in &lt;module&gt;
+    + deploy_options)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 311, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2023-04-28-12-56-26/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2023-04-28-12-56-26&#39;]&#39; returned non-zero exit status 1.
+</code></pre></div>
+
+
+
+<a name="1557746"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557746" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557746">(Apr 28 2023 at 13:15)</a>:</h4>
+<p>Walking down the versions, I get the same error until version 4.8, where the upgrade is currently running</p>
+
+
+
+<a name="1557749"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557749" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557749">(Apr 28 2023 at 13:22)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>Command &#39;[&#39;/bin/ss&#39;, &#39;-Hnl&#39;, &#39;sport = :25672 and not src 127.0.0.1:25672 and not src [::1]:25672&#39;]&#39; died with &lt;Signals.SIGSEGV: 11&gt;.
+</code></pre></div>
+<p>...getting a SEGV doesn't seem promising for the system.</p>
+
+
+
+<a name="1557750"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557750" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557750">(Apr 28 2023 at 13:22)</a>:</h4>
+<p>Can you try running it by hand?</p>
+<div class="codehilite"><pre><span></span><code>/bin/ss -Hnl &#39;sport = :25672 and not src 127.0.0.1:25672 and not src [::1]:25672&#39;
+</code></pre></div>
+
+
+
+<a name="1557751"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557751" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557751">(Apr 28 2023 at 13:23)</a>:</h4>
+<p>Also, that code is closing an arbitrary remote execution of code from RabbitMQ:<br>
+<a href="https://blog.zulip.com/2022/01/25/zulip-server-4-9-security-release/#cve-2021-43799-remote-code-execution-vulnerability-involving-rabbitmq">https://blog.zulip.com/2022/01/25/zulip-server-4-9-security-release/#cve-2021-43799-remote-code-execution-vulnerability-involving-rabbitmq</a></p>
+<p>So kinda important. <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<a name="1557754"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557754" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557754">(Apr 28 2023 at 13:29)</a>:</h4>
+<p>My only guess is a bad interaction with the IPv6 address in there, but that still shouldn't segv.</p>
+
+
+
+<a name="1557758"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557758" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557758">(Apr 28 2023 at 13:35)</a>:</h4>
+<p>I may have moved a bit beyond that point right now. But for reference, doing 3.3 -&gt; 4.8 -&gt; 4.11 gets around the problem</p>
+
+
+
+<a name="1557759"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557759" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557759">(Apr 28 2023 at 13:36)</a>:</h4>
+<p>Huh.  I have no theories why that'd be, as the crash you showed was in the 4.11 upgrade code, in a part which I don't expect to be at all dependent on the version you're coming from.</p>
+
+
+
+<a name="1557760"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557760" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557760">(Apr 28 2023 at 13:36)</a>:</h4>
+<p>Interesting. If I end up working back at 3.3 in the future I will run the command you posted above and send you the output.</p>
+
+
+
+<a name="1557761"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/3.3%20Upgrade%20Problems/near/1557761" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mitchell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/3.2E3.20Upgrade.20Problems.html#1557761">(Apr 28 2023 at 13:37)</a>:</h4>
+<p>It might happen later today if I want another practice run</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

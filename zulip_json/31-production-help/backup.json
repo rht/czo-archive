@@ -1,0 +1,110 @@
+[
+    {
+        "content": "<p>looking at the backup documentation</p>",
+        "id": 678506,
+        "sender_full_name": "kyrogue",
+        "timestamp": 1546577790
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>Install new server as normal by downloading a Zulip release tarball and then using scripts/setup/install, you don’t need to run the initialize-database second stage which puts default data into the database.\n</pre></div>\n\n\n<p>i dont see a flag to specify intialize-database when runing the install script</p>",
+        "id": 678507,
+        "sender_full_name": "kyrogue",
+        "timestamp": 1546577815
+    },
+    {
+        "content": "<p>from the page <a href=\"https://zulip.readthedocs.io/en/latest/production/install.html#step-2-install-zulip\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/install.html#step-2-install-zulip\">https://zulip.readthedocs.io/en/latest/production/install.html#step-2-install-zulip</a></p>",
+        "id": 678508,
+        "sender_full_name": "kyrogue",
+        "timestamp": 1546577890
+    },
+    {
+        "content": "<p>Hmm, yeah I think we may have merged that step into the installer</p>",
+        "id": 678643,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1546618333
+    },
+    {
+        "content": "<p>On my phone but I can look in a bit.  Plan was to script this more fully anyway.</p>",
+        "id": 678645,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1546618357
+    },
+    {
+        "content": "<p>yea so i've tried restoring, running scripts/setup/postgres-init-db</p>",
+        "id": 679283,
+        "sender_full_name": "kyrogue",
+        "timestamp": 1546833981
+    },
+    {
+        "content": "<p>drops zulip database, but now there is no instructions on what is needed to recreate the zulip database schema</p>",
+        "id": 679284,
+        "sender_full_name": "kyrogue",
+        "timestamp": 1546834011
+    },
+    {
+        "content": "<p>so that psql &lt; backup.sql can import back the data</p>",
+        "id": 679285,
+        "sender_full_name": "kyrogue",
+        "timestamp": 1546834021
+    },
+    {
+        "content": "<p>I believe if you created a database dump with <code>pg_dump</code>, the database dump will have the schema creation logic.</p>",
+        "id": 679298,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1546836384
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9364\">@kyrogue</span> check out <a href=\"https://github.com/zulip/zulip/pull/11204\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/11204\">https://github.com/zulip/zulip/pull/11204</a> -- I decided rather than helping you through this manually to work on scripting the backup process for everyone in our next release.</p>",
+        "id": 679302,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1546841709
+    },
+    {
+        "content": "<p>this is what i have done</p>\n<div class=\"codehilite\"><pre><span></span><span class=\"nv\">backup_dir</span><span class=\"o\">=</span><span class=\"s2\">&quot;</span><span class=\"nv\">$1</span><span class=\"s2\">/</span><span class=\"nv\">$2</span><span class=\"s2\">&quot;</span>\n<span class=\"nv\">ZULIP_CONFIG_DIR</span><span class=\"o\">=</span>/etc/zulip/\n<span class=\"nv\">ZULIP_DATABASE</span><span class=\"o\">=</span>zulip\n<span class=\"nv\">ZULIP_LOCAL_UPLOADS_DIR</span><span class=\"o\">=</span>/home/zulip/uploads/\n<span class=\"k\">if</span> <span class=\"o\">[</span> <span class=\"nv\">$#</span> -lt <span class=\"m\">3</span> <span class=\"o\">]</span>\n<span class=\"k\">then</span>\n  usage\n  <span class=\"nb\">exit</span> <span class=\"m\">1</span>\n<span class=\"k\">fi</span>\n\n<span class=\"k\">if</span> <span class=\"o\">[[</span> ! -d <span class=\"nv\">$1</span>/<span class=\"nv\">$2</span> <span class=\"o\">]]</span>\n<span class=\"k\">then</span>\n  mkdir -p <span class=\"nv\">$1</span>/<span class=\"nv\">$2</span>\n<span class=\"k\">fi</span>\n\n<span class=\"k\">function</span> backup_psql <span class=\"o\">{</span>\n  <span class=\"nb\">echo</span> <span class=\"s2\">&quot;performing pg_dump of </span><span class=\"nv\">$ZULIP_DATABASE</span><span class=\"s2\">&quot;</span>\n  <span class=\"k\">if</span> ! pg_dump <span class=\"nv\">$ZULIP_DATABASE</span> &gt; <span class=\"nv\">$backup_dir</span>/<span class=\"k\">$(</span>date +%Y-%m-%d<span class=\"k\">)</span>-daily.sql<span class=\"p\">;</span> <span class=\"k\">then</span>\n    <span class=\"nb\">echo</span> <span class=\"s2\">&quot;Error: Failed to perform pg_dump of </span><span class=\"nv\">$ZULIP_DATABASE</span><span class=\"s2\">&quot;</span> <span class=\"m\">1</span>&gt;<span class=\"p\">&amp;</span><span class=\"m\">2</span>\n    <span class=\"nb\">exit</span> <span class=\"m\">1</span>\n  <span class=\"k\">fi</span>\n<span class=\"o\">}</span>\n\n<span class=\"k\">function</span> backup_user_uploaded_files <span class=\"o\">{</span>\n  <span class=\"k\">if</span> <span class=\"o\">[</span> -d <span class=\"nv\">$ZULIP_LOCAL_UPLOADS_DIR</span> <span class=\"o\">]</span><span class=\"p\">;</span> <span class=\"k\">then</span>\n    <span class=\"nb\">echo</span> <span class=\"s2\">&quot;performing backup of </span><span class=\"nv\">$ZULIP_LOCAL_UPLOADS_DIR</span><span class=\"s2\">&quot;</span>\n    <span class=\"nb\">pushd</span> <span class=\"nv\">$ZULIP_LOCAL_UPLOADS_DIR</span>\n    <span class=\"k\">if</span> ! tar -zcvf <span class=\"nv\">$backup_dir</span>/<span class=\"k\">$(</span>date +%Y-%m-%d<span class=\"k\">)</span>-uploads-daily.tar.gz *<span class=\"p\">;</span> <span class=\"k\">then</span>\n      <span class=\"nb\">echo</span> <span class=\"s2\">&quot;Error: Failed to backup </span><span class=\"nv\">$ZULIP_LOCAL_UPLOADS_DIR</span><span class=\"s2\">&quot;</span> <span class=\"m\">1</span>&gt;<span class=\"p\">&amp;</span><span class=\"m\">2</span>\n      <span class=\"nb\">popd</span>\n      <span class=\"nb\">exit</span> <span class=\"m\">1</span>\n    <span class=\"k\">fi</span>\n    <span class=\"nb\">popd</span>\n  <span class=\"k\">fi</span>\n<span class=\"o\">}</span>\n\n<span class=\"k\">function</span> backup_zulip_config_and_secrets <span class=\"o\">{</span>\n  <span class=\"k\">if</span> <span class=\"o\">[</span> -d <span class=\"nv\">$ZULIP_CONFIG_DIR</span> <span class=\"o\">]</span><span class=\"p\">;</span> <span class=\"k\">then</span>\n    <span class=\"nb\">echo</span> <span class=\"s2\">&quot;performing backup of </span><span class=\"nv\">$ZULIP_CONFIG_DIR</span><span class=\"s2\">&quot;</span>\n    <span class=\"nb\">pushd</span> <span class=\"nv\">$ZULIP_CONFIG_DIR</span>\n    <span class=\"k\">if</span> ! tar -zcvf <span class=\"nv\">$backup_dir</span>/<span class=\"k\">$(</span>date +%Y-%m-%d<span class=\"k\">)</span>-configs-daily.tar.gz *<span class=\"p\">;</span> <span class=\"k\">then</span>\n      <span class=\"nb\">echo</span> <span class=\"s2\">&quot;Error: Failed to backup </span><span class=\"nv\">$ZULIP_CONFIG_DIR</span><span class=\"s2\">&quot;</span> <span class=\"m\">1</span>&gt;<span class=\"p\">&amp;</span><span class=\"m\">2</span>\n      <span class=\"nb\">popd</span>\n      <span class=\"nb\">exit</span> <span class=\"m\">1</span>\n    <span class=\"k\">fi</span>\n    <span class=\"nb\">popd</span>\n  <span class=\"k\">fi</span>\n<span class=\"o\">}</span>\n\n<span class=\"c1\">#Delete backups older than defined</span>\nfind <span class=\"nv\">$backup_dir</span> -maxdepth <span class=\"m\">1</span> -mtime +<span class=\"nv\">$3</span> -name <span class=\"s2\">&quot;*-daily.*&quot;</span> -exec rm <span class=\"s1\">&#39;{}&#39;</span> <span class=\"s1\">&#39;;&#39;</span>\n\nbackup_psql\nbackup_user_uploaded_files\nbackup_zulip_config_and_secrets\n</pre></div>",
+        "id": 679798,
+        "sender_full_name": "kyrogue",
+        "timestamp": 1546922321
+    },
+    {
+        "content": "<p>very simple, just backup the three mentioned directories, as a crontab entry daily</p>",
+        "id": 679799,
+        "sender_full_name": "kyrogue",
+        "timestamp": 1546922374
+    },
+    {
+        "content": "<p>Yeah, that should work fine.  The main difference with the implementation I wrote is that your SQL archives aren't compressed</p>",
+        "id": 680106,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1546983476
+    },
+    {
+        "content": "<p>ah right</p>",
+        "id": 680213,
+        "sender_full_name": "kyrogue",
+        "timestamp": 1546996549
+    },
+    {
+        "content": "<p>hii, when i taking backup of zulip server than error is coming :su zulip -c '/home/zulip/deployments/current/manage.py backup'</p>",
+        "id": 1394311,
+        "sender_full_name": "Azure IT Support",
+        "timestamp": 1655795290
+    },
+    {
+        "content": "<p>error is coming : su: Authentication failure</p>",
+        "id": 1394312,
+        "sender_full_name": "Azure IT Support",
+        "timestamp": 1655795306
+    },
+    {
+        "content": "<p>That means the user you're running that as doesn't have permissions to become the <code>zulip</code> user.  You need to run that command as root.</p>",
+        "id": 1394413,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655833502
+    },
+    {
+        "content": "<p>Please also use <a href=\"https://zulip.com/help/code-blocks\">code blocks</a> to show commands and errors, like:</p>\n<div class=\"codehilite\"><pre><span></span><code>I&#39;m getting this error when trying to take a backup:\n```\nsu zulip -c &#39;/home/zulip/deployments/current/manage.py backup&#39;\nsu: Authentication failure\n```\n</code></pre></div>",
+        "id": 1394415,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655833576
+    }
+]

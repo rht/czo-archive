@@ -1,0 +1,218 @@
+[
+    {
+        "content": "<p>Hi,<br>\nI just upgraded Zulip Server 6.1. to 6.2 without a hitch, but going from 6.2 to 7.0 migrations fail catastrophically with a stack trace and <code>AttributeError: 'Realm' object has no attribute 'host'</code>. I have reverted to a snapshot I took of 6.2.<br>\nHere's the complete upgrade.log: <a href=\"/user_uploads/2/3b/-nsmv9yulkiwGnOhXtPIC3bk/zulip-upgrade.log\">zulip-upgrade.log</a></p>",
+        "id": 1583960,
+        "sender_full_name": "Philipp Huebner",
+        "timestamp": 1685684657
+    },
+    {
+        "content": "<p>Hi, I have exactly the same problem when updating from 6.2 to 7.0. (My installation runs on Debian 11)</p>",
+        "id": 1584049,
+        "sender_full_name": "Alex Meyer",
+        "timestamp": 1685692361
+    },
+    {
+        "content": "<p>Ah, I think I see what the problem is, thanks for reporting!</p>\n<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> I think this chunk in <code>zerver/migrations/0439_fix_deleteduser_email.py</code> was intended to be doing just <code>return host</code> and should be the only fix we need, am I correct?</p>\n<div class=\"codehilite\"><pre><span></span><code>def get_fake_email_domain(apps: StateApps, realm_id: int) -&gt; str:\n    Realm = apps.get_model(&quot;zerver&quot;, &quot;Realm&quot;)\n    realm = Realm.objects.get(id=realm_id)\n\n    # Build out realm.host\n    subdomain = realm.string_id\n    if subdomain == &quot;&quot;:\n        host = settings.EXTERNAL_HOST\n    else:\n        default_host = f&quot;{subdomain}.{settings.EXTERNAL_HOST}&quot;\n        host = settings.REALM_HOSTS.get(subdomain, default_host)\n\n    # Implement get_fake_email_domain\n    try:\n        validate_email(Address(username=&quot;bot&quot;, domain=host).addr_spec)\n        return realm.host\n</code></pre></div>",
+        "id": 1584108,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685695683
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> yes, that sounds correct to me.</p>",
+        "id": 1584298,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685714513
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  Should I be able to update to 7.0?<br>\n6.2 to 7.0 upgrade is failing for me also:</p>\n<div class=\"codehilite\"><pre><span></span><code>ulip stopped successfully!\n2023-06-02 23:51:20,801 upgrade-zulip-stage-2: Applying database migrations...\nOperations to perform:\n  Apply all migrations: analytics, auth, confirmation, contenttypes, otp_static, otp_totp, phonenumber, sessions, social_django, two_factor, zerver\nRunning migrations:\n  Applying zerver.0423_fix_email_gateway_attachment_owner...Traceback (most recent call last):\n  File &quot;./manage.py&quot;, line 150, in &lt;module&gt;\n    execute_from_command_line(sys.argv)\n  File &quot;./manage.py&quot;, line 115, in execute_from_command_line\n    utility.execute()\n  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/__init__.py&quot;, line 436, in execute\n    self.fetch_command(subcommand).run_from_argv(self.argv)\n  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 412, in run_from_argv\n    self.execute(*args, **cmd_options)\n  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 458, in execute\n    output = self.handle(*args, **options)\n  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 106, in wrapper\n    res = handle_func(*args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/commands/migrate.py&quot;, line 356, in handle\n    post_migrate_state = executor.migrate(\n  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/migrations/executor.py&quot;, line 135, in migrate\n    state = self._migrate_all_forwards(\n  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/migrations/executor.py&quot;, line 167, in _migrate_all_forwards\n    state = self.apply_migration(\n  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/migrations/executor.py&quot;, line 252, in apply_migration\n    state = migration.apply(state, schema_editor)\n  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/migrations/migration.py&quot;, line 132, in apply\n    operation.database_forwards(\n  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/migrations/operations/special.py&quot;, line 193, in database_forwards\n    self.code(from_state.apps, schema_editor)\n  File &quot;/home/zulip/deployments/2023-06-02-20-15-43/zerver/migrations/0423_fix_email_gateway_attachment_owner.py&quot;, line 25, in fix_email_gateway_attachment_owner\n    mail_gateway_bot = UserProfile.objects.get(email__iexact=settings.EMAIL_GATEWAY_BOT)\n  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/manager.py&quot;, line 87, in manager_method\n    return getattr(self.get_queryset(), name)(*args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 637, in get\n    raise self.model.DoesNotExist(\n__fake__.DoesNotExist: UserProfile matching query does not exist.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2023-06-02-20-15-43/scripts/lib/upgrade-zulip-stage-2&quot;, line 531, in &lt;module&gt;\n    subprocess.check_call(\n  File &quot;/usr/lib/python3.8/subprocess.py&quot;, line 364, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./manage.py&#39;, &#39;migrate&#39;, &#39;--noinput&#39;, &#39;--skip-checks&#39;]&#39; returned non-zero exit status 1.\n\nZulip upgrade failed (exit code 1)!\n\nThe upgrade process is designed to be idempotent, so you can retry after resolving whatever issue caused the failure (there should be a traceback above). A log of this installation is available in /var/log/zulip/upgrade.log\n</code></pre></div>\n<hr>\n<p><a href=\"/user_uploads/2/46/beEoKpQBLiBOazADSzPeCALj/upgrade.log\">upgrade.log</a></p>",
+        "id": 1584602,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1685753436
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> I get the identical error to <span class=\"user-mention\" data-user-id=\"70\">@GervaisdeM</span> after making the edit highlighted by <span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span>  :(</p>",
+        "id": 1584961,
+        "sender_full_name": "Lee Harris",
+        "timestamp": 1685888383
+    },
+    {
+        "content": "<p>Should I wait before upgrading? I have 6.2 too</p>",
+        "id": 1585140,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1685953236
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10544\">@Andrea Soc</span> My fix for the <code>0439</code> migration issue above hasn't been merged yet (<a href=\"https://github.com/zulip/zulip/pull/25876\">https://github.com/zulip/zulip/pull/25876</a>) so I'd hold off unless you want to tweak things manually.</p>\n<p>For the new issue popping in this thread, you can just check in <code>manage.py shell</code> to see if running <code>UserProfile.objects.get(email__iexact=settings.EMAIL_GATEWAY_BOT)</code> works fine. If it does, you should be good. It's actually quite unclear to me how servers might not have this bot, since it's a system bot and we generally assume in various places in the code that these just exist. So at least this should be a pretty rare problem.</p>",
+        "id": 1585149,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685957293
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"70\">@GervaisdeM</span> <span class=\"user-mention\" data-user-id=\"18378\">@Lee Harris</span> Can either (or both) of you show the output of <code>manage.py list_realms</code>? There's clearly something irregular about these deployments, since the migration is crashing upon not finding a system bot that should always exist.</p>",
+        "id": 1585150,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685957401
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <a href=\"#narrow/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails/near/1585149\">said</a>:</p>\n<blockquote>\n<p>For the new issue popping in this thread, you can just check in <code>manage.py shell</code> to see if running <code>UserProfile.objects.get(email__iexact=settings.EMAIL_GATEWAY_BOT)</code> works fine.</p>\n</blockquote>\n<p>I don't know technically what to do.. I'm not familiar with this script</p>",
+        "id": 1585151,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1685957550
+    },
+    {
+        "content": "<p>I feel like trying on the replica VM</p>",
+        "id": 1585152,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1685957584
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> - I edited the 0439 file within the tarball and was then able to update. Prior to that however, the rollback procedure didn't work :(  That made it hard to hold off updating....</p>\n<p>Here's the output of manage.py list_realms:</p>\n<p>id    string_id            name                           domain                                            <br>\n--    ---------            ----                           ------                                            <br>\n2     ''                   Trading Research Group         <a href=\"https://pit.tradingresearchgroup.com\">https://pit.tradingresearchgroup.com</a>              <br>\n1     zulipinternal        System bot realm               <a href=\"https://zulipinternal.pit.tradingresearchgroup.com\">https://zulipinternal.pit.tradingresearchgroup.com</a></p>\n<p>We haven't done anything 'clever' in terms of our install/setup. Just followed things step by step. We've been running a self-hosted environment for around 2 years. I can't recall what release we started with though.</p>",
+        "id": 1585153,
+        "sender_full_name": "Lee Harris",
+        "timestamp": 1685957850
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"18378\">@Lee Harris</span> Then I assume your issue must have been the original issue with migration <code>0439</code> rather than <span class=\"user-mention silent\" data-user-id=\"70\">GervaisdeM</span>'s issue which is with migration <code>0423</code>. So all should be good</p>",
+        "id": 1585154,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685958917
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> I think my install may predate the existence of realms. I haven't ever tried to change or set one as I have only one organization using Zulip. Here is the output of list_realms:</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip@zulip:~/deployments/current$ ./manage.py list_realms\nid    string_id            name                           domain\n--    ---------            ----                           ------\n1     zulipinternal        System use only                https://zulipinternal.zulip.demontbrun.com\n2     &#39;&#39;                   demontbrun.com                 https://zulip.demontbrun.com\n</code></pre></div>",
+        "id": 1585210,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1685966272
+    },
+    {
+        "content": "<p>Same here.</p>",
+        "id": 1585218,
+        "sender_full_name": "Philipp Huebner",
+        "timestamp": 1685968111
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"70\">@GervaisdeM</span> Hmm, so the system realm exists, let's see what bots exist or are missing. Can you show the output of</p>\n<div class=\"codehilite\"><pre><span></span><code>UserProfile.objects.filter(realm_id=1)\n</code></pre></div>\n<p>run in <code>manage.py shell</code>?</p>",
+        "id": 1585222,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685969007
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> </p>\n<div class=\"codehilite\"><pre><span></span><code>In [1]: UserProfile.objects.filter(realm_id=1)\nOut[1]: &lt;QuerySet [&lt;UserProfile: &lt;UserProfile: nagios-send-bot@zulip.com &lt;Realm: zulipinternal 1&gt;&gt;&gt;, &lt;UserProfile: &lt;UserProfile: welcome-bot@zulip.com &lt;Realm: zulipinternal 1&gt;&gt;&gt;, &lt;UserProfile: &lt;UserProfile: notification-bot@zulip.com &lt;Realm: zulipinternal 1&gt;&gt;&gt;, &lt;UserProfile: &lt;UserProfile: emailgateway@zulip.com &lt;Realm: zulipinternal 1&gt;&gt;&gt;, &lt;UserProfile: &lt;UserProfile: nagios-receive-bot@zulip.com &lt;Realm: zulipinternal 1&gt;&gt;&gt;, &lt;UserProfile: &lt;UserProfile: reminder-bot@zulip.com &lt;Realm: zulipinternal 1&gt;&gt;&gt;]&gt;\n</code></pre></div>",
+        "id": 1585231,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1685970769
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"70\">@GervaisdeM</span>  Hmm, so that looks good too. perhaps the setting value is wrong? Can you check the output</p>\n<div class=\"codehilite\"><pre><span></span><code>settings.EMAIL_GATEWAY_BOT\n</code></pre></div>\n<p>in <code>manage.py shell</code> again? </p>\n<p>And you can try to also run the <code>UserProfile.objects.get(email__iexact=settings.EMAIL_GATEWAY_BOT)</code> line in the shell -  that's the one failing in the migration</p>",
+        "id": 1585232,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685971919
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> </p>\n<div class=\"codehilite\"><pre><span></span><code>Successfully imported Zulip settings, models, and actions functions.\n\nIn [1]: settings.EMAIL_GATEWAY_BOT\nOut[1]: &#39;&#39;\n\nIn [2]: UserProfile.objects.get(email__iexact=settings.EMAIL_GATEWAY_BOT)\n---------------------------------------------------------------------------\nDoesNotExist                              Traceback (most recent call last)\nCell In[2], line 1\n----&gt; 1 UserProfile.objects.get(email__iexact=settings.EMAIL_GATEWAY_BOT)\n\nFile /srv/zulip-venv-cache/7c7e8b6d088683db3cf8cd889cf024a79ffba11a/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/manager.py:85, in BaseManager._get_queryset_methods.&lt;locals&gt;.create_method.&lt;locals&gt;.manager_method(self, *args, **kwargs)\n     84 def manager_method(self, *args, **kwargs):\n---&gt; 85     return getattr(self.get_queryset(), name)(*args, **kwargs)\n\nFile /srv/zulip-venv-cache/7c7e8b6d088683db3cf8cd889cf024a79ffba11a/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py:650, in QuerySet.get(self, *args, **kwargs)\n    648     return clone._result_cache[0]\n    649 if not num:\n--&gt; 650     raise self.model.DoesNotExist(\n    651         &quot;%s matching query does not exist.&quot; % self.model._meta.object_name\n    652     )\n    653 raise self.model.MultipleObjectsReturned(\n    654     &quot;get() returned more than one %s -- it returned %s!&quot;\n    655     % (\n   (...)\n    658     )\n    659 )\n\nDoesNotExist: UserProfile matching query does not exist.\n\nIn [3]:\n</code></pre></div>",
+        "id": 1585236,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1685973768
+    },
+    {
+        "content": "<p>Ah, so that's the problem. <span class=\"user-mention\" data-user-id=\"70\">@GervaisdeM</span> Can you check if you have an override for <code>EMAIL_GATEWAY_BOT = \"\"</code> or such in your <code>/etc/zulip/settings.py</code>? If so, just delete it from there. It's set to a proper default by Zulip</p>",
+        "id": 1585246,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685976087
+    },
+    {
+        "content": "<p>I don't think we've ever documented changing <code>EMAIL_GATEWAY_BOT</code>, so I'm also curious what led to that change, if it exists.</p>",
+        "id": 1585292,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1685981768
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span>  I have never made any changes around the EMAIL_GATEWAY_BOT in my settings.py, so they are all set to whatever the defaults were when I installed Zulip... Should I comment out all the entries about EMAIL_GATEWAY?</p>\n<div class=\"codehilite\"><pre><span></span><code># Example: zulip+%s@example.com\nEMAIL_GATEWAY_PATTERN = &quot;&quot;\n\n\n# The following options are relevant if you&#39;re using mail polling.\n#\n# A sample cron job for mail polling is available at puppet/zulip/files/cron.d/email-mirror\n#\n# The Zulip username of the bot that the email pattern should post as.\n# Example: emailgateway@example.com\nEMAIL_GATEWAY_BOT = &quot;&quot;\n\n# Configuration of the email mirror mailbox\n# The IMAP login and password\nEMAIL_GATEWAY_LOGIN = &quot;&quot;\nEMAIL_GATEWAY_PASSWORD = &quot;&quot;\n# The IMAP server &amp; port to connect to\nEMAIL_GATEWAY_IMAP_SERVER = &quot;&quot;\nEMAIL_GATEWAY_IMAP_PORT = 993\n# The IMAP folder name to check for emails. All emails sent to EMAIL_GATEWAY_PATTERN above\n# must be delivered to this folder\nEMAIL_GATEWAY_IMAP_FOLDER = &quot;INBOX&quot;\n</code></pre></div>",
+        "id": 1585312,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1685982998
+    },
+    {
+        "content": "<p>Yeah, since this is a very old installation, I guess it's just a thing that we used to have in <code>settings.py</code> template in very ancient Zulip. <span class=\"user-mention\" data-user-id=\"70\">@GervaisdeM</span> Yeah just comment out the <code>EMAIL_GATEWAY_BOT = \"\"</code> line and you should be good to go</p>",
+        "id": 1585400,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1685988477
+    },
+    {
+        "content": "<p>Do we want to attempt to address this in a general way in the upgrade?  I think the only way to do so would be to use a hardcoded email address rather than reading <code>EMAIL_GATEWAY_BOT</code></p>",
+        "id": 1585456,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1685990512
+    },
+    {
+        "content": "<p>One idea would be, if the previous version is below 7.1, to check whether <code>get-django-setting </code>EMAIL_GATEWAY_BOT` is another other than the expected value, and abort before doing that if so.</p>",
+        "id": 1585496,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685992105
+    },
+    {
+        "content": "<p>I don't think that being configurable was ever a good idea, but I think it might have been documented at some point 5+ years ago as a thing you can do (with no clear description of why you'd want to do it).</p>",
+        "id": 1585500,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685992132
+    },
+    {
+        "content": "<p>Success!<br>\n<a href=\"/user_uploads/2/1f/28mp8ptae_1I7e-7mLsyoPkU/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/1f/28mp8ptae_1I7e-7mLsyoPkU/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/1f/28mp8ptae_1I7e-7mLsyoPkU/image.png\"></a></div>",
+        "id": 1585695,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1686005074
+    },
+    {
+        "content": "<p>You may want to give upgrading your settings.py a shot:</p>\n<p><a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade.html#updating-settings-py-inline-documentation\">https://zulip.readthedocs.io/en/latest/production/upgrade.html#updating-settings-py-inline-documentation</a></p>",
+        "id": 1585698,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686005525
+    },
+    {
+        "content": "<p>But it may be so old that that doesn't work.</p>",
+        "id": 1585699,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686005539
+    },
+    {
+        "content": "<p>Thanks Alex. I'll check it out.</p>",
+        "id": 1585713,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1686006301
+    },
+    {
+        "content": "<p>Compared my settings.py to latest version and moved settings across... Believe averything is up-to-date and working. Thanks for the tip <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span></p>",
+        "id": 1585851,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1686017467
+    },
+    {
+        "content": "<p>Fun Fact!<br>\nThe tool that tries to identify what version of the settings.py you are using, identified mine at version 1.3.6!<br>\nHa!</p>",
+        "id": 1586801,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1686089511
+    },
+    {
+        "content": "<p>Dang!  That's an old instance. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1586802,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686089548
+    },
+    {
+        "content": "<p>Wow that's about as old as it gets! 1.3.0 was the first version number for the Zulip server.</p>",
+        "id": 1586873,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686095523
+    },
+    {
+        "content": "<p>I upgraded to 7.0 and it wend smoothly without any problem. <br>\nI upgraded to 6.2 last week luckily!</p>",
+        "id": 1587062,
+        "sender_full_name": "Muhammad Laique",
+        "timestamp": 1686122078
+    },
+    {
+        "content": "<p>i upgraded to 7.0 from 6.2 and all work fine, in 10 minutes.</p>",
+        "id": 1588550,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1686231837
+    }
+]

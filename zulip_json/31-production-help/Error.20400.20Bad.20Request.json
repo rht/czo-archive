@@ -1,0 +1,62 @@
+[
+    {
+        "content": "<p>Hello. Im having trouble running a docker instance of zulip. Im getting an Error 400 Bad Request. Ive searched about it and ive done what's suggested, having the domain in which it is being served in the SETTING_EXTERNAL_HOST variable, and adding the ip address of the machine in SETTING_ALLOWED_HOSTS as '[\"${ipAddress}\"]' but Im still getting that error. I wanted to ask which IP address Im supposed to add in this variable. I added the public one</p>",
+        "id": 1461057,
+        "sender_full_name": "Omar Muñoz",
+        "timestamp": 1667929219
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"25188\">@Omar Muñoz</span> you need to have the hostname users will be entering in their browser in these parameters; not IP addresses.</p>",
+        "id": 1461106,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1667933356
+    },
+    {
+        "content": "<p>I just had SETTING_EXTERNAL_HOST: zulip.domain.tld, but that was giving me the error. When I searched about it, people mentioned adding the IP in SETTING_ALLOWED_HOSTS, like in <a href=\"https://github.com/zulip/docker-zulip/issues/134#issuecomment-450478647\">this github issue</a>.  That's why I added it. So that last variable just can't have IPs? What else can I do about the error? I only have the one domain that is supposed to reach zulip, and thats the one in SETTING_EXTERNAL_HOST</p>",
+        "id": 1461113,
+        "sender_full_name": "Omar Muñoz",
+        "timestamp": 1667933791
+    },
+    {
+        "content": "<p>Do you have any layers of proxies between Zulip and how you're accessing it?</p>",
+        "id": 1461141,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667935199
+    },
+    {
+        "content": "<p>sorry for the late reply. Im using an nginx reverse proxy. Im running dockers port 80 and 443 on the host's port 9010 and 9011, though I dont <em>need</em> them there, if using those ports is a problem. If I access localhost:9011 (my server has a GUI), it loads, but js and css dont because it tries to load from the domain which doesnt work. But this means that the containers do run correctly and are serving correctly through those ports. My problem is specifically when using the domain, but it is correctly typed in the docker-compose yml file. This is my nginx config file. I have a file for each service im proxying, so thats why only zulip stuff appears here. All other services im reverse proxying use the same exact thing, except for domain name and ports, and those work</p>\n<div class=\"codehilite\"><pre><span></span><code>server {\n    if ($host = zulip.domain.tld) {\n        return 301 https://$host$request_uri;\n    } # managed by Certbot\n\n\n  listen 80;\n  server_name zulip.domain.tld;\n  return 301 https://zulip.domain.tld$request_uri;\n\n\n}\n\nserver {\n\n    listen 443;\n    server_name zulip.domain.tld;\n\n    # SSL configuration\n    ssl_certificate /etc/letsencrypt/live/zulip.domain.tld-0001/fullchain.pem; # managed by Certbot\n    ssl_certificate_key /etc/letsencrypt/live/zulip.domain.tld-0001/privkey.pem; # managed by Certbot\n    ssl on;\n    ssl_session_cache  builtin:1000  shared:SSL:10m;\n    ssl_protocols  TLSv1 TLSv1.1 TLSv1.2;\n    ssl_ciphers HIGH:!aNULL:!eNULL:!EXPORT:!CAMELLIA:!DES:!MD5:!PSK:!RC4;\n    ssl_prefer_server_ciphers on;\n\n    # Set the access log location\n\n    access_log            /var/log/nginx/zulip.access.log;\n    error_log /var/log/nginx/error.log;\n\n\n    location / {\n\n    # Set the proxy headers\n\n      proxy_set_header        Host $host;\n      proxy_set_header        X-Real-IP $remote_addr;\n      proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;\n      proxy_set_header        X-Forwarded-Proto $scheme;\n\n      # Configure which address the request is proxied to\n\n      proxy_pass          http://127.0.0.1:9011;\n      proxy_read_timeout  90;\n      proxy_redirect      http://127.0.0.1:9011 https://zulip.domain.tld;\n\n      # Set the security headers\n\n      add_header Strict-Transport-Security &quot;max-age=31536000; includeSubDomains; preload&quot;; #HSTS\n      add_header X-Frame-Options DENY; #Prevents clickjacking\n      add_header X-Content-Type-Options nosniff; #Prevents mime sniffing\n      add_header X-XSS-Protection &quot;1; mode=block&quot;; #Prevents cross-site scripting attacks\n      add_header Referrer-Policy &quot;origin&quot;;\n    }\n\n\n}\n</code></pre></div>",
+        "id": 1461241,
+        "sender_full_name": "Omar Muñoz",
+        "timestamp": 1667943219
+    },
+    {
+        "content": "<p>good news I think? The good old restart the server did the trick? Or at least, I restarted the server and it's working now, though I had to point to the container's port 80, rather than 443, but it's using th outer nginx's cert so it still uses SSL, so it's fine. THank you for your time haha. Or rather, sorry for taking time away from you</p>",
+        "id": 1461315,
+        "sender_full_name": "Omar Muñoz",
+        "timestamp": 1667949534
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"25188\">@Omar Muñoz</span>: I think <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy\">https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy</a> is relevant to you, if you have not read it already.</p>",
+        "id": 1461324,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667950574
+    },
+    {
+        "content": "<p>For the Docker install, this means setting <code>LOADBALANCER_IPS</code>, which will handle setting <code>ips</code> under <code>[loadbalancer]</code> in the image.</p>",
+        "id": 1461325,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667950665
+    },
+    {
+        "content": "<p>Without doing that, your access logs will show all clients coming from the proxy's IP, and every non-authenticated request will be IP rate-limited together.</p>",
+        "id": 1461330,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1667950805
+    },
+    {
+        "content": "<p>Understood. I'll set that up. Thank you very much for your time <span aria-label=\"smiley\" class=\"emoji emoji-1f603\" role=\"img\" title=\"smiley\">:smiley:</span></p>",
+        "id": 1461592,
+        "sender_full_name": "Omar Muñoz",
+        "timestamp": 1668007196
+    }
+]

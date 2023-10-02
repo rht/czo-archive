@@ -1,0 +1,143 @@
+<html>
+<head><meta charset="utf-8"><title>stream admin · design · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/101-design/index.html">design</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/101-design/topic/stream.20admin.html">stream admin</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="438815"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/stream%20admin/near/438815" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Yashashvi Dave <a href="https://rht.github.io/czo-archive/stream/101-design/topic/stream.20admin.html#438815">(Jan 10 2018 at 19:10)</a>:</h4>
+<p>I am starting to work on <a href="https://github.com/zulip/zulip/pull/3683" target="_blank" title="https://github.com/zulip/zulip/pull/3683">#3683</a> <code>Create a stream owner/permission concept.</code> <br>
+Most of frontend bugs for stream settings are covered in PR <a href="https://github.com/zulip/zulip/pull/8029" target="_blank" title="https://github.com/zulip/zulip/pull/8029">#8029</a> and <a href="https://github.com/zulip/zulip/pull/7987" target="_blank" title="https://github.com/zulip/zulip/pull/7987">#7987</a>.<br>
+<strong>What I get from the discussion on issue <a href="https://github.com/zulip/zulip/pull/3683" target="_blank" title="https://github.com/zulip/zulip/pull/3683"><a href="https://github.com/zulip/zulip/pull/3683" target="_blank" title="https://github.com/zulip/zulip/pull/3683">#3683</a></a>, <a href="https://github.com/zulip/zulip/pull/566" target="_blank" title="https://github.com/zulip/zulip/pull/566"><a href="https://github.com/zulip/zulip/pull/566" target="_blank" title="https://github.com/zulip/zulip/pull/566">#566</a></a> thread?</strong></p>
+<p><strong>Who is stream owner by default?</strong><br>
+User who create stream.</p>
+<p><strong>How stream owner will differ from other subscriber to stream?</strong><br>
+Stream owner will be only subscriber to stream </p>
+<ul>
+<li>who can edit stream settings like name, description, type. </li>
+<li>who can unsubscribe other user from stream</li>
+<li>who can add other user to stream(not sure about this one either we want to go with the current behavior or restrict it to only stream owner, in current scenario every user in stream can add other user)</li>
+<li>who can make other user as stream owner.</li>
+</ul>
+<p><strong>Can stream have more than one stream owner?</strong><br>
+YES, stream owner can make stream owner from subscriber to stream.<br>
+Every stream owner has the same admin rights.</p>
+<p><strong>How many admin rights org admin will have for stream settings?</strong>(current behavior)</p>
+<ul>
+<li>Org admin can always delete stream from org settings.</li>
+<li>Org admin can not access private stream information(other then name,description) if admin not subscribed</li>
+<li>Org admin can unsubscribe user from public stream.</li>
+<li>Org admin can edit public streams settings.<br>
+ NOTE: If org admin is subscribed to private stream, and not a stream owner then org admin will not be able to edit stream settings.(not current behavior)</li>
+</ul>
+<p><strong>What if there is only one stream owner and he/she leaves the stream?</strong><br>
+When stream owner will leave the stream, owner must give admin rights to someone from subscriber of stream. <br>
+There will be no private stream without stream owner.(should we allow public stream without owner?)</p>
+<p><strong>Wouldn't stream owner for public stream has the same admin rights as org admin have for public stream?</strong><br>
+Yes.</p>
+<p>Do I miss anything here? Any suggestions?</p>
+
+
+
+<a name="438892"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/stream%20admin/near/438892" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/stream.20admin.html#438892">(Jan 10 2018 at 19:46)</a>:</h4>
+<p>Some corrections/clarifications/answers:</p>
+<ul>
+<li>
+<p>Simply keeping track of the stream owner will be an important milestone for us, so think of this as you set up your commits.  (And then we'll gradually empower them--it should be pretty quick to iterate once we have the basic concept in place.)</p>
+</li>
+<li>
+<p>Any user can add other users to public streams, but only stream owners and org admins can remove other subscribers, edit descriptions, and appoint other stream owners.  For public streams I can't think of any difference between owners and org admins.  But the main point of this feature is definitely <strong>private</strong> streams, since in some cases private stream owners will have even more power over their streams than unsubscribed org admins do.</p>
+</li>
+<li>
+<p>We can allow non-owned public streams, since org admins already have plenty of power there.</p>
+</li>
+</ul>
+
+
+
+<a name="446929"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/stream%20admin/near/446929" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Yashashvi Dave <a href="https://rht.github.io/czo-archive/stream/101-design/topic/stream.20admin.html#446929">(Jan 15 2018 at 07:16)</a>:</h4>
+<p>I have implemented following:</p>
+<ul>
+<li>Add <code>is_admin</code> property in <code>Subscription</code> model</li>
+<li>Add method for setting this property in <code>actions.py</code></li>
+<li>In frontend we will have one more widget for stream admin(just like we have one in <code>Organization settings--&gt;User groups--&gt;Subscribers</code> in which current user will automatically added.</li>
+<li>User(who is creating stream) can add other user in that widget</li>
+<li>Set all added user as stream admins in that widget</li>
+<li>While creating stream check if stream admins is none and stream is private return jsonerror</li>
+</ul>
+<p>Work to do next:</p>
+<ul>
+<li>Add stream admin widget in <code>Stream settings</code> and allow stream admins to handle(add/remove) other stream admins</li>
+<li>Add validation <code>is_admin</code> for changing stream properties</li>
+</ul>
+<p>But I am so confused how I should commit this work. <span class="emoji emoji-1f615" title="confused">:confused:</span> <br>
+Should I add this all in one commit? If in separate commits, please guide that in which order should I commit.</p>
+
+
+
+<a name="449319"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/stream%20admin/near/449319" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/stream.20admin.html#449319">(Jan 16 2018 at 12:47)</a>:</h4>
+<p><span class="user-mention" data-user-email="yashashvidave@gmail.com" data-user-id="3244">@Yashashvi Dave</span> You should try to be thoughtful about separating these commits, but we don't necessarily expect all of them to be small.  I do think it's almost always possible to have the first commits be backend only.  It might break down like this:</p>
+<ul>
+<li>add model + migration</li>
+<li>add basic endpoint with fully correct authentication and thorough tests</li>
+<li>allow stream admin to add subscriber w/thorough tests (even though it's backend only and we won't actually surface it on the UI, it will still be a valid commit)</li>
+</ul>
+<p>We will probably want management commands here to assign stream owners, too.</p>
+
+
+
+<a name="449508"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/stream%20admin/near/449508" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Yashashvi Dave <a href="https://rht.github.io/czo-archive/stream/101-design/topic/stream.20admin.html#449508">(Jan 16 2018 at 14:07)</a>:</h4>
+<p><span class="user-mention" data-user-email="showell@zulipchat.com" data-user-id="58">@Steve Howell</span> Wants to know your suggestions on this one. <br>
+<strong>When stream is created</strong><br>
+Passing list of admins on POST method of <code>/users/me/subscriptions</code>endpoint which calls <code>add_subscriptions_backend</code>.  So the <code>add_subscriptions_backend</code> method will look like this:</p>
+<div class="codehilite"><pre><span></span><span class="nd">@has_request_variables</span>
+<span class="k">def</span> <span class="nf">add_subscriptions_backend</span><span class="p">(</span>
+        <span class="n">request</span><span class="p">:</span> <span class="n">HttpRequest</span><span class="p">,</span> <span class="n">user_profile</span><span class="p">:</span> <span class="n">UserProfile</span><span class="p">,</span>
+        <span class="n">streams_raw</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Text</span><span class="p">]]</span><span class="o">=</span><span class="n">REQ</span><span class="p">(</span>
+            <span class="s2">&quot;subscriptions&quot;</span><span class="p">,</span> <span class="n">validator</span><span class="o">=</span><span class="n">check_list</span><span class="p">(</span><span class="n">check_dict</span><span class="p">([(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="n">check_string</span><span class="p">)]))),</span>
+        <span class="n">invite_only</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="n">REQ</span><span class="p">(</span><span class="n">validator</span><span class="o">=</span><span class="n">check_bool</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span>
+        <span class="n">announce</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="n">REQ</span><span class="p">(</span><span class="n">validator</span><span class="o">=</span><span class="n">check_bool</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span>
+        <span class="n">principals</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span><span class="o">=</span><span class="n">REQ</span><span class="p">(</span><span class="n">validator</span><span class="o">=</span><span class="n">check_list</span><span class="p">(</span><span class="n">check_string</span><span class="p">),</span> <span class="n">default</span><span class="o">=</span><span class="p">[]),</span>
+        <span class="n">stream_admins</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Text</span><span class="p">]</span><span class="o">=</span><span class="n">REQ</span><span class="p">(</span><span class="n">validator</span><span class="o">=</span><span class="n">check_list</span><span class="p">(</span><span class="n">check_string</span><span class="p">),</span> <span class="n">default</span><span class="o">=</span><span class="p">[]),</span>
+        <span class="n">authorization_errors_fatal</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="n">REQ</span><span class="p">(</span><span class="n">validator</span><span class="o">=</span><span class="n">check_bool</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HttpResponse</span><span class="p">:</span>
+</pre></div>
+
+
+<p>This method calls <code>bulk_add_subscriptions</code> in <code>actions.py</code>. Pass the list of admins to this method. This method will pass <code>is_admin</code> value(when <code>Subscription</code> object is created) by checking user exists in stream admin list or not. </p>
+<p><strong>To change value afterwards</strong><br>
+In <code>actions.py</code> the function <code>do_change_subscription_property</code> can be used to change <code>is_admin</code> flag's value.</p>
+<p>Is this correct way?</p>
+
+
+
+<a name="449534"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/stream%20admin/near/449534" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/stream.20admin.html#449534">(Jan 16 2018 at 14:38)</a>:</h4>
+<p><span class="user-mention" data-user-email="yashashvidave@gmail.com" data-user-id="3244">@Yashashvi Dave</span> </p>
+<p>yep, that all makes sense to me...obviously, automated tests will be key here</p>
+
+
+
+<a name="458129"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/stream%20admin/near/458129" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Yashashvi Dave <a href="https://rht.github.io/czo-archive/stream/101-design/topic/stream.20admin.html#458129">(Jan 21 2018 at 14:06)</a>:</h4>
+<p>Should we provide all permissions for stream to org admin subscribed to private stream but not a stream admin?</p>
+
+
+
+<a name="458133"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/stream%20admin/near/458133" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/stream.20admin.html#458133">(Jan 21 2018 at 14:15)</a>:</h4>
+<p>I think yes</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,206 @@
+[
+    {
+        "content": "<p>Hi all,</p>",
+        "id": 1647165,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695730608
+    },
+    {
+        "content": "<p>I have tried to update Zulip 4.10 to Zulip 7.4, but I get the following error in the log:</p>\n<div class=\"codehilite\"><pre><span></span><code>Migrations which are currently applied, but missing in the new version:\n  zerver - 0297_auto_20210224_0418\n2023-09-26 12:12:35.866 ERR  [] This is not an upgrade -- the current deployment (version 4.10) contains 1 database migrations which /home/zulip/deployments/2023-09-26-12-07-12 (version 7.4) does not.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2023-09-26-12-07-12/scripts/lib/upgrade-zulip-stage-2&quot;, line 247, in &lt;module&gt;\n    subprocess.check_call(\n  File &quot;/usr/lib/python3.8/subprocess.py&quot;, line 364, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2023-09-26-12-07-12/scripts/lib/check-database-compatibility&#39;]&#39; returned non-zero exit status 1.\n</code></pre></div>\n<p>We are running Ubuntu 20.4 LTS and PostgreSQL 12.</p>\n<p>Thanks a lot for your help and best regards,</p>\n<p>Pascal</p>",
+        "id": 1647166,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695730738
+    },
+    {
+        "content": "<p>I was able to update Zulip 4.10 to Zulip 4.11, but afterwards I get the same error again, when I try to update Zulip to 7.4 or 5.6.</p>",
+        "id": 1647178,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695733809
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19114\">@Pascal Schrafl</span>: Can you show:</p>\n<div class=\"codehilite\"><pre><span></span><code>ls ~zulip/deployments/*/zerver/migrations/0297*\n</code></pre></div>",
+        "id": 1647208,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695737836
+    },
+    {
+        "content": "<p>Hi Alex,</p>\n<p>Here's the output:</p>\n<div class=\"codehilite\"><pre><span></span><code>user@server:~$ ls ~zulip/deployments/*/zerver/migrations/0297*\n/home/zulip/deployments/2022-03-10-11-31-40/zerver/migrations/0297_draft.py\n/home/zulip/deployments/2023-09-26-12-45-34/zerver/migrations/0297_draft.py\n/home/zulip/deployments/current/zerver/migrations/0297_draft.py\n/home/zulip/deployments/last/zerver/migrations/0297_draft.py\n/home/zulip/deployments/next/zerver/migrations/0297_draft.py\n</code></pre></div>\n<p>Cheers, Pascal</p>",
+        "id": 1647223,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695738863
+    },
+    {
+        "content": "<p>So it looks like your database has a migration applied to it which was nver part of the official product -- which is why the ugprade process is erroring out, since it's erring on the cautious side, and being worried about what it might be losing by not knowing about that migration.</p>\n<p>We have very little way of knowing what was in that migration, unfortunately.  The options here are either to do some minor surgery to forget that there's a mystery migration, or to do more spelunking as to what might be different about your schema.</p>",
+        "id": 1647236,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695740063
+    },
+    {
+        "content": "<p>I think it is likely that the migration is safe to ignore, but I don't want to just declare that for you.  IF you know anything about the history of the maintenance of this instance (e.g. was someone working on a customization with database changes?), that might affect your decision.</p>",
+        "id": 1647241,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695740260
+    },
+    {
+        "content": "<p>I never changed anything on the database itself. We had some customization done, but this was using the API, not database changes. Would it help, if I would send you those 4 files as private message? In the past, the update always worked flawlessly without any issues, so I can't imagine, that anyone changed anything on the database.</p>",
+        "id": 1647254,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695741161
+    },
+    {
+        "content": "<p>No, the 5 files you found are the <em>expected</em> database migration, which is named <code>0297_draft.py</code>.  Django was saying that at some point it had a file named <code>0297_auto_20210224_0418.py</code> installed -- and that name is associated with an automatically generated migration from someone running <code>./manage.py makemigrations</code> which is a step done during development after making modifications to the desired database schema.</p>",
+        "id": 1647255,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695741339
+    },
+    {
+        "content": "<p>I think I'd suggest running (as the <code>zulip</code> user):</p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code><span class=\"nb\">cd</span><span class=\"w\"> </span>~/deployments/current\n./manage.py<span class=\"w\"> </span>dbshell\n</code></pre></div>\n<p>And then at that prompt:</p>\n<div class=\"codehilite\" data-code-language=\"SQL\"><pre><span></span><code><span class=\"k\">delete</span><span class=\"w\"> </span><span class=\"k\">from</span><span class=\"w\"> </span><span class=\"n\">django_migrations</span><span class=\"w\"> </span><span class=\"k\">where</span><span class=\"w\"> </span><span class=\"n\">app</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span><span class=\"s1\">'zerver'</span><span class=\"w\"> </span><span class=\"k\">and</span><span class=\"w\"> </span><span class=\"n\">name</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span><span class=\"s1\">'0297_auto_20210224_0418'</span><span class=\"p\">;</span>\n<span class=\"err\">\\</span><span class=\"n\">q</span>\n</code></pre></div>\n<p>You should then be able to upgrade without issue.</p>",
+        "id": 1647256,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695741463
+    },
+    {
+        "content": "<p>I will try this approach. Is there anything, I must check after that change?</p>",
+        "id": 1647266,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695742192
+    },
+    {
+        "content": "<p>Nope.  That command is just adjusting the application's \"memory\" of what the names of database changes it's seen is.  We're telling it to not worry about having seen that migration, and the upgrade will now no longer flip out because it will no longer see any migration names it doesn't recognize.</p>",
+        "id": 1647272,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695742583
+    },
+    {
+        "content": "<p>Thanks a lot! I will give it a try and will keep you posted. And is it correct, it doesn't break anything on the installation or messes up future updates, right?</p>",
+        "id": 1647274,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695742674
+    },
+    {
+        "content": "<p>If there <em>were</em> significant changes in the migration we're telling it to forget about, then the upgrade may fail or the application may not work as expected.</p>",
+        "id": 1647276,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695742782
+    },
+    {
+        "content": "<p>Hi Alex,</p>\n<p>This is the code of the file, that's causing the issues. Perhaps it helps to find the issue. If you need the file 0296_remove_userprofile_short_name, please let me know.</p>\n<p>Thanks and cheers,</p>\n<p>Pascal</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"c1\"># Generated by Django 2.2.14 on 2020-07-23 17:07</span>\n\n<span class=\"kn\">import</span> <span class=\"nn\">django.db.models.deletion</span>\n<span class=\"kn\">from</span> <span class=\"nn\">django.conf</span> <span class=\"kn\">import</span> <span class=\"n\">settings</span>\n<span class=\"kn\">from</span> <span class=\"nn\">django.db</span> <span class=\"kn\">import</span> <span class=\"n\">migrations</span><span class=\"p\">,</span> <span class=\"n\">models</span>\n\n\n<span class=\"k\">class</span> <span class=\"nc\">Migration</span><span class=\"p\">(</span><span class=\"n\">migrations</span><span class=\"o\">.</span><span class=\"n\">Migration</span><span class=\"p\">):</span>\n\n    <span class=\"n\">dependencies</span> <span class=\"o\">=</span> <span class=\"p\">[</span>\n        <span class=\"p\">(</span><span class=\"s2\">\"zerver\"</span><span class=\"p\">,</span> <span class=\"s2\">\"0296_remove_userprofile_short_name\"</span><span class=\"p\">),</span>\n    <span class=\"p\">]</span>\n\n    <span class=\"n\">operations</span> <span class=\"o\">=</span> <span class=\"p\">[</span>\n        <span class=\"n\">migrations</span><span class=\"o\">.</span><span class=\"n\">CreateModel</span><span class=\"p\">(</span>\n            <span class=\"n\">name</span><span class=\"o\">=</span><span class=\"s2\">\"Draft\"</span><span class=\"p\">,</span>\n            <span class=\"n\">fields</span><span class=\"o\">=</span><span class=\"p\">[</span>\n                <span class=\"p\">(</span>\n                    <span class=\"s2\">\"id\"</span><span class=\"p\">,</span>\n                    <span class=\"n\">models</span><span class=\"o\">.</span><span class=\"n\">AutoField</span><span class=\"p\">(</span>\n                        <span class=\"n\">auto_created</span><span class=\"o\">=</span><span class=\"kc\">True</span><span class=\"p\">,</span> <span class=\"n\">primary_key</span><span class=\"o\">=</span><span class=\"kc\">True</span><span class=\"p\">,</span> <span class=\"n\">serialize</span><span class=\"o\">=</span><span class=\"kc\">False</span><span class=\"p\">,</span> <span class=\"n\">verbose_name</span><span class=\"o\">=</span><span class=\"s2\">\"ID\"</span>\n                    <span class=\"p\">),</span>\n                <span class=\"p\">),</span>\n                <span class=\"p\">(</span><span class=\"s2\">\"topic\"</span><span class=\"p\">,</span> <span class=\"n\">models</span><span class=\"o\">.</span><span class=\"n\">CharField</span><span class=\"p\">(</span><span class=\"n\">db_index</span><span class=\"o\">=</span><span class=\"kc\">True</span><span class=\"p\">,</span> <span class=\"n\">max_length</span><span class=\"o\">=</span><span class=\"mi\">60</span><span class=\"p\">)),</span>\n                <span class=\"p\">(</span><span class=\"s2\">\"content\"</span><span class=\"p\">,</span> <span class=\"n\">models</span><span class=\"o\">.</span><span class=\"n\">TextField</span><span class=\"p\">()),</span>\n                <span class=\"p\">(</span><span class=\"s2\">\"last_edit_time\"</span><span class=\"p\">,</span> <span class=\"n\">models</span><span class=\"o\">.</span><span class=\"n\">DateTimeField</span><span class=\"p\">(</span><span class=\"n\">db_index</span><span class=\"o\">=</span><span class=\"kc\">True</span><span class=\"p\">)),</span>\n                <span class=\"p\">(</span>\n                    <span class=\"s2\">\"recipient\"</span><span class=\"p\">,</span>\n                    <span class=\"n\">models</span><span class=\"o\">.</span><span class=\"n\">ForeignKey</span><span class=\"p\">(</span>\n                        <span class=\"n\">null</span><span class=\"o\">=</span><span class=\"kc\">True</span><span class=\"p\">,</span>\n                        <span class=\"n\">on_delete</span><span class=\"o\">=</span><span class=\"n\">django</span><span class=\"o\">.</span><span class=\"n\">db</span><span class=\"o\">.</span><span class=\"n\">models</span><span class=\"o\">.</span><span class=\"n\">deletion</span><span class=\"o\">.</span><span class=\"n\">SET_NULL</span><span class=\"p\">,</span>\n                        <span class=\"n\">to</span><span class=\"o\">=</span><span class=\"s2\">\"zerver.Recipient\"</span><span class=\"p\">,</span>\n                    <span class=\"p\">),</span>\n                <span class=\"p\">),</span>\n                <span class=\"p\">(</span>\n                    <span class=\"s2\">\"user_profile\"</span><span class=\"p\">,</span>\n                    <span class=\"n\">models</span><span class=\"o\">.</span><span class=\"n\">ForeignKey</span><span class=\"p\">(</span>\n                        <span class=\"n\">on_delete</span><span class=\"o\">=</span><span class=\"n\">django</span><span class=\"o\">.</span><span class=\"n\">db</span><span class=\"o\">.</span><span class=\"n\">models</span><span class=\"o\">.</span><span class=\"n\">deletion</span><span class=\"o\">.</span><span class=\"n\">CASCADE</span><span class=\"p\">,</span> <span class=\"n\">to</span><span class=\"o\">=</span><span class=\"n\">settings</span><span class=\"o\">.</span><span class=\"n\">AUTH_USER_MODEL</span>\n                    <span class=\"p\">),</span>\n                <span class=\"p\">),</span>\n            <span class=\"p\">],</span>\n        <span class=\"p\">),</span>\n    <span class=\"p\">]</span>\n</code></pre></div>",
+        "id": 1647341,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695748879
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19114\">@Pascal Schrafl</span>: No, that's not the file that's causing problems.</p>\n<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Updating.20Zulip.204.2E10.20to.20Zulip.207.2E4.20fails/near/1647255\">said</a>:</p>\n<blockquote>\n<p>No, the 5 files you found are the <em>expected</em> database migration, which is named <code>0297_draft.py</code>.  Django was saying that at some point it had a file named <code>0297_auto_20210224_0418.py</code> installed -- and that name is associated with an automatically generated migration from someone running <code>./manage.py makemigrations</code> which is a step done during development after making modifications to the desired database schema.</p>\n</blockquote>",
+        "id": 1647376,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695750548
+    },
+    {
+        "content": "<p>The command I gave you did not find the file we're looking for, which is <code>0297_auto_20210224_0418.py</code></p>",
+        "id": 1647377,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695750574
+    },
+    {
+        "content": "<p>From its datestamp, it was created in February of 2021.</p>",
+        "id": 1647379,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695750597
+    },
+    {
+        "content": "<p>Hi Alex,</p>",
+        "id": 1647433,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695752710
+    },
+    {
+        "content": "<p>Thanks. I ran the following command:</p>",
+        "id": 1647434,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695752718
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>ls ~zulip/deployments/*/zerver/migrations/0297_auto_20210224_0418.py\nls: cannot access &#39;/home/zulip/deployments/*/zerver/migrations/0297_auto_20210224_0418.py&#39;: No such file or directory\n</code></pre></div>\n<p>Apparently, that file doesn't exist.</p>",
+        "id": 1647436,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695752768
+    },
+    {
+        "content": "<p>Cheers, Pascal</p>",
+        "id": 1647438,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695752773
+    },
+    {
+        "content": "<p>Yes, I know the file doesn't exist.  That's what I was attempting to determine <a href=\"#narrow/stream/31-production-help/topic/Updating.20Zulip.204.2E10.20to.20Zulip.207.2E4.20fails/near/1647208\">when I asked you to run a command earlier</a>.</p>\n<p>That's why we don't easily know what the migration had in it.</p>",
+        "id": 1647443,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695752893
+    },
+    {
+        "content": "<p>So there is no way to find out, what the content of that file is and what it does?</p>",
+        "id": 1647444,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695752935
+    },
+    {
+        "content": "<p>Not easily.  We could try to diff the schema in the database against the schema that we expect it to have (for example, using <a href=\"https://django-extensions.readthedocs.io/en/latest/sqldiff.html\">something like <code>sqldiff</code></a>) but that's not going to trivial -- and from a quick skim of folks using that tool, it has some false-positives, so it's not clear how much help it would be.</p>",
+        "id": 1647448,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695753046
+    },
+    {
+        "content": "<p>The weird thing is, that we have it on test and production server. We already updated Zulip before to 4.10 without any issues, so I'm puzzled, why it suddenly happens (especially, as the update from 4.10 to 4.11 works fine, and then it breaks, when I try to update to 5.6 or 7.4).</p>",
+        "id": 1647454,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695753262
+    },
+    {
+        "content": "<p>We added the code in 5.0 to check for migrations that the new version doesn't recognize.  This prevents people from accidentally \"upgrading\" to an older version.  So your upgrade from 4.10 to 4.11 doesn't error out because it doesn't have this protection.</p>",
+        "id": 1647456,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695753457
+    },
+    {
+        "content": "<p>I'm just afraid, that it will break something, when we ignore it and later have issues, that we can't fix anymore.</p>",
+        "id": 1647458,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695753546
+    },
+    {
+        "content": "<p>You should do some investigation as to who was updating your instance in February 24th, 2021.  They may be able to tell you more about what changes they made to the instance.</p>\n<p>I suspect, that if you're not aware of any changes, it's likely fine.  It sounds like you have a test instance -- if that has the same schema and data as your production instance, I suggest <a href=\"#narrow/stream/31-production-help/topic/Updating.20Zulip.204.2E10.20to.20Zulip.207.2E4.20fails/near/1647256\">doing the fix I suggested above</a>, and upgrading it to 7.x to check it out and see how it goes.</p>\n<p>If you don't have a test instance, you can <a href=\"https://zulip.readthedocs.io/en/latest/production/export-and-import.html\">take a backup and restore it onto another server</a> to make one.</p>",
+        "id": 1647461,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695753769
+    },
+    {
+        "content": "<p>I don't know how much more help we can provide for your instance which has unknown customizations.  Those are the routes forward that I can suggest.</p>\n<p>You're welcome to contact <a href=\"mailto:sales@zulip.com\">sales@zulip.com</a> if you'd like a support contract where we can help be more hands-on.</p>",
+        "id": 1647466,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695753827
+    },
+    {
+        "content": "<p>Thanks a lot for your help. I will see, what I can do.</p>",
+        "id": 1647475,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695754308
+    },
+    {
+        "content": "<p>Hi Alex,</p>",
+        "id": 1647973,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695805065
+    },
+    {
+        "content": "<p>I rolled back the server and found the file 0297_auto_20210224_0418.py. Here's the content of it:</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"c1\"># Generated by Django 2.2.16 on 2021-02-24 04:18</span>\n\n<span class=\"kn\">from</span> <span class=\"nn\">django.db</span> <span class=\"kn\">import</span> <span class=\"n\">migrations</span><span class=\"p\">,</span> <span class=\"n\">models</span>\n\n\n<span class=\"k\">class</span> <span class=\"nc\">Migration</span><span class=\"p\">(</span><span class=\"n\">migrations</span><span class=\"o\">.</span><span class=\"n\">Migration</span><span class=\"p\">):</span>\n\n    <span class=\"n\">dependencies</span> <span class=\"o\">=</span> <span class=\"p\">[</span>\n        <span class=\"p\">(</span><span class=\"s1\">'zerver'</span><span class=\"p\">,</span> <span class=\"s1\">'0296_remove_userprofile_short_name'</span><span class=\"p\">),</span>\n    <span class=\"p\">]</span>\n\n    <span class=\"n\">operations</span> <span class=\"o\">=</span> <span class=\"p\">[</span>\n        <span class=\"n\">migrations</span><span class=\"o\">.</span><span class=\"n\">AlterField</span><span class=\"p\">(</span>\n            <span class=\"n\">model_name</span><span class=\"o\">=</span><span class=\"s1\">'userprofile'</span><span class=\"p\">,</span>\n            <span class=\"n\">name</span><span class=\"o\">=</span><span class=\"s1\">'color_scheme'</span><span class=\"p\">,</span>\n            <span class=\"n\">field</span><span class=\"o\">=</span><span class=\"n\">models</span><span class=\"o\">.</span><span class=\"n\">PositiveSmallIntegerField</span><span class=\"p\">(</span><span class=\"n\">default</span><span class=\"o\">=</span><span class=\"mi\">2</span><span class=\"p\">),</span>\n        <span class=\"p\">),</span>\n    <span class=\"p\">]</span>\n</code></pre></div>\n<p>I recall, that one of our developers tried to set the default color to dark mode, and I assume, he ran that change. Can we safely ignore it?</p>\n<p>Thanks and cheers,</p>\n<p>Pascal</p>",
+        "id": 1647974,
+        "sender_full_name": "Pascal Schrafl",
+        "timestamp": 1695805214
+    },
+    {
+        "content": "<p>For purposes of not blocking the upgrade, yes.</p>\n<p>So you should <a href=\"#narrow/stream/31-production-help/topic/Updating.20Zulip.204.2E10.20to.20Zulip.207.2E4.20fails/near/1647256\">remove the record of that migration as detailed above</a>.</p>",
+        "id": 1648062,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695823013
+    }
+]

@@ -1,0 +1,92 @@
+[
+    {
+        "content": "<p>The rabbitmq and beam.smp services both want to bind TCP 5672, which prevents rabbitmq from starting &amp; aborts the upgrade (resolved by rebooting, fixing rabbitmq and running the upgrade script again)<br>\nThe migration script <code>zerver.0077_add_file_name_field_to_realm_emoji</code> fails with python urllib3 warnings:</p>\n<div class=\"codehilite\"><pre><span></span>/home/zulip/deployments/2017-08-15-20-10-37/zulip-venv/lib/python2.7/site-packages/requests/packages/urllib3/util/ssl_.py:334: SNIMissingWarning: An HTTPS request has been made, but the SNI (Subject Name Indication) extension to TLS is not available on this platform. This may cause the server to present an incorrect TLS certificate, which can cause validation failures. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings\n  SNIMissingWarning\n/home/zulip/deployments/2017-08-15-20-10-37/zulip-venv/lib/python2.7/site-packages/requests/packages/urllib3/util/ssl_.py:132: InsecurePlatformWarning: A true SSLContext object is not available. This prevents urllib3 from configuring SSL appropriately and may cause certain SSL connections to fail. You can upgrade to a newer version of Python to solve this. For more information, see https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings\n  InsecurePlatformWarning\n2017-08-15 19:11:27,956 WARNING  ERROR: Could not download emoji RealmEmoji object; please reupload manually\n</pre></div>\n\n\n<p>Platform is the 14.04 appliance upgraded from 1.3.0 via some intermediate versions to 1.5.3</p>",
+        "id": 267915,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1502824640
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"dbgshane@gmail.com\" data-user-id=\"2772\">@Shane Kearns</span> I'm a bit confused; <code>beam.smp</code> is part of RabbitMQ.</p>",
+        "id": 267916,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1502824811
+    },
+    {
+        "content": "<p>I guess it didn't shut down properly then</p>",
+        "id": 267917,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1502824840
+    },
+    {
+        "content": "<p>I think the <code>urllib</code> warnings are mostly fine; you'll just need to re-upload the one realm emoji that it couldn't reach if you still want it.</p>",
+        "id": 267918,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1502824845
+    },
+    {
+        "content": "<p>I just looked in the rabbitmq startup_err log and it had eaddrinuse errors, while there were beam.smp processes using that port in netstat; didn't realise they were the same thing</p>",
+        "id": 267920,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1502825029
+    },
+    {
+        "content": "<p>The abort log looked like:</p>\n<div class=\"codehilite\"><pre><span></span>Setting up rabbitmq-server (3.2.4-1ubuntu0.1) ...\n * Starting message broker rabbitmq-server\n * FAILED - check /var/log/rabbitmq/startup_\\{log, _err\\}\n   ...fail!\ninvoke-rc.d: initscript rabbitmq-server, action &quot;start&quot; failed.\ndpkg: error processing package rabbitmq-server (--configure):\n subprocess installed post-installation script returned error exit status 1\nSetting up libruby1.9.1 (1.9.3.484-2ubuntu1.3) ...\nSetting up ruby1.9.1 (1.9.3.484-2ubuntu1.3) ...\nProcessing triggers for libc-bin (2.19-0ubuntu6.13) ...\nErrors were encountered while processing:\n rabbitmq-server\nE: Sub-process /usr/bin/dpkg returned an error code (1)\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2017-08-15-19-57-20/scripts/lib/upgrade-zulip-stage-2&quot;, line 49, in &lt;module&gt;\n</pre></div>",
+        "id": 267924,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1502825073
+    },
+    {
+        "content": "<p>Annoying; that's actually the <code>apt-get upgrade</code> part failing.</p>",
+        "id": 267928,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1502825175
+    },
+    {
+        "content": "<p>(which isn't really our code, even)</p>",
+        "id": 267929,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1502825185
+    },
+    {
+        "content": "<p>Yes, unless it's something related to the rabbitmq config that stops it shutting down cleanly there's nothing to be done</p>",
+        "id": 267931,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1502825235
+    },
+    {
+        "content": "<p>The emoji migration didn't block the upgrade so that's just in case it's worth updating the migration script to avoid that issue</p>",
+        "id": 267945,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1502825504
+    },
+    {
+        "content": "<p>yeah; I think that will fix itself magically when we move to Python 3.</p>",
+        "id": 267949,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1502825621
+    },
+    {
+        "content": "<p>I think so, when i saw that error in another tool, running python3 instead of python fixed it</p>",
+        "id": 267956,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1502825958
+    },
+    {
+        "content": "<p>Fyi, I just ran into this trying to install on my test server after a couple months idle. I tried updating all my current packages, but that didn't help. Finally I did <code>apt-get purge rabbitmq-server</code> and restarted the Zulip install. Now it's back to normal.</p>",
+        "id": 286501,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1506199653
+    },
+    {
+        "content": "<p>Should <code>apt-get purge rabbitmq-server</code> or a script to force stop it be in the upgrade script, to prevent further similar issue?</p>",
+        "id": 286512,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1506205751
+    },
+    {
+        "content": "<p>Hmm.  My first thought would be no, since that can break things that were otherwise working.  But we should think about it.</p>",
+        "id": 286719,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506309009
+    }
+]

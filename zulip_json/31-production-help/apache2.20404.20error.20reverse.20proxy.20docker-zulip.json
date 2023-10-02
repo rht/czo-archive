@@ -1,0 +1,56 @@
+[
+    {
+        "content": "<p>I 'am getting 404 error trying to start <a href=\"https://github.com/zulip/docker-zulip\">docker-zulip</a> behind Apache reverse proxy. The error is from the nginx inside the container and not the Apache proxy. It even redirects to /login/ at home page. Any ideas on why this is happening? (i've followed the docs)</p>",
+        "id": 1226542,
+        "sender_full_name": "Kassius",
+        "timestamp": 1625622717
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"20052\">@Kassius</span> can you look at <code>nginx</code> access/error logs to see what HTTP request is actually reaching <code>nginx</code>?</p>",
+        "id": 1226973,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625684296
+    },
+    {
+        "content": "<p>A 404 suggest the most likely explanation is that something is translating a URL incorrectly.</p>",
+        "id": 1226974,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625684319
+    },
+    {
+        "content": "<p>(Also, are you trying to put Zulip at a URL like <code>foo.example.com/zulip</code>?</p>",
+        "id": 1226975,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625684332
+    },
+    {
+        "content": "<p>Hello, <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>,  Thanks for your support. Here are the logs (I edited the domain so not to publish it, subdomain is the same):</p>\n<p><code>access.log</code> (for one loading):</p>\n<div class=\"codehilite\"><pre><span></span><code>172.19.0.1 - - [10/Jul/2021:20:20:20 +0000] &quot;GET / HTTP/1.1&quot; 302 0 &quot;-&quot; &quot;Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0&quot; localhost 0.002\n172.19.0.1 - - [10/Jul/2021:20:20:23 +0000] &quot;GET /login/ HTTP/1.1&quot; 404 134 &quot;-&quot; &quot;Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0&quot; localhost 2.750\n172.19.0.1 - - [10/Jul/2021:20:20:24 +0000] &quot;GET /favicon.ico HTTP/1.1&quot; 404 134 &quot;https://chat.MYEDITEDDOMAIN.com/login/&quot; &quot;Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0&quot; localhost 0.120\n</code></pre></div>\n<p><code>error.log</code> (for one loading): </p>\n<div class=\"codehilite\"><pre><span></span><code>2021/07/10 20:20:23 [error] 123#123: *6 upstream prematurely closed connection while reading response header from upstream, client: 172.19.0.1, server: , request: &quot;GET /login/ HTTP/1.1&quot;, upstream: &quot;uwsgi://unix:/home/zulip/deployments/uwsgi-socket:&quot;, host: &quot;localhost:8088&quot;\n2021/07/10 20:20:23 [error] 123#123: *6 open() &quot;/home/zulip/prod-static/webpack-bundles/5xx.html&quot; failed (2: No such file or directory), client: 172.19.0.1, server: , request: &quot;GET /login/ HTTP/1.1&quot;, upstream: &quot;uwsgi://unix:/home/zulip/deployments/uwsgi-socket&quot;, host: &quot;localhost:8088&quot;\n2021/07/10 20:20:24 [error] 123#123: *6 upstream prematurely closed connection while reading response header from upstream, client: 172.19.0.1, server: , request: &quot;GET /favicon.ico HTTP/1.1&quot;, upstream: &quot;uwsgi://unix:/home/zulip/deployments/uwsgi-socket:&quot;, host: &quot;localhost:8088&quot;, referrer: &quot;https://chat.MYEDITEDDOMAIN.com/login/&quot;\n2021/07/10 20:20:24 [error] 123#123: *6 open() &quot;/home/zulip/prod-static/webpack-bundles/5xx.html&quot; failed (2: No such file or directory), client: 172.19.0.1, server: , request: &quot;GET /favicon.ico HTTP/1.1&quot;, upstream: &quot;uwsgi://unix:/home/zulip/deployments/uwsgi-socket&quot;, host: &quot;localhost:8088&quot;, referrer: &quot;https://chat.MYEDITEDDOMAIN.com/login/&quot;\n&quot;/var/log/nginx/error.log&quot; 32L, 9494C\n</code></pre></div>\n<p>host's <code>zulip-apache.conf</code>:</p>\n<div class=\"codehilite\"><pre><span></span><code>&lt;VirtualHost *:80&gt;\n    ServerName chat.MYEDITEDDOMAIN.com\n    RewriteEngine On\n    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]\n&lt;/VirtualHost&gt;\n\n&lt;VirtualHost *:443&gt;\n  ServerName chat.MYEDITEDDOMAIN.com\n\n  RemoteIPHeader X-Forwarded-For\n  RequestHeader set &quot;X-Forwarded-Proto&quot; expr=%{REQUEST_SCHEME}\n  RequestHeader set &quot;X-Forwarded-SSL&quot; expr=%{HTTPS}\n\n  RewriteEngine On\n  RewriteRule /(.*)           http://localhost:8088/$1 [P,L]\n\n  &lt;Location /&gt;\n    Require all granted\n    #ProxyPass  http://localhost:5080/  timeout=300\n    #ProxyPassReverse  http://localhost:5080/\n    ProxyPass  http://localhost:8088/  timeout=300\n    ProxyPassReverse  http://localhost:8088/\n    ProxyPassReverseCookieDomain  127.0.0.1  chat.MYEDITEDDOMAIN.com\n  &lt;/Location&gt;\n\n  SSLEngine on\n  SSLProxyEngine on\n  SSLCertificateFile /etc/letsencrypt/live/chat.MYEDITEDDOMAIN.com/fullchain.pem\n  SSLCertificateKeyFile /etc/letsencrypt/live/chat.MYEDITEDDOMAIN.com/privkey.pem\n#   SSLOpenSSLConfCmd DHParameters &quot;/etc/nginx/dhparam.pem&quot;\n  SSLProtocol all -SSLv3 -TLSv1 -TLSv1.1\n  SSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384\n  SSLHonorCipherOrder off\n  SSLSessionTickets off\n  Header set Strict-Transport-Security &quot;max-age=31536000&quot;\n&lt;/VirtualHost&gt;\n</code></pre></div>",
+        "id": 1229292,
+        "sender_full_name": "Kassius",
+        "timestamp": 1625949000
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"2\" href=\"/#narrow/stream/2-general/topic/apache2.20404.20error.20reverse.20proxy.20docker-zulip\">#general &gt; apache2 404 error reverse proxy docker-zulip</a> by <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span></p>",
+        "id": 1230661,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1626223984
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"20052\">@Kassius</span> moved this here, since this is the stream for support (and thus is read with priority over other threads).</p>",
+        "id": 1230662,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626223998
+    },
+    {
+        "content": "<p>It's not obvious to me what you're doing wrong; but the issue is likely somewhere in your Apache configuration.</p>",
+        "id": 1230664,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626224048
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"20052\">@Kassius</span>: You don't need both the <code>RewriteRule</code> <em>and</em> the <code>ProxyPass</code>.  Remove the <code>RewriteEngine on</code> / <code>RewriteRule</code> lines and see how that fares.</p>",
+        "id": 1231232,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626294868
+    }
+]

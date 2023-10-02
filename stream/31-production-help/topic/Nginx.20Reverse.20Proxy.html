@@ -1,0 +1,121 @@
+<html>
+<head><meta charset="utf-8"><title>Nginx Reverse Proxy · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nginx.20Reverse.20Proxy.html">Nginx Reverse Proxy</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="659964"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nginx%20Reverse%20Proxy/near/659964" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Skurlat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nginx.20Reverse.20Proxy.html#659964">(Nov 09 2018 at 15:48)</a>:</h4>
+<p>Quick context on this question, our Zulip server is hosted on an IPv6 only machine. To make it accessible to IPv4 users, I have used another machine we have with a dual stack (IPv4 + IPv6) with Nginx as a reverse proxy and the following config (on the dual stack machine to redirect IPv4 users to the IPv6 machine):</p>
+<div class="codehilite"><pre><span></span>server {
+    listen 443 ssl;
+    server_name [...].com;
+    ssl_certificate /[...]/fullchain.pem;
+    ssl_certificate_key /[...]/privkey.pem;
+
+    location / {
+        include proxy_params;
+        set $addr &quot;[2a01::::::::]:443&quot;;
+        proxy_pass https://$addr;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+</pre></div>
+
+
+<p>Everything seems to be working fine although I am missing the second point of the doc (<a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy" target="_blank" title="https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy">https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy</a>). Is that needed?</p>
+
+
+
+<a name="660000"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nginx%20Reverse%20Proxy/near/660000" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nginx.20Reverse.20Proxy.html#660000">(Nov 09 2018 at 18:27)</a>:</h4>
+<p><span class="user-mention" data-user-id="9371">@Skurlat</span> yes, you should definitely add the <code>proxy_read_timeout</code> and <code>proxy_buffering</code> settings.</p>
+
+
+
+<a name="660003"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nginx%20Reverse%20Proxy/near/660003" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nginx.20Reverse.20Proxy.html#660003">(Nov 09 2018 at 18:28)</a>:</h4>
+<p>It won't fail super visibly if you don't add those (it'll manifest as the server-&gt;client real-time push being flaky for some users)</p>
+
+
+
+<a name="660004"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nginx%20Reverse%20Proxy/near/660004" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nginx.20Reverse.20Proxy.html#660004">(Nov 09 2018 at 18:28)</a>:</h4>
+<p>But you should still add them <span class="emoji emoji-1f642" title="slight smile">:slight_smile:</span></p>
+
+
+
+<a name="660292"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nginx%20Reverse%20Proxy/near/660292" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Skurlat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nginx.20Reverse.20Proxy.html#660292">(Nov 10 2018 at 15:06)</a>:</h4>
+<p>Ok, thanks Tim, I have updated it accordingly :)</p>
+
+
+
+<a name="804954"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nginx%20Reverse%20Proxy/near/804954" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nginx.20Reverse.20Proxy.html#804954">(Dec 29 2019 at 17:05)</a>:</h4>
+<p>I'm trying to use a reverse proxy for zulip.</p>
+
+
+
+<a name="804955"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nginx%20Reverse%20Proxy/near/804955" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nginx.20Reverse.20Proxy.html#804955">(Dec 29 2019 at 17:06)</a>:</h4>
+<p>While doing the command <strong>letsencrypt certonly 35.247.105.158</strong> i got error</p>
+
+
+
+<a name="804956"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nginx%20Reverse%20Proxy/near/804956" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nginx.20Reverse.20Proxy.html#804956">(Dec 29 2019 at 17:06)</a>:</h4>
+<div class="codehilite"><pre><span></span>
+</pre></div>
+
+
+
+<a name="804957"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nginx%20Reverse%20Proxy/near/804957" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nginx.20Reverse.20Proxy.html#804957">(Dec 29 2019 at 17:07)</a>:</h4>
+<div class="codehilite"><pre><span></span>/usr/local/lib/python2.7/dist-packages/requests/__init__.py:83: RequestsDependencyWarning: Old version of cryptography ([1, 2, 3]) may cause slowdown.
+  warnings.warn(warning, RequestsDependencyWarning)
+usage:
+  certbot [SUBCOMMAND] [options] [-d DOMAIN] [-d DOMAIN] ...
+
+Certbot can obtain and install HTTPS/TLS/SSL certificates.  By default,
+it will attempt to use a webserver both for obtaining and installing the
+certificate.
+certbot: error: unrecognized arguments: 35.247.105.158
+</pre></div>
+
+
+
+<a name="805246"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nginx%20Reverse%20Proxy/near/805246" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nginx.20Reverse.20Proxy.html#805246">(Dec 31 2019 at 01:29)</a>:</h4>
+<p><span class="user-mention" data-user-id="14300">@Luís Correia</span> we don't provide support for running <code>letsencrypt</code> directly; you can use their forum to get help.</p>
+
+
+
+<a name="805359"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nginx%20Reverse%20Proxy/near/805359" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nginx.20Reverse.20Proxy.html#805359">(Dec 31 2019 at 15:08)</a>:</h4>
+<p>But  is there another way of using a reverse proxy without using ssl certificates?</p>
+
+
+
+<a name="805360"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nginx%20Reverse%20Proxy/near/805360" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nginx.20Reverse.20Proxy.html#805360">(Dec 31 2019 at 15:10)</a>:</h4>
+<p><span class="user-mention" data-user-id="14300">@Luís Correia</span> You should also be aware that Let’s Encrypt (and most other CAs) will not give you a certificate for an IP address.</p>
+
+
+
+<a name="805907"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Nginx%20Reverse%20Proxy/near/805907" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Nginx.20Reverse.20Proxy.html#805907">(Jan 02 2020 at 14:22)</a>:</h4>
+<p>So i should use another external host instead IP?</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

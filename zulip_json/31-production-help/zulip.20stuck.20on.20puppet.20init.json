@@ -1,0 +1,122 @@
+[
+    {
+        "content": "<p>I have zulip running in kubernetes for several years now, today when moving to a new node I had to reschedule zulip. Now after starting up, everything is green, however zulip container is stuck and the last log line is <code>Disabling https in nginx.</code>. Inspecting with <code>ps</code> it seems to be stuck on some puppet task:</p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code><span class=\"w\">      </span><span class=\"m\">1</span><span class=\"w\"> </span>?<span class=\"w\">        </span>Ss<span class=\"w\">     </span><span class=\"m\">0</span>:00<span class=\"w\"> </span>/bin/bash<span class=\"w\"> </span>/sbin/entrypoint.sh<span class=\"w\"> </span>app:run\n<span class=\"w\">     </span><span class=\"m\">12</span><span class=\"w\"> </span>?<span class=\"w\">        </span>S<span class=\"w\">      </span><span class=\"m\">0</span>:00<span class=\"w\"> </span>python3<span class=\"w\"> </span>/home/zulip/deployments/current/scripts/zulip-puppet-apply<span class=\"w\"> </span>-f\n<span class=\"w\">     </span><span class=\"m\">15</span><span class=\"w\"> </span>?<span class=\"w\">        </span>D<span class=\"w\">      </span><span class=\"m\">0</span>:00<span class=\"w\">  </span><span class=\"se\">\\_</span><span class=\"w\"> </span>/usr/bin/ruby<span class=\"w\"> </span>/usr/bin/puppet<span class=\"w\"> </span>apply<span class=\"w\"> </span>--modulepath<span class=\"o\">=</span>/home/zulip/deployments/current/puppet:/srv/zulip-puppet-cache/current<span class=\"w\"> </span>-e<span class=\"w\">  </span>Exec<span class=\"w\"> </span><span class=\"o\">{</span><span class=\"w\"> </span><span class=\"nv\">path</span><span class=\"w\"> </span><span class=\"o\">=</span>&gt;<span class=\"w\"> </span><span class=\"s2\">\"/usr/sbin:/usr/bin:/sbin:/bin\"</span><span class=\"w\"> </span><span class=\"o\">}</span><span class=\"w\"> </span>include<span class=\"w\"> </span>zulip::profile::docker<span class=\"w\">  </span>--detailed-exitcodes\n<span class=\"w\">     </span><span class=\"m\">39</span><span class=\"w\"> </span>?<span class=\"w\">        </span>R<span class=\"w\">      </span><span class=\"m\">1</span>:12<span class=\"w\">      </span><span class=\"se\">\\_</span><span class=\"w\"> </span>/usr/bin/ruby<span class=\"w\"> </span>/usr/bin/puppet<span class=\"w\"> </span>apply<span class=\"w\"> </span>--modulepath<span class=\"o\">=</span>/home/zulip/deployments/current/puppet:/srv/zulip-puppet-cache/current<span class=\"w\"> </span>-e<span class=\"w\">  </span>Exec<span class=\"w\"> </span><span class=\"o\">{</span><span class=\"w\"> </span><span class=\"nv\">path</span><span class=\"w\"> </span><span class=\"o\">=</span>&gt;<span class=\"w\"> </span><span class=\"s2\">\"/usr/sbin:/usr/bin:/sbin:/bin\"</span><span class=\"w\"> </span><span class=\"o\">}</span><span class=\"w\"> </span>include<span class=\"w\"> </span>zulip::profile::docker<span class=\"w\">  </span>--detailed-exitcodes\n</code></pre></div>\n<p>It seems to have also pinned one core to 100% usage</p>",
+        "id": 1566526,
+        "sender_full_name": "Vilsol",
+        "timestamp": 1683758894
+    },
+    {
+        "content": "<p>I think you mean puppet, not <code>puppeteer</code>; edited the topic.</p>",
+        "id": 1566555,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1683760164
+    },
+    {
+        "content": "<p>Sorry yes</p>",
+        "id": 1566556,
+        "sender_full_name": "Vilsol",
+        "timestamp": 1683760177
+    },
+    {
+        "content": "<p>I would try killing it and running <code>zulip-puppet-apply</code> manually so you can get the output and see what it's doing when it gets stuck.</p>",
+        "id": 1566557,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1683760214
+    },
+    {
+        "content": "<p>Manually running <code>python3 /home/zulip/deployments/current/scripts/zulip-puppet-apply</code> inside the container yields no output, it just freezes and jumps to 100% usage. Are there any env vars I can provide to it to make it output any debug logs?</p>",
+        "id": 1566567,
+        "sender_full_name": "Vilsol",
+        "timestamp": 1683760488
+    },
+    {
+        "content": "<p>Looks like I had run into this issue <a href=\"https://github.com/docker-library/rabbitmq/issues/545\">https://github.com/docker-library/rabbitmq/issues/545</a></p>\n<p>However bumping to latest rabbitmq <code>3.11.15</code> has not solved the issue. Rabbitmq runs fine, but zulip still has pinned 1 core with that command.</p>",
+        "id": 1566606,
+        "sender_full_name": "Vilsol",
+        "timestamp": 1683761865
+    },
+    {
+        "content": "<p>This is probably somehow related to <a href=\"#narrow/stream/43-automated-testing/topic/puppet.20with.20ruby2.2E7.20updates/near/1562288\">https://chat.zulip.org/#narrow/stream/43-automated-testing/topic/puppet.20with.20ruby2.2E7.20updates/near/1562288</a>.</p>",
+        "id": 1566607,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1683761956
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17466\">@Vilsol</span> try upgrading ruby in your container and try again?</p>",
+        "id": 1566609,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1683761980
+    },
+    {
+        "content": "<p>I wonder if you somehow ended up with your container having the bugged version of Ruby discussed in that thread.</p>",
+        "id": 1566610,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1683761995
+    },
+    {
+        "content": "<p>It does indeed have the old version:</p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code>root@zulip-856b66f995-md2br:/#<span class=\"w\"> </span>ruby<span class=\"w\"> </span>--version\nruby<span class=\"w\"> </span><span class=\"m\">2</span>.7.0p0<span class=\"w\"> </span><span class=\"o\">(</span><span class=\"m\">2019</span>-12-25<span class=\"w\"> </span>revision<span class=\"w\"> </span>647ee6f091<span class=\"o\">)</span><span class=\"w\"> </span><span class=\"o\">[</span>x86_64-linux-gnu<span class=\"o\">]</span>\n</code></pre></div>\n<p>But even running a completely fresh pull on my own machine produces this result, so the container seems to be outdated?</p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code><span class=\"o\">[</span><span class=\"m\">02</span>:41:23<span class=\"o\">]</span><span class=\"w\"> </span>❯<span class=\"w\"> </span>docker<span class=\"w\"> </span>run<span class=\"w\"> </span>--rm<span class=\"w\"> </span>zulip/docker-zulip:6.1-0<span class=\"w\"> </span>ruby<span class=\"w\"> </span>--version\nUnable<span class=\"w\"> </span>to<span class=\"w\"> </span>find<span class=\"w\"> </span>image<span class=\"w\"> </span><span class=\"s1\">'zulip/docker-zulip:6.1-0'</span><span class=\"w\"> </span>locally\n<span class=\"m\">6</span>.1-0:<span class=\"w\"> </span>Pulling<span class=\"w\"> </span>from<span class=\"w\"> </span>zulip/docker-zulip\neaead16dc43b:<span class=\"w\"> </span>Pull<span class=\"w\"> </span><span class=\"nb\">complete</span>\nd05b9d10824b:<span class=\"w\"> </span>Pull<span class=\"w\"> </span><span class=\"nb\">complete</span>\nf8554e985819:<span class=\"w\"> </span>Pull<span class=\"w\"> </span><span class=\"nb\">complete</span>\n7f65b38ce284:<span class=\"w\"> </span>Pull<span class=\"w\"> </span><span class=\"nb\">complete</span>\n82d9cd58bf87:<span class=\"w\"> </span>Pull<span class=\"w\"> </span><span class=\"nb\">complete</span>\n182f797dbe7a:<span class=\"w\"> </span>Pull<span class=\"w\"> </span><span class=\"nb\">complete</span>\n8ea20cd1989c:<span class=\"w\"> </span>Pull<span class=\"w\"> </span><span class=\"nb\">complete</span>\nDigest:<span class=\"w\"> </span>sha256:140b95ff09c24b8cf2b659121161b78dae1bf35a7ca8f63c791f3b9ba885becf\nStatus:<span class=\"w\"> </span>Downloaded<span class=\"w\"> </span>newer<span class=\"w\"> </span>image<span class=\"w\"> </span><span class=\"k\">for</span><span class=\"w\"> </span>zulip/docker-zulip:6.1-0\nruby<span class=\"w\"> </span><span class=\"m\">2</span>.7.0p0<span class=\"w\"> </span><span class=\"o\">(</span><span class=\"m\">2019</span>-12-25<span class=\"w\"> </span>revision<span class=\"w\"> </span>647ee6f091<span class=\"o\">)</span><span class=\"w\"> </span><span class=\"o\">[</span>x86_64-linux-gnu<span class=\"o\">]</span>\n</code></pre></div>",
+        "id": 1566614,
+        "sender_full_name": "Vilsol",
+        "timestamp": 1683762155
+    },
+    {
+        "content": "<p>And upgrading doesn't seem to be an option as on ubuntu 20.04 that is the latest? <a href=\"https://packages.ubuntu.com/focal/ruby\">https://packages.ubuntu.com/focal/ruby</a></p>",
+        "id": 1566616,
+        "sender_full_name": "Vilsol",
+        "timestamp": 1683762338
+    },
+    {
+        "content": "<p>Yeah, we don't generally rebuild the docker images with the latest distribution packages.</p>",
+        "id": 1566617,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1683762339
+    },
+    {
+        "content": "<p>What does <code>apt-cache policy ruby2.7</code> say?</p>",
+        "id": 1566619,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1683762380
+    },
+    {
+        "content": "<p>Hmm, it seems to be available but trying to upgrade it says it's on latest.</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip-856b66f995-md2br:/# apt-cache policy ruby2.7\nruby2.7:\n  Installed: 2.7.0-5ubuntu1.7\n  Candidate: 2.7.0-5ubuntu1.10\n  Version table:\n     2.7.0-5ubuntu1.10 500\n        500 http://archive.ubuntu.com/ubuntu focal-updates/main amd64 Packages\n        500 http://security.ubuntu.com/ubuntu focal-security/main amd64 Packages\n *** 2.7.0-5ubuntu1.7 100\n        100 /var/lib/dpkg/status\n     2.7.0-5ubuntu1 500\n        500 http://archive.ubuntu.com/ubuntu focal/main amd64 Packages\n</code></pre></div>",
+        "id": 1566620,
+        "sender_full_name": "Vilsol",
+        "timestamp": 1683762442
+    },
+    {
+        "content": "<p>forcefully specifying the version upgraded it, but alas the puppet command still freezes</p>",
+        "id": 1566622,
+        "sender_full_name": "Vilsol",
+        "timestamp": 1683762487
+    },
+    {
+        "content": "<p>Passing <code>--debug</code> to <code>zulip-puppet-apply</code> may generate more output.</p>",
+        "id": 1566623,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1683762543
+    },
+    {
+        "content": "<p>Nope. nothing, no logs at all</p>",
+        "id": 1566625,
+        "sender_full_name": "Vilsol",
+        "timestamp": 1683762664
+    },
+    {
+        "content": "<p>Ok, found that I can slap <code>log_level = debug</code> into <code>/etc/puppet/puppet.conf</code>. Now I have logs and it seems that every time it tries to execute a command it takes an actual eternity. It tried executing <code>lsb_release -a</code> and that took like 30 seconds, even though in another terminal in the container I can execute it immediately.</p>",
+        "id": 1566631,
+        "sender_full_name": "Vilsol",
+        "timestamp": 1683763324
+    },
+    {
+        "content": "<p>ok, it literally takes 40 minutes to startup because each command it tries to invoke takes 30s to 2mins. Googling around I cannot find any reference to an issue like this. Sorry for rubber ducky'ing</p>",
+        "id": 1566675,
+        "sender_full_name": "Vilsol",
+        "timestamp": 1683765580
+    },
+    {
+        "content": "<p>I have now changed the deployment command to this as to be able to monitor its progress:</p>\n<div class=\"codehilite\" data-code-language=\"YAML\"><pre><span></span><code><span class=\"nt\">command</span><span class=\"p\">:</span>\n<span class=\"p p-Indicator\">-</span><span class=\"w\"> </span><span class=\"l l-Scalar l-Scalar-Plain\">sh</span>\n<span class=\"p p-Indicator\">-</span><span class=\"w\"> </span><span class=\"l l-Scalar l-Scalar-Plain\">-c</span>\n<span class=\"p p-Indicator\">-</span><span class=\"w\"> </span><span class=\"l l-Scalar l-Scalar-Plain\">printf \"[main]\\nlog_level = debug\" &gt;&gt; /etc/puppet/puppet.conf &amp;&amp; /sbin/entrypoint.sh app:run</span>\n</code></pre></div>",
+        "id": 1566679,
+        "sender_full_name": "Vilsol",
+        "timestamp": 1683765705
+    }
+]

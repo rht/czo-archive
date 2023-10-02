@@ -1,0 +1,397 @@
+<html>
+<head><meta charset="utf-8"><title>redirects from near links · design · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/101-design/index.html">design</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html">redirects from near links</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1343086"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343086" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343086">(Mar 11 2022 at 19:23)</a>:</h4>
+<p>Hey folks!  I'm working on trying to integrate <a href="https://github.com/zulip/zulip/pull/20553">#20553</a>, which fixes one of the more important problems with Zulip's system for linking to a message, and have a few design questions that we need to settle. The problem is that it is currently not possible to generate a link to a topic that will continue to work should the topic be moved/renamed (either to a different stream or topic, or being marked as resolved).</p>
+<p>For context, in Zulip there are two types of URLs that can be generated when linking to a topic:</p>
+<ul>
+<li><code>/#narrow/stream/{stream_id}-{stream_name}/topic/{topic}</code>, which is what you get when clicking a topic in the left sidebar, or the in the URL bar when viewing a topic. These links don't specify a specific place in the conversation -- just the conversation. Clicking one of these links takes you to the first unread message in the conversation (or the bottom of it), which is convenient if your goal is to read that conversation as a whole.</li>
+<li><code>/#narrow/stream/{stream_id}-{stream_name}/topic/{topic}/near/{message_id}</code>, which is what you get when you click "Copy link to conversation" on an individual message, or click the timestamp on the message. These are intended to be permanent links to the target message within a conversation, and are what we recommend to users who want to post a Zulip conversation to an external issue tracker, for example. These are designed to take you to the target message within the conversation regardless of whether you've read the conversation, and as a result take you to a view where messages will not be marked as read by scrolling. (So you can later read the conversation in order after being pointed to a specific part of it by someone).</li>
+</ul>
+
+
+
+<a name="1343087"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343087" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343087">(Mar 11 2022 at 19:25)</a>:</h4>
+<p>The change in <a href="https://github.com/zulip/zulip/pull/20553">#20553</a> will make this second <code>near</code> category of link automatically redirect to the conversation containing the target message if it had been moved to a different stream or topic (assuming you have access to the message's new location).</p>
+
+
+
+<a name="1343089"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343089" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343089">(Mar 11 2022 at 19:26)</a>:</h4>
+<p>The design question I have is what to do in the situation in situations where we determine the following:</p>
+<ul>
+<li>The requested message ID does not appear in the stream/topic pair specified in the link.</li>
+<li>The edit history for the target message shows that it was never in the topic for the narrow that was requested.</li>
+</ul>
+
+
+
+<a name="1343095"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343095" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343095">(Mar 11 2022 at 19:31)</a>:</h4>
+<p>There are a few options:</p>
+<ul>
+<li>We can display the stream/topic pair that was requested scrolled as close as possible to the target message ID. This is the behavior we have today pre-#20553, and is useful for situations where you might replace an existing search for <code>stream: 1/topic: 1/near: 15</code> with <code>stream: 2/topic: 2/near: 15</code> in order to view what was happening in another conversation at the same time as an existing conversation. </li>
+<li>We can redirect to <code>stream: 1 topic: 1</code> because that's the location where the target message is currently. Note that we will probably need to do this option for organizations that have disabled message edit history, since in that situation there is no way for clients to know whether a message was moved. (This may argue for a modified feature for disabling edit history only for content edits, but leaving it enabled for stream/topic edits).</li>
+</ul>
+
+
+
+<a name="1343099"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343099" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343099">(Mar 11 2022 at 19:32)</a>:</h4>
+<p>So the main question is I think whether we think it's correct to parse the edit history and check if the message was actually ever in the current stream/topic before redirecting, or only check whether the stream/topic for the message currently differs from that requested.</p>
+
+
+
+<a name="1343100"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343100" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343100">(Mar 11 2022 at 19:33)</a>:</h4>
+<p>I think parsing edit history is the correct thing to do here since it has clear advantages for the example situation I noted above (and for others, like typing <code>stream: 1/topic: 1/near:1</code> into search to see the very oldest messages in a topic).</p>
+
+
+
+<a name="1343101"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343101" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343101">(Mar 11 2022 at 19:35)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/101-design/topic/redirects.20from.20near.20links/near/1343089">said</a>:</p>
+<blockquote>
+<p>The design question I have is what to do in the situation in situations where we determine the following:</p>
+<ul>
+<li>The requested message ID does not appear in the stream/topic pair specified in the link.</li>
+<li>The edit history for the target message shows that it was never in the topic for the narrow that was requested.</li>
+</ul>
+</blockquote>
+<p>Would this ever happen via the Zulip UI? Or only because a URL was manually edited?</p>
+
+
+
+<a name="1343106"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343106" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343106">(Mar 11 2022 at 19:37)</a>:</h4>
+<p>I think since the feature is "link to message", we should send the user to wherever the <code>{message_id}</code> currently is. I didn't totally follow the relevance of the edit history.</p>
+
+
+
+<a name="1343131"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343131" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343131">(Mar 11 2022 at 20:03)</a>:</h4>
+<p>You can create this situation by editing search operators in the search feature, or editing the URL directly. I imagine most folks encountering this situation would be using the search UI.</p>
+
+
+
+<a name="1343133"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343133" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343133">(Mar 11 2022 at 20:05)</a>:</h4>
+<p>Barring bugs, I think ~100% of people encountering the situation where looking at the edit history would change behavior would be folks who are doing the types of searches described above -- because the edit history will show that the message had indeed been in the topic contained in any link generated by "Copy link to message" (so all algorithms will produce the same outcome, and with the same latency since we need to fetch the message if not in local cache to figure out where it is anyway, and that will return both its current stream/topic and its edit history).</p>
+
+
+
+<a name="1343138"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343138" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343138">(Mar 11 2022 at 20:08)</a>:</h4>
+<p>The main downsides, at least that I'm aware of, of parsing the edit history are (1) increased specification complexity and (2) resulting risk of bugs.</p>
+
+
+
+<a name="1343139"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343139" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343139">(Mar 11 2022 at 20:09)</a>:</h4>
+<p>That said, I'd expect any bugs in this code path be highly reproducible and thus easy to report and then fix.</p>
+
+
+
+<a name="1343157"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343157" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343157">(Mar 11 2022 at 20:24)</a>:</h4>
+<p>I'm deploying <a href="https://github.com/zulip/zulip/pull/20553">#20553</a> here, so that we can start testing the main change, which is that <code>near</code> links should now correctly take you to the intended conversation even if the topic was moved/resolved.</p>
+
+
+
+<a name="1343335"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343335" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343335">(Mar 12 2022 at 00:13)</a>:</h4>
+<p>After chatting with <span class="user-mention silent" data-user-id="7">Tim Abbott</span> to understand what the above means, I'm happy with the proposed plan.</p>
+
+
+
+<a name="1343352"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1343352" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1343352">(Mar 12 2022 at 00:21)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/101-design/topic/redirects.20from.20near.20links/near/1343095">said</a>:</p>
+<blockquote>
+<p>(This may argue for a modified feature for disabling edit history only for content edits, but leaving it enabled for stream/topic edits).</p>
+</blockquote>
+<p>Filed <a href="https://github.com/zulip/zulip/pull/21398">#21398</a> for this.</p>
+
+
+
+<a name="1349468"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1349468" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1349468">(Mar 21 2022 at 23:46)</a>:</h4>
+<p>Great! Glad to see such excellent progress on this.</p>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/101-design/topic/redirects.20from.20near.20links/near/1343086">said</a>:</p>
+<blockquote>
+<p>For context, in Zulip there are two types of URLs that can be generated when linking to a topic:</p>
+<ul>
+<li><code>/#narrow/stream/{stream_id}-{stream_name}/topic/{topic}</code>, which is what you get when clicking a topic in the left sidebar, or the in the URL bar when viewing a topic. These links don't specify a specific place in the conversation -- just the conversation. Clicking one of these links takes you to the first unread message in the conversation (or the bottom of it), which is convenient if your goal is to read that conversation as a whole.</li>
+</ul>
+</blockquote>
+<p>Is there a plan to handle making the links we generate in these other parts of the UI stable too?</p>
+<p>Another place we generate the same kind of link is in autocomplete like <a class="stream-topic" data-stream-id="101" href="/#narrow/stream/101-design/topic/redirects.20from.20near.20links">#design &gt; redirects from near links</a>.</p>
+
+
+
+<a name="1349469"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1349469" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1349469">(Mar 21 2022 at 23:48)</a>:</h4>
+<p>I think the basic shape of a solution will probably be that we encode into those links a message ID too, so that we can apply the same logic of following that message around. Like this proposal in a previous thread:</p>
+<p><span class="user-mention silent" data-user-id="17945">Wesley Aptekar-Cassels</span> <a href="#narrow/stream/137-feedback/topic/links.20to.20topics/near/1214413">said</a>:</p>
+<blockquote>
+<p>Perhaps this should be a separate thread, but have we considered making durable links to topics? (I know there's an issue sort of around this, but it doesn't cover it exactly). I imagine we could do so by having a way of encoding the ID of the first message in the thread in the URL, but without explicitly linking to the first message. That way if the entire thread was renamed, the link would still operate.</p>
+</blockquote>
+
+
+
+<a name="1349470"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1349470" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1349470">(Mar 21 2022 at 23:49)</a>:</h4>
+<p>I.e. we'd add another narrow operator that takes a message ID, and has a slightly different meaning from <code>near</code>: it'd mean to find the thread where that message now is (just like for <code>near</code>), and then go to the first unread.</p>
+
+
+
+<a name="1349476"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1349476" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1349476">(Mar 21 2022 at 23:57)</a>:</h4>
+<p>Filed <a href="https://github.com/zulip/zulip/pull/21505">#21505</a> for that.</p>
+
+
+
+<a name="1349483"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1349483" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1349483">(Mar 21 2022 at 23:59)</a>:</h4>
+<p>I don't have a complete design for how to handle those additional cases, and don't intend to think about it before 5.0 is released.</p>
+
+
+
+<a name="1349484"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1349484" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1349484">(Mar 22 2022 at 00:00)</a>:</h4>
+<p>Yeah, that makes sense</p>
+
+
+
+<a name="1349485"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1349485" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1349485">(Mar 22 2022 at 00:00)</a>:</h4>
+<p>One possible shape of a solution would be to have the Markdown processor, when handling our topic link syntax <a class="stream-topic" data-stream-id="101" href="/#narrow/stream/101-design/topic/redirects.20from.20near.20links">#design &gt; redirects from near links</a>, to generate a <code>near</code> link to the end of the topic as of the time the message is rendered. The main downside with that approach is it's not stable after editing a message.</p>
+
+
+
+<a name="1349486"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1349486" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1349486">(Mar 22 2022 at 00:02)</a>:</h4>
+<p>There's other approaches we might take, which is that if you land on a topic that's empty, try to figure out if it might have been resolved/unresolved ... but that feels a lot more localized to just the resolve topics (fairly common) case. </p>
+<p>But my overall perspective is that it's the kind of thing that's complicated and deserves a lot of careful consideration.</p>
+
+
+
+<a name="1349493"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1349493" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1349493">(Mar 22 2022 at 00:09)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/101-design/topic/redirects.20from.20near.20links/near/1349486">said</a>:</p>
+<blockquote>
+<p>There's other approaches we might take, which is that if you land on a topic that's empty, try to figure out if it might have been resolved/unresolved ... but that feels a lot more localized to just the resolve topics (fairly common) case. </p>
+</blockquote>
+<p>Yeah, I'd like to have a solution that applies to topic renames/moves in general, not just resolve/unresolve. There are lots of other reasons to rename topics, even automated ones (like <a href="https://github.com/rust-lang/triagebot/pull/1590">https://github.com/rust-lang/triagebot/pull/1590</a> , which I found from backlinks on <a href="https://github.com/zulip/zulip/pull/15290">#15290</a>), and it's sad when that breaks links.</p>
+
+
+
+<a name="1349494"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1349494" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1349494">(Mar 22 2022 at 00:09)</a>:</h4>
+<p>Meanwhile I've filed <a href="https://github.com/zulip/zulip-mobile/pull/5306">#M5306</a> for matching this feature on mobile.</p>
+
+
+
+<a name="1361553"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1361553" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1361553">(Apr 06 2022 at 23:14)</a>:</h4>
+<p>Coming back to thinking about what we want the link behavior to be for moved topics, a conservative option might be:</p>
+<ol>
+<li>If there are currently any messages in the original topic, go there.</li>
+<li>If all the messages from that topic have been moved to a single other topic, go there.</li>
+<li>If different messages from that topic have been moved to different other topics... I guess go to the original topic because the right choice isn't clear, even though there's nothing there?</li>
+</ol>
+<p>Thoughts?</p>
+
+
+
+<a name="1369623"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1369623" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1369623">(Apr 19 2022 at 00:16)</a>:</h4>
+<p>This could change with data model work, but it's not necessarily easy to know whether or not there exist messages have been moved away from a topic. The records that a message has been moved to another topic are stored on the messages themselves, and a client fetching messages currently in a topic has no way to find messages that used to be in that topic, without a specific message ID to lookup.</p>
+
+
+
+<a name="1369624"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1369624" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1369624">(Apr 19 2022 at 00:17)</a>:</h4>
+<p>The specific case of "resolve topic" is simpler, in that one can specifically check the resolved/unresolved version of the current topic to see if indeed messages exist there.</p>
+
+
+
+<a name="1456701"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1456701" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1456701">(Oct 28 2022 at 23:21)</a>:</h4>
+<p>I think we can have some sort of "anchor message" that follows the topic as the link is created. Similar to this approach <span class="user-mention silent" data-user-id="7">Tim Abbott</span>   <a href="#narrow/stream/101-design/topic/redirects.20from.20near.20links/near/1349485">mentioned</a>:</p>
+<blockquote>
+<p>One possible shape of a solution would be to have the Markdown processor, when handling our topic link syntax <a class="stream-topic" data-stream-id="101" href="/#narrow/stream/101-design/topic/redirects.20from.20near.20links">#design &gt; redirects from near links</a>, to generate a <code>near</code> link to the end of the topic as of the time the message is rendered. The main downside with that approach is it's not stable after editing a message.</p>
+</blockquote>
+<p>We ensure the invariants that:</p>
+<ul>
+<li>Each non-empty topic has one or more anchor message</li>
+<li>Each link to a topic encodes an always-valid reference to an anchor message</li>
+<li>The anchor message cannot be separately moved without renaming/moving the topic</li>
+</ul>
+<p>When the topic is renamed, that message follows. Same with resolving/unresolving. The only difference is that it is not visible to the user, nor it is editable (other than being moved along with the topic). This does not require substantial changes to our current data model.</p>
+
+
+
+<a name="1457172"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1457172" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1457172">(Oct 31 2022 at 17:05)</a>:</h4>
+<p><span class="user-mention" data-user-id="19400">@Zixuan James Li</span> do you think that should be anything other than just "the last message in the target topic".</p>
+
+
+
+<a name="1457175"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1457175" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zixuan James Li <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1457175">(Oct 31 2022 at 17:10)</a>:</h4>
+<p>I think we can insert a dummy message to separate it from a regular message, by creating a new model that subclasses <code>AbstractMessage</code>.</p>
+
+
+
+<a name="1460690"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1460690" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1460690">(Nov 08 2022 at 02:03)</a>:</h4>
+<p>Here's a scenario where I think different solutions to this problem will give different results, which might help clarify what semantics we want.</p>
+<ul>
+<li>There's a conversation on topic A. Someone makes a link to it. Call that "link 1".</li>
+<li>A month later, an unrelated conversation starts on the same topic A.</li>
+<li>Someone again makes a link to the topic. Call that "link 2".</li>
+<li>Someone cleans things up by moving the latest N messages -- the new, unrelated, conversation -- to a fresh new topic B.</li>
+</ul>
+<p>Say link 1 and link 2 both got written down in conversations elsewhere -- in a GitHub issue, say, or in messages elsewhere on Zulip.</p>
+<p>Now:</p>
+<ul>
+<li>If someone follows link 1, do they get topic A or topic B?</li>
+<li>If someone follows link 2, do they get topic A or topic B?</li>
+</ul>
+
+
+
+<a name="1460691"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1460691" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1460691">(Nov 08 2022 at 02:08)</a>:</h4>
+<p>I think it's pretty clear that the desirable behavior for link 1 is that it gives topic A.</p>
+<p>That's the conversation that the person who made link 1 was looking at -- after all, the later conversation didn't even exist at the time.</p>
+<p>If someone followed the link and got topic B, they'd find a completely unrelated conversation from the one that provides context for whatever the author of the text that used link 1 was saying. If they're lucky, there's a Notification Bot message saying things were moved from topic A, which they could use as a clue to sleuth out what happened and track down the intended conversation… and if they're less lucky, there may well not even be that.</p>
+
+
+
+<a name="1460693"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1460693" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1460693">(Nov 08 2022 at 02:12)</a>:</h4>
+<p>For link 2, I think things are a bit more ambiguous. It's possible that the author's intent was to refer to either the earlier conversation, or the newer one that had just happened.</p>
+<p>I think the more likely case is that they meant the newest conversation, though. If they really meant the older one, the most natural thing is to use "Copy link to message" and get a <code>/near/</code> link -- because even in the absence of anyone subsequently moving the messages, a plain link to the topic will tend to take people to what's latest, which is the newer conversation.</p>
+<p>So I think the desirable behavior is that link 2 should give topic B. But if it gave topic A, just like link 1 did, that would also be reasonable.</p>
+
+
+
+<a name="1460694"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1460694" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1460694">(Nov 08 2022 at 02:14)</a>:</h4>
+<p>With that example in mind:</p>
+<p>I like the version where each link we generate for a topic encodes an actual message in the topic, namely the current latest one.</p>
+<p>It means link 1 will go to topic A, and link 2 to topic B, just as I think we want them to do. And it also keeps things straightforward and transparent in terms of objects users already see and interact with in the app, namely messages.</p>
+
+
+
+<a name="1460698"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1460698" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1460698">(Nov 08 2022 at 02:18)</a>:</h4>
+<p>If I'm understanding the "anchor message" idea correctly, it would require that link 1 and link 2 go to the same place, because they'd be the very same URL. So it couldn't give us that desired behavior.</p>
+<p>I think introducing a new type of object that's sort of like a message, but invisible and intangible for the user to interact with like they can interact with messages, is also likely to lead to a long line of quirks and frustrations where things don't quite behave how the user expected -- or behave differently in situations that seem like they're the same -- and the user can't get their hands on things to make the app do what they wanted.</p>
+
+
+
+<a name="1460998"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1460998" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1460998">(Nov 08 2022 at 16:31)</a>:</h4>
+<p>Thanks <span class="user-mention silent" data-user-id="2187">Greg Price</span> , that's super helpful! It wasn't clear to me previously what's at stake in this discussion.</p>
+
+
+
+<a name="1461005"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1461005" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1461005">(Nov 08 2022 at 16:38)</a>:</h4>
+<p>I guess I can think of situations where you'd prefer to link to the first (or first unread) message, as we currently do. Without any topic moves involved, you might link to a topic expecting folks to read the whole thing from the top, in which case putting people at the bottom seems less useful.</p>
+<p>For links from outside the app, this would basically require a bit of retraining. Currently, when I create a GitHub issue, I sometimes just link to the Zulip topic (rather than a specific message, which would be more robust, I guess) if I want to put folks at the top. But if you're copying a link anyway, it's only a little harder to copy a link to a message; it's really the links inside Zulip where the behavior matters more.</p>
+
+
+
+<a name="1461035"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1461035" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1461035">(Nov 08 2022 at 17:19)</a>:</h4>
+<p>But it's possible that the advantages of the change (esp. with topic moves) are worth it.</p>
+
+
+
+<a name="1461037"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1461037" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1461037">(Nov 08 2022 at 17:22)</a>:</h4>
+<p>Also, making this change would put users in a situation where messages are not being marked as read more often, as we don't mark messages as read in <code>near:</code> views. So that's something to be mindful of and might require some tweaking. For example, if you follow a link to the latest message in a topic, and you have already read all the messages in that topic, you probably want new messages coming into the topic to be marked as read in the normal way.</p>
+
+
+
+<a name="1461038"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1461038" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1461038">(Nov 08 2022 at 17:22)</a>:</h4>
+<p>Ah, there's a distinction to make here:</p>
+<ul>
+<li>what message the link refers to to track moves;</li>
+<li>whether the link takes you to the top of the topic, or the bottom of it, or what.</li>
+</ul>
+<p>Currently we have basically two ways to link to a topic:</p>
+<ul>
+<li>A plain topic link takes you to your first unread in the topic -- so the start of it if you haven't read it, and the end of it if you've read the whole thing. And it doesn't follow any moves, which is basically the problem statement for the current discussion.</li>
+<li>A /near/ link encodes a particular message ID. It follows that message's moves. When opened, it takes you to that message, regardless of how much of the thread you have or haven't read.</li>
+</ul>
+<p>I think a likely outcome of this discussion is that we introduce a third type of link:</p>
+<ul>
+<li>A new-style topic link is like a /near/ link in that it encodes a particular message ID (or something) which it uses to follow moves. But it's like our current plain topic links in that it takes you to your first unread in the topic, so you can read the topic from the beginning if you haven't already.</li>
+</ul>
+
+
+
+<a name="1461039"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1461039" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1461039">(Nov 08 2022 at 17:23)</a>:</h4>
+<p>And then we'd generate that new-style link from "Copy link to topic" and from the <a class="stream-topic" data-stream-id="101" href="/#narrow/stream/101-design/topic/redirects.20from.20near.20links">#design &gt; redirects from near links</a> Markdown syntax (with its handy autocomplete.)</p>
+
+
+
+<a name="1461051"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1461051" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1461051">(Nov 08 2022 at 17:35)</a>:</h4>
+<p>Mm, yeah, that sounds like a good direction!</p>
+
+
+
+<a name="1465117"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1465117" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1465117">(Nov 16 2022 at 00:38)</a>:</h4>
+<p>Yeah that seems like a sensible design! Thanks for all the work spelling out the considerations here!</p>
+
+
+
+<a name="1465587"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1465587" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1465587">(Nov 16 2022 at 19:14)</a>:</h4>
+<p>Now that we have a concrete proposal, I linked <a href="https://github.com/zulip/zulip/pull/21505">#21505</a> to it, and added the "help wanted" and "difficult" tags to the issue.</p>
+
+
+
+<a name="1465816"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1465816" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1465816">(Nov 16 2022 at 22:09)</a>:</h4>
+<p>Thanks!</p>
+<p>Ha, in fact, rereading the issue description, I wrote this then:</p>
+<blockquote>
+<p>I think this will probably look something like: we encode into those links a message ID too, so that we can follow that message around using the same logic as in <code>/near/</code> links. I.e., we'd add another narrow operator that takes a message ID, and has a slightly different meaning from <code>near</code>: it'd mean to find the thread where that message now is (just like for <code>near</code>), and then go to the first unread.</p>
+</blockquote>
+<p>and that is basically the same proposal as the one I wrote <a href="#narrow/stream/101-design/topic/redirects.20from.20near.20links/near/1461038">above</a>:</p>
+<blockquote>
+<ul>
+<li>A new-style topic link is like a /near/ link in that it encodes a particular message ID (or something) which it uses to follow moves. But it's like our current plain topic links in that it takes you to your first unread in the topic, so you can read the topic from the beginning if you haven't already.</li>
+</ul>
+</blockquote>
+
+
+
+<a name="1465867"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/redirects%20from%20near%20links/near/1465867" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/redirects.20from.20near.20links.html#1465867">(Nov 16 2022 at 22:56)</a>:</h4>
+<p>Heh, I guess we now have more context on this thread about why that's what we're going for. :)</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

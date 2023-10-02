@@ -1,0 +1,644 @@
+[
+    {
+        "content": "<p>Log reports tornado might not be running, but supervisorctl shows it is. Tried restarting everything via both the script and supervisorctl and I'm having no luck. What's the next step in troubleshooting?</p>",
+        "id": 246363,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499533195
+    },
+    {
+        "content": "<p>also worth noting my install was working just fine before this happened.</p>",
+        "id": 246369,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499533379
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"lyle@lylebrown.com\" data-user-id=\"2527\">@Lyle</span> have you looked at /var/log/zulip/tornado.log?</p>",
+        "id": 246418,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499535692
+    },
+    {
+        "content": "<p>If you're not seeing anything useful in <code>errors.log</code>, that's the stdout/stderr from the Tornado process, and can sometimes have extra details.</p>",
+        "id": 246419,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499535714
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> looks like I'm getting a connection refused error on port 5672</p>",
+        "id": 246440,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499538585
+    },
+    {
+        "content": "<p>even after stopping everything through supervisorctl, it looks like the zulip user is still running a ton of nginx processes</p>",
+        "id": 246442,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499538646
+    },
+    {
+        "content": "<p>Ahh, that's rabbitmq.  Make sure your rabbitmq server is running.</p>",
+        "id": 246443,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499538651
+    },
+    {
+        "content": "<p>(and accessible)</p>",
+        "id": 246444,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499538661
+    },
+    {
+        "content": "<p>What version did you originally install with?  If you installed before 1.5 or so, if you reboot a Zulip server and it comes up with a different hostname, you'd need to purge and reinstall rabbitmq.</p>",
+        "id": 246445,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499538705
+    },
+    {
+        "content": "<p>I installed roughly a month ago, so...I think 1.5.2</p>",
+        "id": 246447,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499538781
+    },
+    {
+        "content": "<p>how can I check the status of rabbitmq?</p>",
+        "id": 246448,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499538825
+    },
+    {
+        "content": "<p><code>rabbitmqctl status</code></p>",
+        "id": 246454,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499539481
+    },
+    {
+        "content": "<p><code>cat /etc/zulip/zulip.conf</code> would also be helpful for debugging this</p>",
+        "id": 246455,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499539510
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> here's what rabbitmqctl status gives me, even after starting up zulip via supervisorctl again: <a href=\"https://paste.lyle.space/#evu2AvrPI66FqLHr87Acpw\" target=\"_blank\" title=\"https://paste.lyle.space/#evu2AvrPI66FqLHr87Acpw\">https://paste.lyle.space/#evu2AvrPI66FqLHr87Acpw</a></p>",
+        "id": 246457,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499539651
+    },
+    {
+        "content": "<p>Right, so rabbitmq is run via init, and Zulip's supervisord processes depend on it</p>",
+        "id": 246458,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499539694
+    },
+    {
+        "content": "<p>So restarting supervisord won't have any effect until after you get rabbitmq running</p>",
+        "id": 246459,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499539704
+    },
+    {
+        "content": "<p>You can try <code>/etc/init.d/rabbitmq-server start</code></p>",
+        "id": 246460,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499539716
+    },
+    {
+        "content": "<p>but my guess is that will fail.  If it does, you can purge and reinstall rabbitmq's state roughly like this:</p>\n<div class=\"codehilite\"><pre><span></span>/etc/init.d/rabbitmq-server stop\nrm -rf /var/lib/rabbitmq/mnesia\n/etc/init.d/rabbitmq-server start\n/home/zulip/deployments/scripts/setup/configure-rabbitmq\n/home/zulip/deployments/scripts/setup/restart-server\n</pre></div>",
+        "id": 246461,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499539817
+    },
+    {
+        "content": "<p>it looks like rabbitmq came up, but I'm getting a different internal server error now (the page contains nothing but that, not formatted like usual)</p>",
+        "id": 246467,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499540017
+    },
+    {
+        "content": "<p>I'll try a reinstall with those steps</p>",
+        "id": 246468,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499540501
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> did a reinstall, still getting a 500</p>",
+        "id": 246481,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499541006
+    },
+    {
+        "content": "<p>what's in your error logs?</p>",
+        "id": 246482,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499541018
+    },
+    {
+        "content": "<p>tornado.log once again is showing connection refused on port 5672</p>",
+        "id": 246483,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499541078
+    },
+    {
+        "content": "<p>rabbitmqctl status looks the same as it did in my last paste</p>",
+        "id": 246484,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499541162
+    },
+    {
+        "content": "<p>OK.  Try replacing that <code>rm -rf</code> command above with:</p>\n<div class=\"codehilite\"><pre><span></span>apt-get purge rabbitmq-server\n/home/zulip/deployments/current/scripts/zulip-puppet-apply\n</pre></div>",
+        "id": 246485,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499541198
+    },
+    {
+        "content": "<p>(and doing the other steps)</p>",
+        "id": 246486,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499541215
+    },
+    {
+        "content": "<p>It sounds like somehow that was insufficient to get rabbitmq-server to actually be working.</p>",
+        "id": 246487,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499541240
+    },
+    {
+        "content": "<p>(rabbitmq-server is by far our most annoying dependency, because while it usually just works, it's pretty hard to debug if it doesn't start up.)</p>",
+        "id": 246488,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499541273
+    },
+    {
+        "content": "<p>hmm, well now  the server isn't responding at all</p>",
+        "id": 246496,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499542212
+    },
+    {
+        "content": "<p>here we go, now it's up again, but still 500</p>",
+        "id": 246498,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499542248
+    },
+    {
+        "content": "<p>tornado loaded this time, reporting a lot of ~60% busy messages in the log though</p>",
+        "id": 246499,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499542355
+    },
+    {
+        "content": "<p>those should pass after a minute</p>",
+        "id": 246511,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499545328
+    },
+    {
+        "content": "<p>So is it working happily now?</p>",
+        "id": 246512,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499545334
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> still have a 500 error unfortunately</p>",
+        "id": 246539,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499548503
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"lyle@lylebrown.com\" data-user-id=\"2527\">@Lyle</span> can you paste the tracebacks from the Zulip logs when you mention a 500?  It's much more efficient for us to help you debug if you do so.</p>",
+        "id": 246541,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499548790
+    },
+    {
+        "content": "<p>What does \"tornado loaded this time\" mean if you're still getting 500s?</p>",
+        "id": 246542,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499548812
+    },
+    {
+        "content": "<p>so the tornado log did look good when I posted that, but now I'm getting connection refused once again</p>",
+        "id": 246544,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499548851
+    },
+    {
+        "content": "<p>do you think it's possibly trying to run twice or more?</p>",
+        "id": 246545,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499548861
+    },
+    {
+        "content": "<p>Hrm.  <code>pstree -ap</code> may be helpful to try to investigate the possibility you have multiple copies running.  Or <code>pgrep -U postgres --list-full</code>.  But that seems unlikely.</p>",
+        "id": 246548,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499549007
+    },
+    {
+        "content": "<p>errors.log is reporting that as well, not sure if the prior error there is due a shutdown or something else: <a href=\"https://paste.lyle.space/#LNjmDTZQ_oxSYP-gNY5rtg\" target=\"_blank\" title=\"https://paste.lyle.space/#LNjmDTZQ_oxSYP-gNY5rtg\">https://paste.lyle.space/#LNjmDTZQ_oxSYP-gNY5rtg</a></p>",
+        "id": 246550,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499549045
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"lyle@lylebrown.com\" data-user-id=\"2527\">@Lyle</span> just so I understand here, did this just randomly start happening, or did you change something that might have caused the issues?</p>",
+        "id": 246551,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499549046
+    },
+    {
+        "content": "<p>this just randomly started happening. Another application of mine has a corrupt database as of recently, so it's possible there was a write error at some point in time</p>",
+        "id": 246552,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499549078
+    },
+    {
+        "content": "<p>As in, your file system may have corruption?</p>",
+        "id": 246554,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499549114
+    },
+    {
+        "content": "<p>potentially. for the other application (same server &amp; NAS, but different lxc container), it was a corrupted sqlite database, so it would suggest that</p>",
+        "id": 246556,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499549157
+    },
+    {
+        "content": "<p>The errors you posted in that log file basically just show the Django process is unable to reach tornado.  I think we should focus on tornado.log until you have that clear of errors.  The rest is apparently just caused by Tornado being down, which is presumably caused by rabbitmq being unavailable.</p>",
+        "id": 246557,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499549197
+    },
+    {
+        "content": "<p>alright. well I've confirmed only one instance of manage.py calling tornado exists according to pstree</p>",
+        "id": 246558,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499549236
+    },
+    {
+        "content": "<p>not sure if the full tornado log is too helpful, but here it is: <a href=\"https://paste.lyle.space/#Y3-Yj9wMjHUBzqaXzIfm4g\" target=\"_blank\" title=\"https://paste.lyle.space/#Y3-Yj9wMjHUBzqaXzIfm4g\">https://paste.lyle.space/#Y3-Yj9wMjHUBzqaXzIfm4g</a></p>",
+        "id": 246564,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499549649
+    },
+    {
+        "content": "<p>Yeah, that looks like rabbitmq isn't accessible.  I think there's no point in checking whether Tornado works until you get rabbitmq working.  I assume `rabbitmqctl status still throws an error?</p>",
+        "id": 246576,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499550509
+    },
+    {
+        "content": "<p>For debugging that, ultimately, you just need to get RabbitMQ to start; Googling for resources on rabbitmq issues can be helpful, since that's a popular third-party package, and so most material on debugging it will have nothing to do with Zulip</p>",
+        "id": 246577,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499550558
+    },
+    {
+        "content": "<p>(Sorry for the slow replies, I'm in the middle of a few other things this afternoon)</p>",
+        "id": 246578,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499550576
+    },
+    {
+        "content": "<p>no problem, I appreciate the help. Hopefully I can figure that out</p>",
+        "id": 246579,
+        "sender_full_name": "Lyle",
+        "timestamp": 1499551332
+    },
+    {
+        "content": "<p>rabbitmq failing to start is a common issue for my server as well, particularly around upgrade of zulip or hostname changes<br>\nA rather unsavory workaround is to apt-get purge &amp; reinstall it, and re-run the zulip script <code>scripts/setup/configure-rabbitmq</code><br>\nThis is horrible but rescues a production instance quickly.</p>",
+        "id": 247059,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1499697389
+    },
+    {
+        "content": "<p>I'm starting to think about whether we should attempt to replace rabbitmq with redis as a dependency.</p>",
+        "id": 247197,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499709704
+    },
+    {
+        "content": "<p>Since it seems like 80% of problems people have with Zulip in production have to do with keeping rabbitmq running.</p>",
+        "id": 247198,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1499709723
+    },
+    {
+        "content": "<p>Hi I am facing this error in zulip errors log:</p>\n<div class=\"codehilite\"><pre><span></span>  File &quot;/home/zulip/deployments/2017-05-17-04-20-20/zulip-venv/lib/python2.7/site-packages/django/core/handlers/base.py&quot;, line 185, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File &quot;/home/zulip/deployments/2017-05-17-04-20-20/zulip-venv/lib/python2.7/site-packages/django/views/decorators/csrf.py&quot;, line 58, in wrapped_view\n    return view_func(*args, **kwargs)\n  File &quot;./zerver/lib/request.py&quot;, line 165, in _wrapped_view_func\n    return view_func(request, *args, **kwargs)\n  File &quot;./zerver/decorator.py&quot;, line 237, in _wrapped_func_arguments\n    return view_func(request, user_profile, request.client, *args, **kwargs)\n  File &quot;./zerver/lib/request.py&quot;, line 165, in _wrapped_view_func\n    return view_func(request, *args, **kwargs)\n  File &quot;./zerver/webhooks/jira/view.py&quot;, line 255, in api_jira_webhook\n    subject = get_issue_subject(payload)\n  File &quot;./zerver/webhooks/jira/view.py&quot;, line 141, in get_issue_subject\n    return &quot;{}: {}&quot;.format(get_issue_id(payload), get_issue_title(payload))\nUnicodeEncodeError: &#39;ascii&#39; codec can&#39;t encode characters in position 0-6: ordinal not in range(128)\n</pre></div>",
+        "id": 302811,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508745046
+    },
+    {
+        "content": "<p>Can I make some changes in the code to modify the encoding?</p>",
+        "id": 302812,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508745467
+    },
+    {
+        "content": "<p>I tried to restart using supervisorctl, but all statuses showed <code>FATAL</code>, what should I do about this? Any doc I can refer to?</p>",
+        "id": 302813,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508745527
+    },
+    {
+        "content": "<p>You can modify the code in <code>jira/view.py</code> and restart the server.  Here are some docs on <code>supervisorctl</code>, and I'm a little puzzled about why restarting we would fail for you:</p>\n<p><a href=\"https://zulip.readthedocs.io/en/latest/prod-troubleshooting.html#using-supervisorctl\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/prod-troubleshooting.html#using-supervisorctl\">https://zulip.readthedocs.io/en/latest/prod-troubleshooting.html#using-supervisorctl</a></p>\n<p>You can also run <code>./scripts/restart-server</code>:</p>\n<p><a href=\"http://zulip.readthedocs.io/en/latest/prod-maintain-secure-upgrade.html?highlight=restart-server#updating-settings\" target=\"_blank\" title=\"http://zulip.readthedocs.io/en/latest/prod-maintain-secure-upgrade.html?highlight=restart-server#updating-settings\">http://zulip.readthedocs.io/en/latest/prod-maintain-secure-upgrade.html?highlight=restart-server#updating-settings</a></p>",
+        "id": 302866,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1508766398
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"showell@zulipchat.com\" data-user-id=\"58\">@Steve Howell</span> quick note: if it's been several hours since someone asked a question, it's best to mention them to make sure they see the message.</p>",
+        "id": 302934,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508781223
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"chester.lee.cold@gmail.com\" data-user-id=\"2354\">@Chester Li</span> I think the Jira ascii issue is fixed in Zulip 1.7; you can try installing the release candidate being discussed in <a class=\"stream\" data-stream-id=\"2\" href=\"/#narrow/stream/general\">#general</a> to see if it fixes this for you.</p>",
+        "id": 302936,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508781264
+    },
+    {
+        "content": "<p>How to re-install zulip without losing chat history? I didn't find related docs........</p>",
+        "id": 303329,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508804258
+    },
+    {
+        "content": "<p>and any way to make zulip to use python3?</p>",
+        "id": 303330,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508804281
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"chester.lee.cold@gmail.com\" data-user-id=\"2354\">@Chester Li</span> I'm not sure what you mean by re-install, but you can upgrade the 1.7-rc2 release candidate, which will both fix this bug and switch Zulip to Python 3.</p>",
+        "id": 303334,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508804508
+    },
+    {
+        "content": "<p>I meant upgrade, I will try to upgrade to the 1.7-rc2 version thank you <span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span></p>",
+        "id": 303391,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508808362
+    },
+    {
+        "content": "<p>but there is only <code>latest</code>, where to find <code>1.7-rc2 release candidate</code>?</p>",
+        "id": 303395,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508808596
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"chester.lee.cold@gmail.com\" data-user-id=\"2354\">@Chester Li</span> <a href=\"https://chat.zulip.org/#narrow/stream/general/subject/Zulip.201.2E7.20plan/near/302241\" target=\"_blank\" title=\"https://chat.zulip.org/#narrow/stream/general/subject/Zulip.201.2E7.20plan/near/302241\">https://chat.zulip.org/#narrow/stream/general/subject/Zulip.201.2E7.20plan/near/302241</a></p>",
+        "id": 303409,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508810979
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> Much appreciated!</p>",
+        "id": 303415,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508813022
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> <br>\nSorry for keeping bothering, I got this error when upgrading:</p>\n<div class=\"codehilite\"><pre><span></span>Traceback (most recent call last):\n  File &quot;./manage.py&quot;, line 19, in &lt;module&gt;\n    log_management_command(&quot; &quot;.join(sys.argv), settings.MANAGEMENT_LOG_PATH)\n  File &quot;/home/zulip/deployments/2017-10-24-04-28-14/scripts/lib/zulip_tools.py&quot;, line 190, in log_management_command\n    file_handler = logging.FileHandler(log_path)\n  File &quot;/usr/lib/python3.4/logging/__init__.py&quot;, line 1006, in __init__\n    StreamHandler.__init__(self, self._open())\n  File &quot;/usr/lib/python3.4/logging/__init__.py&quot;, line 1030, in _open\n    return open(self.baseFilename, self.mode, encoding=self.encoding)\nPermissionError: [Errno 13] Permission denied: &#39;/var/log/zulip/manage.log&#39;\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2017-10-24-04-28-14/scripts/lib/upgrade-zulip-stage-2&quot;, line 104, in &lt;module&gt;\n    preexec_fn=su_to_zulip)\n  File &quot;/usr/lib/python3.4/subprocess.py&quot;, line 620, in check_output\n    raise CalledProcessError(retcode, process.args, output=output)\nsubprocess.CalledProcessError: Command &#39;[&#39;./manage.py&#39;, &#39;showmigrations&#39;]&#39; returned non-zero exit status 1\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip&quot;, line 53, in &lt;module&gt;\n    subprocess.check_call([os.path.abspath(&quot;./scripts/lib/upgrade-zulip-stage-2&quot;), deploy_path])\n  File &quot;/usr/lib/python2.7/subprocess.py&quot;, line 540, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2017-10-24-04-28-14/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2017-10-24-04-28-14&#39;]&#39; returned non-zero exit status 1\n</pre></div>",
+        "id": 303465,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508819837
+    },
+    {
+        "content": "<p>anyone would be able to give me some hints?</p>",
+        "id": 303466,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508819891
+    },
+    {
+        "content": "<p><code>sudo</code>?</p>",
+        "id": 303468,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1508820184
+    },
+    {
+        "content": "<p>It appears that the command which causes the error is the one when it is executed as <code>zulip</code>.</p>",
+        "id": 303469,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1508820283
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"chester.lee.cold@gmail.com\" data-user-id=\"2354\">@Chester Li</span>, I think you need to run as 'zulip' user. You can do something like: <code>su zulip</code>.</p>",
+        "id": 303482,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508823353
+    },
+    {
+        "content": "<p>Tho there is already the <code>preexec_fn=su_to_zulip</code> and perhaps <code>/var/log/zulip/manage.log</code> wasn't accessible by <code>zulip</code>.</p>",
+        "id": 303483,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1508823628
+    },
+    {
+        "content": "<p>I ran with <code>su zulip -c</code> but it said no permission</p>",
+        "id": 303484,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508823726
+    },
+    {
+        "content": "<p>At current master, <code>script/upgrade-zulip</code> requires to be executed by root: <a href=\"https://github.com/zulip/zulip/blob/master/scripts/lib/upgrade-zulip#L18-L20\" target=\"_blank\" title=\"https://github.com/zulip/zulip/blob/master/scripts/lib/upgrade-zulip#L18-L20\">https://github.com/zulip/zulip/blob/master/scripts/lib/upgrade-zulip#L18-L20</a>.</p>",
+        "id": 303485,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1508823805
+    },
+    {
+        "content": "<p>Hmm, even <code>upgrade-zulip-stage-2</code> has that check. I wonder why it didn't exit earlier.</p>",
+        "id": 303486,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508824074
+    },
+    {
+        "content": "<p>Maybe it has to be <code>os.geteuid()</code> instead of <code>os.getuid()</code>. I encountered this permission error lots of time when debugging a way to <code>upgrade-zulip-from-git</code> on Travis (<a href=\"https://travis-ci.org/rht/zulip/jobs/291909177\" target=\"_blank\" title=\"https://travis-ci.org/rht/zulip/jobs/291909177\">https://travis-ci.org/rht/zulip/jobs/291909177</a> for an example for a failed build, also stopped by a subprocess call that uses the <code>preexec_fn=su_to_zulip</code>).</p>",
+        "id": 303487,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1508824311
+    },
+    {
+        "content": "<p>But then it contradicts the result of various other successful upgrade reports.</p>",
+        "id": 303488,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1508824348
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"chester.lee.cold@gmail.com\" data-user-id=\"2354\">@Chester Li</span>, can you run the command as root?</p>",
+        "id": 303489,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508824455
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"umair.waheed@gmail.com\" data-user-id=\"92\">@Umair Khan</span>which arguments should I use?</p>",
+        "id": 303499,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508827314
+    },
+    {
+        "content": "<p>Do <code>sudo -s</code> to shift to root user and then run the command.</p>",
+        "id": 303500,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508827510
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>usage: upgrade-zulip-stage-2 <span class=\"o\">[</span>-h<span class=\"o\">]</span> <span class=\"o\">[</span>--skip-puppet<span class=\"o\">]</span> <span class=\"o\">[</span>--skip-migrations<span class=\"o\">]</span>\n                             <span class=\"o\">[</span>--from-git<span class=\"o\">]</span>\n                             deploy_path\nupgrade-zulip-stage-2: error: too few arguments\n</pre></div>",
+        "id": 303501,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508827734
+    },
+    {
+        "content": "<p>I ran <code>deployments/current/scripts/lib/upgrade-zulip-stage-2</code></p>",
+        "id": 303502,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508827766
+    },
+    {
+        "content": "<p>Are you upgrading an existing installation?</p>",
+        "id": 303503,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508827817
+    },
+    {
+        "content": "<p>Or setting up a new server?</p>",
+        "id": 303504,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508827869
+    },
+    {
+        "content": "<p>In case you are doing an upgrade, run this:</p>\n<div class=\"codehilite\"><pre><span></span>/home/zulip/deployments/current/scripts/upgrade-zulip zulip-server-VERSION.tar.gz\n</pre></div>",
+        "id": 303505,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508827906
+    },
+    {
+        "content": "<p><code>zulip-server-VERSION.tar.gz</code> is the tarball.</p>",
+        "id": 303506,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508827926
+    },
+    {
+        "content": "<p>I am upgrading to 1.7 candidate version, the  <code>subprocess.CalledProcessError</code> error was from running <code>upgrade-zulip</code> script</p>",
+        "id": 303508,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508828317
+    },
+    {
+        "content": "<p>OK, run <code>upgrade-zulip</code> as root.</p>",
+        "id": 303509,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508828373
+    },
+    {
+        "content": "<p>by doing <code>sudo -s</code> or <code>sudo su</code>.</p>",
+        "id": 303510,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508828389
+    },
+    {
+        "content": "<p>I did run as root</p>",
+        "id": 303511,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508828450
+    },
+    {
+        "content": "<p>Can you share with me the complete log including the command?</p>",
+        "id": 303512,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508828660
+    },
+    {
+        "content": "<p>sure, let me re-run it</p>",
+        "id": 303513,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508828762
+    },
+    {
+        "content": "<p>so the command is <code>deployments/current/scripts/upgrade-zulip zulip-server-1.7.0-rc2.tar.gz</code> after logined as <code>root</code></p>",
+        "id": 303514,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508828823
+    },
+    {
+        "content": "<p>And the log is:</p>\n<div class=\"codehilite\"><pre><span></span><span class=\"m\">2017</span>-10-24 <span class=\"m\">07</span>:07:06,897 upgrade-zulip: Archiving the tarball under /home/zulip/archives\n<span class=\"m\">2017</span>-10-24 <span class=\"m\">07</span>:07:07,252 upgrade-zulip: Unpacking the tarball\n<span class=\"m\">2017</span>-10-24 <span class=\"m\">07</span>:07:09,416 upgrade-zulip-stage-2: Upgrading system packages...\nHit http://repo.zabbix.com precise InRelease\nHit http://ppa.launchpad.net trusty InRelease\nGet:1 http://security.ubuntu.com trusty-security InRelease <span class=\"o\">[</span><span class=\"m\">65</span>.9 kB<span class=\"o\">]</span>\nIgn http://us.archive.ubuntu.com trusty InRelease\nHit http://repo.zabbix.com precise/main Sources\nGet:2 http://us.archive.ubuntu.com trusty-updates InRelease <span class=\"o\">[</span><span class=\"m\">65</span>.9 kB<span class=\"o\">]</span>\nHit http://repo.zabbix.com precise/main amd64 Packages\nHit http://ppa.launchpad.net trusty/main Sources\nHit http://repo.zabbix.com precise/main i386 Packages\nHit http://us.archive.ubuntu.com trusty-backports InRelease\nGet:3 http://security.ubuntu.com trusty-security/main Sources <span class=\"o\">[</span><span class=\"m\">144</span> kB<span class=\"o\">]</span>\nHit http://ppa.launchpad.net trusty/main amd64 Packages\nHit http://us.archive.ubuntu.com trusty Release.gpg\nGet:4 http://us.archive.ubuntu.com trusty-updates/main Sources <span class=\"o\">[</span><span class=\"m\">407</span> kB<span class=\"o\">]</span>\nGet:5 http://security.ubuntu.com trusty-security/restricted Sources <span class=\"o\">[</span><span class=\"m\">4</span>,931 B<span class=\"o\">]</span>\nHit http://ppa.launchpad.net trusty/main i386 Packages\nGet:6 http://security.ubuntu.com trusty-security/universe Sources <span class=\"o\">[</span><span class=\"m\">65</span>.0 kB<span class=\"o\">]</span>\nGet:7 http://us.archive.ubuntu.com trusty-updates/restricted Sources <span class=\"o\">[</span><span class=\"m\">6</span>,322 B<span class=\"o\">]</span>\nHit http://ppa.launchpad.net trusty/main Translation-en\nGet:8 http://security.ubuntu.com trusty-security/multiverse Sources <span class=\"o\">[</span><span class=\"m\">3</span>,202 B<span class=\"o\">]</span>\nGet:9 http://us.archive.ubuntu.com trusty-updates/universe Sources <span class=\"o\">[</span><span class=\"m\">193</span> kB<span class=\"o\">]</span>\nGet:10 http://security.ubuntu.com trusty-security/main amd64 Packages <span class=\"o\">[</span><span class=\"m\">680</span> kB<span class=\"o\">]</span>\nGet:11 http://us.archive.ubuntu.com trusty-updates/multiverse Sources <span class=\"o\">[</span><span class=\"m\">7</span>,767 B<span class=\"o\">]</span>\nGet:12 http://us.archive.ubuntu.com trusty-updates/main amd64 Packages <span class=\"o\">[</span><span class=\"m\">1</span>,030 kB<span class=\"o\">]</span>\nGet:13 http://us.archive.ubuntu.com trusty-updates/restricted amd64 Packages <span class=\"o\">[</span><span class=\"m\">17</span>.1 kB<span class=\"o\">]</span>\nGet:14 http://security.ubuntu.com trusty-security/restricted amd64 Packages <span class=\"o\">[</span><span class=\"m\">14</span>.1 kB<span class=\"o\">]</span>\nIgn http://repo.zabbix.com precise/main Translation-en_US\nGet:15 http://us.archive.ubuntu.com trusty-updates/universe amd64 Packages <span class=\"o\">[</span><span class=\"m\">430</span> kB<span class=\"o\">]</span>\nGet:16 http://security.ubuntu.com trusty-security/universe amd64 Packages <span class=\"o\">[</span><span class=\"m\">191</span> kB<span class=\"o\">]</span>\nIgn http://repo.zabbix.com precise/main Translation-en\nGet:17 http://us.archive.ubuntu.com trusty-updates/multiverse amd64 Packages <span class=\"o\">[</span><span class=\"m\">14</span>.9 kB<span class=\"o\">]</span>\nGet:18 http://security.ubuntu.com trusty-security/multiverse amd64 Packages <span class=\"o\">[</span><span class=\"m\">4</span>,798 B<span class=\"o\">]</span>\nGet:19 http://us.archive.ubuntu.com trusty-updates/main i386 Packages <span class=\"o\">[</span><span class=\"m\">975</span> kB<span class=\"o\">]</span>\nGet:20 http://security.ubuntu.com trusty-security/main i386 Packages <span class=\"o\">[</span><span class=\"m\">624</span> kB<span class=\"o\">]</span>\nGet:21 http://us.archive.ubuntu.com trusty-updates/restricted i386 Packages <span class=\"o\">[</span><span class=\"m\">17</span>.0 kB<span class=\"o\">]</span>\nGet:22 http://security.ubuntu.com trusty-security/restricted i386 Packages <span class=\"o\">[</span><span class=\"m\">13</span>.9 kB<span class=\"o\">]</span>\nGet:23 http://us.archive.ubuntu.com trusty-updates/universe i386 Packages <span class=\"o\">[</span><span class=\"m\">431</span> kB<span class=\"o\">]</span>\nGet:24 http://security.ubuntu.com trusty-security/universe i386 Packages <span class=\"o\">[</span><span class=\"m\">192</span> kB<span class=\"o\">]</span>\nGet:25 http://us.archive.ubuntu.com trusty-updates/multiverse i386 Packages <span class=\"o\">[</span><span class=\"m\">15</span>.3 kB<span class=\"o\">]</span>\nGet:26 http://us.archive.ubuntu.com trusty-updates/main Translation-en <span class=\"o\">[</span><span class=\"m\">509</span> kB<span class=\"o\">]</span>\nGet:27 http://security.ubuntu.com trusty-security/multiverse i386 Packages <span class=\"o\">[</span><span class=\"m\">4</span>,946 B<span class=\"o\">]</span>\nGet:28 http://us.archive.ubuntu.com trusty-updates/multiverse Translation-en <span class=\"o\">[</span><span class=\"m\">7</span>,760 B<span class=\"o\">]</span>\nGet:29 http://security.ubuntu.com trusty-security/main Translation-en <span class=\"o\">[</span><span class=\"m\">366</span> kB<span class=\"o\">]</span>\nGet:30 http://security.ubuntu.com trusty-security/multiverse Translation-en <span class=\"o\">[</span><span class=\"m\">2</span>,564 B<span class=\"o\">]</span>\nGet:31 http://us.archive.ubuntu.com trusty-updates/restricted Translation-en <span class=\"o\">[</span><span class=\"m\">4</span>,031 B<span class=\"o\">]</span>\nGet:32 http://us.archive.ubuntu.com trusty-updates/universe Translation-en <span class=\"o\">[</span><span class=\"m\">233</span> kB<span class=\"o\">]</span>\nGet:33 http://security.ubuntu.com trusty-security/restricted Translation-en <span class=\"o\">[</span><span class=\"m\">3</span>,542 B<span class=\"o\">]</span>\nHit http://us.archive.ubuntu.com trusty-backports/main Sources\nGet:34 http://security.ubuntu.com trusty-security/universe Translation-en <span class=\"o\">[</span><span class=\"m\">110</span> kB<span class=\"o\">]</span>\nHit http://us.archive.ubuntu.com trusty-backports/restricted Sources\nHit http://us.archive.ubuntu.com trusty-backports/universe Sources\nHit http://us.archive.ubuntu.com trusty-backports/multiverse Sources\nHit http://us.archive.ubuntu.com trusty-backports/main amd64 Packages\nHit http://us.archive.ubuntu.com trusty-backports/restricted amd64 Packages\nHit http://us.archive.ubuntu.com trusty-backports/universe amd64 Packages\nHit http://us.archive.ubuntu.com trusty-backports/multiverse amd64 Packages\nHit http://us.archive.ubuntu.com trusty-backports/main i386 Packages\nHit http://us.archive.ubuntu.com trusty-backports/restricted i386 Packages\nHit http://us.archive.ubuntu.com trusty-backports/universe i386 Packages\nHit http://us.archive.ubuntu.com trusty-backports/multiverse i386 Packages\nHit http://us.archive.ubuntu.com trusty-backports/main Translation-en\nHit http://us.archive.ubuntu.com trusty-backports/multiverse Translation-en\nHit http://us.archive.ubuntu.com trusty-backports/restricted Translation-en\nHit http://us.archive.ubuntu.com trusty-backports/universe Translation-en\nHit http://us.archive.ubuntu.com trusty Release\nHit http://us.archive.ubuntu.com trusty/main Sources\nHit http://us.archive.ubuntu.com trusty/restricted Sources\nHit http://us.archive.ubuntu.com trusty/universe Sources\nHit http://us.archive.ubuntu.com trusty/multiverse Sources\nHit http://us.archive.ubuntu.com trusty/main amd64 Packages\nHit http://us.archive.ubuntu.com trusty/restricted amd64 Packages\nHit http://us.archive.ubuntu.com trusty/universe amd64 Packages\nHit http://us.archive.ubuntu.com trusty/multiverse amd64 Packages\nHit http://us.archive.ubuntu.com trusty/main i386 Packages\nHit http://us.archive.ubuntu.com trusty/restricted i386 Packages\nHit http://us.archive.ubuntu.com trusty/universe i386 Packages\nHit http://us.archive.ubuntu.com trusty/multiverse i386 Packages\nHit http://us.archive.ubuntu.com trusty/main Translation-en\nHit http://us.archive.ubuntu.com trusty/multiverse Translation-en\nHit http://us.archive.ubuntu.com trusty/restricted Translation-en\nHit http://us.archive.ubuntu.com trusty/universe Translation-en\nIgn http://us.archive.ubuntu.com trusty/main Translation-en_US\nIgn http://us.archive.ubuntu.com trusty/multiverse Translation-en_US\nIgn http://us.archive.ubuntu.com trusty/restricted Translation-en_US\nIgn http://us.archive.ubuntu.com trusty/universe Translation-en_US\nFetched <span class=\"m\">6</span>,854 kB in 20s <span class=\"o\">(</span><span class=\"m\">341</span> kB/s<span class=\"o\">)</span>\nReading package lists...\nReading package lists...\nBuilding dependency tree...\nReading state information...\n<span class=\"m\">0</span> upgraded, <span class=\"m\">0</span> newly installed, <span class=\"m\">0</span> to remove and <span class=\"m\">0</span> not upgraded.\n+ apt-get -y install build-essential libffi-dev libfreetype6-dev libz-dev libjpeg-dev libldap2-dev libmemcached-dev python3-dev python-dev python3-pip python-pip python-virtualenv python3-six python-six libxml2-dev libxslt1-dev libpq-dev\nReading package lists...\nBuilding dependency tree...\nReading state information...\nbuild-essential is already the newest version.\nlibjpeg-dev is already the newest version.\nlibmemcached-dev is already the newest version.\npython-dev is already the newest version.\npython3-dev is already the newest version.\nzlib1g-dev is already the newest version.\nlibffi-dev is already the newest version.\nlibfreetype6-dev is already the newest version.\nlibldap2-dev is already the newest version.\nlibpq-dev is already the newest version.\nlibxml2-dev is already the newest version.\nlibxslt1-dev is already the newest version.\npython-six is already the newest version.\npython3-six is already the newest version.\npython-pip is already the newest version.\npython-virtualenv is already the newest version.\npython3-pip is already the newest version.\n<span class=\"m\">0</span> upgraded, <span class=\"m\">0</span> newly installed, <span class=\"m\">0</span> to remove and <span class=\"m\">0</span> not upgraded.\nUsing cached Python venv from /srv/zulip-venv-cache/744df963b13bb2a16c0cc12f71b9650c6016e07e/zulip-py3-venv\n+ sudo ln -nsf /srv/zulip-venv-cache/744df963b13bb2a16c0cc12f71b9650c6016e07e/zulip-py3-venv /home/zulip/deployments/2017-10-24-07-07-07/zulip-py3-venv\n+ ln -nsf zulip-py3-venv /home/zulip/deployments/2017-10-24-07-07-07/zulip-current-venv\nNode version <span class=\"m\">6</span>.6.0 and yarn version <span class=\"m\">0</span>.27.5 are already installed.\nGenerated Camo config file /etc/default/camo\ngenerate_secrets: No new secrets to generate.\n<span class=\"m\">2017</span>-10-24 <span class=\"m\">07</span>:07:37,728 upgrade-zulip-stage-2: Installing static assets...\n<span class=\"m\">2017</span>-10-24 <span class=\"m\">07</span>:07:38,936 upgrade-zulip-stage-2: Checking <span class=\"k\">for</span> needed migrations\nTraceback <span class=\"o\">(</span>most recent call last<span class=\"o\">)</span>:\n  File <span class=\"s2\">&quot;./manage.py&quot;</span>, line <span class=\"m\">19</span>, in &lt;module&gt;\n    log_management_command<span class=\"o\">(</span><span class=\"s2\">&quot; &quot;</span>.join<span class=\"o\">(</span>sys.argv<span class=\"o\">)</span>, settings.MANAGEMENT_LOG_PATH<span class=\"o\">)</span>\n  File <span class=\"s2\">&quot;/home/zulip/deployments/2017-10-24-07-07-07/scripts/lib/zulip_tools.py&quot;</span>, line <span class=\"m\">190</span>, in log_management_command\n    <span class=\"nv\">file_handler</span> <span class=\"o\">=</span> logging.FileHandler<span class=\"o\">(</span>log_path<span class=\"o\">)</span>\n  File <span class=\"s2\">&quot;/usr/lib/python3.4/logging/__init__.py&quot;</span>, line <span class=\"m\">1006</span>, in __init__\n    StreamHandler.__init__<span class=\"o\">(</span>self, self._open<span class=\"o\">())</span>\n  File <span class=\"s2\">&quot;/usr/lib/python3.4/logging/__init__.py&quot;</span>, line <span class=\"m\">1030</span>, in _open\n    <span class=\"k\">return</span> open<span class=\"o\">(</span>self.baseFilename, self.mode, <span class=\"nv\">encoding</span><span class=\"o\">=</span>self.encoding<span class=\"o\">)</span>\nPermissionError: <span class=\"o\">[</span>Errno <span class=\"m\">13</span><span class=\"o\">]</span> Permission denied: <span class=\"s1\">&#39;/var/log/zulip/manage.log&#39;</span>\nTraceback <span class=\"o\">(</span>most recent call last<span class=\"o\">)</span>:\n  File <span class=\"s2\">&quot;/home/zulip/deployments/2017-10-24-07-07-07/scripts/lib/upgrade-zulip-stage-2&quot;</span>, line <span class=\"m\">104</span>, in &lt;module&gt;\n    <span class=\"nv\">preexec_fn</span><span class=\"o\">=</span>su_to_zulip<span class=\"o\">)</span>\n  File <span class=\"s2\">&quot;/usr/lib/python3.4/subprocess.py&quot;</span>, line <span class=\"m\">620</span>, in check_output\n    raise CalledProcessError<span class=\"o\">(</span>retcode, process.args, <span class=\"nv\">output</span><span class=\"o\">=</span>output<span class=\"o\">)</span>\nsubprocess.CalledProcessError: Command <span class=\"s1\">&#39;[&#39;</span>./manage.py<span class=\"s1\">&#39;, &#39;</span>showmigrations<span class=\"s1\">&#39;]&#39;</span> returned non-zero <span class=\"nb\">exit</span> status <span class=\"m\">1</span>\nTraceback <span class=\"o\">(</span>most recent call last<span class=\"o\">)</span>:\n  File <span class=\"s2\">&quot;deployments/current/scripts/lib/upgrade-zulip&quot;</span>, line <span class=\"m\">53</span>, in &lt;module&gt;\n    subprocess.check_call<span class=\"o\">([</span>os.path.abspath<span class=\"o\">(</span><span class=\"s2\">&quot;./scripts/lib/upgrade-zulip-stage-2&quot;</span><span class=\"o\">)</span>, deploy_path<span class=\"o\">])</span>\n  File <span class=\"s2\">&quot;/usr/lib/python2.7/subprocess.py&quot;</span>, line <span class=\"m\">540</span>, in check_call\n    raise CalledProcessError<span class=\"o\">(</span>retcode, cmd<span class=\"o\">)</span>\nsubprocess.CalledProcessError: Command <span class=\"s1\">&#39;[&#39;</span>/home/zulip/deployments/2017-10-24-07-07-07/scripts/lib/upgrade-zulip-stage-2<span class=\"s1\">&#39;, &#39;</span>/home/zulip/deployments/2017-10-24-07-07-07<span class=\"s1\">&#39;]&#39;</span> returned non-zero <span class=\"nb\">exit</span> status <span class=\"m\">1</span>\n</pre></div>\n\n\n<p>any idea? <span class=\"user-mention\" data-user-email=\"umair.waheed@gmail.com\" data-user-id=\"92\">@Umair Khan</span></p>",
+        "id": 303515,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508828986
+    },
+    {
+        "content": "<p>What is <code>ls -ld /var/log/zulip</code> and <code>ls -l /var/log/zulip</code>?</p>",
+        "id": 303516,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508829267
+    },
+    {
+        "content": "<p>returned different user and group ownerships</p>",
+        "id": 303517,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508829411
+    },
+    {
+        "content": "<p>root and zulip?</p>",
+        "id": 303518,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508829441
+    },
+    {
+        "content": "<p>no, /zulip folder is owned by another user, while all files under it are owned by zulip</p>",
+        "id": 303519,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508829554
+    },
+    {
+        "content": "<p>hmm</p>",
+        "id": 303520,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508829566
+    },
+    {
+        "content": "<p>that is the problem probably.</p>",
+        "id": 303521,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508829575
+    },
+    {
+        "content": "<p>try this <code>sudo chown zulip:zulip /var/log/zulip</code> and then run the upgrade script again.</p>",
+        "id": 303522,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508829613
+    },
+    {
+        "content": "<p>hmm, got something new</p>\n<div class=\"codehilite\"><pre><span></span>Node version <span class=\"m\">6</span>.6.0 and yarn version <span class=\"m\">0</span>.27.5 are already installed.\nGenerated Camo config file /etc/default/camo\ngenerate_secrets: No new secrets to generate.\n<span class=\"m\">2017</span>-10-24 <span class=\"m\">07</span>:21:01,266 upgrade-zulip-stage-2: Installing static assets...\n<span class=\"m\">2017</span>-10-24 <span class=\"m\">07</span>:21:02,465 upgrade-zulip-stage-2: Checking <span class=\"k\">for</span> needed migrations\nunix:///var/run/supervisor.sock no such file\n<span class=\"m\">2017</span>-10-24 <span class=\"m\">07</span>:21:07,651 upgrade-zulip-stage-2: Stopping Zulip...\nunix:///var/run/supervisor.sock no such file\n<span class=\"m\">2017</span>-10-24 <span class=\"m\">07</span>:21:07,760 upgrade-zulip-stage-2: Applying puppet changes...\nWarning: Could not retrieve fact fqdn\nNotice: Compiled catalog <span class=\"k\">for</span> zenlayer in environment production in <span class=\"m\">1</span>.77 seconds\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Nginx/File<span class=\"o\">[</span>/etc/nginx/nginx.conf<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}8d513aaf28f8945138b14140251e9182&#39;</span> to <span class=\"s1\">&#39;{md5}dee26a31dcae0a49a67fb0b4bb3c51d4&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Analytics/File<span class=\"o\">[</span>/etc/cron.d/update-analytics-counts<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}d618204a4c9720aa6b363dc4ad93e391&#39;</span> to <span class=\"s1\">&#39;{md5}da37aff132764038e73a6ee3914c696b&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Postgres_common/Exec<span class=\"o\">[</span>disable_logrotate<span class=\"o\">]</span>/returns: executed successfully\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::App_frontend/File<span class=\"o\">[</span>/etc/cron.d/restart-zulip<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}3a56343b1c9850a778b9b9150e309587&#39;</span> to <span class=\"s1\">&#39;{md5}d21fb2757945a469df47f0b6a462e0b0&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::App_frontend/File<span class=\"o\">[</span>/etc/logrotate.d/zulip<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}051c9c309fda9a301edbb524b1f416a4&#39;</span> to <span class=\"s1\">&#39;{md5}4e87145fd2f6c141ce2103171ff66d06&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::App_frontend/File<span class=\"o\">[</span>/etc/cron.d/soft-deactivate-users<span class=\"o\">]</span>/ensure: defined content as <span class=\"s1\">&#39;{md5}c09efba42ba520713dbdbd79a24c7dbf&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Nginx/File<span class=\"o\">[</span>/var/log/nginx<span class=\"o\">]</span>/owner: owner changed <span class=\"s1\">&#39;root&#39;</span> to <span class=\"s1\">&#39;zulip&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Nginx/File<span class=\"o\">[</span>/var/log/nginx<span class=\"o\">]</span>/mode: mode changed <span class=\"s1\">&#39;0755&#39;</span> to <span class=\"s1\">&#39;0750&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Static_asset_compiler/Zulip::Static_asset_compiler::Safepackage<span class=\"o\">[</span>yui-compressor<span class=\"o\">]</span>/Package<span class=\"o\">[</span>yui-compressor<span class=\"o\">]</span>/ensure: ensure changed <span class=\"s1\">&#39;purged&#39;</span> to <span class=\"s1\">&#39;present&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Postgres_common/Zulip::Postgres_common::Safepackage<span class=\"o\">[</span>python3-tz<span class=\"o\">]</span>/Package<span class=\"o\">[</span>python3-tz<span class=\"o\">]</span>/ensure: ensure changed <span class=\"s1\">&#39;purged&#39;</span> to <span class=\"s1\">&#39;present&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Postgres_common/File<span class=\"o\">[</span>/usr/lib/nagios/plugins/zulip_postgres_common/check_postgres_backup<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}dc995e91c038ddb92c461aba972b52cf&#39;</span> to <span class=\"s1\">&#39;{md5}13aec757ceb0da2c634035bd3f6e0020&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Postgres_appdb_base/Zulip::Postgres_appdb_base::Safepackage<span class=\"o\">[</span>python3-psycopg2<span class=\"o\">]</span>/Package<span class=\"o\">[</span>python3-psycopg2<span class=\"o\">]</span>/ensure: ensure changed <span class=\"s1\">&#39;purged&#39;</span> to <span class=\"s1\">&#39;present&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Postgres_appdb_base/File<span class=\"o\">[</span>/usr/local/bin/process_fts_updates<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}ebd1554cc1a6019d6b2ba32cdd7963c1&#39;</span> to <span class=\"s1\">&#39;{md5}2d98049abad06138d9b3da226074f11c&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Static_asset_compiler/Zulip::Static_asset_compiler::Safepackage<span class=\"o\">[</span>libclosure-compiler-java<span class=\"o\">]</span>/Package<span class=\"o\">[</span>libclosure-compiler-java<span class=\"o\">]</span>/ensure: ensure changed <span class=\"s1\">&#39;purged&#39;</span> to <span class=\"s1\">&#39;present&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::App_frontend_base/File<span class=\"o\">[</span>/usr/lib/nagios/plugins/zulip_app_frontend/check_cron_file<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}d7340e0a7f7fb7affadc30e66e984fa4&#39;</span> to <span class=\"s1\">&#39;{md5}cc18b9970825f905c2fd06070ef027cf&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::App_frontend_base/File<span class=\"o\">[</span>/usr/lib/nagios/plugins/zulip_app_frontend/check_send_receive_time<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}10199319bcc26680cebdc8d2fe1f6cae&#39;</span> to <span class=\"s1\">&#39;{md5}fe9510e0365263b42311b3b6e700b865&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::App_frontend_base/File<span class=\"o\">[</span>/usr/lib/nagios/plugins/zulip_app_frontend/check_rabbitmq_queues<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}515de9b41cef780c8008154b787d0400&#39;</span> to <span class=\"s1\">&#39;{md5}f6b6487d70cc90ac95af179400eca018&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::App_frontend_base/File<span class=\"o\">[</span>/usr/lib/nagios/plugins/zulip_app_frontend/check_queue_worker_errors<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}75cb3cfb123e77573048268439ae5edf&#39;</span> to <span class=\"s1\">&#39;{md5}2b1a558bcdbf8c45cfa127bc663bbca5&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::App_frontend_base/File<span class=\"o\">[</span>/usr/lib/nagios/plugins/zulip_app_frontend/check_rabbitmq_consumers<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}3a33c1acd7355e76ac72478f6a8dce8b&#39;</span> to <span class=\"s1\">&#39;{md5}f73299d1ce1b1b80412562d1d92af33d&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::App_frontend_base/File<span class=\"o\">[</span>/usr/lib/nagios/plugins/zulip_app_frontend/check_worker_memory<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}51ec8abb41d02fa4393b446205701477&#39;</span> to <span class=\"s1\">&#39;{md5}3ebec035ac3d98a2bcece971a47516c8&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Postgres_common/File<span class=\"o\">[</span>/usr/local/bin/pg_backup_and_purge<span class=\"o\">]</span>/ensure: defined content as <span class=\"s1\">&#39;{md5}317f937b65592a8e133a01f80922856b&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Static_asset_compiler/Zulip::Static_asset_compiler::Safepackage<span class=\"o\">[</span>nodejs-legacy<span class=\"o\">]</span>/Package<span class=\"o\">[</span>nodejs-legacy<span class=\"o\">]</span>/ensure: ensure changed <span class=\"s1\">&#39;purged&#39;</span> to <span class=\"s1\">&#39;present&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Postgres_common/Zulip::Postgres_common::Safepackage<span class=\"o\">[</span>python3-dateutil<span class=\"o\">]</span>/Package<span class=\"o\">[</span>python3-dateutil<span class=\"o\">]</span>/ensure: ensure changed <span class=\"s1\">&#39;purged&#39;</span> to <span class=\"s1\">&#39;present&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::App_frontend_base/File<span class=\"o\">[</span>/etc/zulip/uwsgi.ini<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}096627db48f8c286eb68cdb9a09aaab8&#39;</span> to <span class=\"s1\">&#39;{md5}f671486b4a6092ed71c3ec9c065d4b3b&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::App_frontend_base/File<span class=\"o\">[</span>/etc/supervisor/conf.d/zulip.conf<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}d8bbb23c5c9b379c73a125d73986626e&#39;</span> to <span class=\"s1\">&#39;{md5}e4acd8ffb577209709a4ecd2214f4f21&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Supervisor/Service<span class=\"o\">[</span>supervisor<span class=\"o\">]</span>: Triggered <span class=\"s1\">&#39;refresh&#39;</span> from <span class=\"m\">2</span> events\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Postgres_appdb_base/File<span class=\"o\">[</span>/usr/lib/nagios/plugins/zulip_postgres_appdb/check_fts_update_log<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}fbcb906daf0e02770d83ca290aabda73&#39;</span> to <span class=\"s1\">&#39;{md5}1819b1fc4c85b34df0671df6e9f7111e&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::App_frontend_base/File<span class=\"o\">[</span>/etc/nginx/zulip-include/app<span class=\"o\">]</span>/content: content changed <span class=\"s1\">&#39;{md5}00918852ebd76649c33da05fd8843ebd&#39;</span> to <span class=\"s1\">&#39;{md5}fd86995aad47a125c3e394a1f86446c2&#39;</span>\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Nginx/Service<span class=\"o\">[</span>nginx<span class=\"o\">]</span>: Triggered <span class=\"s1\">&#39;refresh&#39;</span> from <span class=\"m\">2</span> events\nNotice: /Stage<span class=\"o\">[</span>main<span class=\"o\">]</span>/Zulip::Static_asset_compiler/Zulip::Static_asset_compiler::Safepackage<span class=\"o\">[</span>gettext<span class=\"o\">]</span>/Package<span class=\"o\">[</span>gettext<span class=\"o\">]</span>/ensure: ensure changed <span class=\"s1\">&#39;purged&#39;</span> to <span class=\"s1\">&#39;present&#39;</span>\nNotice: Finished catalog run in <span class=\"m\">67</span>.97 seconds\nReading package lists...\nBuilding dependency tree...\nReading state information...\n<span class=\"m\">0</span> upgraded, <span class=\"m\">0</span> newly installed, <span class=\"m\">0</span> to remove and <span class=\"m\">0</span> not upgraded.\n<span class=\"m\">2017</span>-10-24 <span class=\"m\">07</span>:22:22,827 upgrade-zulip-stage-2: Applying database migrations...\n</pre></div>",
+        "id": 303523,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508829759
+    },
+    {
+        "content": "<p>That Node message is not an issue. The  command is still running?</p>",
+        "id": 303524,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508829838
+    },
+    {
+        "content": "<p>other than that, everything is fine now!</p>",
+        "id": 303525,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508829841
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"umair.waheed@gmail.com\" data-user-id=\"92\">@Umair Khan</span> Thank you very much!!!!</p>",
+        "id": 303526,
+        "sender_full_name": "Chester Li",
+        "timestamp": 1508829859
+    },
+    {
+        "content": "<p>No problem :).</p>",
+        "id": 303527,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1508829869
+    }
+]

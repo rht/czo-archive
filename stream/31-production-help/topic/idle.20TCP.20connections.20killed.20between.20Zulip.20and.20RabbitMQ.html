@@ -1,0 +1,468 @@
+<html>
+<head><meta charset="utf-8"><title>idle TCP connections killed between Zulip and RabbitMQ · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html">idle TCP connections killed between Zulip and RabbitMQ</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1511260"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1511260" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anthony B. <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1511260">(Feb 22 2023 at 09:18)</a>:</h4>
+<p>Hi,</p>
+<p>I migrated an old instance of Zulip (2.1.4-0) deployed with Docker-compose to Kubernetes with the HelmChart.<br>
+I upgraded Zulip until 6.1-0 + Psql 10 to 14 and i use the versions of dependencies specified in the HelmChart :</p>
+<ul>
+<li>memcached 6.0.16</li>
+<li>rabbitmq 8.32.0</li>
+<li>redis 16.8.7</li>
+</ul>
+<p>After a period of inactivity, the first request generates errors :</p>
+<p><strong>errors.log :</strong></p>
+<div class="codehilite"><pre><span></span><code>[...]
+django.db.utils.OperationalError: server closed the connection unexpectedly
+    This probably means the server terminated abnormally
+    before or while processing the request.
+[...]
+</code></pre></div>
+<p><strong>workers.log :</strong></p>
+<div class="codehilite"><pre><span></span><code>2023-02-21 15:21:19.691 WARN [] *** Sending self SIGUSR1 to trigger a restart.
+2023-02-21 15:21:19.692 INFO [] Processing traceback with type server for None
+2023-02-21 15:21:19.692 INFO [process_queue] Worker 0 disconnecting from queue missedmessage_emails
+2023-02-21 15:21:22.612 INFO [process_queue] Worker 0 connecting to queue missedmessage_emails
+</code></pre></div>
+<p><strong>events_missedmessage_emails.log (for example) :</strong></p>
+<div class="codehilite"><pre><span></span><code>2023-02-21 15:21:19.666 ERR  [] Problem handling data on queue missedmessage_emails
+</code></pre></div>
+<p>I have this issue with multiples workers :</p>
+<ul>
+<li>zulip-workers:zulip_events_missedmessage_emails</li>
+<li>zulip-workers:zulip_events_user_activity</li>
+<li>zulip-workers:zulip_events_user_activity_interval</li>
+<li>zulip-workers:zulip_events_user_presence</li>
+</ul>
+<p>It's look like the idle TCP connections are killed after few minutes, Zulip try to connect at RabbitMQ with this connection without success and recreate a new connection.</p>
+<p>I found this old issue which describe the problem (with memcached, not with rmq but its very similar) : <a href="https://github.com/zulip/zulip/issues/14455">https://github.com/zulip/zulip/issues/14455</a></p>
+<p>Do you have an idea for fix that ?<br>
+Thanks you.</p>
+
+
+
+<a name="1511264"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1511264" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Notification Bot <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1511264">(Feb 22 2023 at 09:32)</a>:</h4>
+<p>This topic was moved here from <a class="stream-topic" data-stream-id="3" href="/#narrow/stream/3-backend/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ">#backend &gt; idle TCP connections killed between Zulip and RabbitMQ</a> by <span class="user-mention silent" data-user-id="21836">Lauryn Menard</span>.</p>
+
+
+
+<a name="1511272"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1511272" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Lauryn Menard <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1511272">(Feb 22 2023 at 10:17)</a>:</h4>
+<p>Hey <span class="user-mention" data-user-id="26114">@Anthony B.</span> - I moved your message to the <a class="stream" data-stream-id="31" href="/#narrow/stream/31-production-help">#production help</a> stream so that folks who'll be able to help with your issue will see it sooner.</p>
+<p>Also, when posting logs, tracebacks, etc., it's helpful to use <a href="https://zulip.com/help/code-blocks">code blocks</a>.</p>
+
+
+
+<a name="1511384"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1511384" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1511384">(Feb 22 2023 at 18:12)</a>:</h4>
+<p><span class="user-mention" data-user-id="26114">@Anthony B.</span>: Are you using Docker Swarm?</p>
+<p>How long is the period of inactivity?</p>
+
+
+
+<a name="1511394"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1511394" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1511394">(Feb 22 2023 at 18:16)</a>:</h4>
+<p>I also don't see anything in there which points to rabbitmq.  <code>django.db.utils.OperationalError</code> implies it's a database error, so PostgreSQL, not RabbitMQ.  You'll need to show more of the tracebacks to show any of the actual tracebacks or error messages.</p>
+
+
+
+<a name="1511395"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1511395" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1511395">(Feb 22 2023 at 18:17)</a>:</h4>
+<p><a href="https://github.com/zulip/zulip/commit/b312001fd92dc36233e5a9f57cd9fada890880c4">b312001fd92dc36233e5a9f57cd9fada890880c4</a> addressed this for RabbitMQ, so I'd guess that this may be a problem with memcached/postgresql but <em>not</em> RabbitMQ.</p>
+
+
+
+<a name="1512080"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1512080" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anthony B. <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1512080">(Feb 23 2023 at 09:53)</a>:</h4>
+<p><span class="user-mention" data-user-id="12178">@Alex Vandiver</span> </p>
+<p>No, Kubernetes (1.25).<br>
+For the period of inactivity, i don't know exactly, i think at least 20 min for trigger this error.</p>
+<p>In the /var/log/zulip/events_user_activity_interval.log (also in /var/log/zulip/errors.log) :</p>
+<div class="codehilite"><pre><span></span><code> 2023-02-23 08:17:03.978 ERR  [] Problem handling data on queue user_activity_interval
+Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/utils.py&quot;, line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/lib/db.py&quot;, line 34, in execute
+    wrapper_execute(self, super().execute, query, vars)
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/lib/db.py&quot;, line 19, in wrapper_execute
+    action(sql, params)
+psycopg2.OperationalError: server closed the connection unexpectedly
+    This probably means the server terminated abnormally
+    before or while processing the request.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/worker/queue_processors.py&quot;, line 317, in do_consume
+    consume_func(events)
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/worker/queue_processors.py&quot;, line 357, in &lt;lambda&gt;
+    consume_func = lambda events: self.consume(events[0])
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/worker/queue_processors.py&quot;, line 553, in consume
+    user_profile = get_user_profile_by_id(event[&quot;user_profile_id&quot;])
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/lib/cache.py&quot;, line 171, in func_with_caching
+    val = func(*args, **kwargs)
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/models.py&quot;, line 3698, in get_user_profile_by_id
+    return UserProfile.objects.select_related().get(id=user_profile_id)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 646, in get
+    num = len(clone)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 376, in __len__
+    self._fetch_all()
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 1866, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 87, in __iter__
+    results = compiler.execute_sql(
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/sql/compiler.py&quot;, line 1398, in execute_sql
+    cursor.execute(sql, params)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/utils.py&quot;, line 67, in execute
+    return self._execute_with_wrappers(
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/utils.py&quot;, line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/utils.py&quot;, line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/utils.py&quot;, line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/utils.py&quot;, line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/lib/db.py&quot;, line 34, in execute
+    wrapper_execute(self, super().execute, query, vars)
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/lib/db.py&quot;, line 19, in wrapper_execute
+    action(sql, params)
+django.db.utils.OperationalError: server closed the connection unexpectedly
+    This probably means the server terminated abnormally
+    before or while processing the request.
+Stack (most recent call last):
+  File &quot;/home/zulip/deployments/current/manage.py&quot;, line 151, in &lt;module&gt;
+    execute_from_command_line(sys.argv)
+  File &quot;/home/zulip/deployments/current/manage.py&quot;, line 116, in execute_from_command_line
+    utility.execute()
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/__init__.py&quot;, line 440, in execute
+    self.fetch_command(subcommand).run_from_argv(self.argv)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 402, in run_from_argv
+    self.execute(*args, **cmd_options)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 448, in execute
+    output = self.handle(*args, **options)
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/management/commands/process_queue.py&quot;, line 111, in handle
+    worker.start()
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/worker/queue_processors.py&quot;, line 406, in start
+    self.q.start_json_consumer(
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/lib/queue.py&quot;, line 213, in start_json_consumer
+    self.ensure_queue(queue_name, do_consume)
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/lib/queue.py&quot;, line 169, in ensure_queue
+    callback(self.channel)
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/lib/queue.py&quot;, line 203, in do_consume
+    callback(events)
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/worker/queue_processors.py&quot;, line 408, in &lt;lambda&gt;
+    lambda events: self.consume_single_event(events[0]),
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/worker/queue_processors.py&quot;, line 358, in consume_single_event
+    self.do_consume(consume_func, [event])
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/worker/queue_processors.py&quot;, line 327, in do_consume
+    self._handle_consume_exception(events, e)
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/worker/queue_processors.py&quot;, line 384, in _handle_consume_exception
+    logging.exception(
+2023-02-23 08:17:04.001 WARN [] *** Sending self SIGUSR1 to trigger a restart.
+2023-02-23 08:17:04.002 INFO [process_queue] Worker 0 disconnecting from queue user_activity_interval
+2023-02-23 08:17:06.733 INFO [process_queue] Worker 0 connecting to queue user_activity_interval
+</code></pre></div>
+<p>At same time in logs of RabbitMQ pod :</p>
+<div class="codehilite"><pre><span></span><code>2023-02-23 08:17:03.998541+00:00 [info] &lt;0.10513.16&gt; accepting AMQP connection &lt;0.10513.16&gt; (192.168.98.39:49344 -&gt; 192.168.98.47:5672)
+2023-02-23 08:17:03.999951+00:00 [info] &lt;0.10513.16&gt; connection &lt;0.10513.16&gt; (192.168.98.39:49344 -&gt; 192.168.98.47:5672): user &#39;zulip&#39; authenticated and granted access to vhost &#39;/&#39;
+2023-02-23 08:17:04.110198+00:00 [warn] &lt;0.8620.16&gt; closing AMQP connection &lt;0.8620.16&gt; (192.168.98.39:44636 -&gt; 192.168.98.47:5672, vhost: &#39;/&#39;, user: &#39;zulip&#39;):
+2023-02-23 08:17:04.110198+00:00 [warn] &lt;0.8620.16&gt; client unexpectedly closed TCP connection
+2023-02-23 08:17:04.299169+00:00 [warn] &lt;0.10513.16&gt; closing AMQP connection &lt;0.10513.16&gt; (192.168.98.39:49344 -&gt; 192.168.98.47:5672, vhost: &#39;/&#39;, user: &#39;zulip&#39;):
+2023-02-23 08:17:04.299169+00:00 [warn] &lt;0.10513.16&gt; client unexpectedly closed TCP connection
+2023-02-23 08:17:06.736031+00:00 [info] &lt;0.10533.16&gt; accepting AMQP connection &lt;0.10533.16&gt; (192.168.98.39:56568 -&gt; 192.168.98.47:5672)
+2023-02-23 08:17:06.737465+00:00 [info] &lt;0.10533.16&gt; connection &lt;0.10533.16&gt; (192.168.98.39:56568 -&gt; 192.168.98.47:5672): user &#39;zulip&#39; authenticated and granted access to vhost &#39;/&#39;
+</code></pre></div>
+<p>/var/log/zulip/queue_error/user_activity_interval.errors :</p>
+<div class="codehilite"><pre><span></span><code>Wed Feb 22 12:13:31 2023    [{&quot;user_profile_id&quot;:757,&quot;time&quot;:1677068011}]
+Wed Feb 22 14:00:06 2023    [{&quot;user_profile_id&quot;:772,&quot;time&quot;:1677074406}]
+Wed Feb 22 14:54:17 2023    [{&quot;user_profile_id&quot;:772,&quot;time&quot;:1677077657}]
+Wed Feb 22 15:40:05 2023    [{&quot;user_profile_id&quot;:757,&quot;time&quot;:1677080405}]
+Wed Feb 22 16:59:54 2023    [{&quot;user_profile_id&quot;:757,&quot;time&quot;:1677085194}]
+Wed Feb 22 17:41:18 2023    [{&quot;user_profile_id&quot;:430,&quot;time&quot;:1677087678}]
+Thu Feb 23 07:46:38 2023    [{&quot;user_profile_id&quot;:430,&quot;time&quot;:1677138398}]
+Thu Feb 23 08:17:04 2023    [{&quot;user_profile_id&quot;:430,&quot;time&quot;:1677140223}]
+</code></pre></div>
+<p>The worker is restarted each time : </p>
+<div class="codehilite"><pre><span></span><code>zulip-workers:zulip_events_user_activity                        RUNNING   pid 231, uptime 22:40:28
+zulip-workers:zulip_events_user_activity_interval               RUNNING   pid 1208, uptime 1:40:00
+zulip-workers:zulip_events_user_presence                        RUNNING   pid 233, uptime 22:40:28
+</code></pre></div>
+
+
+
+<a name="1512144"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1512144" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1512144">(Feb 23 2023 at 15:59)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>2023-02-23 08:17:03.999951+00:00 [info] &lt;0.10513.16&gt; connection &lt;0.10513.16&gt; (192.168.98.39:49344 -&gt; 192.168.98.47:5672): user &#39;zulip&#39; authenticated and granted access to vhost &#39;/&#39;
+2023-02-23 08:17:04.299169+00:00 [warn] &lt;0.10513.16&gt; closing AMQP connection &lt;0.10513.16&gt; (192.168.98.39:49344 -&gt; 192.168.98.47:5672, vhost: &#39;/&#39;, user: &#39;zulip&#39;):
+2023-02-23 08:17:04.299169+00:00 [warn] &lt;0.10513.16&gt; client unexpectedly closed TCP connection
+</code></pre></div>
+<p>That's like 0.3s before the connection got closed.  That's ... not a lot.</p>
+
+
+
+<a name="1512147"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1512147" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1512147">(Feb 23 2023 at 16:06)</a>:</h4>
+<p>This is a bit outside my expertise; I don't know if <span class="user-mention" data-user-id="25085">@Josh Klar</span> has any thoughts on k8s configuration which might be causing this sort of thing.</p>
+<p>One potential workaround would be to try telling PostgreSQL to have a short keepalive ping:</p>
+<div class="codehilite" data-code-language="Diff"><pre><span></span><code><span class="gh">diff --git zproject/computed_settings.py zproject/computed_settings.py</span>
+<span class="gh">index ba3f369308..2a5d57c4ed 100644</span>
+<span class="gd">--- zproject/computed_settings.py</span>
+<span class="gi">+++ zproject/computed_settings.py</span>
+<span class="gu">@@ -283,6 +283,8 @@ DATABASES: Dict[str, Dict[str, Any]] = {</span>
+<span class="w"> </span>        "OPTIONS": {
+<span class="w"> </span>            "connection_factory": TimeTrackingConnection,
+<span class="w"> </span>            "cursor_factory": TimeTrackingCursor,
+<span class="gi">+            "keepalives": 1,</span>
+<span class="gi">+            "keepalives_idle": 60,</span>
+<span class="w"> </span>        },
+<span class="w"> </span>    }
+<span class="w"> </span>}
+</code></pre></div>
+<p>...but if you're seeing connection drops after <em>less than a second</em>, then no amount of keepalive is going to save you; you'll need to adress the underlying networking issue that's terminating the connections.</p>
+
+
+
+<a name="1512155"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1512155" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anthony B. <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1512155">(Feb 23 2023 at 16:36)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ/near/1512147">said</a>:</p>
+<blockquote>
+<p>This is a bit outside my expertise; I don't know if <span class="user-mention silent" data-user-id="25085">Josh Klar</span> has any thoughts on k8s configuration which might be causing this sort of thing.</p>
+<p>One potential workaround would be to try telling PostgreSQL to have a short keepalive ping:</p>
+<div class="codehilite" data-code-language="Diff"><pre><span></span><code><span class="gh">diff --git zproject/computed_settings.py zproject/computed_settings.py</span>
+<span class="gh">index ba3f369308..2a5d57c4ed 100644</span>
+<span class="gd">--- zproject/computed_settings.py</span>
+<span class="gi">+++ zproject/computed_settings.py</span>
+<span class="gu">@@ -283,6 +283,8 @@ DATABASES: Dict[str, Dict[str, Any]] = {</span>
+<span class="w"> </span>        "OPTIONS": {
+<span class="w"> </span>            "connection_factory": TimeTrackingConnection,
+<span class="w"> </span>            "cursor_factory": TimeTrackingCursor,
+<span class="gi">+            "keepalives": 1,</span>
+<span class="gi">+            "keepalives_idle": 60,</span>
+<span class="w"> </span>        },
+<span class="w"> </span>    }
+<span class="w"> </span>}
+</code></pre></div>
+<p>...but if you're seeing connection drops after <em>less than a second</em>, then no amount of keepalive is going to save you; you'll need to adress the underlying networking issue that's terminating the connections.</p>
+</blockquote>
+<p>Thanks you for ur help.</p>
+<p>Why the keepalive of PostgreSQL would have an impact with communications between Zulip and RabbitMQ ? After reading the logs, the connections are closed between Zulip and RabbitMQ. <br>
+I missed something i think.</p>
+
+
+
+<a name="1512157"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1512157" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1512157">(Feb 23 2023 at 16:40)</a>:</h4>
+<p><em>Both</em> RabbitMQ and PostgreSQL are having their connections dropped.  Here's RabbitMQ's connection dropping:</p>
+<div class="codehilite"><pre><span></span><code>2023-02-23 08:17:03.999951+00:00 [info] &lt;0.10513.16&gt; connection &lt;0.10513.16&gt; (192.168.98.39:49344 -&gt; 192.168.98.47:5672): user &#39;zulip&#39; authenticated and granted access to vhost &#39;/&#39;
+2023-02-23 08:17:04.299169+00:00 [warn] &lt;0.10513.16&gt; closing AMQP connection &lt;0.10513.16&gt; (192.168.98.39:49344 -&gt; 192.168.98.47:5672, vhost: &#39;/&#39;, user: &#39;zulip&#39;):
+2023-02-23 08:17:04.299169+00:00 [warn] &lt;0.10513.16&gt; client unexpectedly closed TCP connection
+</code></pre></div>
+<p>Here's PostgreSQL's dropping (<code>psycopg2</code> is the low-level PostgreSQL driver):</p>
+<div class="codehilite"><pre><span></span><code>Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/utils.py&quot;, line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/lib/db.py&quot;, line 34, in execute
+    wrapper_execute(self, super().execute, query, vars)
+  File &quot;/home/zulip/deployments/2023-01-23-18-51-59/zerver/lib/db.py&quot;, line 19, in wrapper_execute
+    action(sql, params)
+psycopg2.OperationalError: server closed the connection unexpectedly
+    This probably means the server terminated abnormally
+    before or while processing the request.
+</code></pre></div>
+
+
+
+<a name="1512159"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1512159" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1512159">(Feb 23 2023 at 16:40)</a>:</h4>
+<p>I suspect memcache is also having its connection severed, but we just don't have as good logging for that.</p>
+
+
+
+<a name="1512160"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1512160" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Josh Klar <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1512160">(Feb 23 2023 at 16:42)</a>:</h4>
+<p>(I've seen this and will spend my walk to go pick up breakfast in town giving this some thought. Re-marking as unread so I get back to this when at my desk, thanks for the ping)</p>
+
+
+
+<a name="1512164"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1512164" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anthony B. <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1512164">(Feb 23 2023 at 16:54)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ/near/1512159">said</a>:</p>
+<blockquote>
+<p>Both RabbitMQ and PostgreSQL are having their connections dropped</p>
+</blockquote>
+<p>Effectively, i see a lot of connections resets in the log of PostgreSQL pod :</p>
+<div class="codehilite"><pre><span></span><code>2023-02-23 09:54:58.495 UTC [107340] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 09:57:09.567 UTC [107413] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 09:59:49.311 UTC [108098] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 10:42:29.311 UTC [112183] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 10:42:29.311 UTC [112152] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 10:42:29.311 UTC [112167] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 10:42:29.311 UTC [112151] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 10:42:29.311 UTC [112136] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 10:42:29.311 UTC [112168] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 10:42:29.311 UTC [111988] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 10:42:29.312 UTC [112184] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 10:42:29.312 UTC [112135] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 10:42:29.312 UTC [112120] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 10:42:29.312 UTC [112021] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 11:43:39.326 UTC [117330] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 11:52:23.615 UTC [110031] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 12:31:42.911 UTC [121302] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 12:32:02.808 UTC [127867] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 14:34:02.943 UTC [132055] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 14:34:02.943 UTC [132152] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 14:34:02.943 UTC [132023] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 14:34:02.943 UTC [132022] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 14:38:25.087 UTC [132219] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 14:38:25.087 UTC [132218] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 15:12:38.914 UTC [138416] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 15:17:44.383 UTC [135826] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 15:20:28.222 UTC [133856] LOG:  could not receive data from client: Connection reset by peer
+2023-02-23 16:26:33.150 UTC [138878] LOG:  could not receive data from client: Connection reset by peer
+</code></pre></div>
+<p>It's weird, however, the timestamps does not match with the previous errors. <br>
+I will continue to search the problem. For the moment, I don't see any impact.</p>
+
+
+
+<a name="1512239"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1512239" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Josh Klar <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1512239">(Feb 23 2023 at 18:24)</a>:</h4>
+<p><span class="user-mention" data-user-id="26114">@Anthony B.</span> is this a local k8s cluster of some sort, or is this a cloud PaaS? (GKE, EKS, AKS, etc.)</p>
+<p>If local/on-prem, can you describe the topology a bit (whatever you can share that isn't some sort of trade secret or other proprietary info would be helpful), including any Docker driver versions, kernel versions, which distro is the host, etc? Just to kinda narrow down the haystacks to find a needle in.</p>
+
+
+
+<a name="1512243"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1512243" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Josh Klar <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1512243">(Feb 23 2023 at 18:29)</a>:</h4>
+<p>Bonus if you can get me the output of <code>iptables -t nat -L KUBE-SERVICES</code> on the node in question, though I understand if that one's a no-go since that's going to describe your firewalling rules.</p>
+<p>I'm somewhat looking to see if there's duplicate entries or something else that's tripping up the k8s routing engine here, or perhaps otherwise causing it to cycle connections (or perhaps pods/services entirely) for some strange reason.</p>
+<p>A ways back, K8S had problems with this type of network dropping, but a lot of the tools used then aren't used now, at least in the mainline k8s distribution. Less certain about minikube, k3s, etc., but again: more info should help here.</p>
+
+
+
+<a name="1512246"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1512246" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Josh Klar <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1512246">(Feb 23 2023 at 18:33)</a>:</h4>
+<p>Lastly, to see if it's outright pods getting cycled out, <code>kubectl get events -n &lt;your_app_namespace&gt; --sort-by='.metadata.creationTimestamp'</code> would be helpful: it won't tell us <em>why</em> something got torn down, but it would tell us <em>if</em>, which is helpful here (and then we can dig further).</p>
+
+
+
+<a name="1513186"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1513186" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anthony B. <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1513186">(Feb 24 2023 at 11:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="25085">@Josh Klar</span> <br>
+It's a local k8s cluster with 3 control-plane and 19 workers.</p>
+<div class="codehilite"><pre><span></span><code>K8s : 1.24.8
+Containerd : 1.6.9
+OS : Rocky Linux 8.6
+Kernel : 4.18.0-372.26.1.el8_6.x86_64
+CNI : Weave 2.8.1
+</code></pre></div>
+<p>The pods running on the same node, except memcached.</p>
+<p>Rules iptables :</p>
+<div class="codehilite"><pre><span></span><code>Chain KUBE-SERVICES (2 references)
+target     prot opt source               destination
+KUBE-MARK-MASQ  all  -- !192.168.64.0/18      anywhere             /* Kubernetes service cluster ip + port for masquerade purpose */ match-set KUBE-CLUSTER-IP dst,dst
+KUBE-NODE-PORT  all  --  anywhere             anywhere             ADDRTYPE match dst-type LOCAL
+ACCEPT     all  --  anywhere             anywhere             match-set KUBE-CLUSTER-IP dst,dst
+# Warning: iptables-legacy tables present, use iptables-legacy to see them
+</code></pre></div>
+<p>Events pods : </p>
+<div class="codehilite"><pre><span></span><code>LAST SEEN   TYPE      REASON             OBJECT                                      MESSAGE
+4m3s        Warning   DNSConfigForming   pod/test-zulip-memcached-5f9f8b88dc-nsl6q   Search Line limits were exceeded, some search paths have been omitted, the applied search line is: infra-zulip.svc.cluster.local svc.cluster.local cluster.local ****** ***** *******
+3m21s       Warning   DNSConfigForming   pod/test-zulip-redis-master-0               Search Line limits were exceeded, some search paths have been omitted, the applied search line is: infra-zulip.svc.cluster.local svc.cluster.local cluster.local ****** ***** *******
+2m58s       Warning   DNSConfigForming   pod/test-zulip-rabbitmq-0                   Search Line limits were exceeded, some search paths have been omitted, the applied search line is: infra-zulip.svc.cluster.local svc.cluster.local cluster.local ****** ***** *******
+4m24s       Warning   DNSConfigForming   pod/test-zulip-postgresql-0                 Search Line limits were exceeded, some search paths have been omitted, the applied search line is: infra-zulip.svc.cluster.local svc.cluster.local cluster.local ****** ***** *******
+2m33s       Warning   DNSConfigForming   pod/test-zulip-0                            Search Line limits were exceeded, some search paths have been omitted, the applied search line is: infra-zulip.svc.cluster.local svc.cluster.local cluster.local ****** ***** *******
+</code></pre></div>
+<p>i will search on the network level to find logs or something that can help.<br>
+Tell me if u want more informations, i'm not very familiar with K8s for the moment.</p>
+
+
+
+<a name="1513368"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1513368" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anthony B. <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1513368">(Feb 24 2023 at 16:51)</a>:</h4>
+<p>Interesting to try: <a href="https://kubernetes.io/docs/reference/networking/virtual-ips/#session-affinity">https://kubernetes.io/docs/reference/networking/virtual-ips/#session-affinity</a></p>
+
+
+
+<a name="1515376"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1515376" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anthony B. <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1515376">(Feb 28 2023 at 13:01)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="26114">Anthony B.</span> <a href="#narrow/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ/near/1512155">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ/near/1512147">said</a>:</p>
+<blockquote>
+<p>This is a bit outside my expertise; I don't know if <span class="user-mention silent" data-user-id="25085">Josh Klar</span> has any thoughts on k8s configuration which might be causing this sort of thing.</p>
+<p>One potential workaround would be to try telling PostgreSQL to have a short keepalive ping:</p>
+<div class="codehilite" data-code-language="Diff"><pre><span></span><code><span class="gh">diff --git zproject/computed_settings.py zproject/computed_settings.py</span>
+<span class="gh">index ba3f369308..2a5d57c4ed 100644</span>
+<span class="gd">--- zproject/computed_settings.py</span>
+<span class="gi">+++ zproject/computed_settings.py</span>
+<span class="gu">@@ -283,6 +283,8 @@ DATABASES: Dict[str, Dict[str, Any]] = {</span>
+<span class="w"> </span>        "OPTIONS": {
+<span class="w"> </span>            "connection_factory": TimeTrackingConnection,
+<span class="w"> </span>            "cursor_factory": TimeTrackingCursor,
+<span class="gi">+            "keepalives": 1,</span>
+<span class="gi">+            "keepalives_idle": 60,</span>
+<span class="w"> </span>        },
+<span class="w"> </span>    }
+<span class="w"> </span>}
+</code></pre></div>
+<p>...but if you're seeing connection drops after <em>less than a second</em>, then no amount of keepalive is going to save you; you'll need to adress the underlying networking issue that's terminating the connections.</p>
+</blockquote>
+<p>Thanks you for ur help.</p>
+<p>Why the keepalive of PostgreSQL would have an impact with communications between Zulip and RabbitMQ ? After reading the logs, the connections are closed between Zulip and RabbitMQ. <br>
+I missed something i think.</p>
+</blockquote>
+<p>This workaround seems to work well for the moment. Thanks you <span aria-label="+1" class="emoji emoji-1f44d" role="img" title="+1">:+1:</span></p>
+
+
+
+<a name="1516174"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1516174" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1516174">(Mar 01 2023 at 19:52)</a>:</h4>
+<p>Are those options we should consider just adding unconditionally?</p>
+
+
+
+<a name="1516812"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1516812" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anthony B. <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1516812">(Mar 02 2023 at 12:45)</a>:</h4>
+<p>I don't see a potential side-effect, those options had fully fixed my issues with Zulip on K8s.</p>
+
+
+
+<a name="1517048"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1517048" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1517048">(Mar 02 2023 at 20:23)</a>:</h4>
+<p>This feels like papering over the problem -- for instance, the memcached connection has no heartbeat and is likely getting killed.  Just we power along without errors when we don't have a memcached connection, so it's a silent performance-killer rather than stopping you dead.</p>
+
+
+
+<a name="1518088"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1518088" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1518088">(Mar 04 2023 at 01:02)</a>:</h4>
+<p>(The potential side effect would be a bunch of idle network traffic wasting resources.)</p>
+
+
+
+<a name="1518089"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1518089" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1518089">(Mar 04 2023 at 01:04)</a>:</h4>
+<p>I feel like the main benefit of merging that sort of change, like the one we did with RabbitMQ, is our not needing time to debug this class of issue introduced by container hosting systems that decide to be clever with how they limit network connections -- they feel pretty unpleasant for users and don't feel super easy to investigate or to provide a clear error message with details on what the user should consider at the right time.</p>
+
+
+
+<a name="1518090"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/idle%20TCP%20connections%20killed%20between%20Zulip%20and%20RabbitMQ/near/1518090" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/idle.20TCP.20connections.20killed.20between.20Zulip.20and.20RabbitMQ.html#1518090">(Mar 04 2023 at 01:05)</a>:</h4>
+<p>But I suppose the safer option would be to add a setting that we turn on by default in some docker environments (or at least recommend considering somewhere in our Docker docs?).</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,97 @@
+<html>
+<head><meta charset="utf-8"><title>✔ git &quot;would clobber existing tag&quot; ? · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20git.20.22would.20clobber.20existing.20tag.22.20.3F.html">✔ git &quot;would clobber existing tag&quot; ?</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1350391"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20git%20%22would%20clobber%20existing%20tag%22%20%3F/near/1350391" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20git.20.22would.20clobber.20existing.20tag.22.20.3F.html#1350391">(Mar 22 2022 at 23:36)</a>:</h4>
+<p>Hello,</p>
+<p>I get some trouble with git and upgrade-zulip-from-git (I have added some debug line in it to understand what it was doing).</p>
+<div class="codehilite"><pre><span></span><code>zulip1:~# rm -r /srv/zulip.git
+zulip1:~# /home/zulip/deployments/current/scripts/upgrade-zulip-from-git samlsplogout-upgrade
+2022-03-22 22:45:09,608 upgrade-zulip-from-git: Cloning the repository
+2022-03-22 22:45:09,608 upgrade-zulip-from-git: git clone https://github.com/mateuszmandera/zulip.git --mirror
+Cloning into bare repository &#39;/srv/zulip.git&#39;...
+2022-03-22 22:45:58,558 upgrade-zulip-from-git: git remote set-url origin https://github.com/mateuszmandera/zulip.git
+2022-03-22 22:45:58,564 upgrade-zulip-from-git: git remote add upstream https://github.com/zulip/zulip.git
+2022-03-22 22:45:58,567 upgrade-zulip-from-git: Fetching the latest commits /srv/zulip.git
+2022-03-22 22:45:58,567 upgrade-zulip-from-git: git fetch --prune --quiet --tags --all
+error: Could not fetch upstream
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-from-git&quot;, line 94, in &lt;module&gt;
+    [&quot;git&quot;, &quot;fetch&quot;, &quot;--prune&quot;, &quot;--quiet&quot;, &quot;--tags&quot;, &quot;--all&quot;], preexec_fn=su_to_zulip
+  File &quot;/usr/lib/python3.7/subprocess.py&quot;, line 347, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;git&#39;, &#39;fetch&#39;, &#39;--prune&#39;, &#39;--quiet&#39;, &#39;--tags&#39;, &#39;--all&#39;]&#39; returned non-zero exit status 1.
+
+Zulip upgrade failed (exit code 1)!
+
+The upgrade process is designed to be idempotent, so you can retry after resolving whatever issue caused the failure (there should be a traceback above). A log of this installation is available in /var/log/zulip/upgrade.log
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>zulip1:/srv/zulip.git# git fetch --prune  --tags --all
+Fetching origin
+From https://github.com/mateuszmandera/zulip
+ - [deleted]               (none)     -&gt; upstream/1.4.x
+...
+ - [deleted]               (none)     -&gt; shared-0.0.9
+Fetching upstream
+From https://github.com/zulip/zulip
+ * [new branch]            1.4.x                                    -&gt; upstream/1.4.x
+ ...
+ ! [rejected]              4.10                                     -&gt; 4.10  (would clobber existing tag)
+ ! [rejected]              4.11                                     -&gt; 4.11  (would clobber existing tag)
+ * [new tag]               4.2                                      -&gt; 4.2
+ ! [rejected]              4.3                                      -&gt; 4.3  (would clobber existing tag)
+...
+ ! [rejected]              4.8                                      -&gt; 4.8  (would clobber existing tag)
+ ! [rejected]              4.9                                      -&gt; 4.9  (would clobber existing tag)
+...
+ * [new tag]               shared-0.0.9                             -&gt; shared-0.0.9
+error: Could not fetch upstream
+zulip1:/srv/zulip.git# echo $?
+1
+</code></pre></div>
+<p>any idea why I get some "would clobber existing tag" ?</p>
+<p><code>git fetch --prune  --tags --all  -f</code> works (of course)</p>
+
+
+
+<a name="1350392"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20git%20%22would%20clobber%20existing%20tag%22%20%3F/near/1350392" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20git.20.22would.20clobber.20existing.20tag.22.20.3F.html#1350392">(Mar 22 2022 at 23:37)</a>:</h4>
+<p>I think this has to do with <code>/srv/zulip.git</code> being generated with <code>git clone --mirror</code>, but that doesn't explain everything to me.</p>
+
+
+
+<a name="1350395"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20git%20%22would%20clobber%20existing%20tag%22%20%3F/near/1350395" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20git.20.22would.20clobber.20existing.20tag.22.20.3F.html#1350395">(Mar 22 2022 at 23:39)</a>:</h4>
+<p>It looks like mateuszmandera/zulip has a bunch of tags that conflict with the official repository, presumably for testing something.</p>
+
+
+
+<a name="1350413"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20git%20%22would%20clobber%20existing%20tag%22%20%3F/near/1350413" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20git.20.22would.20clobber.20existing.20tag.22.20.3F.html#1350413">(Mar 22 2022 at 23:54)</a>:</h4>
+<p>so I need to wait for Mateusz to look at his repo. In the mean time, I will add the <code>-f</code> flag in <code>upgrade-zulip-from-git</code><br>
+thank you.</p>
+
+
+
+<a name="1350708"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20git%20%22would%20clobber%20existing%20tag%22%20%3F/near/1350708" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20git.20.22would.20clobber.20existing.20tag.22.20.3F.html#1350708">(Mar 23 2022 at 12:50)</a>:</h4>
+<p>FYI: Mateusz has updated his repo, no more conflicting error tags.</p>
+
+
+
+<a name="1350709"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20git%20%22would%20clobber%20existing%20tag%22%20%3F/near/1350709" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Notification Bot <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20git.20.22would.20clobber.20existing.20tag.22.20.3F.html#1350709">(Mar 23 2022 at 12:50)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="9869">delaf</span> has marked this topic as resolved.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

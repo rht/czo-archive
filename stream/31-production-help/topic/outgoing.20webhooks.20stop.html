@@ -1,0 +1,110 @@
+<html>
+<head><meta charset="utf-8"><title>outgoing webhooks stop · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/outgoing.20webhooks.20stop.html">outgoing webhooks stop</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="858665"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/outgoing%20webhooks%20stop/near/858665" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/outgoing.20webhooks.20stop.html#858665">(Apr 20 2020 at 21:47)</a>:</h4>
+<p>We've run into an issue twice now, where an outgoing webhook coming from Zulip hits a 500 error, which somehow results in no more payloads being sent from zulip. I realize we're about a year behind Zulip versions, but I'm wondering if anyone has ever hit this. Restarting the flask server the 'trouble bot' is running on fixes it, and all queued payloads are immediately sent</p>
+
+
+
+<a name="858666"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/outgoing%20webhooks%20stop/near/858666" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/outgoing.20webhooks.20stop.html#858666">(Apr 20 2020 at 21:49)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>2020-04-20 20:32:53.084 WARN [] Message https://chat/#narrow/pm-with/2663,19-pm/near/1194444 triggered an outgoing webhook, returning status code 500.
+ Content of response (in quotes): &quot;b&#39;&lt;html&gt;&lt;head&gt;&lt;title&gt;500 Internal Server Error&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Internal Server Error&lt;/h1&gt;&lt;p&gt;The server encountered an internal error and was unable to complete your request.  Either the server is overloaded or there is an error in the application.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;&#39;&quot;
+2020-04-20 20:32:53.156 INFO [] Trigger event list on mustacheme resulted in a connection error. Retrying
+</code></pre></div>
+
+
+<p>After this, no further webhook payloads are sent from Zulip until the <code>mustacheme</code> flask server is restarted</p>
+
+
+
+<a name="858670"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/outgoing%20webhooks%20stop/near/858670" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/outgoing.20webhooks.20stop.html#858670">(Apr 20 2020 at 21:52)</a>:</h4>
+<p>Over on the moustachme flask server (running on a <a href="https://github.com/tiangolo/meinheld-gunicorn-flask-docker" title="https://github.com/tiangolo/meinheld-gunicorn-flask-docker">meinhold-gunicorn-flask docker</a>:</p>
+<div class="codehilite"><pre><span></span><code>[2020-04-20 20:21:53 +0000] [1] [CRITICAL] WORKER TIMEOUT (pid:16)
+[2020-04-20 20:21:53 +0000] [16] [ERROR] Traceback (most recent call last):
+  File &quot;/usr/local/lib/python3.7/site-packages/flask/app.py&quot;, line 2463, in __call__
+    return self.wsgi_app(environ, start_response)
+  File &quot;/usr/local/lib/python3.7/site-packages/flask/app.py&quot;, line 2446, in wsgi_app
+    response = self.full_dispatch_request()
+  File &quot;/usr/local/lib/python3.7/site-packages/flask/app.py&quot;, line 1949, in full_dispatch_request
+    rv = self.dispatch_request()
+  File &quot;/usr/local/lib/python3.7/site-packages/flask/app.py&quot;, line 1935, in dispatch_request
+    return self.view_functions[rule.endpoint](**req.view_args)
+  File &quot;/app/start_server.py&quot;, line 159, in reply
+    reply_content = bot.reply_to(payload=payload)
+  File &quot;/app/mustachemebot/bot.py&quot;, line 347, in reply_to
+    reply = _build_reply(payload=payload)
+  File &quot;/app/mustachemebot/bot.py&quot;, line 137, in _build_reply
+    image = func(content, stickers=sticker_requests)
+  File &quot;/app/onyourface/decorate.py&quot;, line 205, in decorate_by_search
+    minimize_duplicates=minimize_duplicates)
+  File &quot;/app/onyourface/decorate.py&quot;, line 81, in decorate
+    features = get_labeled_face_features(f)
+  File &quot;/app/onyourface/face_recognition.py&quot;, line 240, in get_labeled_face_features
+    landmarks = _face_landmarks(image)
+  File &quot;/app/onyourface/face_recognition.py&quot;, line 216, in _face_landmarks
+    pool.terminate()
+  File &quot;/usr/local/lib/python3.7/multiprocessing/pool.py&quot;, line 548, in terminate
+    self._terminate()
+  File &quot;/usr/local/lib/python3.7/multiprocessing/util.py&quot;, line 189, in __call__
+    res = self._callback(*self._args, **self._kwargs)
+  File &quot;/usr/local/lib/python3.7/multiprocessing/pool.py&quot;, line 617, in _terminate_pool
+    p.join()
+  File &quot;/usr/local/lib/python3.7/multiprocessing/process.py&quot;, line 140, in join
+    res = self._popen.wait(timeout)
+  File &quot;/usr/local/lib/python3.7/multiprocessing/popen_fork.py&quot;, line 48, in wait
+    return self.poll(os.WNOHANG if timeout == 0.0 else 0)
+  File &quot;/usr/local/lib/python3.7/multiprocessing/popen_fork.py&quot;, line 28, in poll
+    pid, sts = os.waitpid(self.pid, flag)
+  File &quot;/usr/local/lib/python3.7/site-packages/gunicorn/workers/base.py&quot;, line 196, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+</code></pre></div>
+
+
+<p>Although we've hit this with the development flask server as well.</p>
+
+
+
+<a name="858673"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/outgoing%20webhooks%20stop/near/858673" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/outgoing.20webhooks.20stop.html#858673">(Apr 20 2020 at 21:53)</a>:</h4>
+<p>We're moving to upgrade our server ASAP (which I think I said a month ago too... <span aria-label="face palm" class="emoji emoji-1f926" role="img" title="face palm">:face_palm:</span> ) Should we be looking for anything on the zulip server before we restart the problem bots that would help with troubleshooting?</p>
+
+
+
+<a name="858677"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/outgoing%20webhooks%20stop/near/858677" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/outgoing.20webhooks.20stop.html#858677">(Apr 20 2020 at 21:56)</a>:</h4>
+<p><span class="user-mention" data-user-id="3733">@Sean Wallitsch</span> I think we have made error-handling changes to that code path in the last year.</p>
+
+
+
+<a name="858678"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/outgoing%20webhooks%20stop/near/858678" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/outgoing.20webhooks.20stop.html#858678">(Apr 20 2020 at 21:56)</a>:</h4>
+<p>So while it's possible that the bug you're seeing still exists, it'd probably make sense for you to complete your upgrade first.</p>
+
+
+
+<a name="858679"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/outgoing%20webhooks%20stop/near/858679" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/outgoing.20webhooks.20stop.html#858679">(Apr 20 2020 at 21:56)</a>:</h4>
+<p>cool. no worries. We'll get ourselves upgraded and report if it happens again</p>
+
+
+
+<a name="858681"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/outgoing%20webhooks%20stop/near/858681" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/outgoing.20webhooks.20stop.html#858681">(Apr 20 2020 at 21:58)</a>:</h4>
+<p>Thank you!</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

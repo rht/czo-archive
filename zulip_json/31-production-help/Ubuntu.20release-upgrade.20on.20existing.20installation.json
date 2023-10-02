@@ -1,0 +1,164 @@
+[
+    {
+        "content": "<p>We've been using Zulip for over 3 years now and thus it ran on Ubuntu 14.04. Today I tried to dist-upgrade it do 16.04 (and then to 18.04), but after a few hours I failed :/ The problem is the python version - it changed to 3.5 from 3.4 - in django.log I find:<br>\n```error while loading shared libraries: libpython3.4m.so.1.0: cannot open shared object file: No such file or directory<br>\nand it's true :) in 16.04 python3.4 has been replaced by 3.5 and it causes the crash (in fact it's not a crash, because all cpus run constantly at 100% ;) )<br>\nI presume that one should create new virtual environment in python 3.5 and then somehow move the old one or reinstall? I am completely unfamiliar with python and that's why I'm stuck. I tried googling and searching githup zulip issues but found no clue. <br>\nThe only thing I can think of right now is the hard way: install fresh 18.04, install zulip and copy the database - but can it be done in  some easier way?</p>\n<p>Any advice or at least a url with tips? :)</p>",
+        "id": 676515,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546003451
+    },
+    {
+        "content": "<p>Looks like, from <a href=\"https://zulip.readthedocs.io/en/latest/production/maintain-secure-upgrade.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/maintain-secure-upgrade.html\">https://zulip.readthedocs.io/en/latest/production/maintain-secure-upgrade.html</a>, the process is still underdocumented.</p>\n<blockquote>\n<p>Note that upgrading an existing Zulip production server from Ubuntu 14.04 Trusty to Ubuntu 16.04 Xenial (or 16.04 Xenial to 18.04 Bionic) will require significant manual intervention on your part to migrate the data in the database from Postgres 9.3 to Postgres 9.5. Contributions on testing and documenting this process are welcome!</p>\n</blockquote>\n<p><span class=\"user-mention\" data-user-id=\"10809\">@Michał Grabowski</span> what if you blast off <code>/srv/zulip-venv-cache</code> (or is it zulip-py3-cache) then cd to <code>/home/zulip/deployments/current</code> then <code>python3 tools/setup/setup_venvs.py</code></p>",
+        "id": 676517,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1546004149
+    },
+    {
+        "content": "<p>The virtualenv migration is just 1 part of the process. Not sure if it would be much easier to export all the data to a zip file, then install Zulip in a fresh 18.04, then import the files. But you already did the upgrade.</p>",
+        "id": 676518,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1546004293
+    },
+    {
+        "content": "<p>I did, but I had a VM snapshot just in case and I reverted back to it</p>",
+        "id": 676519,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546004354
+    },
+    {
+        "content": "<p>And as far as migrating the database cluster to 9.5 is concerned, it was quick and easy ;) you get good info during the upgrade</p>",
+        "id": 676520,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546004405
+    },
+    {
+        "content": "<p>Huh, I see. What would be your upgrade path then? 1. 14.04-&gt;18.04 then fix all the problems, 2. Export data at 14.04 then do a fresh 18.04 (because there is no documented way to uninstall Zulip yet) then import from the data.</p>",
+        "id": 676521,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1546004735
+    },
+    {
+        "content": "<p>right now I'm taking a fresh snapshot and will try the setup_venvs.py approach</p>",
+        "id": 676523,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546005103
+    },
+    {
+        "content": "<p>Unfortunately: </p>\n<div class=\"codehilite\"><pre><span></span>Traceback (most recent call last):\n  File &quot;setup_venv.py&quot;, line 5, in &lt;module&gt;\n    from scripts.lib.zulip_tools import run, ENDC, WARNING, parse_lsb_release\nImportError: No module named &#39;scripts&#39;\n</pre></div>",
+        "id": 676534,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546008431
+    },
+    {
+        "content": "<p>btw, the script was <code>scripts/lib/setup_venv.py</code></p>",
+        "id": 676535,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546008462
+    },
+    {
+        "content": "<p>I should probably configure some library paths, but have no idea where :)</p>",
+        "id": 676536,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546008530
+    },
+    {
+        "content": "<p>hmm... I can find your script in the repo, but it doesn't exist on my server</p>",
+        "id": 676537,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546008673
+    },
+    {
+        "content": "<p>nevermind, I didn't think fast enough :)</p>",
+        "id": 676538,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546009009
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2328\">@Rein Zustand</span> thanks a lot!! Your clue was the key to get this running (for now on 16.04, but the next step to 18.04 will probably be similar), though after doing everything I don't think of it as the \"easy way\" anymore ;)  In a few moments I'll sum it all up for others.</p>",
+        "id": 676597,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546017662
+    },
+    {
+        "content": "<p>I started with zulip 1.9.0 and Ubuntu 14.04. What I did:<br>\n1. <code>supervisorctl stop all</code> and created a snapshot of my VM  (seems obvious :) )<br>\n2. <code>do-release-upgrade</code> - upgraded everything and chose to remove old packages. I left nginx configuration unchanged (preserved my old one).<br>\n3. after reboot, all virtual cpus were at 100% (supervisorctl process) -&gt; <code>supervisorctl stop all</code><br>\n4. updated my PostgreSQL to 9.5 (9.3 was still installed, though it is not supported anymore)<br>\n      -<code>apt-get install postgresql-9.5 postgresql-client-9.5</code><br>\n      - <code>pg_dropcluster --stop 9.5 main</code> - default 9.5 cluster needs to be removed,<br>\n      - <code>pg_upgradecluster 9.3 main</code> - converts cluster to 9.5 and also 'transfers' default port 5432 to 9.5 cluster, takes a few minutes<br>\n      - <code>pg_lsclusters</code> - display current cluster state (9.3 should be stopped, and 9.5 running)<br>\n5. downloaded zulip 1.9.0 source (not release for production) and copied tools folder to <code>/home/zulip/deployments/current/</code><br>\n6. deleted contents of <code>/srv/zulip-venv-cache</code><br>\n7. cd to <code>/home/zulip/deployments/current</code> and then <code>python3 tools/setup/setup_venvs.py</code> - virtual environment was recreated and _development_ dependencies were downloaded (and supposedly installed somewhere, but I'm not really sure...)<br>\n8. upgraded pip <code>python3 -m pip install --upgrade pip</code><br>\n9. tried to start everything <code>supervisorctl start all</code><br>\n10. opened second console with <code>tail -f /var/log/zulip/errors.log</code><br>\n11. watched the errors and manually installed missing python packages (turned out they were all missing - that's why I'm not sure that <code>setup_venvs.py</code> installed dependencies anywhere) using <code>python -m pip install &lt;package_name&gt;</code>. There were about 20 or 25 of them.<br>\n12. after no other errors were showing up, I tried to launch the zulip webpage - got 500 Internal Server Error. Checked nginx error.log <code>/var/log/nginx/error.log</code> and found only client socket errors :/ No other errors were shown in zulip logs...<br>\n13. as a last resort I decided to upgrade zulip to 1.9.1 (had to <code>apt-get remove upstart</code> first) and it did the trick! Everything seems to be working again - on Ubuntu 16.04 :)</p>",
+        "id": 676627,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546019503
+    },
+    {
+        "content": "<p>My mistake, it is supposed to be <code>scripts/lib/create-production-venv</code> that's why some packages are missing.</p>",
+        "id": 676633,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1546025348
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10809\">@Michał Grabowski</span> making sure you see the previous message before you attempt the 16.04-&gt;18.04. Thanks for opening up the path and slaying the dragons!</p>",
+        "id": 676634,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1546025553
+    },
+    {
+        "content": "<p>Well, it was also my mistake not to study the contents of <code>scripts/lib</code> thorough enough ;), but I was in a bit of a hurry. Next week I will probably try the next step (16.04 -&gt; 18.04) and I will surely post my conclusions. Thanks again for your help!</p>",
+        "id": 676769,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546091094
+    },
+    {
+        "content": "<p>We should probably just do the work of documenting this, thanks for the detailed report <span class=\"user-mention\" data-user-id=\"10809\">@Michał Grabowski</span>.</p>",
+        "id": 676888,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1546103199
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/11156\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/11156\">#11156</a> for quick patch. <span class=\"user-mention\" data-user-id=\"10809\">@Michał Grabowski</span> if you could update the steps by replacing <code>setup_venv.py</code> with <code>create-production-venv</code> . It's better to put the link now, then work on a more streamline steps later.</p>",
+        "id": 677027,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1546111477
+    },
+    {
+        "content": "<p>OK, so here are corrected steps for upgrading Ubuntu 14.04 to 16.04 with working Zulip production environment  (for now).</p>\n<p>What I did:<br>\n1. <code>supervisorctl stop all</code> and created a snapshot of my VM  (seems obvious :) )<br>\n2. <code>do-release-upgrade</code> - upgraded everything and chose to remove old packages. I left nginx configuration unchanged (preserved my old one).<br>\n3. after reboot, all virtual cpus were at 100% (supervisorctl process) -&gt; <code>supervisorctl stop all</code><br>\n4. updated my PostgreSQL to 9.5 (9.3 was still installed, though it is not supported anymore)<br>\n      -<code>apt-get install postgresql-9.5 postgresql-client-9.5</code><br>\n      - <code>pg_dropcluster --stop 9.5 main</code> - default 9.5 cluster needs to be removed,<br>\n      - <code>pg_upgradecluster 9.3 main</code> - converts cluster to 9.5 and also 'transfers' default port 5432 to 9.5 cluster, takes a few minutes<br>\n      - <code>pg_lsclusters</code> - display current cluster state (9.3 should be stopped, and 9.5 running)<br>\n5. downloaded zulip 1.9.0 source (not release for production) and copied tools folder to <code>/home/zulip/deployments/current/</code><br>\n6. deleted contents of <code>/srv/zulip-venv-cache</code><br>\n7. cd to <code>/home/zulip/deployments/current</code> and then <code>python3 tools/setup/create-production-venv.py</code> - virtual environment was recreated<br>\n8. upgraded pip <code>python3 -m pip install --upgrade pip</code><br>\n9. tried to start everything <code>supervisorctl start all</code><br>\n10. opened second console with <code>tail -f /var/log/zulip/errors.log</code><br>\n11. watched the errors and manually installed missing python packages using <code>python -m pip install &lt;package_name&gt;</code>. There were about 20 or 25 of them. (it is useful to open <code>requirements/common.in</code> to find &lt;package_name&gt; of the packages)<br>\n12. after no other errors were showing up, I tried to launch the zulip webpage - got 500 Internal Server Error. Checked nginx error.log <code>/var/log/nginx/error.log</code> and found only client socket errors :/ No other errors were shown in zulip logs...<br>\n13. as a last resort I decided to upgrade zulip to 1.9.1 (had to <code>apt-get remove upstart</code> first) and it did the trick! Everything seems to be working again - on Ubuntu 16.04 :)</p>",
+        "id": 677279,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546167438
+    },
+    {
+        "content": "<p>Cool.  Next step is that we should put this into a script, do a test install, snapshot it, and repeat testing the upgrade script until it just works so we can document that.</p>",
+        "id": 677361,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1546195440
+    },
+    {
+        "content": "<p>Anyone interested in grabbing that project?  It's definitely a high priority effort.</p>",
+        "id": 677362,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1546195458
+    },
+    {
+        "content": "<p>Two additional things after the update:<br>\n1. password recovery mails were not sent - I had to set TOKENIZED_NOREPLY_EMAIL_ADDRESS in my settings.py file (I think it's more connected with zulip update than OS update, but still I had to do it :) )<br>\n2. the <code>create-production-venv.py</code> file is in <code>scripts/lib/create-production-venv.py</code> - I had it wrong in my last message</p>",
+        "id": 677709,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546418216
+    },
+    {
+        "content": "<p>BTW, in a few hours I'll be doing 16.04 -&gt; 18.04 upgrade. Keep your fingers crossed! ;)</p>",
+        "id": 677710,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546418838
+    },
+    {
+        "content": "<p>I'm a bit disappointed - everything went smooth and clean :) About 40 minutes and zulip was up and running on 18.04.<br>\nBut a bit earlier we found a problem after upgrading to 16.04 - text search caused ISE 500. After some investigation and debugging it turned out that the error was caused by tsearch-extras and lack of proper functions in the database - seems like they have disappeared during database cluster upgrade.</p>",
+        "id": 677895,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546456220
+    },
+    {
+        "content": "<p>Hopefully, this is the last summary of upgrading steps in this topic :)</p>\n<p>What should work:<br>\n<strong>First stage - upgrade from Ubuntu 14.04 to Ubuntu 16.04</strong><br>\n1. <code>supervisorctl stop all</code> and create a snapshot/backup of the system<br>\n2. <code>do-release-upgrade</code> - upgrade everything and choose to remove old packages. Leave nginx configuration unchanged (preserve the old one).<br>\n3. after reboot, all virtual cpus will be at 100% (supervisorctl process) -&gt; <code>supervisorctl stop all</code><br>\n4. update PostgreSQL to 9.5 (9.3 will still be installed, though it is not supported anymore)<br>\n      -<code>apt-get install postgresql-9.5 postgresql-client-9.5</code><br>\n      - <code>pg_dropcluster --stop 9.5 main</code> - default 9.5 cluster needs to be removed,<br>\n      - <code>pg_upgradecluster 9.3 main</code> - converts cluster to 9.5 and also 'transfers' default port 5432 to 9.5 cluster, takes a few minutes<br>\n      - <code>pg_lsclusters</code> - display current cluster state (9.3 should be stopped, and 9.5 running)<br>\n5. delete contents of <code>/srv/zulip-venv-cache</code><br>\n6. cd to <code>/home/zulip/deployments/current</code> and then run <code>scripts/lib/create-production-venv</code> (AFAIR as 'zulip' user) - virtual environment should be recreated and all python dependencies downloaded<br>\n7. start everything <code>supervisorctl start all</code><br>\n8. everything should be working again<br>\n9. if the text search causes errors (i.e. 500 Internal Server Error), try:<br>\n    - <code>apt-get remove postgresql-9.5-tsearch-extras</code><br>\n    - <code>sudo apt-add-repository -ys ppa:tabbott/zulip</code><br>\n    - <code>sudo apt-get update</code><br>\n    - <code>apt-get install postgresql-9.5-tsearch-extras</code><br>\n    - on zulip database execute:</p>\n<div class=\"codehilite\"><pre><span></span><span class=\"k\">CREATE</span> <span class=\"nb\">TEXT</span> <span class=\"k\">SEARCH</span> <span class=\"k\">DICTIONARY</span> <span class=\"n\">english_us_hunspell</span>  <span class=\"p\">(</span>\n    <span class=\"k\">TEMPLATE</span> <span class=\"o\">=</span> <span class=\"n\">ispell</span><span class=\"p\">,</span>\n    <span class=\"n\">DictFile</span> <span class=\"o\">=</span> <span class=\"n\">en_us</span><span class=\"p\">,</span>\n    <span class=\"n\">AffFile</span> <span class=\"o\">=</span> <span class=\"n\">en_us</span><span class=\"p\">,</span>\n    <span class=\"n\">StopWords</span> <span class=\"o\">=</span> <span class=\"n\">zulip_english</span>\n<span class=\"p\">);</span>\n\n<span class=\"k\">ALTER</span> <span class=\"nb\">TEXT</span> <span class=\"k\">SEARCH</span> <span class=\"n\">CONFIGURATION</span> <span class=\"n\">zulip</span><span class=\"p\">.</span><span class=\"n\">english_us_search</span>\n<span class=\"k\">ALTER</span> <span class=\"n\">MAPPING</span>\n<span class=\"k\">FOR</span> <span class=\"n\">asciiword</span><span class=\"p\">,</span>\n    <span class=\"n\">asciihword</span><span class=\"p\">,</span>\n    <span class=\"n\">hword_asciipart</span><span class=\"p\">,</span>\n    <span class=\"n\">word</span><span class=\"p\">,</span>\n    <span class=\"n\">hword</span><span class=\"p\">,</span>\n    <span class=\"n\">hword_part</span> <span class=\"k\">WITH</span> <span class=\"n\">english_us_hunspell</span><span class=\"p\">,</span>\n                    <span class=\"n\">english_stem</span><span class=\"p\">;</span>\n</pre></div>\n\n\n<p><strong>Second stage - upgrade from Ubuntu 16.04 to Ubuntu 18.04</strong><br>\n1. perform all the steps from the first stage except for step 4. (database upgrade - I didn't try to upgrade Posgtresql to v10).</p>\n<p><strong>Comments</strong><br>\nAbove steps should work, but they are not 100% what I did. Instead <code>scripts/lib/create-production-venv</code> I ran <code>python3 tools/setup/setup_venvs.py</code> (took <code>tools</code> folder from sources first), but then I had to manually install production dependencies of python. At the end I had to do <code>upgrade-zulip</code> , because I was still getting ISE 500 errors (without trace in logfiles). The second stage (from 16.04 to 18.04) went smooth and clean using <code>scripts/lib/create-production-venv</code> (and so it will probably at the first stage).</p>\n<p>Hope this helps anyone :) <br>\nShould you have any questions, feel free to write me.</p>",
+        "id": 677907,
+        "sender_full_name": "Michał Grabowski",
+        "timestamp": 1546457798
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10809\">@Michał Grabowski</span> awesome, thanks for the writeup.  I'm going to test some improvements to this and then try to add to our docs.</p>",
+        "id": 677916,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1546459650
+    }
+]

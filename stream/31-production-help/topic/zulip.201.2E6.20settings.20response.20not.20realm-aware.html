@@ -1,0 +1,253 @@
+<html>
+<head><meta charset="utf-8"><title>zulip 1.6 settings response not realm-aware · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html">zulip 1.6 settings response not realm-aware</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="301554"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301554" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mark Clifton <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301554">(Oct 20 2017 at 02:33)</a>:</h4>
+<p>My server (using <a href="https://hub.docker.com/r/galexrt/zulip/" target="_blank" title="https://hub.docker.com/r/galexrt/zulip/">zulip docker 1.6</a>) is responding to <code>/api/v1/server_settings</code> with a response that does not include "realm_icon". It is a simple url setup: <a href="http://subdomain.domain.com" target="_blank" title="http://subdomain.domain.com">subdomain.domain.com</a>, with no "/realm" in the path.<br/>
+This causes the <a href="https://github.com/zulip/zulip-electron/blob/master/app/renderer/js/utils/domain-util.js" target="_blank" title="https://github.com/zulip/zulip-electron/blob/master/app/renderer/js/utils/domain-util.js">client electron code</a> to look for a realm icon, then if not found, <em>not even call resolve on the promise??</em>.. this is almost definitely a bug in the electron code, but obviously this must be rare or something for a server not to include a realm_icon?</p>
+<p>I'm not sure what's going on. What config setting is involved in order to get my server to respond with a realm_icon? I noticed I visit the server in a non-electron browser, the <code>/api/v1/server_settings</code> responds with a realm_icon.. I tested with curl and if I include the session cookie, the realm_icon appears.</p>
+<p>I googled and found this <a href="https://github.com/zulip/zulip-mobile/issues/392" target="_blank" title="https://github.com/zulip/zulip-mobile/issues/392">issue</a>.  So apparently my server is unaware of its realm or something if there is no session? I'm a bit lost here on how to solve.</p>
+
+
+
+<a name="301555"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301555" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mark Clifton <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301555">(Oct 20 2017 at 02:37)</a>:</h4>
+<p>Notice the <code>if</code> with no action or <code>else</code> after checking for <code>realm_icon</code> in <a href="https://github.com/zulip/zulip-electron/blob/master/app/renderer/js/utils/domain-util.js" target="_blank" title="https://github.com/zulip/zulip-electron/blob/master/app/renderer/js/utils/domain-util.js">electron's app code</a>:</p>
+<div class="codehilite"><pre><span></span>               <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">error</span> <span class="o">&amp;&amp;</span> <span class="nx">response</span><span class="p">.</span><span class="nx">statusCode</span> <span class="o">===</span> <span class="mi">200</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="kr">const</span> <span class="nx">data</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">body</span><span class="p">);</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="s1">'realm_icon'</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="nx">data</span><span class="p">.</span><span class="nx">realm_icon</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="nx">resolve</span><span class="p">({</span>
+                            <span class="c1">// Some Zulip Servers use absolute URL for server icon whereas others use relative URL</span>
+                            <span class="c1">// Following check handles both the cases</span>
+                            <span class="nx">icon</span><span class="o">:</span> <span class="nx">data</span><span class="p">.</span><span class="nx">realm_icon</span><span class="p">.</span><span class="nx">startsWith</span><span class="p">(</span><span class="s1">'/'</span><span class="p">)</span> <span class="o">?</span> <span class="nx">data</span><span class="p">.</span><span class="nx">realm_uri</span> <span class="o">+</span> <span class="nx">data</span><span class="p">.</span><span class="nx">realm_icon</span> <span class="o">:</span> <span class="nx">data</span><span class="p">.</span><span class="nx">realm_icon</span><span class="p">,</span>
+                            <span class="nx">url</span><span class="o">:</span> <span class="nx">data</span><span class="p">.</span><span class="nx">realm_uri</span><span class="p">,</span>
+                            <span class="nx">alias</span><span class="o">:</span> <span class="nx">data</span><span class="p">.</span><span class="nx">realm_name</span>
+                        <span class="p">});</span>
+                    <span class="p">}</span>
+                <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                    <span class="nx">reject</span><span class="p">(</span><span class="s1">'Zulip server version &lt; 1.6.'</span><span class="p">);</span>
+                <span class="p">}</span>
+</pre></div>
+
+
+
+<a name="301558"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301558" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301558">(Oct 20 2017 at 02:47)</a>:</h4>
+<p>cc: <span class="user-mention" data-user-email="svnitakash@gmail.com" data-user-id="53">@Akash Nimare</span></p>
+
+
+
+<a name="301571"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301571" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301571">(Oct 20 2017 at 05:32)</a>:</h4>
+<p><span class="user-mention" data-user-email="mark.clifton@gmail.com" data-user-id="2945">@Mark Clifton</span> interesting.</p>
+
+
+
+<a name="301573"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301573" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301573">(Oct 20 2017 at 05:33)</a>:</h4>
+<p>Did you by any chance setup multiple realms on your server?</p>
+
+
+
+<a name="301574"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301574" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301574">(Oct 20 2017 at 05:33)</a>:</h4>
+<p>The problem you describe sounds like what happens with that on 1.6</p>
+
+
+
+<a name="301575"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301575" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301575">(Oct 20 2017 at 05:33)</a>:</h4>
+<p>If that's your problem, you may want to just upgrade to <code>master</code>, which will become 1.7 within a couple days.</p>
+
+
+
+<a name="301581"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301581" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mark Clifton <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301581">(Oct 20 2017 at 05:40)</a>:</h4>
+<p>no I did not set up multiple realms afaik. is there a command to list realms in the manage.py shell?</p>
+
+
+
+<a name="301585"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301585" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301585">(Oct 20 2017 at 06:25)</a>:</h4>
+<p>you could try Realm.objects.all()</p>
+
+
+
+<a name="301599"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301599" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mark Clifton <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301599">(Oct 20 2017 at 07:39)</a>:</h4>
+<p>Ok, I'm seeing 3 realms.. how do I delete them? there's <a href="http://example.com" target="_blank" title="http://example.com">example.com</a>, zulip 1, and the one I'm actually using.</p>
+
+
+
+<a name="301616"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301616" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shayan Toqraee <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301616">(Oct 20 2017 at 08:11)</a>:</h4>
+<p>(Make sure about which of the realms you are using, before removing others. On my server, the realm that I expect the least for it to be the realm that I'm using, is actually the one!!)</p>
+
+
+
+<a name="301794"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301794" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301794">(Oct 20 2017 at 16:09)</a>:</h4>
+<p><span class="user-mention" data-user-email="mark.clifton@gmail.com" data-user-id="2945">@Mark Clifton</span> so, still in the <code>manage.py shell</code>, you can use <code>UserProfile.objects.filter(realm=realm)</code> to see which one has your users in it.</p>
+
+
+
+<a name="301795"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301795" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301795">(Oct 20 2017 at 16:10)</a>:</h4>
+<p>I can send you notes on options for how to clean things up when you're online.</p>
+
+
+
+<a name="301796"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301796" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mark Clifton <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301796">(Oct 20 2017 at 16:11)</a>:</h4>
+<p>great, I found the realm I want to keep</p>
+
+
+
+<a name="301799"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301799" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mark Clifton <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301799">(Oct 20 2017 at 16:11)</a>:</h4>
+<p>it is "<a href="http://example.com" target="_blank" title="http://example.com">example.com</a>"</p>
+
+
+
+<a name="301802"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301802" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mark Clifton <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301802">(Oct 20 2017 at 16:12)</a>:</h4>
+<p>is deleting the other realms going to switch the server into single-realm-mode?</p>
+
+
+
+<a name="301807"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301807" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301807">(Oct 20 2017 at 16:13)</a>:</h4>
+<p>Yeah, it will.</p>
+
+
+
+<a name="301808"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301808" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301808">(Oct 20 2017 at 16:13)</a>:</h4>
+<p>Well</p>
+
+
+
+<a name="301809"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301809" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301809">(Oct 20 2017 at 16:13)</a>:</h4>
+<p>Don't delete the "zulip" one</p>
+
+
+
+<a name="301810"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301810" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301810">(Oct 20 2017 at 16:13)</a>:</h4>
+<p>That one is used for various "system bots".</p>
+
+
+
+<a name="301812"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301812" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mark Clifton <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301812">(Oct 20 2017 at 16:13)</a>:</h4>
+<p>oh ok</p>
+
+
+
+<a name="301814"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301814" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301814">(Oct 20 2017 at 16:14)</a>:</h4>
+<p>(E.g. the Notification Bot)</p>
+
+
+
+<a name="301815"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301815" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301815">(Oct 20 2017 at 16:14)</a>:</h4>
+<p>I would take a backup of your database before doing this using <code>pg_dump</code>.</p>
+
+
+
+<a name="301816"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301816" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301816">(Oct 20 2017 at 16:14)</a>:</h4>
+<p>Just because that makes human error less risky :)</p>
+
+
+
+<a name="301817"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301817" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mark Clifton <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301817">(Oct 20 2017 at 16:15)</a>:</h4>
+<p>but there's one I seem to have inadvertently created but not used. should I just call <code>.delete()</code> on it or is there more to it than that?</p>
+
+
+
+<a name="301820"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301820" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301820">(Oct 20 2017 at 16:17)</a>:</h4>
+<p>I suspect calling <code>.delete()</code> on it will just work (that should cascade to deleting related objects).  It might also be good enough to just do a <code>do_deactivate_realm</code> on it, but I'd need to read some code to verify.  Certainly it <strong>should</strong> just work to do that.</p>
+
+
+
+<a name="301821"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301821" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301821">(Oct 20 2017 at 16:17)</a>:</h4>
+<p>Yeah, deactivating the realm should suffice.</p>
+
+
+
+<a name="301822"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301822" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mark Clifton <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301822">(Oct 20 2017 at 16:18)</a>:</h4>
+<p>ok cool well considering <code>do_deactivate_realm</code> feels less destructive I'll try that first</p>
+
+
+
+<a name="301827"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301827" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mark Clifton <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301827">(Oct 20 2017 at 16:21)</a>:</h4>
+<p>ok, the realm_icon is showing up in the <code>/api/v1/server_settings</code> now! thanks a ton!</p>
+
+
+
+<a name="301834"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301834" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301834">(Oct 20 2017 at 16:23)</a>:</h4>
+<p>Thank you <span class="user-mention" data-user-email="mark.clifton@gmail.com" data-user-id="2945">@Mark Clifton</span>!  This discussion caused me to notice we need to do <a href="https://github.com/zulip/zulip/commit/88245d2cd66c75e1096eec53882a2750826f03be" target="_blank" title="https://github.com/zulip/zulip/commit/88245d2cd66c75e1096eec53882a2750826f03be">88245d2cd66c75e1096eec53882a2750826f03be</a> for the 1.7 release to handle your case correctly :)</p>
+
+
+
+<a name="301835"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301835" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301835">(Oct 20 2017 at 16:24)</a>:</h4>
+<p>BTW if you'd like to help further, give a skip through the release/upgrades notes part of <a href="http://zulip.readthedocs.io/en/latest/changelog.html" target="_blank" title="http://zulip.readthedocs.io/en/latest/changelog.html">http://zulip.readthedocs.io/en/latest/changelog.html</a> and let us know if everything makes sense :)</p>
+
+
+
+<a name="301836"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301836" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301836">(Oct 20 2017 at 16:24)</a>:</h4>
+<p>We're going to be shipping that in the next day or so :)</p>
+
+
+
+<a name="301841"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301841" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mark Clifton <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301841">(Oct 20 2017 at 16:27)</a>:</h4>
+<p>regarding the 2014 desktop app, the notes should probably <em>not</em> say "deprecated completely soon.".. my guess is "removed completely soon" is more to the point</p>
+
+
+
+<a name="301842"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301842" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mark Clifton <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301842">(Oct 20 2017 at 16:27)</a>:</h4>
+<p>(in the changelog)</p>
+
+
+
+<a name="301844"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/301844" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#301844">(Oct 20 2017 at 16:27)</a>:</h4>
+<p>Well, we probably don't delete the original copy, we'll just stop supporting its weird way of getting notifications.  Maybe that's sorta the same though.  Good point, we should change that language somehow.</p>
+
+
+
+<a name="302125"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/302125" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mark Clifton <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#302125">(Oct 20 2017 at 19:12)</a>:</h4>
+<p>I like the fix re: legacy desktop app discussion in changelog.. you're so quick!</p>
+
+
+
+<a name="302127"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%201.6%20settings%20response%20not%20realm-aware/near/302127" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.201.2E6.20settings.20response.20not.20realm-aware.html#302127">(Oct 20 2017 at 19:14)</a>:</h4>
+<p>Great :)</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

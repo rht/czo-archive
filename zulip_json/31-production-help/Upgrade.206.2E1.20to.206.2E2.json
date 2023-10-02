@@ -1,0 +1,284 @@
+[
+    {
+        "content": "<p>I'm having an issue when trying to upgrade my server. Can someone point me to the correct log file where I might find the cause (or offer any advice).</p>\n<div class=\"codehilite\"><pre><span></span><code>Zulip stopped successfully!\n2023-05-20 12:26:23,482 upgrade-zulip-stage-2: Building static assets...\nCached version not found! Installing node modules.\n+ /srv/zulip-yarn/bin/yarn install --non-interactive --frozen-lockfile --prod\nyarn install v1.22.19\n[1/4] Resolving packages...\n[2/4] Fetching packages...\n[3/4] Linking dependencies...\nwarning &quot; &gt; postcss-media-minmax@5.0.0&quot; has incorrect peer dependency &quot;postcss@8.4.5&quot;.\n[4/4] Building fresh packages...\nwarning Ignored scripts due to flag.\nDone in 151.72s.\nUsing cached node modules from /srv/zulip-npm-cache/e93070e712473d4766bfc3c8dec49406762b9818/node_modules\n+ ./tools/setup/emoji/build_emoji\nDumping emojis ...\n\nError running a subcommand of ./tools/update-prod-static: ./tools/setup/emoji/build_emoji\nActual error output for the subcommand is just above this.\n\n2023-05-20 12:29:02,151 upgrade-zulip-stage-2: Failed to build static assets.\n\nZulip upgrade failed (exit code 1)!\n\nThe upgrade process is designed to be idempotent, so you can retry after resolving whatever issue caused the failure (there should be a traceback above). A log of this installation is available in /var/log/zulip/upgrade.log\n</code></pre></div>\n<p>I'm running Ubuntu 20.04LTS as my OS.</p>",
+        "id": 1573460,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684585952
+    },
+    {
+        "content": "<p>Why is is saying, \"This is not an upgrade\"?</p>\n<blockquote>\n<p>Migrations which are currently applied, but missing in the new version:<br>\n  zerver - 0006_auto_20151123_2019<br>\n2023-05-21 22:48:19.161 ERR  [] This is not an upgrade -- the current deployment (version 6.1) contains 1 database migrations which /home/zulip/deployments/2023-05-21-19-46-48 (version 6.2) does not.</p>\n</blockquote>",
+        "id": 1573850,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684709386
+    },
+    {
+        "content": "<p>Can you post the contents of that migration file?</p>",
+        "id": 1574091,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684773867
+    },
+    {
+        "content": "<p>It looks like you might have a local fork including a database migration.</p>",
+        "id": 1574094,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684773876
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"70\">@GervaisdeM</span> just adding a mention to make sure you saw the question; that migration ID <code>0006_auto_20151123_2019</code> is quite confusing to me.</p>",
+        "id": 1574614,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684804465
+    },
+    {
+        "content": "<p>Hi <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> <br>\nSorry for delay ... I just re-ran <code>sudo /home/zulip/deployments/current/scripts/upgrade-zulip-from-git 6.2</code><br>\n<a href=\"/user_uploads/2/47/4jFhel3W7nzCKfDsScc9H3xM/upgrade.log\">upgrade.log</a></p>",
+        "id": 1575421,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684885844
+    },
+    {
+        "content": "<p>Can you try to find a copy of that migration? I would try something like:</p>\n<p><code>ls /home/zulip/deployments/*/*/migrations/0006_auto_20151123_2019.py</code></p>",
+        "id": 1575423,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684885938
+    },
+    {
+        "content": "<p>I suspect it's the result of something fork of Zulip you were using, but have no idea what.</p>",
+        "id": 1575424,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684885953
+    },
+    {
+        "content": "<p>Here's all the migrations with number 0006 in our <code>main</code> branch:</p>\n<div class=\"codehilite\"><pre><span></span><code>$ ls */migrations/0006*\nanalytics/migrations/0006_add_subgroup_to_unique_constraints.py\nconfirmation/migrations/0006_realmcreationkey_presume_email_valid.py\ncorporate/migrations/0006_nullable_stripe_customer_id.py\nzilencer/migrations/0006_customer.py\n</code></pre></div>",
+        "id": 1575425,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684886001
+    },
+    {
+        "content": "<p>weird, I'm not finding anything:</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip@zulip:~$ pwd\n/home/zulip\nzulip@zulip:~$ find . -name 0006_auto_20151123_2019.py\n</code></pre></div>\n<p>OR</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip@zulip:~$ ls /home/zulip/deployments/*/*/migrations/0006* | grep auto\n</code></pre></div>\n<p><span aria-label=\"point up\" class=\"emoji emoji-1f446\" role=\"img\" title=\"point up\">:point_up:</span> Finds nothing :(</p>",
+        "id": 1575427,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684886373
+    },
+    {
+        "content": "<p>These are all the 0006 migrations that I have on my server:</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip@zulip:~$ pwd\n/home/zulip\n\nzulip@zulip:~$ ls /home/zulip/deployments/*/*/migrations/0006* | rev | cut -d&quot;/&quot; -f1 | rev | sort | uniq\n0006_add_subgroup_to_unique_constraints.py\n0006_customer.py\n0006_nullable_stripe_customer_id.py\n0006_realmcreationkey_presume_email_valid.py\n</code></pre></div>",
+        "id": 1575431,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684886576
+    },
+    {
+        "content": "<p>Mine match yours...</p>",
+        "id": 1575433,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684886645
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  I searched my entire filesystem and can't find anything with that name (or a similar name)</p>",
+        "id": 1575468,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684888526
+    },
+    {
+        "content": "<p>OK I think probably the right answer is going to be surgery to remove the record that migration was supposed to exist.</p>",
+        "id": 1575469,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684888638
+    },
+    {
+        "content": "<p>You can probably upgrade by passing <code>--skip-downgrade-check</code> to the upgrade script, given that this does not sound like it's actually a downgrade, that should be safe.</p>",
+        "id": 1575472,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684888685
+    },
+    {
+        "content": "<p>Try doing this in a <code>manage.py dbshell</code>:</p>\n<div class=\"codehilite\"><pre><span></span><code>select * from django_migrations where name like &#39;%0006%&#39;;\n id  |      app      |                   name                    |            applied\n-----+---------------+-------------------------------------------+-------------------------------\n  31 | analytics     | 0006_add_subgroup_to_unique_constraints   | 2023-05-19 13:06:33.506296-07\n  47 | auth          | 0006_require_contenttypes_0002            | 2023-05-19 13:06:34.876907-07\n 133 | confirmation  | 0006_realmcreationkey_presume_email_valid | 2023-05-19 13:06:40.546378-07\n 144 | zilencer      | 0006_customer                             | 2023-05-19 13:06:41.260748-07\n 410 | corporate     | 0006_nullable_stripe_customer_id          | 2023-05-19 13:07:05.646953-07\n 434 | two_factor    | 0006_phonedevice_key_default              | 2023-05-19 13:07:08.96123-07\n 448 | social_django | 0006_partial                              | 2023-05-19 13:07:09.844523-07\n(7 rows)\n</code></pre></div>",
+        "id": 1575474,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684888752
+    },
+    {
+        "content": "<p>That will reveal when that migration was applied, which may be some clue.</p>",
+        "id": 1575475,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684888762
+    },
+    {
+        "content": "<p>(And the workaround is almost certainly going to be to just delete the row from that table so this check won't fail in the future)</p>",
+        "id": 1575477,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684888781
+    },
+    {
+        "content": "<p>I don't know about the manage.py dbshell, so I just connected straight to the postgress db and deleted the row from the table...</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip=&gt; select * from django_migrations where name like &#39;%0006%&#39;;\n id  |      app      |                   name                    |            applied\n-----+---------------+-------------------------------------------+-------------------------------\n   8 | auth          | 0006_require_contenttypes_0002            | 2015-10-04 03:24:38.21632+00\n  18 | zerver        | 0006_auto_20151123_2019                   | 2015-11-24 01:20:23.371357+00\n  19 | zerver        | 0006_zerver_userprofile_email_upper_idx   | 2016-05-06 23:32:55.892862+00\n  81 | analytics     | 0006_add_subgroup_to_unique_constraints   | 2017-02-12 20:00:20.606988+00\n 110 | social_django | 0006_partial                              | 2017-03-03 00:14:37.215558+00\n 191 | confirmation  | 0006_realmcreationkey_presume_email_valid | 2018-04-18 02:08:55.220976+00\n 288 | two_factor    | 0006_phonedevice_key_default              | 2019-12-13 22:19:07.494492+00\n(7 rows)\n\nzulip=&gt; delete from django_migrations where id = 18;\nDELETE 1\n</code></pre></div>\n<hr>\n<p>Reran the upgrade <code>sudo /home/zulip/deployments/current/scripts/upgrade-zulip-from-git 6.2</code> and it failed again.<br>\n<span aria-label=\"frown\" class=\"emoji emoji-1f641\" role=\"img\" title=\"frown\">:frown:</span> </p>\n<p><a href=\"/user_uploads/2/2d/w1DfFzmF2R5yhbNGK6EFMAeI/upgrade.log\">upgrade.log</a></p>",
+        "id": 1575495,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684889864
+    },
+    {
+        "content": "<p>Now I am getting this error, but I have plenty of free ram:</p>\n<div class=\"codehilite\"><pre><span></span><code>Using cached node modules from /srv/zulip-npm-cache/6f3521d76d211a9d7ea7b89de3bf9f6ced8dbeab/node_modules\n+ ./tools/setup/emoji/build_emoji\nDumping emojis ...\n\nError running a subcommand of ./tools/update-prod-static: ./tools/setup/emoji/build_emoji\nActual error output for the subcommand is just above this.\n\n2023-05-24 01:36:11,129 upgrade-zulip-stage-2: Failed to build static assets.\n2023-05-24 01:36:11,139 upgrade-zulip-stage-2: Usually the cause is insufficient free RAM to run webpack.\n2023-05-24 01:36:11,139 upgrade-zulip-stage-2: Try stopping the Zulip server (scripts/stop-server) and trying again.\n\nZulip upgrade failed (exit code 1)!\n\nThe upgrade process is designed to be idempotent, so you can retry after resolving whatever issue caused the failure (there should be a traceback above). A log of this installation is available in /var/log/zulip/upgrade.log\n[gervais@zulip ~]$ free -m\n              total        used        free      shared  buff/cache   available\nMem:           9961        2308        4432          87        3220        7260\nSwap:          3000           0        3000\n</code></pre></div>",
+        "id": 1575517,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684892289
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  any other ideas?</p>",
+        "id": 1575518,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684892309
+    },
+    {
+        "content": "<p>I changed my VM to 16GB of RAM and I am seeing the same error.</p>",
+        "id": 1575556,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684896087
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"70\">@GervaisdeM</span> try running  <code>./tools/setup/emoji/build_emoji</code> directly to see what output it has.</p>",
+        "id": 1575590,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684903097
+    },
+    {
+        "content": "<p>I would be pretty surprised if it's an OOM kill, given the specific step that's failing ... but I'm also surprised that's failing.</p>",
+        "id": 1575591,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684903121
+    },
+    {
+        "content": "<p>I suppose a shortage of disk would be a valid possibility?</p>",
+        "id": 1575592,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684903129
+    },
+    {
+        "content": "<p>Do I need to activate a virtual env to run the command above?</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip@zulip:~/deployments/current$ ./tools/setup/emoji/build_emoji\nTraceback (most recent call last):\n  File &quot;./tools/setup/emoji/build_emoji&quot;, line 10, in &lt;module&gt;\n    import orjson\nModuleNotFoundError: No module named &#39;orjson&#39;\n</code></pre></div>\n<hr>\n<p>I have enough disk space</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip:/home/zulip/deployments/current# exit\n[gervais@zulip ~]$ df -h\nFilesystem                    Size  Used Avail Use% Mounted on\n/dev/mapper/ubuntu--vg-lv--0   78G   39G   35G  53% /\n/dev/sda2                     974M  267M  640M  30% /boot\n</code></pre></div>",
+        "id": 1575753,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684935028
+    },
+    {
+        "content": "<p>Perhaps it's just a coincidence, but there was another <code>orjson</code> issue popping up in <a class=\"stream-topic\" data-stream-id=\"31\" href=\"/#narrow/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2\">#production help &gt; ✔ SIGILL on Upgrade to 6.2</a>. However, the original error looks different there.</p>",
+        "id": 1575783,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1684939317
+    },
+    {
+        "content": "<p>My issue is that it can not find orjson. It looks like the other issue was that it was crashing.</p>",
+        "id": 1576121,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684965264
+    },
+    {
+        "content": "<p>I am running on a very old CPU though... Not getting and SIGILL though...</p>",
+        "id": 1576144,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684966215
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"70\">@GervaisdeM</span> yeah, I think you need to <code>source /home/zulip/deployments/current/bin/activate</code>; sorry I didn't clarify that; this tool is one that you usually only run directly in a development environment, so its callers are responsible for entering the venv for it.</p>",
+        "id": 1576155,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684966856
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  The path above is not where activate lives... I found it in <code>zulip-py3-venv/bin/activate</code> (which is a symlink into <code>/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv</code></p>\n<p>Should I be running this in <code>current</code> or <code>next</code> ?</p>\n<hr>\n<p>When I run it in <code>current</code> it immediately finishes:</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip:/home/zulip/deployments/current# . zulip-py3-venv/bin/activate\n(zulip-py3-venv) root@zulip:/home/zulip/deployments/current# ./tools/setup/emoji/build_emoji\nbuild_emoji: Using cached emojis from /srv/zulip-emoji-cache/91291e9d75965ffa4cd052d277357991c48538d9/emoji\n</code></pre></div>\n<hr>\n<hr>\n<p>When I run it in <code>next</code> it core dumps:</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip:/home/zulip/deployments/next# . zulip-py3-venv/bin/activate\n(zulip-py3-venv) root@zulip:/home/zulip/deployments/next# ./tools/setup/emoji/build_emoji\nDumping emojis ...\nIllegal instruction (core dumped)\n</code></pre></div>",
+        "id": 1576276,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684971662
+    },
+    {
+        "content": "<p>Should I be running those as zulip or root user?</p>",
+        "id": 1576281,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684971844
+    },
+    {
+        "content": "<p>Normal user, and yeah the <code>next/</code> path is the right place to run it, though the fact that it does succeed in <code>6.1</code> is super interesting.</p>",
+        "id": 1576295,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684972371
+    },
+    {
+        "content": "<p>This is starting to make me suspect this issue might be the same <code>orjson</code> issue discussed here: <a href=\"#narrow/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2/near/1574815\">https://chat.zulip.org/#narrow/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2/near/1574815</a></p>",
+        "id": 1576298,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684972441
+    },
+    {
+        "content": "<p><a href=\"https://github.com/ijl/orjson/issues/383\">https://github.com/ijl/orjson/issues/383</a></p>",
+        "id": 1576299,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684972490
+    },
+    {
+        "content": "<p>The <code>cpuid</code> output for your system, as suggested on the other thread, would be helpful.</p>",
+        "id": 1576303,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684972550
+    },
+    {
+        "content": "<p><code>cpuid</code> makes a massive dump. I've attached the output.<br>\n<a href=\"/user_uploads/2/54/Zbc601zJ4PXumQMD_JDjx_fT/cpuid.out\">cpuid.out</a></p>\n<p>Here is the output of <code>lscpu</code></p>\n<div class=\"codehilite\"><pre><span></span><code>[gervais@zulip ~]$ lscpu\nArchitecture:                    x86_64\nCPU op-mode(s):                  32-bit, 64-bit\nByte Order:                      Little Endian\nAddress sizes:                   36 bits physical, 48 bits virtual\nCPU(s):                          2\nOn-line CPU(s) list:             0,1\nThread(s) per core:              1\nCore(s) per socket:              2\nSocket(s):                       1\nNUMA node(s):                    1\nVendor ID:                       GenuineIntel\nCPU family:                      6\nModel:                           15\nModel name:                      Intel(R) Xeon(R) CPU            5160  @ 3.00GHz\nStepping:                        6\nCPU MHz:                         2992.510\nBogoMIPS:                        5985.02\nHypervisor vendor:               KVM\nVirtualization type:             full\nL1d cache:                       64 KiB\nL1i cache:                       64 KiB\nL2 cache:                        8 MiB\nNUMA node0 CPU(s):               0,1\nVulnerability Itlb multihit:     KVM: Vulnerable\nVulnerability L1tf:              Mitigation; PTE Inversion\nVulnerability Mds:               Vulnerable: Clear CPU buffers attempted, no microcode; SMT Host state unknown\nVulnerability Meltdown:          Mitigation; PTI\nVulnerability Mmio stale data:   Unknown: No mitigations\nVulnerability Retbleed:          Not affected\nVulnerability Spec store bypass: Vulnerable\nVulnerability Spectre v1:        Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:        Mitigation; Retpolines, STIBP disabled, RSB filling, PBRSB-eIBRS Not affected\nVulnerability Srbds:             Not affected\nVulnerability Tsx async abort:   Not affected\nFlags:                           fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm constant_tsc rep_good nopl\n                                  cpuid tsc_known_freq pni ssse3 cx16 x2apic hypervisor lahf_lm pti\n</code></pre></div>",
+        "id": 1576313,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684973123
+    },
+    {
+        "content": "<p>Looks like the CPU was discontinued in 2009; I don't know what I'm looking for, but it seems very likely this is the same issue with <code>orjson</code> having dropped support.</p>",
+        "id": 1576325,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684974083
+    },
+    {
+        "content": "<p>Looking at <a href=\"https://github.com/ijl/orjson/releases\">https://github.com/ijl/orjson/releases</a>, <span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> should we downgrade <code>orjson</code> on the <code>6.x</code> branch, at least, to 3.8.10, the last release before their changes that break this?</p>",
+        "id": 1576328,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684974227
+    },
+    {
+        "content": "<p>That seems reasonable for 6.x. Probably not sustainable indefinitely.</p>",
+        "id": 1576329,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1684974302
+    },
+    {
+        "content": "<p>Yeah, we want upgrades to maintenance releases to just work, and it looks like they have no security fixes since then.</p>",
+        "id": 1576332,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684974398
+    },
+    {
+        "content": "<p>Should we post on the <code>orjson</code> issue thread that we've now had multiple folks have upgrading Zulip crash because of this change, and we'd be interested in some way to install the latest version that works across all CPUs?</p>",
+        "id": 1576333,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684974452
+    },
+    {
+        "content": "<p>It sounds like we're not the only ones having trouble, so they might find the data point helpful.</p>",
+        "id": 1576334,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684974468
+    },
+    {
+        "content": "<p>interesting... My 2006 MacPro (running Linux) refuses to die. Perhaps it is finally time to retire it.<br>\nI did just upgrade it to Ubuntu 22.04 though, so should be supported for 4 more years...<br>\nI was hoping to run it until it was at least 20 years old (make sure I got my money's worth out of it) - LOL</p>",
+        "id": 1576337,
+        "sender_full_name": "GervaisdeM",
+        "timestamp": 1684974943
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/25752\">#25752</a></p>",
+        "id": 1576345,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1684975806
+    },
+    {
+        "content": "<p>Wondering why is json so specific about dropping cpu support...</p>",
+        "id": 1576351,
+        "sender_full_name": "Cosmic Sound",
+        "timestamp": 1684976296
+    },
+    {
+        "content": "<p>When you’re parsing as fast as <code>orjson</code> does, the little optimizations you can get from instructions available only in newer CPUs can add up to a significant boost. That said, it is possible to take this logic too far too quickly, and I’ve asked the author if it might be prudent to reconsider for now.</p>",
+        "id": 1576358,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1684976930
+    }
+]

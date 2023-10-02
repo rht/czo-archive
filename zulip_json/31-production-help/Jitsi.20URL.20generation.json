@@ -1,0 +1,62 @@
+[
+    {
+        "content": "<p>hello, can someone point me to the file where the jitsi url <a href=\"http://meet.jit.si/#number\">meet.jit.si/#number</a> is being generated?</p>\n<p>i have a special private jitisi server behind a reverse-proxy which is filtering tld/url at the url level and a secret string needs to be passed as part of the url, and i cannot use it with the existing way it's being handled, as there is alwas a \"/\" in front of the random number being generated, i.e. i need to modify the creation of the whole uri/string.</p>\n<p>i grepped for a while but don't find it</p>",
+        "id": 1491177,
+        "sender_full_name": "RolandK",
+        "timestamp": 1673879599
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11088\">@RolandK</span>  In <code>compose.js</code>:</p>\n<div class=\"codehilite\" data-code-language=\"JavaScript\"><pre><span></span><code><span class=\"w\">            </span><span class=\"kd\">const</span><span class=\"w\"> </span><span class=\"nx\">video_call_id</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span><span class=\"nx\">util</span><span class=\"p\">.</span><span class=\"nx\">random_int</span><span class=\"p\">(</span><span class=\"mf\">100000000000000</span><span class=\"p\">,</span><span class=\"w\"> </span><span class=\"mf\">999999999999999</span><span class=\"p\">);</span>\n<span class=\"w\">            </span><span class=\"nx\">video_call_link</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span><span class=\"nx\">page_params</span><span class=\"p\">.</span><span class=\"nx\">jitsi_server_url</span><span class=\"w\"> </span><span class=\"o\">+</span><span class=\"w\"> </span><span class=\"s2\">\"/\"</span><span class=\"w\"> </span><span class=\"o\">+</span><span class=\"w\"> </span><span class=\"nx\">video_call_id</span><span class=\"p\">;</span>\n<span class=\"w\">            </span><span class=\"nx\">insert_video_call_url</span><span class=\"p\">(</span><span class=\"nx\">video_call_link</span><span class=\"p\">,</span><span class=\"w\"> </span><span class=\"nx\">$target_textarea</span><span class=\"p\">);</span>\n</code></pre></div>",
+        "id": 1491193,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1673886174
+    },
+    {
+        "content": "<p>thank you</p>",
+        "id": 1491196,
+        "sender_full_name": "RolandK",
+        "timestamp": 1673887519
+    },
+    {
+        "content": "<p>mhh, i don't find such file compose.js on our server.  when i grep for insert_video_call_url, i get thousands of lines printed on terminal. it seems it's hidden in a file which is not meant to be edited !?</p>\n<div class=\"codehilite\"><pre><span></span><code># grep -rl insert_video_call_url\nprod-static/webpack-bundles/app.84bba8706374d32c03e0.js.map\ndeployments/2022-12-11-19-55-19/prod-static/serve/webpack-bundles/app.84bba8706374d32c03e0.js.map\n</code></pre></div>\n<p>how can i edit/modifiy this piece of code ?</p>",
+        "id": 1491374,
+        "sender_full_name": "RolandK",
+        "timestamp": 1673945306
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11088\">@RolandK</span>: That's the compiled code that we ship as part of formal releases.  You'll need the original source code to modify <code>insert_video_call_url</code>.</p>\n<p><a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#making-changes\">https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#making-changes</a> should get you started.</p>",
+        "id": 1491418,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1673968564
+    },
+    {
+        "content": "<p>ouch. maybe it's easier to make an RFE and convince my which/change-request being implemented?! :D</p>\n<p>what i want is that i can have   $(my-jitsi-server-url)/$(my-url-base-path)$randomnumber instead of $(my-jitsi-server-url)/$randomnumber , as i use a secret prefix in jitsi url to filter on reverse proxy (to make it available to a closed user group instead of making it publicly available). </p>\n<p>i cannot configure that in the existing jitsi configuration. when  i enter \"my.jitsi.server/secretstring_\" for jitsi server, that will expand to <a href=\"https://my.jitsi.server/secretstring_/$randomnumber\">https://my.jitsi.server/secretstring_/$randomnumber</a> (which is one slash too much, which can't be removed)</p>\n<p>i know, it's rather special requirement...</p>",
+        "id": 1491447,
+        "sender_full_name": "RolandK",
+        "timestamp": 1673971903
+    },
+    {
+        "content": "<p>You have this filter in your proxy because the Jitsi hostname isn't treated as a secret, but the secretstring is?</p>\n<p>I'm not sure that anyone else is going to have that requirement, so I think we're unlikely to take that as a core change.  But it's likely a one-line local patch, and we work hard to fully document all of the things you need to maintain that over time, at the link above.</p>",
+        "id": 1491448,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1673972261
+    },
+    {
+        "content": "<blockquote>\n<p>You have this filter in your proxy because the Jitsi hostname isn't treated as a secret, but the secretstring is?</p>\n</blockquote>\n<p>yes. the hostname is in dns and some script-kiddie may hit the server via ip-search/dns-search, but as long the secret string (which can be changed from time to time on reverse proxy and on zulip) is maintained as a shared secret within the community, i think the jitsi server is well (or at least somewhat) hidden from the public and cannot be used for video-conferencing besides the users in zulip who know the secret string. (and all of that without enabling auth in jitsi)</p>",
+        "id": 1491449,
+        "sender_full_name": "RolandK",
+        "timestamp": 1673972654
+    },
+    {
+        "content": "<p>I think we might be able to support this generally if the server-side adds the <code>/</code> when necessary, in the <code>page_params</code>; that way the client is just doing an append of the entropy, without a <code>/</code>.  <code>zerver/lib/events.py</code> is where we assemble that; we probably need to parse it using <code>urlparse</code> to make sure we support <code>https://jitsi.example.com</code> as well as <code>https://jitsi.example.com/</code></p>",
+        "id": 1491450,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1673972774
+    },
+    {
+        "content": "<p>that sounds good and would help a lot. but i hope this won't introduce hassle for others...</p>\n<p>btw, this is how this looks in real. the jitsi server simply does not seem to exist at all...if the corrent secret isn't being entered</p>\n<p><a href=\"/user_uploads/2/4b/hyidFJDJ5g1pdbimNL0UdmmT/grafik.png\">grafik.png</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/4b/hyidFJDJ5g1pdbimNL0UdmmT/grafik.png\" title=\"grafik.png\"><img src=\"/user_uploads/2/4b/hyidFJDJ5g1pdbimNL0UdmmT/grafik.png\"></a></div><p>filter is done via path regex in haproxy, can provide example if someone is interested in this</p>",
+        "id": 1491451,
+        "sender_full_name": "RolandK",
+        "timestamp": 1673973113
+    }
+]

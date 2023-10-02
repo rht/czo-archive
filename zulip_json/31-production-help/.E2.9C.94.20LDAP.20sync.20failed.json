@@ -1,0 +1,62 @@
+[
+    {
+        "content": "<p>I think I have the same problem as in this topic <a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/LDAP.20sync.20failed\">#issues &gt; LDAP sync failed</a> <br>\nIt seems that after the 5.3 update, the \"LDAP_DEACTIVATE_NON_MATHING_USERS\" setting stopped working correctly. Now I see <code>INFO Deactivated non-matching user</code> in the <code>sync_ldap_user_data.log</code> only for already deactivated Zulip users. An error occurs when trying to deactivate an active Zulip user during synchronization.</p>\n<div class=\"codehilite\"><pre><span></span><code>2022-07-07 03:30:20,239 INFO     Starting update.\n2022-07-07 03:30:20,608 INFO     Updated User01@example.com.\n2022-07-07 03:30:20,649 INFO     Updated User02@example.com.\n2022-07-07 03:30:20,655 INFO     Deactivated non-matching user: User03@example.com\n2022-07-07 03:30:20,689 INFO     Updated User04@example.com.\n2022-07-07 03:30:20,731 INFO     Updated User05@example.com.\n&lt;...&gt;\n2022-07-07 03:30:40,716 INFO     Updated User150@example.com.\n2022-07-07 03:30:40,756 INFO     Updated User151@example.com.\n2022-07-07 03:30:40,762 INFO     Deactivated non-matching user: User152@example.com\n2022-07-07 03:30:40,804 INFO     Updated User153@example.com.\n2022-07-07 03:30:40,849 INFO     Updated User154@example.com.\n2022-07-07 03:30:41,376 ERROR    LDAP sync failed\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2022-06-22-12-21-48/zproject/backends.py&quot;, line 1096, in sync_user_from_ldap\n    ldap_username = backend.django_to_ldap_username(user_profile.delivery_email)\n  File &quot;/home/zulip/deployments/2022-06-22-12-21-48/zproject/backends.py&quot;, line 665, in django_to_ldap_username\n    raise ZulipLDAPExceptionNoMatchingLDAPUser(\nzproject.backends.ZulipLDAPExceptionNoMatchingLDAPUser: No LDAP user matching django_to_ldap_username result: User155. Input username: User155@example.com\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2022-06-22-12-21-48/zerver/management/commands/sync_ldap_user_data.py&quot;, line 30, in sync_ldap_user_data\n    sync_user_from_ldap(u, logger)\n  File &quot;/home/zulip/deployments/2022-06-22-12-21-48/zproject/backends.py&quot;, line 1103, in sync_user_from_ldap\n    do_deactivate_user(user_profile, acting_user=None)\n  File &quot;/home/zulip/deployments/2022-06-22-12-21-48/zerver/actions/users.py&quot;, line 163, in do_deactivate_user\n    delete_user_sessions(user_profile)\n  File &quot;/home/zulip/deployments/2022-06-22-12-21-48/zerver/lib/sessions.py&quot;, line 47, in delete_user_sessions\n    delete_session(session)\n  File &quot;/home/zulip/deployments/2022-06-22-12-21-48/zerver/lib/sessions.py&quot;, line 41, in delete_session\n    session_engine.SessionStore(session.session_key).delete()\n  File &quot;/home/zulip/deployments/2022-06-22-12-21-48/zerver/lib/safe_session_cached_db.py&quot;, line 24, in delete\n    assert not get_connection().in_atomic_block\nAssertionError\n</code></pre></div>\n<p>I changed the real names in the log for security reasons.</p>",
+        "id": 1431294,
+        "sender_full_name": "Aggr",
+        "timestamp": 1662540260
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10714\">@Aggr</span> thanks for the report. </p>\n<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> <span class=\"user-mention\" data-user-id=\"10242\">@Sahil Batra</span> I feel like we do have a regression in 5.x related to LDAP synchronization and the transaction model. I seem to recall there was a better thread than <a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/LDAP.20sync.20failed\">#issues &gt; LDAP sync failed</a> with our previous investigation; can either of you find it?</p>",
+        "id": 1431454,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662571201
+    },
+    {
+        "content": "<p>Maybe <a href=\"#narrow/stream/31-production-help/topic/LDAP.20user.20sync.20empty/near/1374439\">https://chat.zulip.org/#narrow/stream/31-production-help/topic/LDAP.20user.20sync.20empty/near/1374439</a> is the other one?</p>",
+        "id": 1431455,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662571265
+    },
+    {
+        "content": "<p><a class=\"stream-topic\" data-stream-id=\"31\" href=\"/#narrow/stream/31-production-help/topic/sync_ldap_user_data.20error.20.2321709\">#production help &gt; sync_ldap_user_data error #21709</a>, I believe.</p>",
+        "id": 1444270,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1664846320
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/21709\">#21709</a> is still unresolved.  I've marked it as a release goal for 6.0 -- it's not a regression (5.0 had the same bug) but it seems important to fix, particularly for large deploys.</p>",
+        "id": 1444271,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1664846491
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/LDAP.20sync.20failed/near/1444271\">said</a>:</p>\n<blockquote>\n<p><a href=\"https://github.com/zulip/zulip/pull/21709\">#21709</a> is still unresolved.  I've marked it as a release goal for 6.0 -- it's not a regression (5.0 had the same bug) but it seems important to fix, particularly for large deploys.</p>\n</blockquote>\n<p>Yeah, agreed. I should be able to work on this.</p>",
+        "id": 1444471,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1664903195
+    },
+    {
+        "content": "<p>OK, great!</p>",
+        "id": 1444489,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1664904512
+    },
+    {
+        "content": "<blockquote>\n<p><em>5.7 changelog:</em><br>\nFixed an error with deactivating users with <code>manage.py sync_ldap_user_data</code> when <code>LDAP_DEACTIVATE_NON_MATCHING_USERS</code> was enabled.</p>\n</blockquote>\n<p>I can confirm that no errors appear after upgrading to 5.7. Thanks! Great job!<br>\nThis topic can be marked as solved.</p>",
+        "id": 1467756,
+        "sender_full_name": "Aggr",
+        "timestamp": 1668976168
+    },
+    {
+        "content": "<p>Awesome, thanks for confirming <span aria-label=\"grinning face with smiling eyes\" class=\"emoji emoji-1f601\" role=\"img\" title=\"grinning face with smiling eyes\">:grinning_face_with_smiling_eyes:</span></p>",
+        "id": 1468011,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1669032468
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> has marked this topic as resolved.</p>",
+        "id": 1468012,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1669032475
+    }
+]

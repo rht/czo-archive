@@ -1,0 +1,146 @@
+[
+    {
+        "content": "<p>I'll soon start working on <a href=\"https://github.com/zulip/zulip/pull/17971\">#17971</a> (Add support for link shortener). This is a more configurable version of <a href=\"https://github.com/zulip/zulip/pull/11895\">#11895</a> (Automatically shorten Github URLs). I want to ask, is <code>Link Shortener</code> the right name for this? Or should it be <code>URL Shortener</code>? (these two are more intuitive).<br>\n<a href=\"https://git.io/\">https://git.io/</a> shortens the GitHub URL but not in the way we want (like we want <code>https://github.com/zulip/zulip/issues/17971</code> -&gt; <code>zulip/zulip#17971</code> but <a href=\"https://git.io/\">https://git.io/</a> shortens the same link to <code>https://git.io/JGEYZ</code>) -- so as not to give a wrong idea about our feature, any better recommendations or <code>Link Shortener</code> is fine?</p>",
+        "id": 1198505,
+        "sender_full_name": "Akshat",
+        "timestamp": 1622539473
+    },
+    {
+        "content": "<p>Rather than a separate feature, could this be a property of linkifiers? That is, for each linkifier, there could be an org-wide setting that determines whether URLs matching the pattern get rewritten in the compose box.</p>",
+        "id": 1198768,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1622571647
+    },
+    {
+        "content": "<p>There are some Validation constraints for linkifiers (which should not change for this specific purpose) because of which we can't set <code>pattern</code> as something like: <code>https://github.com/zulip/zulip/issues/(?P&lt;id&gt;[0-9]+)</code> and <code>URL format string</code> as <code>zulip/zulip#%(id)s</code>.<br>\nMoreover, the term linkifier doesn't mean a URL shortener.</p>",
+        "id": 1198813,
+        "sender_full_name": "Akshat",
+        "timestamp": 1622573398
+    },
+    {
+        "content": "<p>Using a term like \"URL pattern\" could cover both cases, however.</p>",
+        "id": 1198823,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1622573669
+    },
+    {
+        "content": "<p>I'm not sure I follow your point about \"validation constraints.\"</p>\n<p>I think this would be a third field for URL patterns:</p>\n<ul>\n<li>Match this regex: <code>...</code></li>\n<li>Link to: <code>...</code></li>\n<li>Render as <code>...</code></li>\n</ul>",
+        "id": 1198826,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1622573780
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/Link.20Shortener.20.2317971/near/1198768\">said</a>:</p>\n<blockquote>\n<p>Rather than a separate feature, could this be a property of linkifiers? That is, for each linkifier, there could be an org-wide setting that determines whether URLs matching the pattern get rewritten in the compose box.</p>\n</blockquote>\n<p>I actually have the opposite instinct when it comes to linkifiers/shortifiers.  Instead of us trying to over-generalize things, I would prefer for us to just come up with up a bunch of specific solutions to 95% of the problems.  I don't have an easy way to validate my hypothesis, but that's my hypothesis.</p>",
+        "id": 1198883,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1622576632
+    },
+    {
+        "content": "<p>Hmm, I'm not sure this can be readily pushed into the Linkifier model.</p>",
+        "id": 1199182,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1622593900
+    },
+    {
+        "content": "<p>If we can, I'd absolutely like to do that.</p>",
+        "id": 1199183,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1622593907
+    },
+    {
+        "content": "<p>I guess the only input difference between these features is whether what you start with is a patterns that's a link or not?</p>",
+        "id": 1199184,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1622593995
+    },
+    {
+        "content": "<p>And effectively Linkifiers have <code>Render as</code> being the input text, whereas URL Shorteners have <code>Link to</code> as the input text?</p>",
+        "id": 1199185,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1622594048
+    },
+    {
+        "content": "<p>I think the validation issues are solvable; effectively we'd just check <code>link_to</code> or <code>render_as</code> is <code>%(input)s</code> (whatever we call it) and do specific validation for that case, but be able to handle these in a single part of the data model.</p>",
+        "id": 1199186,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1622594198
+    },
+    {
+        "content": "<p>(There's a ton of duplicate code that we end up needing to write to add a parallel specialized feature vs. an optional field on an existing one, so general is probably better here, especially since it doesn't preclude something more specialized in how we present things to users in the UI if we desire)</p>",
+        "id": 1199187,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1622594283
+    },
+    {
+        "content": "<p>I agree with Tim here that they have two different flow of information here. If you enter a link like <code>#123</code>, do we now render it as <code>#123</code> or as <code>issue-123</code> after running it through the whole link shortening logic?</p>\n<p>Also, since we're discussing this anyway, the core question is how do we reduce link spam in messages and I believe this can be done entirely client side as well.</p>",
+        "id": 1200564,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1622748127
+    },
+    {
+        "content": "<p>Consider this: you copy a link and paste it in the compose box. Instead of getting pasted as plaintext, it gets pasted as: <code>[...generating title...](https://github.com/zulip/zulip/issues/123)</code> which somewhat immediately changes to <code>[zulip/zulip#123](...)</code>. This leaves the user in control of changing the title themselves if they want to, and handles 95% of cases where people just copy-paste a link and press send.</p>",
+        "id": 1200566,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1622748298
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"1406\">Rohitt Vashishtha</span> <a href=\"#narrow/stream/101-design/topic/Link.20Shortener.20.2317971/near/1200564\">said</a>:</p>\n<blockquote>\n<p>I agree with Tim here that they have two different flow of information here. If you enter a link like <code>#123</code>, do we now render it as <code>#123</code> or as <code>issue-123</code> after running it through the whole link shortening logic?</p>\n<p>Also, since we're discussing this anyway, the core question is how do we reduce link spam in messages and I believe this can be done entirely client side as well.</p>\n</blockquote>\n<p>Rendering it as <code>#123</code> or as <code>issue-123</code> totally depends on how have we configured our settings.</p>",
+        "id": 1200630,
+        "sender_full_name": "Akshat",
+        "timestamp": 1622754144
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"1406\">Rohitt Vashishtha</span> <a href=\"#narrow/stream/101-design/topic/Link.20Shortener.20.2317971/near/1200566\">said</a>:</p>\n<blockquote>\n<p>Consider this: you copy a link and paste it in the compose box. Instead of getting pasted as plaintext, it gets pasted as: <code>[...generating title...](https://github.com/zulip/zulip/issues/123)</code> which somewhat immediately changes to <code>[zulip/zulip#123](...)</code>. This leaves the user in control of changing the title themselves if they want to, and handles 95% of cases where people just copy-paste a link and press send.</p>\n</blockquote>\n<p>Wait, the proposed modal of Link Shortener doesn't work this way. When someone pastes a link and after they have sent the message then only we do the link shortening process and not when the user has just pasted the link in the compose box.</p>",
+        "id": 1200633,
+        "sender_full_name": "Akshat",
+        "timestamp": 1622754304
+    },
+    {
+        "content": "<p>The question is how it <em>should</em> work, not how some particular proposed implementation works.</p>",
+        "id": 1200635,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1622754499
+    },
+    {
+        "content": "<p>Yeah, I was clarifying that what is the original idea.</p>",
+        "id": 1200640,
+        "sender_full_name": "Akshat",
+        "timestamp": 1622755212
+    },
+    {
+        "content": "<p>So, do we want to make it as a Realm setting like linkifiers or leave it to the users if they want to keep the generated title (as proposed by <span class=\"user-mention silent\" data-user-id=\"1406\">Rohitt Vashishtha</span> )?</p>",
+        "id": 1200641,
+        "sender_full_name": "Akshat",
+        "timestamp": 1622755448
+    },
+    {
+        "content": "<p>I guess the downside of that sort of client-side rewriting is what happens if you typed <code>[label](|)</code> and then try to paste the link at the <code>|</code> position ; you probably are going to be kinda sad if we generate that sort of markdown structure for you.  (In most cases we wouldn't need an intermediate \"generating title\" thing, since one could run a rewrite handler instantly).</p>\n<p>The other difference between client-side vs. server-side logic here is that server-side logic affects for API usage (and all client apps), not just ones that have implemented the client-side feature.  I think if it's going to be an organization-level setting, we probably want it to be universal to all clients, which can be done either way but is much easier to do with server-side logic.</p>",
+        "id": 1200733,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1622764893
+    },
+    {
+        "content": "<p>I am somewhat more tempted by the proposal to extend the existing linkifier model as was proposed earlier, at present.</p>",
+        "id": 1200734,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1622764971
+    },
+    {
+        "content": "<p>So, I was thinking about how this can be done cleanly. I think we should add another field, <code>render_format_string</code> (similar to what <span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> suggested), to the existing model. So that one can use it as:</p>\n<ul>\n<li><code>pattern</code>: <code>#(?P&lt;id&gt;[0-9]+)</code><br>\n<code>url_format_string</code>: <code>https://github.com/zulip/zulip/issues/%(id)s</code><br>\n<code>render_format_string</code>: <code>#%(id)s</code></li>\n</ul>\n<p>OR</p>\n<ul>\n<li><code>pattern</code>: <code>https://github.com/zulip/zulip/issues/(?P&lt;id&gt;[0-9]+)</code><br>\n<code>url_format_string</code>: <code>https://github.com/zulip/zulip/issues/%(id)s</code><br>\n<code>render_format_string</code>: <code>#%(id)s</code></li>\n</ul>\n<p>Moreover, this new field <code>render_format_string</code> should be optional; if not provided - matched <code>pattern</code> will be used to convert it into a link? (Like we do now with linkifiers)</p>\n<p>If we can get <a href=\"https://github.com/zulip/zulip/pull/16860\">#16860</a> merged, then I can remove some validation for <code>pattern</code> and apply the new checks on top of that.</p>\n<p>Also, are we still going to call this model as the Linkifier/Link Shortener? Because by Linkifier, I understand something that will be linkified and Link Shortener, I understand some shortened form of Link.<br>\nThis new model will give new power to adjust the Render text as per one's will. Any better name for this?</p>",
+        "id": 1204958,
+        "sender_full_name": "Akshat",
+        "timestamp": 1623244799
+    },
+    {
+        "content": "<blockquote>\n<p>Also, are we still going to call this model as the Linkifier/Link Shortener? Because by Linkifier, I understand something that will be linkified and Link Shortener, I understand some shortened form of Link.<br>\nThis new model will give new power to adjust the Render text as per one's will. Any better name for this?</p>\n</blockquote>\n<p>I'm not sure what the best naming is, but my understading is that \"linkifier\" is a made-up term, so I suppose it could cover both functions.</p>",
+        "id": 1205180,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623254918
+    },
+    {
+        "content": "<p>Yeah, I'd go for \"not renaming models / API fields\" when building this.  Renaming things in the API and data model is time-consuming, and it's better to validate the rest of the concept and implementation without that complexity. We can always do a rename sweep afterwards.  Note that the backend data model is still called RealmFilter, aka the pre-Linkifier name.</p>",
+        "id": 1205662,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623283429
+    }
+]

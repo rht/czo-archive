@@ -1,0 +1,104 @@
+[
+    {
+        "content": "<p>Hi :)<br>\nJust out of curiosity: in \"About Zulip\", our installation (current master) shows</p>\n<div class=\"codehilite\" data-code-language=\"Text only\"><pre><span></span><code>Version 4.0-dev-5385-g906a75ac00\nForked from upstream at 4.0-dev-5181-g48addae20b\n</code></pre></div>\n<p>Wouldn't this be supposed to switch to 5.0?</p>",
+        "id": 1226094,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1625608349
+    },
+    {
+        "content": "<p>That implies the repo it's using didn't fetch the tags.</p>",
+        "id": 1226099,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1625608736
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert (ro-i)</span> can you run <code>git remote -v</code> on <code>/srv/zulip.git</code> on your server?</p>",
+        "id": 1226230,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625608852
+    },
+    {
+        "content": "<p>This code in <code>upgrade-zulip-from-git</code> is what manages this:</p>\n<div class=\"codehilite\"><pre><span></span><code>try:\n    deploy_path = make_deploy_path()\n\n    # Populate LOCAL_GIT_CACHE_DIR with both the requested remote and zulip/zulip.\n    if not os.path.exists(LOCAL_GIT_CACHE_DIR):\n        logging.info(&quot;Cloning the repository&quot;)\n        subprocess.check_call(\n            [&quot;git&quot;, &quot;clone&quot;, &quot;-q&quot;, remote_url, &quot;--mirror&quot;, LOCAL_GIT_CACHE_DIR],\n            stdout=subprocess.DEVNULL,\n        )\n    if os.stat(LOCAL_GIT_CACHE_DIR).st_uid == 0:\n        subprocess.check_call([&quot;chown&quot;, &quot;-R&quot;, &quot;zulip:zulip&quot;, LOCAL_GIT_CACHE_DIR])\n\n    os.chdir(LOCAL_GIT_CACHE_DIR)\n    subprocess.check_call(\n        [&quot;git&quot;, &quot;remote&quot;, &quot;set-url&quot;, &quot;origin&quot;, remote_url], preexec_fn=su_to_zulip\n    )\n\n    # Ensure upstream remote is configured; we need this to make `git describe` accurate.\n    remotes = subprocess.check_output([&quot;git&quot;, &quot;remote&quot;], preexec_fn=su_to_zulip).split(b&quot;\\n&quot;)\n    if b&quot;upstream&quot; not in remotes:\n        subprocess.check_call(\n            [&quot;git&quot;, &quot;remote&quot;, &quot;add&quot;, &quot;upstream&quot;, remote_url], preexec_fn=su_to_zulip\n        )\n\n    logging.info(&quot;Fetching the latest commits&quot;)\n    subprocess.check_call([&quot;git&quot;, &quot;fetch&quot;, &quot;-q&quot;, &quot;--tags&quot;, &quot;--all&quot;], preexec_fn=su_to_zulip)\n</code></pre></div>",
+        "id": 1226279,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625608903
+    },
+    {
+        "content": "<p>Oh, one possibility is if you're building your own release tarballs rather than upgrading from Git, and the system that is doing those builds hasn't done a <code>git fetch --all --tags</code>.</p>",
+        "id": 1226282,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625608923
+    },
+    {
+        "content": "<p>(I wonder if this is a failure mode that our Docker setup might have?)</p>",
+        "id": 1226284,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625608933
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/Zulip.20master.20version/near/1226230\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"17322\">Robert (ro-i)</span> can you run <code>git remote -v</code> on <code>/srv/zulip.git</code> on your server?</p>\n</blockquote>\n<p>Sure:</p>\n<div class=\"codehilite\" data-code-language=\"Bash Session\"><pre><span></span><code><span class=\"go\">/srv/zulip.git$ git remote -v</span>\n<span class=\"go\">origin  https://github.com/ro-i/zulip.git (fetch)</span>\n<span class=\"go\">origin  https://github.com/ro-i/zulip.git (push)</span>\n<span class=\"go\">upstream    https://github.com/ro-i/zulip.git (fetch)</span>\n<span class=\"go\">upstream    https://github.com/ro-i/zulip.git (push)</span>\n</code></pre></div>\n<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/Zulip.20master.20version/near/1226282\">said</a>:</p>\n<blockquote>\n<p>Oh, one possibility is if you're building your own release tarballs rather than upgrading from Git [...]</p>\n</blockquote>\n<p>No, I do directly <code>sudo /home/zulip/deployments/current/scripts/upgrade-zulip-from-git zulip.in.tum.de</code>.</p>",
+        "id": 1226289,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1625609050
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Zulip.20master.20version/near/1226099\">said</a>:</p>\n<blockquote>\n<p>That implies the repo it's using didn't fetch the tags.</p>\n</blockquote>\n<p>Hm, so I need to do more than just <code>git fetch upstream master</code> + <code>git rebase upstream/master</code> on my fork? <span aria-label=\"see no evil\" class=\"emoji emoji-1f648\" role=\"img\" title=\"see no evil\">:see_no_evil:</span></p>",
+        "id": 1226315,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1625609773
+    },
+    {
+        "content": "<p><code>git fetch --tags upstream master</code></p>",
+        "id": 1226318,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1625610032
+    },
+    {
+        "content": "<p>You'll also need to make sure the tags gte pushed to your fork once you fetch them.</p>",
+        "id": 1226320,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1625610059
+    },
+    {
+        "content": "<p>The problem is that your <code>upstream</code> remote points to ro-i/zulip rather than zulip/zulip.</p>",
+        "id": 1226327,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1625610406
+    },
+    {
+        "content": "<p>This probably happens if the first <code>upgrade-zulip-from-git</code> you did was from ro-i/zulip. Run <code>git remote set-url upstream https://github.com/zulip/zulip.git; git fetch upstream</code> to fix it.</p>",
+        "id": 1226331,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1625610517
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"699\">Anders Kaseorg</span> <a href=\"#narrow/stream/31-production-help/topic/Zulip.20master.20version/near/1226331\">said</a>:</p>\n<blockquote>\n<p>This probably happens if the first <code>upgrade-zulip-from-git</code> you did was from ro-i/zulip. Run <code>git remote set-url upstream https://github.com/zulip/zulip.git; git fetch upstream</code> to fix it.</p>\n</blockquote>\n<p>So I'm supposed to run this on the server in <code>/srv/zulip.git</code>? But what would the <code>fetch upstream</code> part lead to in this case? Wouldn't I also need the <code>--tags</code> that <span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> mentioned?</p>",
+        "id": 1226335,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1625610740
+    },
+    {
+        "content": "<p>Yes, in <code>/srv/zulip.git</code>. The <code>--tags</code> is unimportant; Git already fetches tags that are connected to branches.</p>",
+        "id": 1226339,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1625611072
+    },
+    {
+        "content": "<p>Oh, you probably want to do this as the <code>zulip</code> user, or <code>chown -R zulip: /srv/zulip.git</code> if you already did it as <code>root</code>.</p>",
+        "id": 1226342,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1625611168
+    },
+    {
+        "content": "<p>After that, run <code>su zulip -c /home/zulip/deployments/current/tools/cache-zulip-git-version</code> (to update <code>/home/zulip/deployments/current/zulip-git-version</code>).</p>",
+        "id": 1226346,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1625611299
+    },
+    {
+        "content": "<p>... and do a <code>restart-server</code> :)<br>\nWorked! Thank you so much <span aria-label=\"heart\" class=\"emoji emoji-2764\" role=\"img\" title=\"heart\">:heart:</span></p>",
+        "id": 1226351,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1625611492
+    }
+]

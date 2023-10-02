@@ -1,0 +1,44 @@
+[
+    {
+        "content": "<p>I just tried to upgrade 1.7.1 to 1.8.0 via the git upgrade method. It fails with the following error message:</p>\n<div class=\"codehilite\"><pre><span></span>Error running a subcommand of ./tools/update-prod-static: /home/zulip/deployments/2018-05-11-17-13-12/scripts/lib/cd_exec /srv/zulip-npm-cache/0fedea1c2531c80ca0526ade4e14cd9d213c7935 /srv/zulip-yarn/bin/yarn install --non-interactive --prod\nActual error output for the subcommand is just above this.\n\nTraceback (most recent call last):\n  File &quot;./tools/update-prod-static&quot;, line 37, in &lt;module&gt;\n    setup_node_modules(production=True, stdout=fp, stderr=fp)\n  File &quot;./tools/../scripts/lib/node_cache.py&quot;, line 65, in setup_node_modules\n    copy_modules=copy_modules)\n  File &quot;./tools/../scripts/lib/node_cache.py&quot;, line 98, in do_yarn_install\n    run(cmd, stdout=stdout, stderr=stderr)\n  File &quot;./tools/../scripts/lib/zulip_tools.py&quot;, line 163, in run\n    subprocess.check_call(args, **kwargs)\n  File &quot;/usr/lib/python3.5/subprocess.py&quot;, line 581, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2018-05-11-17-13-12/scripts/lib/cd_exec&#39;, &#39;/srv/zulip-npm-cache/0fedea1c2531c80ca0526ade4e14cd9d213c7935&#39;, &#39;/srv/zulip-yarn/bin/yarn&#39;, &#39;install&#39;, &#39;--non-interactive&#39;, &#39;--prod&#39;]&#39; returned non-zero exit status 1\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2018-05-11-17-13-12/scripts/lib/upgrade-zulip-stage-2&quot;, line 81, in &lt;module&gt;\n    preexec_fn=su_to_zulip)\n  File &quot;/usr/lib/python3.5/subprocess.py&quot;, line 581, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./tools/update-prod-static&#39;, &#39;--authors-not-required&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/upgrade-zulip-from-git&quot;, line 71, in &lt;module&gt;\n    deploy_path, &quot;--from-git&quot;] + deploy_options)\n  File &quot;/usr/lib/python3.5/subprocess.py&quot;, line 581, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2018-05-11-17-13-12/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2018-05-11-17-13-12&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1\n</pre></div>\n\n\n<p>What might be the trouble?</p>",
+        "id": 578383,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1526073549
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2530\">@Edmund Lian</span> if you read the top of that error message you'll see the useful part of the traceback is above that block</p>",
+        "id": 578385,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1526074069
+    },
+    {
+        "content": "<p>But that's likely a network failure connecting to npm</p>",
+        "id": 578386,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1526074093
+    },
+    {
+        "content": "<p>Oh? Everything immediately above that error message looks normal:</p>\n<div class=\"codehilite\"><pre><span></span>Using cached Python venv from /srv/zulip-venv-cache/5c47f4d1e18caec36b4939535354b8685f6cc775/zulip-py3-venv\n+ sudo ln -nsf /srv/zulip-venv-cache/5c47f4d1e18caec36b4939535354b8685f6cc775/zulip-py3-venv /home/zulip/deployments/2018-05-11-17-13-12/zulip-py3-venv\n+ ln -nsf zulip-py3-venv /home/zulip/deployments/2018-05-11-17-13-12/zulip-current-venv\nv8.11.1 is already installed.\nNow using node v8.11.1 (npm v5.6.0)\ndefault -&gt; 8.11.1 (-&gt; v8.11.1)\nInstalling Yarn!\nYarn is already at the 1.5.1 version.\nGenerated Camo config file /etc/default/camo\ngenerate_secrets: No new secrets to generate.\n2018-05-11 17:13:29,061 upgrade-zulip-stage-2: Building static assets...\nCached version not found! Installing node modules.\n+ mkdir -p /srv/zulip-npm-cache/0fedea1c2531c80ca0526ade4e14cd9d213c7935\n+ cp package.json yarn.lock /srv/zulip-npm-cache/0fedea1c2531c80ca0526ade4e14cd9d213c7935\n+ /home/zulip/deployments/2018-05-11-17-13-12/scripts/lib/cd_exec /srv/zulip-npm-cache/0fedea1c2531c80ca0526ade4e14cd9d213c7935 /srv/zulip-yarn/bin/yarn install --non-interactive --prod\n</pre></div>",
+        "id": 578387,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1526074198
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  So call me stupid. The problem seems to have been that I ran the git upgrade with &lt;branch&gt; set to \"master\" in <code>/home/zulip/deployments/current/scripts/upgrade-zulip-from-git &lt;branch&gt;</code> instead of specifying a release tag.</p>\n<p>Easy to do if you don't use git like me. I suggest putting an example for &lt;branch&gt; in the docs to avoid displays of dumbness from people like me...</p>",
+        "id": 578394,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1526088010
+    },
+    {
+        "content": "<p>But that's likely a network failure connecting to npm</p>",
+        "id": 578549,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1526144547
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2530\">@Edmund Lian</span> thanks for the feedback!  I was busy at the time, but I just added <a href=\"https://github.com/zulip/zulip/commit/d6fb47385b72a3bb490c6d9b4660aca02971ddcc\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/d6fb47385b72a3bb490c6d9b4660aca02971ddcc\">d6fb47385b72a3bb490c6d9b4660aca02971ddcc</a> to improve the docs here.</p>",
+        "id": 585822,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1527111347
+    }
+]

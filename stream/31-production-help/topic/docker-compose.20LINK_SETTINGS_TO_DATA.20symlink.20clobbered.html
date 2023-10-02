@@ -1,0 +1,248 @@
+<html>
+<head><meta charset="utf-8"><title>docker-compose LINK_SETTINGS_TO_DATA symlink clobbered · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html">docker-compose LINK_SETTINGS_TO_DATA symlink clobbered</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="702796"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/702796" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Whitney <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#702796">(Feb 18 2019 at 21:04)</a>:</h4>
+<p>I'm upgrading my docker-zulip server from an older git version (<code>1a1d199</code> to <code>a1ff393</code>), and I'm running into a problem with the <code>LINK_SETTINGS_TO_DATA</code> option. The symlink command definitely executes and <a href="https://github.com/galexrt/docker-zulip/blob/master/entrypoint.sh#L69" target="_blank" title="https://github.com/galexrt/docker-zulip/blob/master/entrypoint.sh#L69">links correctly here</a>, but later <a href="https://github.com/galexrt/docker-zulip/blob/master/entrypoint.sh#L126" target="_blank" title="https://github.com/galexrt/docker-zulip/blob/master/entrypoint.sh#L126">a call to <code>zulip-puppet-apply</code></a> clobbers that link. I end up with the <code>ImportError: No module named 'zproject.dev_settings'</code> error.</p>
+<p>I can see it happening too, this is in the logs:</p>
+<div class="codehilite"><pre><span></span>zulip_1      | Notice: Compiled catalog for XXXXX.com in environment production in 0.87 seconds
+zulip_1      | Notice: /Stage[main]/Zulip::Base/File[/etc/zulip]/ensure: ensure changed &#39;link&#39; to &#39;directory&#39;
+zulip_1      | Notice: /Stage[main]/Zulip::Base/File[/etc/zulip/zulip-secrets.conf]/ensure: created
+zulip_1      | Notice: /Stage[main]/Zulip::Base/File[/etc/zulip/settings.py]/ensure: created
+zulip_1      | Notice: /Stage[main]/Zulip::Base/File[/etc/zulip/zulip.conf]/ensure: created
+zulip_1      | Notice: /Stage[main]/Zulip::App_frontend_base/File[/etc/zulip/uwsgi.ini]/ensure: defined content as &#39;{md5}f671486b4a6092ed71c3ec9c065d4b3b&#39;
+zulip_1      | Notice: /Stage[main]/Zulip::Supervisor/Service[supervisor]: Triggered &#39;refresh&#39; from 1 events
+zulip_1      | Notice: /Stage[main]/Zulip::App_frontend/File[/etc/nginx/sites-available/zulip-enterprise]/content: content changed &#39;{md5}68f22096b428d0a377117a635fbc361f&#39; to &#39;{md5}e9f006bebbdfb139093d060bdcf0143a&#39;
+zulip_1      | Notice: /Stage[main]/Zulip::Nginx/Service[nginx]: Triggered &#39;refresh&#39; from 1 events
+zulip_1      | Notice: Finished catalog run in 0.31 seconds
+</pre></div>
+
+
+<p>I guess I'm wondering if anyone has seen this before, or if I'm missing something obvious</p>
+
+
+
+<a name="702829"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/702829" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#702829">(Feb 18 2019 at 22:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="11360">@Whitney</span> oh, interesting, thanks for the report!</p>
+
+
+
+<a name="702832"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/702832" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#702832">(Feb 18 2019 at 22:02)</a>:</h4>
+<p>I think the conflict is with this block in <code>puppet/zulip/manifests/base.pp</code></p>
+<div class="codehilite"><pre><span></span>  file { &#39;/etc/zulip&#39;:
+    ensure =&gt; &#39;directory&#39;,
+    mode   =&gt; &#39;0644&#39;,
+    owner  =&gt; &#39;zulip&#39;,
+    group  =&gt; &#39;zulip&#39;,
+  }
+</pre></div>
+
+
+<p>You can try changing that to remove the <code>ensure =&gt; 'directory'</code> part; that may be the right fix for this.</p>
+
+
+
+<a name="702837"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/702837" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#702837">(Feb 18 2019 at 22:06)</a>:</h4>
+<p>Or maybe change <code>directory</code> to <code>present</code> there.</p>
+
+
+
+<a name="702839"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/702839" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#702839">(Feb 18 2019 at 22:07)</a>:</h4>
+<p>I expect we'll want to make that last change as described; I'm testing a commit that does precisely that.</p>
+
+
+
+<a name="855866"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855866" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> pemontto <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855866">(Apr 17 2020 at 18:32)</a>:</h4>
+<p>Also seeing this issue when I try to use <code>MANUAL_CONFIGURATION</code> and <code>LINK_SETTINGS_TO_DATA</code> with <code>DISABLE_HTTPS</code> on docker. I tried removing the <code>DISABLE_HTTPS</code> and it starts up OK. I then tried to enter the zulip container and follow the <a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy" title="https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy">instructions</a> to disable HTTPS. You're right, it clobbers the symlink:<br>
+before:</p>
+<div class="codehilite"><pre><span></span><span class="gp">root@e7ff3dcdd7ba:/#</span> ll /etc <span class="p">|</span> grep zulip
+<span class="go">lrwxrwxrwx 1 root root      24 Apr 17 18:24 zulip -&gt; /data/settings/etc-zulip/</span>
+</pre></div>
+
+
+<p>after:</p>
+<div class="codehilite"><pre><span></span><span class="gp">root@e7ff3dcdd7ba:/#</span> ll /etc <span class="p">|</span> grep zulip
+<span class="go">drwxr-xr-x 2 zulip zulip     86 Apr 17 18:30 zulip/</span>
+</pre></div>
+
+
+<p>So it seems currently <code>LINK_SETTINGS_TO_DATA</code> is not compatible with <code>DISABLE_HTTPS</code>.  The script shows puppet alerting the directory and wiping the contents <span aria-label="sad" class="emoji emoji-2639" role="img" title="sad">:sad:</span></p>
+<div class="codehilite"><pre><span></span><span class="go">Apply changes? [y/N] y</span>
+<span class="go">Notice: Compiled catalog for e7ff3dcdd7ba.e-secure.com.au in environment production in 1.53 seconds</span>
+<span class="go">Info: Applying configuration version &#39;1587148235&#39;</span>
+<span class="go">Notice: /Stage[main]/Zulip::Base/File[/etc/zulip]/ensure: ensure changed &#39;link&#39; to &#39;directory&#39;</span>
+<span class="go">Notice: /Stage[main]/Zulip::Base/File[/etc/zulip/zulip.conf]/ensure: created</span>
+<span class="go">Notice: /Stage[main]/Zulip::Base/File[/etc/zulip/settings.py]/ensure: created</span>
+<span class="go">Notice: /Stage[main]/Zulip::Base/File[/etc/zulip/zulip-secrets.conf]/ensure: created</span>
+</pre></div>
+
+
+<p>Now to dive into how puppet works</p>
+
+
+
+<a name="855872"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855872" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855872">(Apr 17 2020 at 18:36)</a>:</h4>
+<p>Interesting, thanks for the debugging!</p>
+
+
+
+<a name="855873"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855873" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855873">(Apr 17 2020 at 18:37)</a>:</h4>
+<p>We definitely want puppet to be runnable in the container, so I think it makes sense to fix this by adjusting the puppet logic to accept a link there.</p>
+
+
+
+<a name="855874"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855874" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855874">(Apr 17 2020 at 18:38)</a>:</h4>
+<p>Structurally, we need to expose the <code>LINK_SETTINGS_TO_DATA</code> state to puppet so that it can know to keep ensure that file is a link.</p>
+
+
+
+<a name="855875"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855875" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855875">(Apr 17 2020 at 18:40)</a>:</h4>
+<p><a href="https://puppet.com/docs/puppet/latest/types/file.html#file-attribute-links" title="https://puppet.com/docs/puppet/latest/types/file.html#file-attribute-links">https://puppet.com/docs/puppet/latest/types/file.html#file-attribute-links</a></p>
+
+
+
+<a name="855876"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855876" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855876">(Apr 17 2020 at 18:40)</a>:</h4>
+<p><span class="user-mention" data-user-id="15691">@pemontto</span> maybe `links =&gt; 'follow'`` on this declaration?</p>
+<div class="codehilite"><pre><span></span>  file { &#39;/etc/zulip&#39;:
+    ensure =&gt; &#39;directory&#39;,
+    mode   =&gt; &#39;0644&#39;,
+    owner  =&gt; &#39;zulip&#39;,
+    group  =&gt; &#39;zulip&#39;,
+  }
+</pre></div>
+
+
+
+<a name="855878"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855878" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> pemontto <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855878">(Apr 17 2020 at 18:41)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> one step ahead! Just testing now how this can be done, thanks for the pointer!</p>
+
+
+
+<a name="855889"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855889" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855889">(Apr 17 2020 at 18:47)</a>:</h4>
+<p>One way would be to add it to your fork of zulip/zulip, and then build the image off that.</p>
+<p>But you can perhaps hack it faster by just editing code in your container and rebooting in a way that doesn't lose the image's disk.</p>
+
+
+
+<a name="855890"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855890" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> pemontto <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855890">(Apr 17 2020 at 18:48)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855889" title="#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855889">said</a>:</p>
+<blockquote>
+<p>One way would be to add it to your fork of zulip/zulip, and then build the image off that.</p>
+<p>But you can perhaps hack it faster by just editing code in your container and rebooting in a way that doesn't lose the image's disk.</p>
+</blockquote>
+<p>Yeah look at the best way... it appears</p>
+
+
+
+<a name="855891"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855891" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855891">(Apr 17 2020 at 18:48)</a>:</h4>
+<p>Or even just running <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code> to see if it does that change.</p>
+
+
+
+<a name="855892"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855892" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> pemontto <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855892">(Apr 17 2020 at 18:50)</a>:</h4>
+<p>it appears both these work independently. Will there ever be a circumstance where it'll need to create the directory? As far as I can tell /etc/zulip needs to exist for the script to run, so really it's just checking the permissions and ownership and should be fine with either</p>
+<div class="codehilite"><pre><span></span>links =&gt; &#39;follow&#39;
+</pre></div>
+
+
+<p>and</p>
+<div class="codehilite"><pre><span></span>ensure =&gt; &#39;present&#39;
+</pre></div>
+
+
+
+<a name="855893"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855893" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> pemontto <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855893">(Apr 17 2020 at 18:51)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855891" title="#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855891">said</a>:</p>
+<blockquote>
+<p>Or even just running <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code> to see if it does that change.</p>
+</blockquote>
+<p>A couple of ways, fixing the puppet script or rerunning <code>prepareDirectories</code> in <a href="http://entrypoint.sh" title="http://entrypoint.sh">entrypoint.sh</a> after <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply -f</code> runs</p>
+
+
+
+<a name="855898"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855898" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855898">(Apr 17 2020 at 18:57)</a>:</h4>
+<p>Yes, the intent of that puppet rule is just to make sure the permissions are correct.</p>
+
+
+
+<a name="855899"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855899" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> pemontto <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855899">(Apr 17 2020 at 18:58)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="15691">pemontto</span> <a href="#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855892" title="#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855892">said</a>:</p>
+<blockquote>
+<p>it appears both these work independently. Will there ever be a circumstance where it'll need to create the directory? As far as I can tell /etc/zulip needs to exist for the script to run, so really it's just checking the permissions and ownership and should be fine with either</p>
+</blockquote>
+<p>The pupper script running it requires the directory exist, I'll submit a PR to with links =&gt; 'follow'.<br>
+<code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code></p>
+<div class="codehilite"><pre><span></span><span class="n">config</span> <span class="o">=</span> <span class="n">configparser</span><span class="o">.</span><span class="n">RawConfigParser</span><span class="p">()</span>
+<span class="n">config</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="s2">&quot;/etc/zulip/zulip.conf&quot;</span><span class="p">)</span>
+</pre></div>
+
+
+
+<a name="855900"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855900" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855900">(Apr 17 2020 at 18:58)</a>:</h4>
+<p>Yeah, that PR sounds great.</p>
+
+
+
+<a name="855901"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855901" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855901">(Apr 17 2020 at 18:58)</a>:</h4>
+<p>I can backport it to the 2.1.x branch so that it's easily runnable before our next release.</p>
+
+
+
+<a name="855904"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855904" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855904">(Apr 17 2020 at 19:00)</a>:</h4>
+<p>But again, huge thanks for debugging this!  The reason <code>docker-zulip</code> is still market as experimental is because of a half-dozen bugs like this one that just need a proper investigation.</p>
+
+
+
+<a name="855921"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855921" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> pemontto <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855921">(Apr 17 2020 at 19:11)</a>:</h4>
+<p>PR <a href="https://github.com/zulip/zulip/pull/14613" title="https://github.com/zulip/zulip/pull/14613">https://github.com/zulip/zulip/pull/14613</a></p>
+
+
+
+<a name="855962"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855962" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> pemontto <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855962">(Apr 17 2020 at 19:39)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="15691">pemontto</span> <a href="#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855921" title="#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855921">said</a>:</p>
+<blockquote>
+<p>PR <a href="https://github.com/zulip/zulip/pull/14613" title="https://github.com/zulip/zulip/pull/14613">https://github.com/zulip/zulip/pull/14613</a></p>
+</blockquote>
+<p>Fixed the spacing issue. Have a good weekend!</p>
+
+
+
+<a name="855972"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker-compose%20LINK_SETTINGS_TO_DATA%20symlink%20clobbered/near/855972" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered.html#855972">(Apr 17 2020 at 19:46)</a>:</h4>
+<p><span class="user-mention" data-user-id="15691">@pemontto</span> merged.  If you run into other problems with that setting bundle, we'd love to hear about it.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

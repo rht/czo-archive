@@ -1,0 +1,146 @@
+[
+    {
+        "content": "<p>opening a CZO for <a href=\"https://github.com/zulip/zulip/issues/20047\">https://github.com/zulip/zulip/issues/20047</a></p>\n<p><span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span>  <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> etc - it's been 6+ months... still high priority?  you guys interested if I prototype this? FWIW, I've worked on user generated content (UGC) products for decades, including \"at scale\" (Google) and I've also been a mod on reddit for a 2M user sub. This seems like a good next zulip project for me, now that I'm familiar with the frontend etc.</p>\n<p><span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span> the posted design makes sense to me. With your permission of course, I might suggest the wording change slightly from \"flag message\" to \"report message\" since that's actually what the user is doing ;-)  Regardless, tooltip &amp; online help will be super important for users &amp; moderators.</p>\n<p>all - given that Zulip's gone many years without this feature, my sense is that we can defer \"secondary issues\" and \"issues of scale\" including abuse of the report-message button, brigading, flooding the abuse queue, etc.</p>",
+        "id": 1362574,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1649422055
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21154\">@Adam S</span> We're pretty liberal with the high-priority label, so it doesn't necessarily indicate plans to do something immediately. Definitely still excited about this feature. :) If you want to pick it up, that sounds great!</p>",
+        "id": 1362691,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1649436748
+    },
+    {
+        "content": "<p>Sure, \"Report message\" makes sense to me for the label.</p>",
+        "id": 1362692,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1649436806
+    },
+    {
+        "content": "<blockquote>\n<p>all - given that Zulip's gone many years without this feature, my sense is that we can defer \"secondary issues\" and \"issues of scale\" including abuse of the report-message button, brigading, flooding the abuse queue, etc.</p>\n</blockquote>\n<p>That makes sense to me; admins can kick off any users who are abusing the reporting mechanism.</p>",
+        "id": 1362695,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1649437034
+    },
+    {
+        "content": "<p>I'm on it. PR coming.</p>",
+        "id": 1363961,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1649598868
+    },
+    {
+        "content": "<p>PR <a href=\"https://github.com/zulip/zulip/pull/21821\">#21821</a> ready for eng review incl unittests, etc - I recommend playing with it and seeing how it feels. Thx to design feedback from <span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span>.</p>\n<p>There's one corner case we should discuss: what happens if the \"report message\" stream is deleted/disabled/etc ?  I don't want to add complexity, but IMHO it's bad to have this feature silently fail.  Thoughts?</p>\n<p>cc <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> <span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> (substantial feature requested by the Rust community)</p>",
+        "id": 1382488,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1652999106
+    },
+    {
+        "content": "<p>Thank you for working on this!!</p>",
+        "id": 1382504,
+        "sender_full_name": "Evy",
+        "timestamp": 1653006953
+    },
+    {
+        "content": "<p>And good thinking about that corner case.</p>\n<p>There are two angles on that -- one is to notify someone when it happens, and the other is to try to prevent getting into that exceptional case.  I see you currently have a <code>logging.error(\"...\")</code> when it happens -- which in most installs will email the server admins.  Which is a pretty reasonable first pass, in that in most self-hosted installs those folks are likely the folks who would be able to fix it.</p>\n<p>The problem is that in things like Zulip Cloud, the server admins (e.g. someone like me) can't do anything about the configuration of the streams in that one realm.  So we'd prefer to notify the realm admins, instead -- e.g. via <code>send_email_to_admins</code>.</p>\n<p>But even better would be to prevent being in that case, by hooking into when we archive streams to show a client-side popup confirming that this will disable the feature.  That also provides a way to handle the similar issues from if one archives the new-user or new-stream notifications, which users might also archive without understanding the implications.</p>\n<p>And tangentially, the \"report message\" option still shows up even if the feature is disabled (both if it was explicitly unset, as well as if the stream is archived).  We should remove it from the UI in those cases.</p>",
+        "id": 1382546,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1653016045
+    },
+    {
+        "content": "<p>thx! the client-side confirmation has a problem in the corner-corner case where the UserProfile archiving the stream isn't an admin and therefore shouldn't be permitted to disable this feature!</p>\n<p>But hooking-into the archive-stream function is smart, and leads to the simple solution of just erroring if someone tries to archive the report-messages stream: \"Error: cannot delete &lt;stream&gt; because it is being used to receive reporting messages. Please first disable this feature in the admin settings.\"</p>\n<p>If nobody screams, I'll try that next and post a screencap.</p>",
+        "id": 1382631,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1653038765
+    },
+    {
+        "content": "<p>We allow only admins and owners to archive streams, so that should not be a problem.</p>",
+        "id": 1382637,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1653044883
+    },
+    {
+        "content": "<p>Ah, I think when Adam and I messaged about this on the issue, I think we may have been talking about different situations.</p>\n<p>You can disable the stream via the \"Disable\" button for the message setting, similar to New stream/user notifications:</p>\n<p><a href=\"/user_uploads/2/e8/x-IisWjG9jBaYUYSp6aTWUP4/Screen-Shot-2022-05-20-at-4.19.42-PM.png\">Screen-Shot-2022-05-20-at-4.19.42-PM.png</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/e8/x-IisWjG9jBaYUYSp6aTWUP4/Screen-Shot-2022-05-20-at-4.19.42-PM.png\" title=\"Screen-Shot-2022-05-20-at-4.19.42-PM.png\"><img src=\"/user_uploads/2/e8/x-IisWjG9jBaYUYSp6aTWUP4/Screen-Shot-2022-05-20-at-4.19.42-PM.png\"></a></div><p>In that situation it should be clear to the admin that they are turning off the feature, and I still think all we need to do is to remove the option from the three-dot menu for users, as Alex suggested above as well.</p>",
+        "id": 1382961,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1653089137
+    },
+    {
+        "content": "<blockquote>\n<p>But even better would be to prevent being in that case, by hooking into when we archive streams to show a client-side popup confirming that this will disable the feature. That also provides a way to handle the similar issues from if one archives the new-user or new-stream notifications, which users might also archive without understanding the implications.</p>\n</blockquote>\n<p>I agree with that proposal. I think it should be a warning as <span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> suggested, not an error -- you can still archive the stream and turn off the feature in one step. It should work the same for new user and new stream announcements.</p>\n<p>It would be totally fine for this warning to be a follow-up issue/PR. It's a rare situation, and it's not a blocker for the report message feature.</p>",
+        "id": 1382962,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1653089318
+    },
+    {
+        "content": "<p>For simplicity, I coded this as an error, with a descriptive warning. This is an obscure case and imho doesn't deserve optimization. :-)<br>\n<a href=\"/user_uploads/2/e9/f3R4LEpeI3Qey6a1alOhAl99/chrome-capture-2022-4-22.gif\">chrome-capture-2022-4-22.gif</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/e9/f3R4LEpeI3Qey6a1alOhAl99/chrome-capture-2022-4-22.gif\" title=\"chrome-capture-2022-4-22.gif\"><img src=\"/user_uploads/2/e9/f3R4LEpeI3Qey6a1alOhAl99/chrome-capture-2022-4-22.gif\"></a></div><p><a href=\"https://github.com/zulip/zulip/pull/21821\">#21821</a> ready for review.</p>",
+        "id": 1383514,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1653301695
+    },
+    {
+        "content": "<p>I filed <a href=\"https://github.com/zulip/zulip/pull/22110\">#22110</a> for the archive stream warning; we can just add some text to the existing confirmation dialog.</p>",
+        "id": 1383591,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1653335926
+    },
+    {
+        "content": "<p>I guess ideally we'd also warn when changing the stream for reporting messages to no longer be private, as that turns off the feature as well.</p>",
+        "id": 1383602,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1653337345
+    },
+    {
+        "content": "<p>Playing with the PR, it looks like the reporting option still needs to be removed from the three-dot message menu when the org setting is disabled.</p>",
+        "id": 1383608,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1653337613
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span>  ok, I'll fix both cases (error-on-public and triple-dot disable) as well as the UI bug you mentioned in the PR (<a href=\"https://github.com/zulip/zulip/pull/21821#issuecomment-1135105229\">https://github.com/zulip/zulip/pull/21821#issuecomment-1135105229</a>)</p>",
+        "id": 1383621,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1653339138
+    },
+    {
+        "content": "<p>I agree not offering the report option if the destination stream is disabled is probably the best plan. To be explicit, <span class=\"user-mention\" data-user-id=\"21154\">@Adam S</span> have you implemented that detail yet? I can do a detailed review of this PR but it'd be nice to know whether the UX matches what we intend when doing so.</p>",
+        "id": 1385181,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1653606886
+    },
+    {
+        "content": "<p>I have not implemented this yet - yes I agree, let's hold off code review<br>\nuntil the next round of changes is ready. Lol, I have plenty of other PRs<br>\nready for review!</p>",
+        "id": 1385278,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1653610681
+    },
+    {
+        "content": "<p>I ended up doing a review anyway -- most of my comments are on naming/convention details independent of these UI details, so I think my time was well spent. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1387915,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1654217883
+    },
+    {
+        "content": "<p>I'm working through the code review... ran into a question about the formatting: <a href=\"https://github.com/zulip/zulip/pull/21821#discussion_r887412747\">https://github.com/zulip/zulip/pull/21821#discussion_r887412747</a><br>\n<span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> <span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span> (and others?) WDYT?</p>\n<p>Pick the format you want, and I'll code it up.</p>",
+        "id": 1391842,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1655051777
+    },
+    {
+        "content": "<p>I think I'd recommend just structuring it so there is a single string template with substitutions so it's easy to finalize the string in a later pass.</p>",
+        "id": 1391843,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655052466
+    },
+    {
+        "content": "<p>Since we often like to do that while doing the final documentation.</p>",
+        "id": 1391844,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655052481
+    },
+    {
+        "content": "<p>prep commits are in (thx <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> ) and merged, ready for review: <a href=\"https://github.com/zulip/zulip/pull/21821\">https://github.com/zulip/zulip/pull/21821</a></p>",
+        "id": 1404583,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1657768640
+    }
+]

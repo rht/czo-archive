@@ -1,0 +1,44 @@
+[
+    {
+        "content": "<p>Hello, I have installed a Zulip server on Ubuntu 16.04.3, I want to authenticate users via an ADS server, but the bind does is not successful .Below is the error i get when i do a ldap test query</p>\n<p>/home/zulip/deployments/current/manage.py query_ldap <a href=\"mailto:ryan.braganza@xxxxxx.com\" title=\"mailto:ryan.braganza@xxxxxx.com\">ryan.braganza@xxxxxx.com</a><br>\n2018-02-26 05:47:45.177 ERR  [django_auth_ldap] search_s('dc=xxxxxx,dc=com', 2, '(uid=ryan.braganza)') raised OPERATIONS_ERROR({'info': '000004DC: LdapErr: DSID-0C0906DD, comment: In order to perform this operation a successful bind must be completed on the connection., data 0, v1772', 'desc': 'Operations error'},)<br>\nNo such user found</p>\n<p>=============================================================================<br>\nThe setting.py ldap sections is as below</p>\n<p>AUTH_LDAP_SERVER_URI = \"ldap://mumdc01.xxxxxx.com\"</p>\n<p>AUTH_LDAP_BIND_DN = \"CN=xyzuser,CN=Users,DC=xxxxxx,DC=com\"<br>\nAUTH_LDAP_BIND_PASSWORD = \"password\"</p>\n<p>AUTH_LDAP_USER_SEARCH = LDAPSearch(\"dc=xxxxxx,dc=com\",<br>\n                                  ldap.SCOPE_SUBTREE, \"(uid=%(user)s)\")</p>\n<p>LDAP_APPEND_DOMAIN = '<a href=\"http://xxxxxx.com\" target=\"_blank\" title=\"http://xxxxxx.com\">xxxxxx.com</a>'<br>\n=============================================================================</p>\n<p>Can anyone please help me out what i could be possibly missing ?? I am able to a successful ldap query using the ldapsearch command.</p>\n<p>Thank you</p>",
+        "id": 516699,
+        "sender_full_name": "Ryan Braganza",
+        "timestamp": 1519624756
+    },
+    {
+        "content": "<p>After  putting the password in quotes in the secrets file, the bind unsuccessful error has gone, but now its throws up a new error ----&gt; </p>\n<p>\"ldap.INVALID_CREDENTIALS: {'desc': 'Invalid credentials', 'info': '80090308: LdapErr: DSID-0C0903AA, comment: AcceptSecurityContext error, data 52e, v1772'}\"</p>",
+        "id": 516994,
+        "sender_full_name": "Ryan Braganza",
+        "timestamp": 1519648447
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"ryann.braganza@gmail.com\" data-user-id=\"5510\">@Ryan Braganza</span> I'm not sure and don't have time to investigate this moment, but I think it's possible that you should be using <code>ldaps://</code> protocol (which is more secure) for connecting to your server, i.e. you should use that in the <code>AUTH_LDAP_SERVER_URI</code> field.</p>",
+        "id": 517267,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1519658086
+    },
+    {
+        "content": "<p>Here are the settings that work for my AD instance. Users will login with <a href=\"mailto:first.last@domain.com\" title=\"mailto:first.last@domain.com\">first.last@domain.com</a> and their LDAP password. The <code>auth_ldap_bind_password</code> value in zulip-secrets.conf should <em>not</em> be quoted because the file is in INI format, not a python file.</p>\n<p>Take careful note of the <code>AUTH_LDAP_CONNECTION_OPTIONS</code> options for AD servers. Without these options your AD connection will fail.</p>\n<div class=\"codehilite\"><pre><span></span>AUTH_LDAP_SERVER_URI = &quot;ldap://ldap.example.com&quot;\n\nAUTH_LDAP_BIND_DN = &quot;cn=ldapbind,cn=Users,dc=example,dc=com&quot;\n\nAUTH_LDAP_USER_SEARCH = LDAPSearch(&quot;dc=example,dc=com&quot;, ldap.SCOPE_SUBTREE, &quot;(mail=%(user)s)&quot;)\n\nLDAP_APPEND_DOMAIN = None\n\nLDAP_EMAIL_ATTR = None\n\nAUTH_LDAP_USER_ATTR_MAP = {\n    &quot;full_name&quot;: &quot;cn&quot;,\n}\n\nAUTH_LDAP_CONNECTION_OPTIONS = {\n        ldap.OPT_REFERRALS: 0,\n        ldap.OPT_X_TLS_REQUIRE_CERT: 0,\n}\n</pre></div>\n\n\n<p>My guess as to how to get you going would be:</p>\n<p>1) Unquote your ldap password in zulip-settings.conf<br>\n2) Add the <code>AUTH_LDAP_CONNECTION_OPTIONS</code> as I have it.<br>\n3) Use supervisiorctl restart all<br>\n4) As the zulip account, run ./manage.py query_ldap &lt;uid&gt;</p>\n<p>If that still fails then post whatever traceback get and I'll try and take a second look for you.</p>",
+        "id": 518015,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1519708657
+    },
+    {
+        "content": "<p>Just to be clear, the reason why you now get INVALID_CREDENTIALS is because the password is being sent as <code>\"password\"</code>with the quotes as you put in the INI file zulip-secrets.conf</p>",
+        "id": 518016,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1519708775
+    },
+    {
+        "content": "<p>Wow :) thanks <span class=\"user-mention\" data-user-email=\"scott@frak.ms\" data-user-id=\"5233\">@Scott Russell</span> adding AUTH_LDAP_CONNECTION_OPTIONS and removing he quotes has got it working :) ...</p>",
+        "id": 518027,
+        "sender_full_name": "Ryan Braganza",
+        "timestamp": 1519710907
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> test</p>",
+        "id": 527752,
+        "sender_full_name": "Voy Test",
+        "timestamp": 1520355766
+    }
+]

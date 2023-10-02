@@ -1,0 +1,96 @@
+<html>
+<head><meta charset="utf-8"><title>postgres running out of connections · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/postgres.20running.20out.20of.20connections.html">postgres running out of connections</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="782673"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/postgres%20running%20out%20of%20connections/near/782673" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrew Martin <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/postgres.20running.20out.20of.20connections.html#782673">(Aug 26 2019 at 14:59)</a>:</h4>
+<p>Running with around 350 users I am seeing the following errors repeatedly in errors.log and some connections to zulip are dropping out:</p>
+<div class="codehilite"><pre><span></span>psycopg2.OperationalError: FATAL:  remaining connection slots are reserved for non-replication superuser connections
+</pre></div>
+
+
+<p>This is disrupting user connectivity to Zulip - can the maximum number of postgres connections be increased?</p>
+
+
+
+<a name="782674"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/postgres%20running%20out%20of%20connections/near/782674" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrew Martin <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/postgres.20running.20out.20of.20connections.html#782674">(Aug 26 2019 at 14:59)</a>:</h4>
+<p>at this time <code>pg_top</code> shows almost all workers running <code>COMMIT</code> and none idle</p>
+
+
+
+<a name="782693"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/postgres%20running%20out%20of%20connections/near/782693" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrew Martin <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/postgres.20running.20out.20of.20connections.html#782693">(Aug 26 2019 at 16:03)</a>:</h4>
+<p>it looks like there were connections from many days ago - killing the oldest couple immediately reduced the number of open connections from around 100 to around 25; is zulip supposed to be cleaning up these old connections?</p>
+
+
+
+<a name="782697"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/postgres%20running%20out%20of%20connections/near/782697" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrew Martin <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/postgres.20running.20out.20of.20connections.html#782697">(Aug 26 2019 at 16:23)</a>:</h4>
+<p>would implementing a postgres idle connection reaper as outlined <a href="https://stackoverflow.com/questions/13236160/is-there-a-timeout-for-idle-postgresql-connections/13245020#13245020" target="_blank" title="https://stackoverflow.com/questions/13236160/is-there-a-timeout-for-idle-postgresql-connections/13245020#13245020">here</a> be advisable?</p>
+
+
+
+<a name="782769"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/postgres%20running%20out%20of%20connections/near/782769" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/postgres.20running.20out.20of.20connections.html#782769">(Aug 26 2019 at 18:54)</a>:</h4>
+<p><span class="user-mention" data-user-id="12576">@Andrew Martin</span> interesting.  Our postgres configurations set <code>max_connections = 1000</code>; are you using a separate postgres server?</p>
+
+
+
+<a name="782770"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/postgres%20running%20out%20of%20connections/near/782770" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/postgres.20running.20out.20of.20connections.html#782770">(Aug 26 2019 at 18:55)</a>:</h4>
+<p>I am not aware of any known postgres connection leak.</p>
+
+
+
+<a name="782771"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/postgres%20running%20out%20of%20connections/near/782771" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/postgres.20running.20out.20of.20connections.html#782771">(Aug 26 2019 at 18:55)</a>:</h4>
+<p>Given that it sounds like you had a limit of 100 connections, I'm guessing you're not running our configuration.</p>
+
+
+
+<a name="782772"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/postgres%20running%20out%20of%20connections/near/782772" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/postgres.20running.20out.20of.20connections.html#782772">(Aug 26 2019 at 18:55)</a>:</h4>
+<p>Hmm, though we did change 100 to 1000 since Zulip 2.0, so maybe that's the issue.</p>
+
+
+
+<a name="782784"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/postgres%20running%20out%20of%20connections/near/782784" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrew Martin <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/postgres.20running.20out.20of.20connections.html#782784">(Aug 26 2019 at 19:45)</a>:</h4>
+<p>yes, this server was upgraded from Zulip 1.x to 2.0 so maybe it kept the old settings? We are using the normal internal postgres server that puppet configures. Is there a way that we can reconfigure it to use <code>max_connections = 1000</code> now?</p>
+
+
+
+<a name="782789"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/postgres%20running%20out%20of%20connections/near/782789" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/postgres.20running.20out.20of.20connections.html#782789">(Aug 26 2019 at 19:48)</a>:</h4>
+<p><span class="user-mention" data-user-id="12576">@Andrew Martin</span> you can just edit the postgres config file and restart postgres.</p>
+
+
+
+<a name="782790"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/postgres%20running%20out%20of%20connections/near/782790" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/postgres.20running.20out.20of.20connections.html#782790">(Aug 26 2019 at 19:48)</a>:</h4>
+<p>(You'll get reset to the default on the next upgrade, but that should be fine as the 2.1 will have the 1000 anyway)</p>
+
+
+
+<a name="782807"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/postgres%20running%20out%20of%20connections/near/782807" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrew Martin <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/postgres.20running.20out.20of.20connections.html#782807">(Aug 26 2019 at 20:39)</a>:</h4>
+<p>ok, I am guessing that is <code>/etc/postgresql/9.5/main/postgresql.conf</code>?</p>
+
+
+
+<a name="782808"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/postgres%20running%20out%20of%20connections/near/782808" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/postgres.20running.20out.20of.20connections.html#782808">(Aug 26 2019 at 20:45)</a>:</h4>
+<p>Yep!</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

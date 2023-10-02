@@ -1,0 +1,74 @@
+[
+    {
+        "content": "<p>Bringing here a <a href=\"https://github.com/zulip/zulip/pull/22350#issuecomment-1198639189\">conversation</a> that I had with Alya on <strong>copy-paste: Fix edge cases on message selection for copying. <a href=\"https://github.com/zulip/zulip/pull/22350\">#22350</a></strong></p>\n<p>Alya noted:</p>\n<blockquote>\n<p>Playing around with this PR, I ended up getting the timestamp copy-pasted along with the message</p>\n<p>I think that's a regression from how it works currently -- when I test on CZO, even if the timestamp is selected, it doesn't end up getting pasted in.</p>\n</blockquote>\n<p>to which I said</p>\n<blockquote>\n<p>If you select the time in CZO while staying within the same message, it copies the time as well (and the name!)</p>\n<p>If you copy across multiple messages, we use the multi-message copy instead which currently removes the timestamp.</p>\n<p>I also think it's okay to copy things that are selected -- I just talked to an experienced engineer (housemate) about this and we were talking about how it's much better to copy exactly what's highlighted than try to do something clever, because cleverness leads both to edge cases and also it lies to the user by copying something different than the selection and something they can't control. I'm not saying we should necessarily change how we do copy pasting (though it would be easy to remove our custom handling and let the browser handle it always) but I think copying the timestamp there is fine.</p>\n</blockquote>\n<p>Alya:</p>\n<blockquote>\n<p>Would you mind kicking off a #design discussion to settle what aspects of the copy behavior folks thinks are important, and in particular whether we're fine with making the timestamp change?</p>\n</blockquote>",
+        "id": 1413567,
+        "sender_full_name": "Evy",
+        "timestamp": 1659312520
+    },
+    {
+        "content": "<p>So, thoughts? :)</p>",
+        "id": 1413568,
+        "sender_full_name": "Evy",
+        "timestamp": 1659312548
+    },
+    {
+        "content": "<p>I'd always prefer consistency, and times appear like useful elements to maintain.</p>\n<p>I tried copying your messages above by selecting both, which did lose the time data upon paste. That said, selecting the bottom message alone, through dragging over it, was somewhat challenging in order to get both the content and time - are these structured differently in the source, so selecting them is strange, perhaps? (eg. drag from left of <code>So, thoughts?</code>, and it deselects the text when over the time?)</p>",
+        "id": 1413603,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1659319796
+    },
+    {
+        "content": "<p>Copying timestamps strikes me as fine.</p>",
+        "id": 1413716,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1659370036
+    },
+    {
+        "content": "<p>For some extra context, if you don't select multiple messages it will use the browser copy and just copy whatever is selected. If you select multiple messages, we do our own fancy thing which currently involves removing timestamps.</p>\n<p>My change doesn't affect the multi message time stamp selection, it just makes it harder to accidentally trigger the multi-message copy when you're still only highlighting a single message. So now it's easier to end up in a situation where you're still only selecting one message but the timestamp is selected</p>",
+        "id": 1413797,
+        "sender_full_name": "Evy",
+        "timestamp": 1659375227
+    },
+    {
+        "content": "<p>I'm not sure I totally follow the core questions here. But there's some context that's worth mentioning.</p>\n<ul>\n<li>For some use cases, like copying the timeline of events into an incident retrospective document, it's extremely annoying if you can't get the timestamps when doing copy/paste. So we should consider that an important constraint/input in our copy/paste design.</li>\n<li>On Linux at least, there's two clipboards -- which I'll call the Ctrl+C clipboard and the one you get if you just select a region of text and then use middle-click to paste it. The <code>Ctrl+C</code> clipboard we have a lot of control over -- that's where we get to run a JS function that does whatever we want to populate the buffer and can do fancier formatting. The middle-click / \"Select text\" one is only controllable AFAIK by HTML/CSS -- one can make elements invisible to it by making them impossible to select, but it's basically just going to copy paste the text you had selected, in the order it appears in the DOM. (We can do some clever things like having the DOM order be different from the visual appearance).</li>\n</ul>\n<p>We have some (very) old issues/PRs, linked below, that aim to add a menu that would give users more explicit options around copy/paste. I remember them being bogged down in implementability issues at the time (i.e. at least one of the options, we couldn't figure out how to do). But I think they have useful context around some previous corner cases / thinking:</p>\n<ul>\n<li><a href=\"https://github.com/zulip/zulip/issues/6316\">https://github.com/zulip/zulip/issues/6316</a></li>\n<li><a href=\"https://github.com/zulip/zulip/pull/11949\">https://github.com/zulip/zulip/pull/11949</a></li>\n<li><a href=\"https://github.com/zulip/zulip/pull/15235\">https://github.com/zulip/zulip/pull/15235</a></li>\n</ul>",
+        "id": 1414662,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1659564928
+    },
+    {
+        "content": "<p>I personally feel like this is a minor enough change in my PR (and barely even a change) to have a debate about it. <span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span> are there specific things you wanted to dive into, or would you be okay with merging my PR as is (with the fixed unit test)? I think it's a big improvement from the current state, and possibly also fine as it is indefinitely.</p>",
+        "id": 1414686,
+        "sender_full_name": "Evy",
+        "timestamp": 1659568671
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  would you be open to looking at <a href=\"https://github.com/zulip/zulip/pull/22350\">#22350</a> and seeing if this engineering approach seems reasonable? I think it's ready to go except for one failing test, but the test seems hard to fix and has to do with how I implemented the change, so I'd like to know if this strategy was reasonable before diving into the test. </p>\n<p>If you know someone else who could take a look, that also would help.</p>",
+        "id": 1417996,
+        "sender_full_name": "Evy",
+        "timestamp": 1660154669
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21453\">@Evy</span> I posted a few comments. To be honest, I don't understand why the change is supposed to work. I think it needs a commit message (perhaps combined with updates to the comments) that explains why the new algorithm is correct (and perhaps in the commit message, what the bug was with the previous algorithm).</p>",
+        "id": 1418479,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660256161
+    },
+    {
+        "content": "<p>Not having done the debugging myself, it's really not clear to me what elements in the selection were causing the bug.</p>",
+        "id": 1418480,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660256199
+    },
+    {
+        "content": "<p>I agree we should feel very happy to do a tactical bug fix here, but I don't yet understand why this bug fix works <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1418481,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660256232
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/22350\">#22350</a> updated with a different approach, more comments, a longer commit message, and passing CI! :)</p>",
+        "id": 1420584,
+        "sender_full_name": "Evy",
+        "timestamp": 1660698533
+    }
+]

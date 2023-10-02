@@ -1,0 +1,92 @@
+[
+    {
+        "content": "<p>Is it possible to filter users by AD group, so that only users that are a member of a specific group have access to ZULIP?</p>",
+        "id": 696555,
+        "sender_full_name": "Ivan",
+        "timestamp": 1549631140
+    },
+    {
+        "content": "<p>you can define a specific ldap search</p>",
+        "id": 696563,
+        "sender_full_name": "niels",
+        "timestamp": 1549631363
+    },
+    {
+        "content": "<p>How can I define it? Do you have some example?</p>",
+        "id": 696565,
+        "sender_full_name": "Ivan",
+        "timestamp": 1549631462
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>LDAPSearch(&quot;ou=users,dc=example,dc=com&quot;, ldap.SCOPE_SUBTREE, &quot;(uid=%(user)s)&quot;), there only user are allowed\nLDAPSearch(&quot;ou=otherusers,dc=example,dc=com&quot;, ldap.SCOPE_SUBTREE, &quot;(uid=%(user)s)&quot;), there only otherusers are allowed\n</pre></div>",
+        "id": 696568,
+        "sender_full_name": "niels",
+        "timestamp": 1549631596
+    },
+    {
+        "content": "<p>I know about this filter but it is only based on the Organization Unit... I need a filter for a security group</p>",
+        "id": 696570,
+        "sender_full_name": "Ivan",
+        "timestamp": 1549632172
+    },
+    {
+        "content": "<p>I have tried a few filters but every time I get an error:  ERR  [django_auth_ldap] search_s('(&amp;(objectCategory=user)(memberOf=CN=</p>",
+        "id": 696600,
+        "sender_full_name": "Ivan",
+        "timestamp": 1549636943
+    },
+    {
+        "content": "<p>raised INVALID_DN_SYNTAX({'info': 'invalid DN', 'desc': 'Invalid DN syntax'},)</p>",
+        "id": 696601,
+        "sender_full_name": "Ivan",
+        "timestamp": 1549636962
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11281\">@Ivan</span> check out <a href=\"https://django-auth-ldap.readthedocs.io/en/latest/groups.html\" target=\"_blank\" title=\"https://django-auth-ldap.readthedocs.io/en/latest/groups.html\">https://django-auth-ldap.readthedocs.io/en/latest/groups.html</a></p>",
+        "id": 696638,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1549643287
+    },
+    {
+        "content": "<p>I think you can use the <code>AUTH_LDAP_REQUIRE_GROUP</code> setting.  Let me know if that works for you.</p>",
+        "id": 696640,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1549643324
+    },
+    {
+        "content": "<p>Thanks for the hint. I misunderstood the concept of groups. Here the things I must add in <code>/etc/zulip/settings.py</code></p>\n<div class=\"codehilite\"><pre><span></span>AUTH_LDAP_GROUP_SEARCH = LDAPSearch(&quot;OU=Groups,DC=###,DC=###&quot;,\n    ldap.SCOPE_SUBTREE, &quot;(objectClass=groupOfNames)&quot;\n)\nAUTH_LDAP_GROUP_TYPE = GroupOfNamesType()\nAUTH_LDAP_REQUIRE_GROUP = &quot;CN=ZULIP_USER,OU=Groups,DC=###,DC=###&quot;\n</pre></div>\n\n\n<p>then it works. If you add for test a user you can delete it following <a href=\"https://github.com/zulip/zulip/issues/10533\" target=\"_blank\" title=\"https://github.com/zulip/zulip/issues/10533\">Issue 10533</a>. There is an <a href=\"https://github.com/zulip/zulip/issues/338\" target=\"_blank\" title=\"https://github.com/zulip/zulip/issues/338\">old issue  about groups</a> with more information</p>",
+        "id": 697373,
+        "sender_full_name": "niels",
+        "timestamp": 1549737006
+    },
+    {
+        "content": "<p>It is not working... I get this error:   File \"/home/zulip/deployments/2018-12-19-14-27-08/zulip-py3-venv/lib/python3.5/site-packages/django_auth_ldap/backend.py\", line 547, in _search_for_user_dn<br>\n    raise ImproperlyConfigured('AUTH_LDAP_USER_SEARCH must be an LDAPSearch instance.')<br>\ndjango.core.exceptions.ImproperlyConfigured: AUTH_LDAP_USER_SEARCH must be an LDAPSearch instance.</p>",
+        "id": 697899,
+        "sender_full_name": "Ivan",
+        "timestamp": 1549881499
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11281\">@Ivan</span> Have you added the AUTH_LDAP_GROUP_SEARCH? The 4 first lines in my example are important.</p>",
+        "id": 697900,
+        "sender_full_name": "niels",
+        "timestamp": 1549882972
+    },
+    {
+        "content": "<p>Yes, I did. But I did remove AUTH_LDAP_USER_SEARCH... After I added back AUTH_LDAP_USER_SEARCH now it is working. Here is my configuration: </p>\n<div class=\"codehilite\"><pre><span></span>AUTH_LDAP_USER_SEARCH = LDAPSearch(&quot;dc=xxx,dc=corp&quot;, ldap.SCOPE_SUBTREE, &quot;(mail=%(user)s)&quot;)\nAUTH_LDAP_GROUP_SEARCH = LDAPSearch(&quot;dc=xxx,dc=corp&quot;, ldap.SCOPE_SUBTREE, &quot;(objectClass=groupOfNames)&quot;)\nAUTH_LDAP_GROUP_TYPE = GroupOfNamesType()\nAUTH_LDAP_REQUIRE_GROUP = &quot;CN=Zulip-Access,OU=Special,OU=Domain Custom Groups,DC=xxx,DC=corp&quot;\n</pre></div>\n\n\n<p>Now I have to find out how to add multiple groups, because I use OPENLDAP as a Proxy to query multiple LDAP servers...</p>",
+        "id": 697901,
+        "sender_full_name": "Ivan",
+        "timestamp": 1549883262
+    },
+    {
+        "content": "<p>Thanks for your help! I'm now able to add more groups and it is working fine...<br>\n<code>AUTH_LDAP_REQUIRE_GROUP = (\n    (\n        LDAPGroupQuery(\"CN=Zulip1-Access,OU=Special,OU=Domain Custom Groups,DC=xxx,DC=corp\") |\n        LDAPGroupQuery(\"CN=Zulip2-Access,OU=Special,OU=Domain Custom Groups,DC=xxx,DC=corp\") |\n        LDAPGroupQuery(\"CN=Zulip3-Access,OU=Special,OU=Domain Custom Groups,DC=xxx,DC=corp\")\n    )\n)</code></p>",
+        "id": 697914,
+        "sender_full_name": "Ivan",
+        "timestamp": 1549892469
+    },
+    {
+        "content": "<p>Thanks folks!  I added <a href=\"https://github.com/zulip/zulip/commit/a46640b3257794eab408b5da8ae274f71326dcb5\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/a46640b3257794eab408b5da8ae274f71326dcb5\">a46640b3257794eab408b5da8ae274f71326dcb5</a> to document this feature.</p>",
+        "id": 698084,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1549914087
+    }
+]

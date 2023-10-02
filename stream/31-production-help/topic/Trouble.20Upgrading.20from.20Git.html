@@ -1,0 +1,256 @@
+<html>
+<head><meta charset="utf-8"><title>Trouble Upgrading from Git · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html">Trouble Upgrading from Git</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="666882"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/666882" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Armaan Ahluwalia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#666882">(Nov 30 2018 at 21:53)</a>:</h4>
+<p>I'm having some trouble upgrading from git in production. I have a slightly modified zulip branch with some trivial changes. <br>
+Locally all tests are passing and i'm able to build a release tarball. However when I run it in production it seems to be hanging at the <code>./tools/minify-js --prev-deploy /home/zulip/deployments/current</code> step.</p>
+<p>I can't seem to debug the issue further than that. I checked the upgrade log and it provides no additional information apart from that.</p>
+<div class="codehilite"><pre><span></span>Using cached node modules from /srv/zulip-npm-cache/e3c7933380aa32ecc61bc333489f5488ee9bc0b8/node_modules
++ rm -rf node_modules
++ ln -nsf /srv/zulip-npm-cache/e3c7933380aa32ecc61bc333489f5488ee9bc0b8/node_modules node_modules
++ ./tools/setup/emoji/build_emoji
++ ./tools/inline-email-css
++ ./tools/setup/generate_zulip_bots_static_files
++ ./tools/setup/generate-custom-icon-webfont
++ ./tools/setup/build_pygments_data
++ ./tools/minify-js --prev-deploy /home/zulip/deployments/current
+</pre></div>
+
+
+<p>It just indefinitely hangs at that step. I need to manually quit the process.</p>
+
+
+
+<a name="666884"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/666884" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#666884">(Nov 30 2018 at 21:56)</a>:</h4>
+<p>Are you sure it's hanging?  <code>minify-js</code> takes a while, especially on a slow machine.</p>
+
+
+
+<a name="666885"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/666885" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Armaan Ahluwalia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#666885">(Nov 30 2018 at 21:57)</a>:</h4>
+<p>What would be an adequate amount of time to leave it on? Left it for 10 minutes.</p>
+
+
+
+<a name="666896"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/666896" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Armaan Ahluwalia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#666896">(Nov 30 2018 at 22:18)</a>:</h4>
+<p>Been on for 15 minutes. Process still seems to be hung. Not sure whats going on.</p>
+
+
+
+<a name="666961"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/666961" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Armaan Ahluwalia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#666961">(Dec 01 2018 at 03:42)</a>:</h4>
+<p>Here's an error I got when the operation failed.</p>
+<div class="codehilite"><pre><span></span>+ ./tools/setup/generate-custom-icon-webfont
++ ./tools/setup/build_pygments_data
++ ./tools/minify-js --prev-deploy /home/zulip/deployments/current
+
+^[[0;37;41mError running a subcommand of ./tools/update-prod-static: ./tools/minify-js --prev-deploy /home/zulip/deployments/current^[[0m
+^[[0;37;41mActual error output for the subcommand is just above this.^[[0m
+
+Traceback (most recent call last):
+  File &quot;./tools/update-prod-static&quot;, line 56, in &lt;module&gt;
+    stdout=fp, stderr=fp)
+  File &quot;./tools/../scripts/lib/zulip_tools.py&quot;, line 164, in run
+    subprocess.check_call(args, **kwargs)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;./tools/minify-js&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1.
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2018-11-30-22-02-24/scripts/lib/upgrade-zulip-stage-2&quot;, line 100, in &lt;module&gt;
+    preexec_fn=su_to_zulip)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;./tools/update-prod-static&#39;, &#39;--authors-not-required&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1.
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-from-git&quot;, line 80, in &lt;module&gt;
+    deploy_path, &quot;--from-git&quot;] + deploy_options)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2018-11-30-22-02-24/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2018-11-30-22-02-24&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1.
+</pre></div>
+
+
+<p>Ended up building from a tarball instead which was smooth.</p>
+
+
+
+<a name="666968"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/666968" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#666968">(Dec 01 2018 at 04:28)</a>:</h4>
+<p>There's a <code>var/log/update-prod-static.log</code> file (within the <code>/home/zulip/deployments/</code>  directory) that will have the actual error message.</p>
+
+
+
+<a name="667076"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/667076" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Armaan Ahluwalia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#667076">(Dec 01 2018 at 13:23)</a>:</h4>
+<p>Here's the error in that log</p>
+<div class="codehilite"><pre><span></span>+ ./tools/inline-email-css
++ ./tools/setup/generate_zulip_bots_static_files
++ ./tools/setup/generate-custom-icon-webfont
++ ./tools/setup/build_pygments_data
++ ./tools/minify-js --prev-deploy /home/zulip/deployments/current
+
+^[[0;37;41mError running a subcommand of ./tools/update-prod-static: ./tools/minify-js --prev-deploy /home/zulip/deployments/current^[[0m
+^[[0;37;41mActual error output for the subcommand is just above this.^[[0m
+
+Traceback (most recent call last):
+  File &quot;./tools/update-prod-static&quot;, line 56, in &lt;module&gt;
+    stdout=fp, stderr=fp)
+  File &quot;./tools/../scripts/lib/zulip_tools.py&quot;, line 164, in run
+    subprocess.check_call(args, **kwargs)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;./tools/minify-js&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1.
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2018-11-30-22-02-24/scripts/lib/upgrade-zulip-stage-2&quot;, line 100, in &lt;module&gt;
+    preexec_fn=su_to_zulip)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;./tools/update-prod-static&#39;, &#39;--authors-not-required&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1.
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-from-git&quot;, line 80, in &lt;module&gt;
+    deploy_path, &quot;--from-git&quot;] + deploy_options)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2018-11-30-22-02-24/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2018-11-30-22-02-24&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1.
+</pre></div>
+
+
+
+<a name="667131"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/667131" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#667131">(Dec 01 2018 at 19:12)</a>:</h4>
+<p><span class="user-mention" data-user-id="5837">@Armaan Ahluwalia</span> I think you pasted the wrong thing.  In any case, see the text "Actual error output for the subcommand is just above this."</p>
+
+
+
+<a name="667138"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/667138" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Armaan Ahluwalia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#667138">(Dec 01 2018 at 19:22)</a>:</h4>
+<p>Not sure I did paste the wrong thing. That was from <code>/var/log/zulip/upgrade.log</code>. Here's a full snippet</p>
+<div class="codehilite"><pre><span></span>Using cached node modules from /srv/zulip-npm-cache/e3c7933380aa32ecc61bc333489f5488ee9bc0b8/node_modules
++ rm -rf node_modules
++ ln -nsf /srv/zulip-npm-cache/e3c7933380aa32ecc61bc333489f5488ee9bc0b8/node_modules node_modules
++ ./tools/setup/emoji/build_emoji
++ ./tools/inline-email-css
++ ./tools/setup/generate_zulip_bots_static_files
++ ./tools/setup/generate-custom-icon-webfont
++ ./tools/setup/build_pygments_data
++ ./tools/minify-js --prev-deploy /home/zulip/deployments/current
+
+^[[0;37;41mError running a subcommand of ./tools/update-prod-static: ./tools/minify-js --prev-deploy /home/zulip/deployments/current^[[0m
+^[[0;37;41mActual error output for the subcommand is just above this.^[[0m
+
+Traceback (most recent call last):
+  File &quot;./tools/update-prod-static&quot;, line 56, in &lt;module&gt;
+    stdout=fp, stderr=fp)
+  File &quot;./tools/../scripts/lib/zulip_tools.py&quot;, line 164, in run
+    subprocess.check_call(args, **kwargs)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;./tools/minify-js&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1.
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2018-11-30-22-02-24/scripts/lib/upgrade-zulip-stage-2&quot;, line 100, in &lt;module&gt;
+    preexec_fn=su_to_zulip)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;./tools/update-prod-static&#39;, &#39;--authors-not-required&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1.
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-from-git&quot;, line 80, in &lt;module&gt;
+    deploy_path, &quot;--from-git&quot;] + deploy_options)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2018-11-30-22-02-24/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2018-11-30-22-02-24&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1.
+</pre></div>
+
+
+
+<a name="667295"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/667295" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#667295">(Dec 03 2018 at 03:23)</a>:</h4>
+<p>Right, as I said, you need to provide the<code>var/log/update-prod-static.log</code>, which will be in some <code>/home/zulip/deployments/*</code> folder.</p>
+
+
+
+<a name="667429"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/667429" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Armaan Ahluwalia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#667429">(Dec 03 2018 at 17:55)</a>:</h4>
+<p>Ah right. Here's the log from that file. I guess the interesting thing here is upgrading from a tarball works but upgrading from git doesn't. Wondering what could make that the case?</p>
+<div class="codehilite"><pre><span></span>Using cached emojis from /srv/zulip-emoji-cache/1085f58f695ba9203ee5a08effd43ed0bcb91179/emoji
++ rm -rf /home/zulip/deployments/2018-11-30-22-02-24/tools/setup/emoji/../../../static/generated/emoji
+SUCCESS! Webfonts generated in ./static/generated/icons/fonts.
+(node:19964) DeprecationWarning: Tapable.plugin is deprecated. Use new API on `.hooks` instead
+Traceback (most recent call last):
+  File &quot;tools/webpack&quot;, line 120, in &lt;module&gt;
+    build_for_prod_or_casper(args.quiet)
+  File &quot;tools/webpack&quot;, line 31, in build_for_prod_or_casper
+    subprocess.check_call(webpack_args)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;node&#39;, &#39;node_modules/.bin/webpack-cli&#39;, &#39;--config&#39;, &#39;tools/webpack.config.ts&#39;, &#39;-p&#39;, &#39;--env&#39;, &#39;production&#39;]&#39; died with &lt;Signals.SIGKILL: 9&gt;.
+Traceback (most recent call last):
+  File &quot;./tools/minify-js&quot;, line 35, in &lt;module&gt;
+    subprocess.check_call([&#39;tools/webpack&#39;])
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;tools/webpack&#39;]&#39; returned non-zero exit status 1.
+</pre></div>
+
+
+
+<a name="667431"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/667431" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#667431">(Dec 03 2018 at 17:55)</a>:</h4>
+<p>Yeah, OK, it seems likely your problem is an OOM kill or something running webpack.  How much RAM does your system have?</p>
+
+
+
+<a name="667432"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/667432" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Armaan Ahluwalia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#667432">(Dec 03 2018 at 17:56)</a>:</h4>
+<p>2GB <span class="emoji emoji-1f633" title="embarrassed">:embarrassed:</span></p>
+
+
+
+<a name="667436"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/667436" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Armaan Ahluwalia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#667436">(Dec 03 2018 at 17:58)</a>:</h4>
+<p>Relatedly, if I'm running zulip on an instance where  94.0% of 7.69GB has been used, is there anything specific I need to do to make sure the system doesn't run out of memory and crash?</p>
+
+
+
+<a name="667439"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/667439" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Armaan Ahluwalia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#667439">(Dec 03 2018 at 17:59)</a>:</h4>
+<p>Or to put it another way, whats a safe amount of disk space that I need to have to feel comfortable?</p>
+
+
+
+<a name="667441"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/667441" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#667441">(Dec 03 2018 at 17:59)</a>:</h4>
+<p>This is all documented in our "requirements" page, I'm pretty sure.</p>
+
+
+
+<a name="667443"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/667443" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#667443">(Dec 03 2018 at 17:59)</a>:</h4>
+<p>Yeah, running <code>upgrade-zulip-from-git</code> without first shutting down the server doesn't super work with 2GB of RAM (since building static assets takes more free RAM than is present).</p>
+
+
+
+<a name="667445"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/667445" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Armaan Ahluwalia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#667445">(Dec 03 2018 at 18:00)</a>:</h4>
+<p>Yes I see that apparently I need more power.</p>
+
+
+
+<a name="667446"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Trouble%20Upgrading%20from%20Git/near/667446" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Armaan Ahluwalia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Trouble.20Upgrading.20from.20Git.html#667446">(Dec 03 2018 at 18:01)</a>:</h4>
+<p>Thanks</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

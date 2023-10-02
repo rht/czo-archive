@@ -1,0 +1,74 @@
+[
+    {
+        "content": "<p>Once the zproject.backends.SAMLAuthBackend is the only backend in AUTHENTICATION_BACKENDS, is there a way to retrieve the user api_key via /api/v1/fetch_api_key ? (I get <code>{\"result\":\"error\",\"msg\":\"Your username or password is incorrect\",\"code\":\"AUTHENTICATION_FAILED\"}</code>)</p>\n<p>The only solution I found, is to get it directly from the database: su - zulip -c 'psql -t -d zulip -c \"select api_key from zerver_userprofile where id =8\"'</p>\n<p>In fact I think that all the API call is not usable anymore as the \"basic\" authentication is not available.</p>",
+        "id": 1351673,
+        "sender_full_name": "delaf",
+        "timestamp": 1648116089
+    },
+    {
+        "content": "<blockquote>\n<p>Once the zproject.backends.SAMLAuthBackend is the only backend in AUTHENTICATION_BACKENDS, is there a way to retrieve the user api_key via /api/v1/fetch_api_key ? (I get {\"result\":\"error\",\"msg\":\"Your username or password is incorrect\",\"code\":\"AUTHENTICATION_FAILED\"})</p>\n</blockquote>\n<p>Yeah, without the backend enabled, the call</p>\n<div class=\"codehilite\"><pre><span></span><code>    user_profile = authenticate(\n        request=request, username=username, password=password, realm=realm, return_data=return_data\n    )\n</code></pre></div>\n<p>in <code>api_fetch_api_key</code> won't succeed.</p>",
+        "id": 1351674,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1648116195
+    },
+    {
+        "content": "<p>Does obtaining it via the webapp UI not work though?</p>",
+        "id": 1351675,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1648116208
+    },
+    {
+        "content": "<p>yes via the web UI it works</p>",
+        "id": 1351676,
+        "sender_full_name": "delaf",
+        "timestamp": 1648116227
+    },
+    {
+        "content": "<blockquote>\n<p>In fact I think that all the API call is not usable anymore as the \"basic\" authentication is not available.</p>\n</blockquote>\n<p>Hmm , API should be usable normally with our standard http basic auth. What issue did you run into with it?</p>",
+        "id": 1351677,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1648116253
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"9869\">delaf</span> <a href=\"#narrow/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication/near/1351676\">said</a>:</p>\n<blockquote>\n<p>yes via the web UI it works</p>\n</blockquote>\n<p>Ah, okay. To get it programmatically, yeah I think the <code>psql</code> approach will be needed (or similarly something in <code>manage.py shell</code>) - if the backend can't be enabled</p>",
+        "id": 1351678,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1648116300
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code># curl -sSX POST https://{{zulip_api_key_url}}/fetch_api_key --data-urlencode username={{ zulip_email }} --data-urlencode password={{ zulip_user_password }}\n\n{&quot;result&quot;:&quot;error&quot;,&quot;msg&quot;:&quot;Your username or password is incorrect&quot;,&quot;code&quot;:&quot;AUTHENTICATION_FAILED&quot;}\n</code></pre></div>",
+        "id": 1351679,
+        "sender_full_name": "delaf",
+        "timestamp": 1648116360
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <a href=\"#narrow/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication/near/1351674\">said</a>:</p>\n<blockquote>\n<blockquote>\n<p>Once the zproject.backends.SAMLAuthBackend is the only backend in AUTHENTICATION_BACKENDS, is there a way to retrieve the user api_key via /api/v1/fetch_api_key ? (I get {\"result\":\"error\",\"msg\":\"Your username or password is incorrect\",\"code\":\"AUTHENTICATION_FAILED\"})</p>\n</blockquote>\n<p>Yeah, without the backend enabled, the call</p>\n<div class=\"codehilite\"><pre><span></span><code>    user_profile = authenticate(\n        request=request, username=username, password=password, realm=realm, return_data=return_data\n    )\n</code></pre></div>\n<p>in <code>api_fetch_api_key</code> won't succeed.</p>\n</blockquote>\n<p>Ultimately, i think it has to be that way - if we allowed obtaining the api key with username+password when the Email (and LDAP) backends are disabled, that would defeat the point of disabling the backend from security perspective</p>",
+        "id": 1351680,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1648116407
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"9869\">delaf</span> <a href=\"#narrow/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication/near/1351679\">said</a>:</p>\n<blockquote>\n<p><div class=\"codehilite\"><pre><span></span><code># curl -sSX POST https://{{zulip_api_key_url}}/fetch_api_key --data-urlencode username={{ zulip_email }} --data-urlencode password={{ zulip_user_password }}\n\n{&quot;result&quot;:&quot;error&quot;,&quot;msg&quot;:&quot;Your username or password is incorrect&quot;,&quot;code&quot;:&quot;AUTHENTICATION_FAILED&quot;}\n</code></pre></div><br>\n</p>\n</blockquote>\n<p>Oh, that's what you meant. Yeah, the endpoint will always fail auth for the reasons above. I thought you were referring to the whole API, sorry!</p>",
+        "id": 1351681,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1648116478
+    },
+    {
+        "content": "<p>Is there a way a to create a global API key in the config file so that we did not have to get one via sql or API ? something we could set at install time</p>",
+        "id": 1351684,
+        "sender_full_name": "delaf",
+        "timestamp": 1648116674
+    },
+    {
+        "content": "<p>As in, an API key that can fetch the API keys of other users?</p>",
+        "id": 1351990,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1648148551
+    },
+    {
+        "content": "<p>Summary : <br>\nIn case of an Zulip installation only based on SAML, there is no other way to retrieve the API key of the reaml user.</p>\n<p>The workflow is: </p>\n<ol>\n<li>running <code>scripts/setup/install</code></li>\n<li>install ids certs and zulip cert/key for SAML</li>\n<li>install settings.py &amp; zulip.conf with the right config (in particular: <code>AUTHENTICATION_BACKENDS: Tuple[str, ...] = ( 'zproject.backends.SAMLAuthBackend' ) </code>)</li>\n<li>running <code>scripts/zulip-puppet-apply -f</code></li>\n<li>running <code>scripts/upgrade-zulip-from-git zulip_git.branch</code> (when/if needed)</li>\n<li>running <code>manage.py create_realm</code> to create the realm with an admin user</li>\n<li>retrieve the API key of the admin user (with <code>psql -t -d zulip -c \"select api_key from zerver_userprofile where ...\"</code>)</li>\n<li>use the API key to create other users from another software</li>\n</ol>\n<p>In this case, the only way to get the API key is to make an SQL request as <code>EmailAuthBackend</code> is not available but is needed to use API without an API key.</p>\n<p>Here are the different \"solutions\" I can think of: </p>\n<ol>\n<li>\n<p>have a global API key set in the config that can be used for:</p>\n<ul>\n<li>allow to retrieve an user API key or a subset of API call</li>\n<li>allow to make any API calls</li>\n</ul>\n</li>\n<li>\n<p>allow to set the admin API key at realm creation</p>\n</li>\n<li>have a <code>manage.py</code> action to retrieve the admin API key</li>\n</ol>\n<p>I think the best way (and easiest) is the <code>manage.py</code>action.</p>",
+        "id": 1352674,
+        "sender_full_name": "delaf",
+        "timestamp": 1648196883
+    }
+]

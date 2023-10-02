@@ -1,0 +1,197 @@
+<html>
+<head><meta charset="utf-8"><title>Timeout errors · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html">Timeout errors</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1288980"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1288980" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonas F <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1288980">(Dec 01 2021 at 00:31)</a>:</h4>
+<p>I'm getting emails containing the error message "Function call timed out" from our zulip server whenever somebody tries to post a long and math-heavy message.</p>
+<p>Can I increase a timeout threshold somewhere to avoid this?</p>
+<p>Our zulip version is:</p>
+<div class="codehilite"><pre><span></span><code>Version 4.3
+Forked from upstream at 4.2-21-g9815581957
+</code></pre></div>
+<p>(I think the same happens on this server here as well -- long enough messages don't render. I just tried it by messaging myself)</p>
+
+
+
+<a name="1289375"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289375" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289375">(Dec 01 2021 at 20:32)</a>:</h4>
+<p><span class="user-mention" data-user-id="17356">@Jonas F</span> thanks for the report!</p>
+
+
+
+<a name="1289376"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289376" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289376">(Dec 01 2021 at 20:32)</a>:</h4>
+<p>Am I correct that messages affected by the issue are those that have a very large number of small math blocks, rather than those that have a single very long math block?</p>
+
+
+
+<a name="1289378"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289378" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289378">(Dec 01 2021 at 20:33)</a>:</h4>
+<p>I think what's happening is that each individual inline math block requires us to wait for a node process to startup and run <code>KaTeX</code> on the math block, so if you have hundreds of them, the total of those startup times will exceed the timeouts for rendering messages.</p>
+
+
+
+<a name="1289379"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289379" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289379">(Dec 01 2021 at 20:34)</a>:</h4>
+<p>You can likely change the <code>5</code> (seconds) here in <code>zerver/lib/markdown/__init__.py</code> to change the timeout (untested):</p>
+<div class="codehilite"><pre><span></span><code>    try:
+        # Spend at most 5 seconds rendering; this protects the backend
+        # from being overloaded by bugs (e.g. Markdown logic that is
+        # extremely inefficient in corner cases) as well as user
+        # errors (e.g. a linkifier that makes some syntax
+        # infinite-loop).
+        rendering_result.rendered_content = timeout(5, lambda: _md_engine.convert(content))
+</code></pre></div>
+
+
+
+<a name="1289380"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289380" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289380">(Dec 01 2021 at 20:35)</a>:</h4>
+<p>The right fix likely involves changing how we run <code>KaTeX</code> to some sort of batch-processing mode that would allow us to only start <code>KaTeX</code> once and have it render all the math blocks in a given message with only a single startup overhead.</p>
+
+
+
+<a name="1289381"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289381" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289381">(Dec 01 2021 at 20:35)</a>:</h4>
+<p>I haven't looked into whether <code>KaTeX</code> provides a mechanism for doing that.</p>
+
+
+
+<a name="1289384"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289384" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289384">(Dec 01 2021 at 20:37)</a>:</h4>
+<p>We can write our own JS wrapper that communicates using JSON lines. We can even keep the subprocess around and use it for different messages.</p>
+
+
+
+<a name="1289385"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289385" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289385">(Dec 01 2021 at 20:38)</a>:</h4>
+<p>Yes, though if we do that we have to be careful about handling macros.<br>
+<a href="https://katex.org/docs/api.html#server-side-rendering-or-rendering-to-a-string">https://katex.org/docs/api.html#server-side-rendering-or-rendering-to-a-string</a></p>
+
+
+
+<a name="1289387"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289387" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289387">(Dec 01 2021 at 20:39)</a>:</h4>
+<p>We just need to avoid doing the thing that explicitly persists the macro state.</p>
+
+
+
+<a name="1289394"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289394" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonas F <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289394">(Dec 01 2021 at 20:43)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/Timeout.20errors/near/1289378">said</a>:</p>
+<blockquote>
+<p>I think what's happening is that each individual inline math block requires us to wait for a node process to startup and run <code>KaTeX</code> on the math block, so if you have hundreds of them, the total of those startup times will exceed the timeouts for rendering messages.</p>
+</blockquote>
+<p>I just counted, and I think it's not hundreds of little math blocks but can be 40 or 50 in a message that triggers an error.</p>
+
+
+
+<a name="1289404"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289404" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289404">(Dec 01 2021 at 20:49)</a>:</h4>
+<p>This is <a href="https://github.com/zulip/zulip/issues/17425">https://github.com/zulip/zulip/issues/17425</a> BTW.</p>
+
+
+
+<a name="1289405"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289405" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonas F <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289405">(Dec 01 2021 at 20:50)</a>:</h4>
+<p>Sometimes I get a state where the message seems to render and display correctly, but in the upper right there are two red icons saying "retry" and "cancel" when hovering:</p>
+<p><a href="/user_uploads/2/ce/-E0A2P7FfpQrs-tYdgO6WPjz/Screenshot_20211201_154825.png">Screenshot_20211201_154825.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/ce/-E0A2P7FfpQrs-tYdgO6WPjz/Screenshot_20211201_154825.png" title="Screenshot_20211201_154825.png"><img src="/user_uploads/2/ce/-E0A2P7FfpQrs-tYdgO6WPjz/Screenshot_20211201_154825.png"></a></div>
+
+
+
+<a name="1289406"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289406" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289406">(Dec 01 2021 at 20:50)</a>:</h4>
+<p><span class="user-mention" data-user-id="17356">@Jonas F</span> oh, I think if you upgrade to <code>main</code> you'll find the problem gets a lot better.</p>
+
+
+
+<a name="1289407"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289407" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289407">(Dec 01 2021 at 20:51)</a>:</h4>
+<p>We fixed a couple issues that are not timeouts that cause large LaTeX documents to not send (discussed on that thread).</p>
+
+
+
+<a name="1289410"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289410" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289410">(Dec 01 2021 at 20:52)</a>:</h4>
+<p>But I think those fixes were after the 4.0 release.</p>
+
+
+
+<a name="1289411"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289411" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonas F <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289411">(Dec 01 2021 at 20:52)</a>:</h4>
+<p>I see, I might try upgrading. But as I said, I tried to send the same messages to myself on this server here, and also got the red icons.</p>
+
+
+
+<a name="1289415"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289415" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289415">(Dec 01 2021 at 20:53)</a>:</h4>
+<p>Yeah, the changes don't fix the timeout issue, but fix an issue you'll see with substantially smaller messages that they generate a too-large rendered HTML message body.</p>
+
+
+
+<a name="1289429"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289429" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonas F <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289429">(Dec 01 2021 at 21:06)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span>  What I'm confused about is that with the red retry/cancel icons, the message displays as rendered, but for some reason gets stuck in this state. So the problem is not a timeout with the rendering, is it?  (Kevin Buzzard talks about the same red icons in the bug report you linked, though he reports essentially losing what he typed. That hasn't happended to me yet fortunately)</p>
+
+
+
+<a name="1289431"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289431" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289431">(Dec 01 2021 at 21:07)</a>:</h4>
+<p>Well the "local echo" immediate rendering is done in your browser, which doesn't have the performance issue of starting KaTeX many times, but can't be trusted by the server for use by other clients.  So the server is rejecting the message due to the timeout even though the browser client is able to render it.</p>
+
+
+
+<a name="1289432"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289432" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289432">(Dec 01 2021 at 21:07)</a>:</h4>
+<p>We should make those error icons not only on hover.</p>
+
+
+
+<a name="1289434"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289434" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289434">(Dec 01 2021 at 21:08)</a>:</h4>
+<p>Yes the fact those are hover-only is an important bug that I hope we've fixed in main but if we haven't, perhaps <span class="user-mention" data-user-id="9808">@Yash RE</span> can pick it up.</p>
+
+
+
+<a name="1289435"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289435" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289435">(Dec 01 2021 at 21:09)</a>:</h4>
+<p>(Reproducer should just be to modify <code>zerver/views/message_send.py</code> to <code>raise JsonableError</code> on all messages)</p>
+
+
+
+<a name="1289436"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289436" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289436">(Dec 01 2021 at 21:09)</a>:</h4>
+<p>I think a version of <span class="user-mention" data-user-id="699">@Anders Kaseorg</span>'s proposal to reuse the KaTeX process would work, and potentially not be a big project for someone with the right systems engineering experience.</p>
+
+
+
+<a name="1289444"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1289444" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonas F <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1289444">(Dec 01 2021 at 21:12)</a>:</h4>
+<p>By the way, when just logging into the server after experimenting with long messages I got the message</p>
+<div class="codehilite"><pre><span></span><code>=&gt; There is 1 zombie process.
+</code></pre></div>
+<p>which I've never seen before. No idea if it's related, but I thought I mention it.</p>
+
+
+
+<a name="1296401"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Timeout%20errors/near/1296401" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Yash RE <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Timeout.20errors.html#1296401">(Dec 12 2021 at 14:19)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/Timeout.20errors/near/1289434">said</a>:</p>
+<blockquote>
+<p>Yes the fact those are hover-only is an important bug that I hope we've fixed in main but if we haven't, perhaps <span class="user-mention silent" data-user-id="9808">Yash RE</span> can pick it up.</p>
+</blockquote>
+<p><a href="https://github.com/zulip/zulip/pull/20548">#20548</a></p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

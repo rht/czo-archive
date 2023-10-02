@@ -1,0 +1,153 @@
+<html>
+<head><meta charset="utf-8"><title>SAML &amp; API call authentication · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication.html">SAML &amp; API call authentication</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1351673"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20%26%20API%20call%20authentication/near/1351673" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication.html#1351673">(Mar 24 2022 at 10:01)</a>:</h4>
+<p>Once the zproject.backends.SAMLAuthBackend is the only backend in AUTHENTICATION_BACKENDS, is there a way to retrieve the user api_key via /api/v1/fetch_api_key ? (I get <code>{"result":"error","msg":"Your username or password is incorrect","code":"AUTHENTICATION_FAILED"}</code>)</p>
+<p>The only solution I found, is to get it directly from the database: su - zulip -c 'psql -t -d zulip -c "select api_key from zerver_userprofile where id =8"'</p>
+<p>In fact I think that all the API call is not usable anymore as the "basic" authentication is not available.</p>
+
+
+
+<a name="1351674"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20%26%20API%20call%20authentication/near/1351674" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication.html#1351674">(Mar 24 2022 at 10:03)</a>:</h4>
+<blockquote>
+<p>Once the zproject.backends.SAMLAuthBackend is the only backend in AUTHENTICATION_BACKENDS, is there a way to retrieve the user api_key via /api/v1/fetch_api_key ? (I get {"result":"error","msg":"Your username or password is incorrect","code":"AUTHENTICATION_FAILED"})</p>
+</blockquote>
+<p>Yeah, without the backend enabled, the call</p>
+<div class="codehilite"><pre><span></span><code>    user_profile = authenticate(
+        request=request, username=username, password=password, realm=realm, return_data=return_data
+    )
+</code></pre></div>
+<p>in <code>api_fetch_api_key</code> won't succeed.</p>
+
+
+
+<a name="1351675"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20%26%20API%20call%20authentication/near/1351675" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication.html#1351675">(Mar 24 2022 at 10:03)</a>:</h4>
+<p>Does obtaining it via the webapp UI not work though?</p>
+
+
+
+<a name="1351676"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20%26%20API%20call%20authentication/near/1351676" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication.html#1351676">(Mar 24 2022 at 10:03)</a>:</h4>
+<p>yes via the web UI it works</p>
+
+
+
+<a name="1351677"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20%26%20API%20call%20authentication/near/1351677" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication.html#1351677">(Mar 24 2022 at 10:04)</a>:</h4>
+<blockquote>
+<p>In fact I think that all the API call is not usable anymore as the "basic" authentication is not available.</p>
+</blockquote>
+<p>Hmm , API should be usable normally with our standard http basic auth. What issue did you run into with it?</p>
+
+
+
+<a name="1351678"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20%26%20API%20call%20authentication/near/1351678" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication.html#1351678">(Mar 24 2022 at 10:05)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="9869">delaf</span> <a href="#narrow/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication/near/1351676">said</a>:</p>
+<blockquote>
+<p>yes via the web UI it works</p>
+</blockquote>
+<p>Ah, okay. To get it programmatically, yeah I think the <code>psql</code> approach will be needed (or similarly something in <code>manage.py shell</code>) - if the backend can't be enabled</p>
+
+
+
+<a name="1351679"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20%26%20API%20call%20authentication/near/1351679" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication.html#1351679">(Mar 24 2022 at 10:06)</a>:</h4>
+<div class="codehilite"><pre><span></span><code># curl -sSX POST https://{{zulip_api_key_url}}/fetch_api_key --data-urlencode username={{ zulip_email }} --data-urlencode password={{ zulip_user_password }}
+
+{&quot;result&quot;:&quot;error&quot;,&quot;msg&quot;:&quot;Your username or password is incorrect&quot;,&quot;code&quot;:&quot;AUTHENTICATION_FAILED&quot;}
+</code></pre></div>
+
+
+
+<a name="1351680"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20%26%20API%20call%20authentication/near/1351680" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication.html#1351680">(Mar 24 2022 at 10:06)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="10349">Mateusz Mandera</span> <a href="#narrow/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication/near/1351674">said</a>:</p>
+<blockquote>
+<blockquote>
+<p>Once the zproject.backends.SAMLAuthBackend is the only backend in AUTHENTICATION_BACKENDS, is there a way to retrieve the user api_key via /api/v1/fetch_api_key ? (I get {"result":"error","msg":"Your username or password is incorrect","code":"AUTHENTICATION_FAILED"})</p>
+</blockquote>
+<p>Yeah, without the backend enabled, the call</p>
+<div class="codehilite"><pre><span></span><code>    user_profile = authenticate(
+        request=request, username=username, password=password, realm=realm, return_data=return_data
+    )
+</code></pre></div>
+<p>in <code>api_fetch_api_key</code> won't succeed.</p>
+</blockquote>
+<p>Ultimately, i think it has to be that way - if we allowed obtaining the api key with username+password when the Email (and LDAP) backends are disabled, that would defeat the point of disabling the backend from security perspective</p>
+
+
+
+<a name="1351681"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20%26%20API%20call%20authentication/near/1351681" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication.html#1351681">(Mar 24 2022 at 10:07)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="9869">delaf</span> <a href="#narrow/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication/near/1351679">said</a>:</p>
+<blockquote>
+<p><div class="codehilite"><pre><span></span><code># curl -sSX POST https://{{zulip_api_key_url}}/fetch_api_key --data-urlencode username={{ zulip_email }} --data-urlencode password={{ zulip_user_password }}
+
+{&quot;result&quot;:&quot;error&quot;,&quot;msg&quot;:&quot;Your username or password is incorrect&quot;,&quot;code&quot;:&quot;AUTHENTICATION_FAILED&quot;}
+</code></pre></div><br>
+</p>
+</blockquote>
+<p>Oh, that's what you meant. Yeah, the endpoint will always fail auth for the reasons above. I thought you were referring to the whole API, sorry!</p>
+
+
+
+<a name="1351684"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20%26%20API%20call%20authentication/near/1351684" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication.html#1351684">(Mar 24 2022 at 10:11)</a>:</h4>
+<p>Is there a way a to create a global API key in the config file so that we did not have to get one via sql or API ? something we could set at install time</p>
+
+
+
+<a name="1351990"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20%26%20API%20call%20authentication/near/1351990" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication.html#1351990">(Mar 24 2022 at 19:02)</a>:</h4>
+<p>As in, an API key that can fetch the API keys of other users?</p>
+
+
+
+<a name="1352674"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20%26%20API%20call%20authentication/near/1352674" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20.26.20API.20call.20authentication.html#1352674">(Mar 25 2022 at 08:28)</a>:</h4>
+<p>Summary : <br>
+In case of an Zulip installation only based on SAML, there is no other way to retrieve the API key of the reaml user.</p>
+<p>The workflow is: </p>
+<ol>
+<li>running <code>scripts/setup/install</code></li>
+<li>install ids certs and zulip cert/key for SAML</li>
+<li>install settings.py &amp; zulip.conf with the right config (in particular: <code>AUTHENTICATION_BACKENDS: Tuple[str, ...] = ( 'zproject.backends.SAMLAuthBackend' ) </code>)</li>
+<li>running <code>scripts/zulip-puppet-apply -f</code></li>
+<li>running <code>scripts/upgrade-zulip-from-git zulip_git.branch</code> (when/if needed)</li>
+<li>running <code>manage.py create_realm</code> to create the realm with an admin user</li>
+<li>retrieve the API key of the admin user (with <code>psql -t -d zulip -c "select api_key from zerver_userprofile where ..."</code>)</li>
+<li>use the API key to create other users from another software</li>
+</ol>
+<p>In this case, the only way to get the API key is to make an SQL request as <code>EmailAuthBackend</code> is not available but is needed to use API without an API key.</p>
+<p>Here are the different "solutions" I can think of: </p>
+<ol>
+<li>
+<p>have a global API key set in the config that can be used for:</p>
+<ul>
+<li>allow to retrieve an user API key or a subset of API call</li>
+<li>allow to make any API calls</li>
+</ul>
+</li>
+<li>
+<p>allow to set the admin API key at realm creation</p>
+</li>
+<li>have a <code>manage.py</code> action to retrieve the admin API key</li>
+</ol>
+<p>I think the best way (and easiest) is the <code>manage.py</code>action.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

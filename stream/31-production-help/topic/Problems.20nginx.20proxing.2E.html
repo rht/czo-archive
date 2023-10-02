@@ -1,0 +1,424 @@
+<html>
+<head><meta charset="utf-8"><title>Problems nginx proxing. · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html">Problems nginx proxing.</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="918277"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/918277" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#918277">(Jun 29 2020 at 10:34)</a>:</h4>
+<p>Hi all.<br>
+So i have 2 servers.<br>
+1 Only proxy nginx server to second<br>
+location / {             proxy_pass  <a href="https://10.10.2.9:8089">https://10.10.2.9:8089</a>;    # Port that docker-zulip is listening on     }<br>
+2 On the second srv default configuration docker with mapping port 8089 to 80</p>
+<p>But i have error ERR_CONNECTION_TIMED_OUT (GET /new/0noxx8pqjm732ih7jrwsgszq HTTP/1.1" 301)<br>
+Please help me configure nginx config file on second srv )<br>
+Many thanks.</p>
+
+
+
+<a name="918572"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/918572" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#918572">(Jun 29 2020 at 18:37)</a>:</h4>
+<p><span class="user-mention" data-user-id="16256">@Rostyslav Matiusha</span> have you read <a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy">https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy</a>?</p>
+
+
+
+<a name="918816"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/918816" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#918816">(Jun 29 2020 at 19:50)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> <br>
+Thanks Tim.<br>
+I read this and i do it<br>
+Add the following block to /etc/zulip/zulip.conf:</p>
+<p>[application_server]<br>
+http_only = true<br>
+As root, run /home/zulip/deployments/current/scripts/zulip-puppet-apply. This will convert Zulip’s main nginx configuration file to allow HTTP instead of HTTPS.</p>
+<p>Finally, restart the Zulip server, using /home/zulip/deployments/current/scripts/restart-server</p>
+<p>and i have a new nginx conf file<br>
+BUT ((( nothink  301 error</p>
+<p>any thoughts ?</p>
+
+
+
+<a name="924531"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/924531" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#924531">(Jul 04 2020 at 13:00)</a>:</h4>
+<p><span class="user-mention" data-user-id="16256">@Rostyslav Matiusha</span>  Another place to check would be <code>docker-compose.yml</code>. I needed to do:</p>
+<div class="codehilite"><pre><span></span><code>      SETTING_USE_X_FORWARDED_HOST: &#39;True&#39;
+      SETTING_ALLOWED_HOSTS: &quot;[&#39;*&#39;, &#39;0.0.0.0&#39;]
+      DISABLE_HTTPS: &quot;True&quot;
+</code></pre></div>
+
+
+<p>...in order to get it running. Mine runs on Apache, though.</p>
+
+
+
+<a name="924540"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/924540" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#924540">(Jul 04 2020 at 13:23)</a>:</h4>
+<p>Thank. I fixed the this error. BUT<br>
+Next error 502<br>
+2020/07/04 16:23:04 [crit] 4248#0: *89 connect() to 10.10.2.11:8089 failed (13: Permission denied) while connecting to upstream, client: 10.10.8.69, server: <a href="http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>, request: "GET / HTTP/2.0", upstream: "<a href="http://10.10.2.11:8089/">http://10.10.2.11:8089/</a>", host: "<a href="http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>"<br>
+2020/07/04 16:23:04 [crit] 4248#0: *89 connect() to 10.10.2.11:8089 failed (13: Permission denied) while connecting to upstream, client: 10.10.8.69, server: <a href="http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>, request: "GET /favicon.ico HTTP/2.0", upstream: "<a href="http://10.10.2.11:8089/favicon.ico">http://10.10.2.11:8089/favicon.ico</a>", host: "<a href="http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>", referrer: "<a href="https://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai/">https://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai/</a>"</p>
+
+
+
+<a name="924579"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/924579" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#924579">(Jul 04 2020 at 13:49)</a>:</h4>
+<p>Where can I see all the 'SETTING' for run docker-compose.yml ?</p>
+
+
+
+<a name="924952"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/924952" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#924952">(Jul 04 2020 at 18:35)</a>:</h4>
+<p><span class="user-mention" data-user-id="16256">@Rostyslav Matiusha</span> </p>
+<p>Well, they are in <code>docker-compose.yml</code>in the <code>zulip</code>section. These are just the <a href="https://zulip.readthedocs.io/en/latest/production/settings.html">same settings as in <code>/etc/zulip/settings.py</code> and <code>/etc/zulip/zulip-secrets.conf</code></a> on a non-docker install, only prefixed with <code>SETTINGS_</code>and <code>SECRETS_</code>respectively.</p>
+<p>From the <a href="https://github.com/zulip/docker-zulip">zulip/docker-zulip docs</a>:</p>
+<blockquote>
+<p>Standard Zulip server settings are secrets are set using the following syntax:</p>
+<ul>
+<li><code>SETTING_MY_SETTING</code> will become <code>MY_SETTING</code> in <code>/etc/zulip/settings.py</code></li>
+<li><code>SECRETS_my_secret</code> will become <code>my_secret</code> in <code>/etc/zulip/zulip-secrets.conf</code>.</li>
+</ul>
+</blockquote>
+<p>You could look into a <code>/etc/zulip/settings.py</code>file, there's a lot to read about possible settings in there.</p>
+
+
+
+<a name="924956"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/924956" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#924956">(Jul 04 2020 at 18:37)</a>:</h4>
+<p>Maybe something like:</p>
+<div class="codehilite"><pre><span></span><code># If you need to access the server on a specific port, you should set
+# EXTERNAL_HOST to e.g. zulip.example.com:1234 here.
+EXTERNAL_HOST = &#39;example.com&#39;
+</code></pre></div>
+
+
+
+<a name="924958"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/924958" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#924958">(Jul 04 2020 at 18:40)</a>:</h4>
+<p>For example, I did a</p>
+<div class="codehilite"><pre><span></span><code>SETTING_EXTERNAL_HOST: &#39;abc.xyz.de&#39;
+</code></pre></div>
+
+
+<p>in the <code>docker-compose.yml</code>of my Zulip docker install.</p>
+
+
+
+<a name="925357"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/925357" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#925357">(Jul 05 2020 at 14:01)</a>:</h4>
+<p>Thanks Roman.<br>
+my /etc/zulip/settings.py<br>
+REMOTE_POSTGRES_HOST = '10.10.2.12'<br>
+REMOTE_POSTGRES_SSLMODE = 'prefer'<br>
+AUTHENTICATION_BACKENDS = ('zproject.backends.EmailAuthBackend',)<br>
+AUTHENTICATION_BACKENDS += ('zproject.backends.GoogleAuthBackend',)<br>
+AUTHENTICATION_BACKENDS += ('zproject.backends.GitHubAuthBackend',)<br>
+AUTHENTICATION_BACKENDS += ('zproject.backends.AzureADAuthBackend',)<br>
+AUTHENTICATION_BACKENDS += ('zproject.backends.LDAPAuthBackend',)<br>
+ALLOWED_HOSTS = ['*', '0.0.0.0']<br>
+AUTH_LDAP_BIND_PASSWORD = '123'<br>
+AUTH_LDAP_SERVER_URI = 'ldap://ldap.avo.ru'<br>
+AUTH_LDAP_USER_SEARCH = LDAPSearch("cn=DigitalPlatformReader,ou=systemUsers,dc=avo,dc=ru",ldap.SCOPE_SUBTREE, "(mail=%(user)s)")<br>
+EMAIL_HOST = '<a href="http://mail.avo.ru">mail.avo.ru</a>'<br>
+EMAIL_HOST_USER = '<a href="mailto:noreply@avo.ru">noreply@avo.ru</a>'<br>
+EMAIL_PORT = 465<br>
+EMAIL_USE_SSL = True<br>
+EMAIL_USE_TLS = True<br>
+EXTERNAL_HOST = '<a href="http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>'<br>
+MEMCACHED_LOCATION = 'memcached:11211'<br>
+RABBITMQ_HOST = 'rabbitmq'<br>
+RABBITMQ_USER = 'zulip'<br>
+RATE_LIMITING = True<br>
+REDIS_HOST = 'redis'<br>
+REDIS_PORT = 6379<br>
+USE_X_FORWARDED_HOST = True<br>
+ZULIP_ADMINISTRATOR = '<a href="mailto:msg@avo.ru">msg@avo.ru</a>'</p>
+<p>but i still have error 502</p>
+<p>2020/07/05 16:59:25 [crit] 5298#0: *1 connect() to 10.10.2.11:8089 failed (13: Permission denied) while connecting to upstream, client: 10.10.8.69, server: <a href="http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>, request: "GET / HTTP/2.0", upstream: "<a href="http://10.10.2.11:8089/">http://10.10.2.11:8089/</a>", host: "<a href="http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>"</p>
+<p>any ideas please and thanks ?</p>
+
+
+
+<a name="925415"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/925415" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#925415">(Jul 05 2020 at 15:05)</a>:</h4>
+<p>Hi <span class="user-mention" data-user-id="16256">@Rostyslav Matiusha</span> ,<br>
+if that's from the Docker install, I miss a <code>DISABLE_HTTPS: "True"</code> in there.</p>
+<p>But I don't think that causes a 502. You will want to look at your Nginx config.</p>
+<p>I did it with Apache, where it was as simple as:</p>
+<div class="codehilite"><pre><span></span><code>ProxyPass / http://zulip.example.de:10080/
+ProxyPassReverse / http://zulip.example.de:10080/
+</code></pre></div>
+
+
+<p>Docker/Zulip exposes Port 10080 and has DISABLE_HTTPS set to "True".</p>
+
+
+
+<a name="925705"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/925705" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#925705">(Jul 06 2020 at 09:39)</a>:</h4>
+<p>ok Roman.<br>
+DISABLE_HTTPS: "True" - YES</p>
+<p>cat /etc/zulip/uwsgi.ini <br>
+[uwsgi]<br>
+socket=/home/zulip/deployments/uwsgi-socket<br>
+module=zproject.wsgi:application<br>
+chdir=/home/zulip/deployments/current/<br>
+master=true<br>
+chmod-socket=700<br>
+chown-socket=zulip:zulip<br>
+processes=6<br>
+harakiri=20<br>
+buffer-size=8192<br>
+listen=128<br>
+post-buffering=4096<br>
+env= LANG=en_US.UTF-8<br>
+uid=zulip<br>
+gid=zulip</p>
+<p>ls -la /home/zulip/deployments/uwsgi-socket<br>
+srwx------ 1 zulip zulip 0 Jul  6 08:10 /home/zulip/deployments/uwsgi-socket</p>
+<p>ps axu | grep nginx<br>
+root       287  0.0  0.0  85996  5596 ?        S    08:10   0:00 nginx: master process /usr/sbin/nginx -g daemon off;<br>
+zulip      317  0.0  0.0 102876 20172 ?        S    08:10   0:00 nginx: worker process<br>
+zulip      318  0.0  0.0 102876 19700 ?        S    08:10   0:00 nginx: worker process</p>
+<p>any ideas please and thanks ?</p>
+
+
+
+<a name="925709"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/925709" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#925709">(Jul 06 2020 at 10:23)</a>:</h4>
+<p>This seems all to be from inside the Docker container, where I have got exactly the same. Check the Nginx/Apache config of your server, not of the container.</p>
+<p>Espesially <code>site-confs</code>. You could create a site-conf for your Zulip Docker install like so:</p>
+<div class="codehilite"><pre><span></span><code>server {
+    listen       443;
+    listen [::]:443;
+    server_name zulip.domain.com;
+
+    location / {
+        proxy_pass http://[server IP:exposed Docker container port number];
+        proxy_set_header Host $http_host;  # forward to HTTP only
+    }
+</code></pre></div>
+
+
+<p>See: <a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#nginx-configuration">https://zulip.readthedocs.io/en/latest/production/deployment.html#nginx-configuration</a></p>
+
+
+
+<a name="925755"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/925755" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#925755">(Jul 06 2020 at 11:33)</a>:</h4>
+<p>Frontend NGINX<br>
+server {<br>
+    listen 80;<br>
+    server_name <a href="http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>;<br>
+    return 301 https://$host$request_uri;  # redirect http to https<br>
+}</p>
+<p>server {<br>
+    listen 443 ssl http2;<br>
+    server_name <a href="http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>;</p>
+<div class="codehilite"><pre><span></span><code>ssl_certificate      certs/xn--b1ayw2a_xn--p1ai.chained.crt;
+ssl_certificate_key  certs/xn--b1ayw2a.xn--p1ai.key;
+
+port_in_redirect off;
+proxy_buffering off;
+proxy_http_version 1.1;     # Properly proxy websocket connections
+proxy_read_timeout 300s;    # terminate websockets afer 5min of inactivity
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-Host $host;
+proxy_set_header X-Forwarded-Server $host;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Protocol $scheme;
+proxy_set_header Upgrade $http_upgrade;
+proxy_set_header Connection &quot;upgrade&quot;;
+
+
+location / {
+        proxy_pass  http://10.10.2.11:8089;    # Port that docker-zulip is listening on
+}
+</code></pre></div>
+
+
+<p>}</p>
+
+
+
+<a name="925861"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/925861" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#925861">(Jul 06 2020 at 12:59)</a>:</h4>
+<p>chmod-socket = 664 <br>
+installed too<br>
+but the result is one 502</p>
+
+
+
+<a name="925886"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/925886" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#925886">(Jul 06 2020 at 13:40)</a>:</h4>
+<p>I think you got it by now, now it's Zulip that needs to be configured right.</p>
+<p>What did you change to make it pass?</p>
+
+
+
+<a name="925915"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/925915" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#925915">(Jul 06 2020 at 14:55)</a>:</h4>
+<p>so i fixed 502 error and site is up, but have another <br>
+"Internal server error"</p>
+
+
+
+<a name="925965"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/925965" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#925965">(Jul 06 2020 at 17:01)</a>:</h4>
+<p>Good. Now it's easy. <span aria-label="sunglasses" class="emoji emoji-1f60e" role="img" title="sunglasses">:sunglasses:</span> Configure Zulip.</p>
+
+
+
+<a name="927135"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/927135" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#927135">(Jul 07 2020 at 12:31)</a>:</h4>
+<p>Thanks Roman.<br>
+But i'm stumped (((<br>
+AttributeError: module 'zproject.backends' has no attribute ' GoogleAuthBackend'<br>
+<a href="/user_uploads/2/e/TChAhHZ1y621-qUjrP9ySi4J/2020-07-07_15-30-59.png">2020-07-07_15-30-59.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/e/TChAhHZ1y621-qUjrP9ySi4J/2020-07-07_15-30-59.png" title="2020-07-07_15-30-59.png"><img src="/user_uploads/2/e/TChAhHZ1y621-qUjrP9ySi4J/2020-07-07_15-30-59.png"></a></div>
+
+
+
+<a name="927156"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/927156" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#927156">(Jul 07 2020 at 13:05)</a>:</h4>
+<p>Hi Rostyslav, I don't think it has to do with GoogleAuthBackends. It's probably something in <code>settings.py</code> that you configure via Docker. Like<code>[SETTING_]EXTERNAL_HOST</code>.</p>
+<p>Can Zulip handle Internationalized Domain Names / Punycode in its settings for external host? (I don't know.) <span class="user-mention" data-user-id="7">@Tim Abbott</span> <br>
+Perhaps you could try to replace the Punycode with the 'real cyrillic' domain name in settings.py:<br>
+<code>EXTERNAL_HOST = 'мессенджер.цэво.рф'</code></p>
+<p>Also, check if all the other containers from the Zulip Docker stack are running (Memcached, Redis, Postgresql, RabbitMQ), and their properties/ports.</p>
+
+
+
+<a name="927256"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/927256" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#927256">(Jul 07 2020 at 17:56)</a>:</h4>
+<p><span class="user-mention" data-user-id="14475">@Roman Bannack</span> good question, I haven't dealt with i18n domain names much before but I'd expect it to work how you described without issues.</p>
+
+
+
+<a name="927259"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/927259" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#927259">(Jul 07 2020 at 17:56)</a>:</h4>
+<p><span class="user-mention" data-user-id="16256">@Rostyslav Matiusha</span> to make sure you see this.</p>
+
+
+
+<a name="927362"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/927362" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#927362">(Jul 07 2020 at 18:46)</a>:</h4>
+<p>[root@localhost docker-zulip]# docker-compose ps<br>
+         Name                        Command               State                    Ports                 </p>
+<hr>
+<p>dockerzulip_memcached_1   <a href="http://docker-entrypoint.sh">docker-entrypoint.sh</a> sh -e ...   Up      11211/tcp                              <br>
+dockerzulip_rabbitmq_1    <a href="http://docker-entrypoint.sh">docker-entrypoint.sh</a> rabbi ...   Up      25672/tcp, 4369/tcp, 5671/tcp, 5672/tcp<br>
+dockerzulip_redis_1       <a href="http://docker-entrypoint.sh">docker-entrypoint.sh</a> sh -e ...   Up      6379/tcp                               <br>
+dockerzulip_zulip_1       /sbin/entrypoint.sh app:run      Up      443/tcp, 0.0.0.0:8089-&gt;80/tcp</p>
+<p>settings.py</p>
+<p>REMOTE_POSTGRES_HOST = '10.10.2.12'<br>
+REMOTE_POSTGRES_SSLMODE = 'prefer'<br>
+AUTHENTICATION_BACKENDS = ('zproject.backends.EmailAuthBackend',)<br>
+AUTHENTICATION_BACKENDS += ('zproject.backends. GoogleAuthBackend',)<br>
+AUTHENTICATION_BACKENDS += ('zproject.backends. GitHubAuthBackend',)<br>
+AUTHENTICATION_BACKENDS += ('zproject.backends. GitLabAuthBackend',)<br>
+AUTHENTICATION_BACKENDS += ('zproject.backends. AzureADAuthBackend',)<br>
+AUTHENTICATION_BACKENDS += ('zproject.backends. LDAPAuthBackend',)<br>
+ALLOWED_HOSTS = ['*', '0.0.0.0']<br>
+AUTH_LDAP_BIND_PASSWORD = 'Ljiflrf28@'<br>
+AUTH_LDAP_SERVER_URI = 'ldap://ldap.avo.ru'<br>
+AUTH_LDAP_USER_SEARCH = LDAPSearch("cn=DigitalPlatformReader,ou=systemUsers,dc=avo,dc=ru",ldap.SCOPE_SUBTREE, "(mail=%(user)s)")<br>
+EMAIL_HOST = '<a href="http://mail.avo.ru">mail.avo.ru</a>'<br>
+EMAIL_HOST_USER = '<a href="mailto:noreply@avo.ru">noreply@avo.ru</a>'<br>
+EMAIL_PORT = 465<br>
+EMAIL_USE_TLS = True<br>
+EXTERNAL_HOST = '<a href="http://xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai">xn--d1ababe6aj1ada.xn--b1ayw2a.xn--p1ai</a>'<br>
+MEMCACHED_LOCATION = 'memcached:11211'<br>
+RABBITMQ_HOST = 'rabbitmq'<br>
+RABBITMQ_USER = 'zulip'<br>
+RATE_LIMITING = True<br>
+REDIS_HOST = 'redis'<br>
+REDIS_PORT = 6379<br>
+USE_X_FORWARDED_HOST = True<br>
+ZULIP_ADMINISTRATOR = '<a href="mailto:msg@avo.ru">msg@avo.ru</a>'</p>
+
+
+
+<a name="927440"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/927440" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#927440">(Jul 07 2020 at 19:56)</a>:</h4>
+<p><span class="user-mention" data-user-id="16256">@Rostyslav Matiusha</span></p>
+<blockquote>
+<p>dockerzulip_memcached_1   <a href="http://docker-entrypoint.sh">docker-entrypoint.sh</a> sh -e ...   Up      11211/tcp                              <br>
+dockerzulip_rabbitmq_1    <a href="http://docker-entrypoint.sh">docker-entrypoint.sh</a> rabbi ...   Up      25672/tcp, 4369/tcp, 5671/tcp, 5672/tcp<br>
+dockerzulip_redis_1       <a href="http://docker-entrypoint.sh">docker-entrypoint.sh</a> sh -e ...   Up      6379/tcp                               <br>
+dockerzulip_zulip_1       /sbin/entrypoint.sh app:run      Up      443/tcp, 0.0.0.0:8089-&gt;80/tcp</p>
+</blockquote>
+<p>Where's Postgresql? Try <code>docker-compose restart</code></p>
+
+
+
+<a name="927967"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/927967" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#927967">(Jul 08 2020 at 07:58)</a>:</h4>
+<p>postgresql on remote host<br>
+REMOTE_POSTGRES_HOST = '10.10.2.12'</p>
+
+
+
+<a name="927987"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/927987" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#927987">(Jul 08 2020 at 09:57)</a>:</h4>
+<p>find error<br>
+ImportError: Module "zproject.backends" does not define a "GitLabAuthBackend" attribute/class<br>
+2020-07-08 09:52:49.914 ERR  [django.request] Internal Server Error: /login/</p>
+<p>ZULIP_AUTH_BACKENDS: 'EmailAuthBackend,GitHubAuthBackend,GitLabAuthBackend,LDAPAuthBackend'</p>
+<p>AUTHENTICATION_BACKENDS = ('zproject.backends.EmailAuthBackend',)<br>
+AUTHENTICATION_BACKENDS += ('zproject.backends.GitHubAuthBackend',)<br>
+AUTHENTICATION_BACKENDS += ('zproject.backends.GitLabAuthBackend',)<br>
+AUTHENTICATION_BACKENDS += ('zproject.backends.LDAPAuthBackend',)</p>
+
+
+
+<a name="927992"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/927992" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#927992">(Jul 08 2020 at 10:17)</a>:</h4>
+<p><span class="user-mention" data-user-id="16256">@Rostyslav Matiusha</span> Um, do you need Auth via GitLab, GitHub and so on? In <a href="#narrow/stream/31-production-help/topic/Problems.20nginx.20proxing.2E/near/927362">your settings.py</a>, you only configure LDAP Auth. Try:</p>
+<div class="codehilite"><pre><span></span><code>ZULIP_AUTH_BACKENDS: &#39;EmailAuthBackend,LDAPAuthBackend&#39;
+</code></pre></div>
+
+
+<p>And, as previously mentioned, replace the Punycode external hostname with the actual one.</p>
+
+
+
+<a name="927993"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/927993" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#927993">(Jul 08 2020 at 10:18)</a>:</h4>
+<p>ok, I left only 'EmailAuthBackend' and i not have 500 error, but i nead LDAP</p>
+
+
+
+<a name="927995"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/927995" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#927995">(Jul 08 2020 at 10:24)</a>:</h4>
+<p>ZULIP_AUTH_BACKENDS: 'EmailAuthBackend,LDAPAuthBackend'<br>
+      SETTING_AUTH_LDAP_SERVER_URI: 'ldap://ldap.avo.ru'<br>
+      SETTING_AUTH_LDAP_BIND_PASSWORD: 'Ljiflrf28@'<br>
+      LDAP_APPEND_DOMAIN: '<a href="http://avo.ru">avo.ru</a>'<br>
+      AUTH_LDAP_REVERSE_EMAIL_SEARCH: '%(email)s'<br>
+      SETTING_AUTH_LDAP_USER_SEARCH: 'LDAPSearch("cn=DigitalPlatformReader,ou=systemUsers,dc=avo,dc=ru",ldap.SCOPE_SUBTREE, "(mail=%(user)s)")'</p>
+
+
+
+<a name="927997"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/927997" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#927997">(Jul 08 2020 at 10:29)</a>:</h4>
+<p>500 error (((<br>
+and<br>
+ImportError: Module "zproject.backends" does not define a "LDAPAuthBackend" attribute/class</p>
+
+
+
+<a name="928000"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Problems%20nginx%20proxing./near/928000" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Roman Bannack <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Problems.20nginx.20proxing.2E.html#928000">(Jul 08 2020 at 10:37)</a>:</h4>
+<p>This one: <code>SETTING_AUTH_LDAP_BIND_PASSWORD: 'Ljiflrf28@'</code> belongs into the <code>zulip-secrets.conf</code>, imho. So it would be <code>SECRETS_AUTH_LDAP_BIND_PASSWORD: xxxx</code> in docker-compose.yml. The rest seems to be in settings.py only, check <a href="https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#ldap-including-active-directory">https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#ldap-including-active-directory</a></p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

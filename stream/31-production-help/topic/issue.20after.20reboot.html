@@ -1,0 +1,138 @@
+<html>
+<head><meta charset="utf-8"><title>issue after reboot · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html">issue after reboot</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1122905"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/issue%20after%20reboot/near/1122905" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ympek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html#1122905">(Feb 23 2021 at 20:16)</a>:</h4>
+<p>Hello everyone. Recently a server running Zulip instance came into my management. Today, after rebooting the server, Zulip fails to work with following error present in django.log:</p>
+<div class="codehilite"><pre><span></span><code>2021-02-23 19:53:16.514 ERR  [django.request] Internal Server Error: /json/users/me/presence
+Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/0a816cd0ff430872fc4978ab68de8d986b0af078/zulip-py3-venv/lib/python3.6/site-packages/django/contrib/sessions/backends/base.py&quot;, line 189, in _get_session
+    return self._session_cache
+AttributeError: &#39;SessionStore&#39; object has no attribute &#39;_session_cache&#39;
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/0a816cd0ff430872fc4978ab68de8d986b0af078/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/base/base.py&quot;, line 217, in ensure_connection
+    self.connect()
+  File &quot;/srv/zulip-venv-cache/0a816cd0ff430872fc4978ab68de8d986b0af078/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/base/base.py&quot;, line 195, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File &quot;/srv/zulip-venv-cache/0a816cd0ff430872fc4978ab68de8d986b0af078/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/postgresql/base.py&quot;, line 178, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File &quot;/srv/zulip-venv-cache/0a816cd0ff430872fc4978ab68de8d986b0af078/zulip-py3-venv/lib/python3.6/site-packages/psycopg2/__init__.py&quot;, line 127, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+  File &quot;./zerver/lib/db.py&quot;, line 44, in __init__
+    super().__init__(*args, **kwargs)
+psycopg2.OperationalError: FATAL:  role &quot;zulip&quot; does not exist
+</code></pre></div>
+
+
+
+<a name="1122910"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/issue%20after%20reboot/near/1122910" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html#1122910">(Feb 23 2021 at 20:17)</a>:</h4>
+<p>The bottom part of that suggests that this is an authentication error talking to the PostgreSQL database.  Is the database running on the Zulip host? (it usually is)</p>
+
+
+
+<a name="1122911"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/issue%20after%20reboot/near/1122911" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ympek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html#1122911">(Feb 23 2021 at 20:18)</a>:</h4>
+<p>Yes, everything is inside one lxd container. I am checking it</p>
+
+
+
+<a name="1122912"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/issue%20after%20reboot/near/1122912" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html#1122912">(Feb 23 2021 at 20:19)</a>:</h4>
+<p>That sounds like it's talking to the <em>wrong</em> pg database, or that cluster lost its storage.</p>
+
+
+
+<a name="1122914"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/issue%20after%20reboot/near/1122914" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ympek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html#1122914">(Feb 23 2021 at 20:22)</a>:</h4>
+<p>Now I feel so stupid, checked in systemd and in fact there was PG cluster down, unable to start because of occupied port</p>
+
+
+
+<a name="1122915"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/issue%20after%20reboot/near/1122915" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ympek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html#1122915">(Feb 23 2021 at 20:22)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>root@chat:~# systemctl | grep postgres
+  postgresql.service                   loaded active     exited    PostgreSQL RDBMS
+● postgresql@10-main.service           loaded failed     failed    PostgreSQL Cluster 10-main
+  postgresql@12-main.service           loaded active     running   PostgreSQL Cluster 12-main
+  system-postgresql.slice              loaded active     active    system-postgresql.slice
+</code></pre></div>
+
+
+
+<a name="1122916"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/issue%20after%20reboot/near/1122916" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ympek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html#1122916">(Feb 23 2021 at 20:23)</a>:</h4>
+<p>I killed all postgres and started 12-main</p>
+
+
+
+<a name="1122917"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/issue%20after%20reboot/near/1122917" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ympek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html#1122917">(Feb 23 2021 at 20:23)</a>:</h4>
+<p>now it works... thank you so much Alex!!!</p>
+
+
+
+<a name="1122918"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/issue%20after%20reboot/near/1122918" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html#1122918">(Feb 23 2021 at 20:23)</a>:</h4>
+<p>Happy to help with <span aria-label="duck" class="emoji emoji-1f986" role="img" title="duck">:duck:</span> debugging.</p>
+
+
+
+<a name="1122919"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/issue%20after%20reboot/near/1122919" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ympek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html#1122919">(Feb 23 2021 at 20:24)</a>:</h4>
+<p>BTW, why there are two of these? I mean this 10-main and 12-main</p>
+
+
+
+<a name="1122920"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/issue%20after%20reboot/near/1122920" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html#1122920">(Feb 23 2021 at 20:25)</a>:</h4>
+<p>That implies that multiple versions of the postgres server are installed.  Zulip has somewhat-recent machinery to set and control which version of Pg it uses, but it's not expected that you'd end up with multiple versions that want to run at once.</p>
+
+
+
+<a name="1122936"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/issue%20after%20reboot/near/1122936" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ympek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html#1122936">(Feb 23 2021 at 20:36)</a>:</h4>
+<p>... which would be the case here, presumably?<br>
+Now I am examining logs from the container, around when reboot happened, it in fact was unable to start pg:</p>
+<div class="codehilite"><pre><span></span><code>Feb 23 19:49:25 chat postgresql@12-main[189]: Error: /usr/lib/postgresql/12/bin/pg_ctl /usr/lib/postgresql/12/bin/pg_ctl start -D /var/lib/postgresql/12/main -l /var/log/postgresql/postgresql-12-main.log -s -o  -c config_file=&quot;/etc/postgresql/12/main/postgresql.conf&quot;  exited with status 1:
+Feb 23 19:49:25 chat postgresql@12-main[189]: 2021-02-23 19:49:25.052 UTC [60355c45.190]: [1-1] LOG:  starting PostgreSQL 12.5 (Ubuntu 12.5-1.pgdg18.04+1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit
+Feb 23 19:49:25 chat postgresql@12-main[189]: 2021-02-23 19:49:25.052 UTC [60355c45.190]: [2-1] LOG:  could not bind IPv4 address &quot;127.0.0.1&quot;: Address already in use
+Feb 23 19:49:25 chat postgresql@12-main[189]: 2021-02-23 19:49:25.052 UTC [60355c45.190]: [3-1] HINT:  Is another postmaster already running on port 5432? If not, wait a few seconds and retry.
+Feb 23 19:49:25 chat postgresql@12-main[189]: 2021-02-23 19:49:25.052 UTC [60355c45.190]: [4-1] WARNING:  could not create listen socket for &quot;localhost&quot;
+Feb 23 19:49:25 chat postgresql@12-main[189]: 2021-02-23 19:49:25.052 UTC [60355c45.190]: [5-1] FATAL:  could not create any TCP/IP sockets
+Feb 23 19:49:25 chat postgresql@12-main[189]: 2021-02-23 19:49:25.053 UTC [60355c45.190]: [6-1] LOG:  database system is shut down
+Feb 23 19:49:25 chat postgresql@12-main[189]: pg_ctl: could not start server
+Feb 23 19:49:25 chat postgresql@12-main[189]: Examine the log output.
+Feb 23 19:49:25 chat systemd[1]: postgresql@12-main.service: Can&#39;t open PID file /run/postgresql/12-main.pid (yet?) after start: No such file or directory
+Feb 23 19:49:25 chat systemd[1]: postgresql@12-main.service: Failed with result &#39;protocol&#39;.
+Feb 23 19:49:25 chat systemd[1]: Failed to start PostgreSQL Cluster 12-main.
+</code></pre></div>
+<p>Maybe the 10 version started itself earlier upon reboot, which lead to this race? I don't know yet.</p>
+
+
+
+<a name="1122937"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/issue%20after%20reboot/near/1122937" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ympek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html#1122937">(Feb 23 2021 at 20:38)</a>:</h4>
+<p>Anyway, so far it was a pleasure to work with Zulip, I am newcomer at company and first time seeing it, though I am pretty impressed - really good piece of software : )</p>
+
+
+
+<a name="1123045"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/issue%20after%20reboot/near/1123045" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/issue.20after.20reboot.html#1123045">(Feb 24 2021 at 01:38)</a>:</h4>
+<p>Thanks for the kind words!</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

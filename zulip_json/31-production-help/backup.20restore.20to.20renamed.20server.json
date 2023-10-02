@@ -1,0 +1,116 @@
+[
+    {
+        "content": "<p>Hi all,</p>\n<p>After restoring a backup to a renamed target server (see <a href=\"https://zulip.readthedocs.io/en/stable/production/export-and-import.html#data-export\">Backup, export and import</a>, all data seem to be OK however I get contuous <code>Unable to connect to Zulip. Updates may be delayed, Retrying soon...</code> in the Web browser</p>\n<p><code>/var/log/zulip/error.log</code> gives repeating  messages like</p>\n<div class=\"spoiler-block\"><div class=\"spoiler-header\">\n\n<p>2020-10-16 12:25:58.607 ERR  [] Traceback (most recent call last):</p>\n</div><div class=\"spoiler-content\" aria-hidden=\"true\">\n\n<p>2020-10-16 12:25:58.607 ERR  [] Traceback (most recent call last):<br>\n  File \"/srv/zulip-venv-cache/546c5f60162d0b5be09d52adebaa995f9c609da3/zulip-py3-venv/lib/python3.7/site-packages/django/core/handlers/base.py\", line 185, in _get_response<br>\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)<br>\n  File \"./zerver/lib/rest.py\", line 35, in _wrapped_view_func<br>\n    response = view_func(request, *args, **kwargs)<br>\n  File \"/srv/zulip-venv-cache/546c5f60162d0b5be09d52adebaa995f9c609da3/zulip-py3-venv/lib/python3.7/site-packages/django/views/decorators/csrf.py\", line 58, in wrapped_view<br>\n    return view_func(*args, **kwargs)<br>\n  File \"./zerver/lib/rest.py\", line 172, in rest_dispatch<br>\n    return target_function(request, **kwargs)<br>\n  File \"/srv/zulip-venv-cache/546c5f60162d0b5be09d52adebaa995f9c609da3/zulip-py3-venv/lib/python3.7/site-packages/django/utils/decorators.py\", line 149, in _wrapped_view<br>\n    response = view_func(request, *args, **kwargs)<br>\n  File \"./zerver/decorator.py\", line 710, in _wrapped_view_func<br>\n    return authenticate_log_and_execute_json(request, view_func, *args, **kwargs)<br>\n  File \"./zerver/decorator.py\", line 689, in authenticate_log_and_execute_json<br>\n    return limited_view_func(request, user_profile, *args, **kwargs)<br>\n  File \"./zerver/decorator.py\", line 829, in wrapped_func<br>\n    return func(request, *args, **kwargs)<br>\n  File \"./zerver/lib/request.py\", line 367, in _wrapped_view_func<br>\n    return view_func(request, *args, **kwargs)<br>\n  File \"./zerver/views/messages.py\", line 927, in get_messages_backend<br>\n    allow_edit_history=user_profile.realm.allow_edit_history,<br>\n  File \"./zerver/lib/message.py\", line 115, in messages_for_ids<br>\n    MessageDict.post_process_dicts(message_list, apply_markdown, client_gravatar)<br>\n  File \"./zerver/lib/message.py\", line 194, in post_process_dicts<br>\n    MessageDict.bulk_hydrate_recipient_info(objs)<br>\n  File \"./zerver/lib/message.py\", line 485, in bulk_hydrate_recipient_info<br>\n    display_recipients = bulk_fetch_display_recipients(recipient_tuples)<br>\n  File \"./zerver/lib/display_recipient.py\", line 165, in bulk_fetch_display_recipients<br>\n    cache_transformer=personal_and_huddle_cache_transformer<br>\n  File \"./zerver/lib/cache.py\", line 395, in generic_bulk_cached_fetch<br>\n    db_objects = query_function(needed_ids)<br>\n  File \"./zerver/lib/display_recipient.py\", line 135, in personal_and_huddle_query_function<br>\n    result.append((<a href=\"http://recipient.id\">recipient.id</a>, [user_profiles[recipient.type_id]]))<br>\nKeyError: 15</p>\n</div></div>\n\n<p>What could be wrong/done about this?</p>\n<p>details:</p>\n<ul>\n<li>I followed the instructions on <a href=\"https://zulip.readthedocs.io/en/stable/production/export-and-import.html#data-export\">Backup, export and import</a></li>\n<li>using the 'backup tool' to migrate data to another server.</li>\n<li>Zulip versions for source and target the same (2.1.0, output of <code>manage.py showmigrations</code> is identical). </li>\n<li>The target was installed from zulip-server-2.1.0.tar.gz and then upgraded (git) to my fork  at github (custom css and changed 'mark as read' routine in filter.js) on Debian 10.</li>\n<li>restarted a few times (supervisorctl restart all). <code>supervisorctl status</code> shows all services running.</li>\n<li>Using the 'data export tool' did not have this problem, however that tool  did not export all uploaded files (uploaded files that came in via the email gateway bot were not in the export file)</li>\n<li>Eventually I want to upgrade to the latest stable release.</li>\n</ul>",
+        "id": 1039268,
+        "sender_full_name": "Tom Welter",
+        "timestamp": 1602853649
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"14319\">@Tom Welter</span> Do you recall if you might have ever deleted a user from the database, either via <code>.delete()</code> in <code>manage.py shell</code> or a direct SQL query?</p>",
+        "id": 1039291,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1602864951
+    },
+    {
+        "content": "<p>Never deleted anyone as far as I remember and certainly not via manage.py. All users are authenticated via ldap</p>",
+        "id": 1039296,
+        "sender_full_name": "Tom Welter",
+        "timestamp": 1602865106
+    },
+    {
+        "content": "<p>Hmm, okay. Could you show the output of</p>\n<div class=\"codehilite\"><pre><span></span><code>for r in Recipient.objects.filter(type=Recipient.PERSONAL):\n    try:\n        UserProfile.objects.get(id=r.type_id)\n    except UserProfile.DoesNotExist:\n        print(r)\n</code></pre></div>\n\n\n<p>in <code>manage.py shell</code>?</p>",
+        "id": 1039318,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1602865644
+    },
+    {
+        "content": "<p>result :<br>\n&lt;Recipient: [] (15, 1)&gt;</p>",
+        "id": 1039328,
+        "sender_full_name": "Tom Welter",
+        "timestamp": 1602866213
+    },
+    {
+        "content": "<p>Weird. The problem has almost disappeared. I was working this morning and i had this problem continuously. Went cycling and came back just now to see if there were answers to my question.  Now I have seen the warning twice but no more in 10 minutes.</p>",
+        "id": 1039330,
+        "sender_full_name": "Tom Welter",
+        "timestamp": 1602866445
+    },
+    {
+        "content": "<p>Perhaps we can just delete this mysteriously orphaned Recipient object. Can you check</p>\n<div class=\"codehilite\"><pre><span></span><code>Message.objects.filter(recipient__type_id=15)\n</code></pre></div>\n\n\n<p>in the shell again, and verify if those might be valuable messages? If you're okay with all that being deleted, that would simplify things</p>",
+        "id": 1039335,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1602866573
+    },
+    {
+        "content": "<p>Probably best not to paste the output here since it might have message content or parts of it <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1039341,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1602866782
+    },
+    {
+        "content": "<p>I noticed, but nothing confidential. It seem to be  a few test messages:</p>\n<div class=\"spoiler-block\"><div class=\"spoiler-header\">\n\n<p>output</p>\n</div><div class=\"spoiler-content\" aria-hidden=\"true\">\n\n<p>&lt;QuerySet [&lt;Message: &lt;Message: [] /  / &lt;UserProfile: <a href=\"mailto:welcome-bot@zulip.com\">welcome-bot@zulip.com</a> &lt;Realm: zulipinternal 1&gt;&gt;&gt;&gt;, &lt;Message: &lt;Message: [] /  / &lt;UserProfile: <a href=\"mailto:admin@example.com\">admin@example.com</a> &lt;Realm:  2&gt;&gt;&gt;&gt;, &lt;Message: &lt;Message: [] /  / &lt;UserProfile: <a href=\"mailto:admin@example.com\">admin@example.com</a> &lt;Realm:  2&gt;&gt;&gt;&gt;, &lt;Message: &lt;Message: MT / MT info / &lt;UserProfile: <a href=\"mailto:admin@example.com\">admin@example.com</a> &lt;Realm:  2&gt;&gt;&gt;&gt;, &lt;Message: &lt;Message: MT / test123 / &lt;UserProfile: <a href=\"mailto:tom.welter@example.com\">tom.welter@example.com</a> &lt;Realm:  2&gt;&gt;&gt;&gt;, &lt;Message: &lt;Message: MT / stream events / &lt;UserProfile: <a href=\"mailto:notification-bot@zulip.com\">notification-bot@zulip.com</a> &lt;Realm: zulipinternal 1&gt;&gt;&gt;&gt;, &lt;Message: &lt;Message: MT / stream events / &lt;UserProfile: <a href=\"mailto:notification-bot@zulip.com\">notification-bot@zulip.com</a> &lt;Realm: zulipinternal 1&gt;&gt;&gt;&gt;, &lt;Message: &lt;Message: MT / stream events / &lt;UserProfile: <a href=\"mailto:notification-bot@zulip.com\">notification-bot@zulip.com</a> &lt;Realm: zulipinternal 1&gt;&gt;&gt;&gt;, &lt;Message: &lt;Message: MT / Test-topic &gt; nadien  / &lt;UserProfile: <a href=\"mailto:juliette@example.com\">juliette@example.com</a> &lt;Realm:  2&gt;&gt;&gt;&gt;, &lt;Message: &lt;Message: MT / bes / &lt;UserProfile: <a href=\"mailto:admin@example.com\">admin@example.com</a> &lt;Realm:  2&gt;&gt;&gt;&gt;, &lt;Message: &lt;Message: MT / Test-topic &gt; nadien / &lt;UserProfile: <a href=\"mailto:tom.welter@example.com\">tom.welter@example.com</a> &lt;Realm:  2&gt;&gt;&gt;&gt;]&gt;</p>\n</div></div>\n\n<p>Can all be deleted</p>",
+        "id": 1039346,
+        "sender_full_name": "Tom Welter",
+        "timestamp": 1602867178
+    },
+    {
+        "content": "<p>The test messages are related to a topic that was renamed</p>",
+        "id": 1039350,
+        "sender_full_name": "Tom Welter",
+        "timestamp": 1602867318
+    },
+    {
+        "content": "<p>In that case <code>Recipient.objects.filter(type_id=15, type=Recipient.PERSONAL).delete()</code> should fix this issue for good</p>",
+        "id": 1039352,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1602867371
+    },
+    {
+        "content": "<p>Result:</p>\n<div class=\"codehilite\"><pre><span></span><code>(7,\n {&#39;zerver.MutedTopic&#39;: 0,\n  &#39;zerver.SubMessage&#39;: 0,\n  &#39;zerver.Reaction&#39;: 0,\n  &#39;zerver.UserMessage&#39;: 3,\n  &#39;zerver.Attachment_messages&#39;: 0,\n  &#39;zerver.MissedMessageEmailAddress&#39;: 0,\n  &#39;zerver.Subscription&#39;: 0,\n  &#39;zerver.ScheduledMessage&#39;: 0,\n  &#39;zerver.Message&#39;: 3,\n  &#39;zerver.Recipient&#39;: 1})\n</code></pre></div>",
+        "id": 1039353,
+        "sender_full_name": "Tom Welter",
+        "timestamp": 1602867465
+    },
+    {
+        "content": "<p>Okay, great, things should work fine now. Unless you bump into some other weird states in database, but hopefulyl everything is fixed now</p>",
+        "id": 1039356,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1602867521
+    },
+    {
+        "content": "<p>Thanks for the speedy help!<br>\nFor what it is worth, I think this ' mysteriously orphaned Recipient object.' has something to do with renaming a topic</p>",
+        "id": 1039361,
+        "sender_full_name": "Tom Welter",
+        "timestamp": 1602867675
+    },
+    {
+        "content": "<p>I have not seen the warning anymore so [SOLVED]</p>",
+        "id": 1039365,
+        "sender_full_name": "Tom Welter",
+        "timestamp": 1602867793
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"14319\">@Tom Welter</span> that sort of orphan Recipient object can I believe only be created by manually deleting a user or stream from the database using the <code>manage.py shell</code>.</p>",
+        "id": 1039397,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602877225
+    },
+    {
+        "content": "<p>Then there must be a bug somewhere because I used <code>manage.py shell</code> for the first time in my life today <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span> and never did anything to the database</p>\n<p>What we did do was play around a bit with the various ways of renaming a topic (that is also where the orphaned messages are from). <br>\nResults were confusing at one point but we did not think much of it.</p>\n<p>FYI: I ran de search command (for r.....) on the source server for the backup:  </p>\n<div class=\"codehilite\"><pre><span></span><code>&lt;Recipient: [{&#39;id&#39;: 15, &#39;email&#39;: &#39;Ray.Jens@example.com&#39;, &#39;full_name&#39;: &#39;Ray Jens&#39;, &#39;short_name&#39;: &#39;Ray Jens&#39;, &#39;is_mirror_dummy&#39;: False}] (15, 1)&gt;\n</code></pre></div>\n\n\n<p>This 'Ray Jens' (not his real name) was a person who originally had a manually created account and later had two accounts by the same name after I activated the LDAP authentication.  The source server now shows only one account. I think I have deleted the 'manual account' from the webinterface but I cannot remember exactly. Perhaps something went wrong there.</p>",
+        "id": 1039512,
+        "sender_full_name": "Tom Welter",
+        "timestamp": 1602886564
+    },
+    {
+        "content": "<p>Hmm, well deleting such a \"duplicate\" account is certainly the type of thing that would cause this.  You could have done it via postgres (perhaps via a web interface), but Zulip doesn't have a feature that could cause this state.</p>",
+        "id": 1039578,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602891486
+    },
+    {
+        "content": "<p>I am ok with a mystery once in a while <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span> <br>\nThanks for the help!</p>",
+        "id": 1039608,
+        "sender_full_name": "Tom Welter",
+        "timestamp": 1602892462
+    }
+]

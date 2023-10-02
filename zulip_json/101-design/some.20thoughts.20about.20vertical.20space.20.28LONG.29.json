@@ -1,0 +1,146 @@
+[
+    {
+        "content": "<p>So I’m working with several different issues in the message area, all of which have a non-obvious common thread connecting them involving space around message content and the dimensions of message rows:</p>\n<ul>\n<li>Placement of the new hover icons</li>\n<li>Shifting timestamps &amp; edited/moved markers on editing and collapsed messages, as well as image-only messages</li>\n<li>Poorly-aligned emoji text in emoji-as-text mode</li>\n<li>Right-sizing the timestamp column in a locale- and time-format-sensitive way</li>\n</ul>",
+        "id": 1626474,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692214976
+    },
+    {
+        "content": "<p>In one way or another, each of those issues to some degree impacted by the use of margin on inner elements. Sometimes with the very innermost elements. For example, here are five different one-line messages without a sender (and one with a sender, but that’s a separate issue). I’ve listed the height of the <code>.message_content</code> box with them, but that’s actually also the height of the entire  containing <code>.message_row</code>, too:</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/78/cmb8_a2EUVHPo6BuxyLTAr0t/original.png\"><img src=\"/user_uploads/2/78/cmb8_a2EUVHPo6BuxyLTAr0t/original.png\"></a></div>",
+        "id": 1626475,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215015
+    },
+    {
+        "content": "<p>Here’s the same set of messages, only this with the actual Markdown content highlighted in purple (this is a mixture of padding, line-height, and content, depending on which specific element you’re talking about):</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/2c/hTpvXrGAYq2s9jSpjCaLpJY8/content.png\"><img src=\"/user_uploads/2/2c/hTpvXrGAYq2s9jSpjCaLpJY8/content.png\"></a></div>",
+        "id": 1626478,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215111
+    },
+    {
+        "content": "<p>And now here’s that same set, only with the area occupied by top and bottom margin highlighted in yellow:</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/1a/bAY2f90Flx2WmZ0V6inHbBXC/content-margin.png\"><img src=\"/user_uploads/2/1a/bAY2f90Flx2WmZ0V6inHbBXC/content-margin.png\"></a></div>",
+        "id": 1626479,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215139
+    },
+    {
+        "content": "<p>And one more, using an orange bottom border to illustrate the boundaries between messages (borders being what they are in the border-box model, this actually shifts the layout, but it's just meant for illustration here):</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/4f/4XJ-baqfKbkP_K0SXseTG-Z8/content-margin-false-boundaries.png\"><img src=\"/user_uploads/2/4f/4XJ-baqfKbkP_K0SXseTG-Z8/content-margin-false-boundaries.png\"></a></div>",
+        "id": 1626481,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215183
+    },
+    {
+        "content": "<p>Sidestepping for now differences in padding and line-height, we have a situation where the margin on inner elements—in this case, rendered markdown elements, though there are others within the message grid when there’s a sender, or reactions visible—is determining both the height of each message row and therefore the space around message content. As the example images here show, those differences vary even across what ought to be very similar elements.</p>",
+        "id": 1626484,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215210
+    },
+    {
+        "content": "<p>While those differences and indeed the very dimensions of the message box are a bit of a pain to work around in fixing the issues I listed above, they are also a stumbling block to another, larger issue with trying to offer user-selectable information density (shorthand for font-size and line-height) in the message area. Making that work predictably and reliably depends on predictable containers and predictable content within them, with much more deliberate size relationships between font size, line height, and vertical margin/padding.</p>",
+        "id": 1626486,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215218
+    },
+    {
+        "content": "<p>To get there, I suggest two sort of broad philosophical approaches for handling layout (ideally app-wide, but for now, I’m just talking about the message area):</p>",
+        "id": 1626487,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215229
+    },
+    {
+        "content": "<p>First, <strong>Inner elements should not be presented with whitespace that affects outside edges of their containers, let alone their container's neighbors.</strong></p>",
+        "id": 1626488,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215237
+    },
+    {
+        "content": "<p>Zulip's design being what it is, content needs to begin and end at very specific points in space, with low tolerance for deviations from that (e.g., the active message box, the alignment of elements with especially the top of each message row). </p>\n<p>Witness the single-line messages above, which are referenced numerous places in comments in the <code>rendered_markdown.css</code> file. It’s the margin on the top and bottom of the <em>paragraph tag</em> that’s pushing open the message box as wide as it goes—including offsetting the active message box.</p>",
+        "id": 1626489,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215250
+    },
+    {
+        "content": "<p>Or for another example, the margins on the <em>ordinarily invisible</em> reaction button adjacent existing emoji single-handedly increases the space at the bottom of a message—while also causing weird, head-scratcher layout shifts on the message box below with regard to the vertical alignment of timestamp and hover controls.</p>",
+        "id": 1626490,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215262
+    },
+    {
+        "content": "<p>And second: <strong>Grid templates should be the source of truth for any explicit grid dimensions.</strong> It makes little sense to say that a row’s height is 25px, only to discover that it’s actually 27px high because of cocktail of inner bits of margin and padding. Or to declare that a grid column is 60px wide if an element contained in it has <code>min-width: 70px</code> specified on it (which <code>min-width</code> ultimately wins out).</p>",
+        "id": 1626492,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215276
+    },
+    {
+        "content": "<p>So what do I personally think needs to happen? I’m so glad you asked :)</p>",
+        "id": 1626495,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215288
+    },
+    {
+        "content": "<ol>\n<li><strong>As a starter, let’s use <code>:first-child</code> and <code>:last-child</code> pseudo-elements to remove the top and bottom margin/padding on rendered markdown at the top and bottom of messages.</strong> That’s a stop-gap measure to keep top-margin from popping out the top of a message row, and bottom margin from spilling out the very bottom, but it will make it possible to restore any desired space as part of the message-box grid. I say <em>desired space</em> because not all of the whitespace around different elements seems especially intentional, and it could be that the side-effects I’ve documented here on the display of message rows have played a role in preventing that kind of whitespace review.</li>\n</ol>",
+        "id": 1626496,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215326
+    },
+    {
+        "content": "<ol start=\"2\">\n<li><strong>Set a pixel-based line-height for the whole message area, and stick to it for the time being.</strong> Right now we have a unitless value of <code>1.214</code>, which with the <code>14px</code> font-size on message text works out to a line-height of <code>16.996px</code>—which is very hard to reason about, let alone derive half, third, or quarter line values for adding more deliberate space around especially rendered-markdown elements. While ultimately we should express line-heights as a relative value (in em units, which is effectively what the unitless line-height value is anyway), to get there, we need to be working in pixel values from which the relative em-unit values can be derived.</li>\n</ol>",
+        "id": 1626497,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215337
+    },
+    {
+        "content": "<ol start=\"3\">\n<li><strong>Fine-tune the space between around senderless message rows</strong>, whether they contain paragraphs or polls (i.e., there should be the same amount of space between the border of a code block and the active-message box as there is between a collapsed spoiler and the active-message box). Scrub the senderless single-line message row for any stray margin, padding, or line-height differences, and ensure that the size of the row’s actual content does not exceed the height of the row as described in the grid. Desired message-row space should be expressed either through padding or “dead” grid rows, neither of which will leak into or affect adjacent message rows.</li>\n</ol>",
+        "id": 1626498,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215347
+    },
+    {
+        "content": "<ol start=\"4\">\n<li><strong>Do a similar fine-tuning of message rows that include a sender</strong>, ridding it of as much additional margin and padding as possible, and express that row’s true height as a matter of CSS grid. That might also require the addition of a “dead” row of space to account for the space above the avatar image, or at least a reduction in the amount of margin around it.</li>\n</ol>",
+        "id": 1626499,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215394
+    },
+    {
+        "content": "<ol start=\"5\">\n<li><strong>Apply consistent baseline typography to all the fundamental rendered markdown elements</strong>. Derive those values from the message-areas pixel-based baseline, with fine-tuning that deviates from those derived values as needed, when signed off on by someone like Alya or Vlad. Given the need for a uniform starting line for all message content, space should be expressed <em>below</em> each element (e.g., <code>margin-bottom</code>). That space should be the very minimum amount of space between one element and whatever follows it (which probably necessitates keeping a <code>&gt; :last-child</code> selector on the rendered-markdown area that removes any trailing margin, again to avoid affecting the layout of the message box itself or message rows that follow). If, for some reason, a specific element needs more space between it and a preceding element, then that should be expressed with adjacent sibling selectors (e.g., <code>x + y</code> to style <code>y</code>), and not be part of the element selector itself.</li>\n</ol>",
+        "id": 1626500,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215404
+    },
+    {
+        "content": "<p>In addition to the inherent benefits to cleaning up the codebase in this regard, this represents what I think is necessary prep work to allow for user-adjustable information density (shorthand for font-size and line-height) within the message area.</p>",
+        "id": 1626501,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215426
+    },
+    {
+        "content": "<p>My hope here, too, is that we’ll learn a lot about the utility of a consistent baseline grid, and the dimensions and spatial relationships that can be derived from it, and use those to make more consistent spacing choices throughout the rest of the UI. That would look like knowing “There should be 3px of padding below this element” instead of “Hey, try and see how it looks if we put 3px of padding below this element.” (That’s not to say that there wouldn’t be a need for tuning in specific areas of the UI, but having a reasoned starting value would remove some of the guesswork.)</p>",
+        "id": 1626502,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215433
+    },
+    {
+        "content": "<p>Here endeth my dissertation on vertical space...</p>",
+        "id": 1626503,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692215447
+    },
+    {
+        "content": "<p>Thanks for the writeup! I think that strategy sounds good. I'm not entirely certain I can predict what weird problems we may run into. I would be curious for Vlad's thoughts on this, but I suspect that the right strategy may be to do this internals refactoring with minimal material design changes, and then plan to do redesign changes on top of that, just because of how design regressions in the message feed can impact usability a great deal and thus block integration of work.</p>\n<p>For some historical perspective, the 27/28/29 height variance is likely not intentional; in fact I'm certain that at least once, and probably more than once in Zulip's development, I've done work to try to make those identical (in addition to other goals like having the blue box look balanced around them), before we started using CSS grid in the message feed at all this year -- it's the kind of regression we might have missed in review, because it's very hard to see.</p>\n<p>But it's the kind of thing that breaks every time someone refactors the message feed CSS, and it'd be really good if we can make that no longer a fact about how message feed CSS works <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1627121,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692300236
+    },
+    {
+        "content": "<p>For his part, <span class=\"user-mention\" data-user-id=\"22433\">@Vlad Korobov</span> DM'd me an amazing 14-minute video walkthrough of his designs for the message area and signaled a willingness to collaborate on this stuff together, which I'm super excited about. I need to watch again and take careful notes, but it seems like we're all on board with the general direction here. At this point, that's all I need :)</p>",
+        "id": 1627158,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692302884
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/some.20thoughts.20about.20vertical.20space.20.28LONG.29/near/1627121\">said</a>:</p>\n<blockquote>\n<p>[...] I suspect that the right strategy may be to do this internals refactoring with minimal material design changes, and then plan to do redesign changes on top of that, just because of how design regressions in the message feed can impact usability a great deal and thus block integration of work.</p>\n</blockquote>\n<p>Wholly agreed. I like to have a clean base of changes to work from, even if that requires taking some time to fix up stuff that might ultimately disappear.</p>",
+        "id": 1627161,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1692302983
+    }
+]

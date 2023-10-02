@@ -1,0 +1,194 @@
+[
+    {
+        "content": "<p>Hello all,</p>\n<p>I'm trying to restore a 4.7 backup taken from an Ubuntu 18.04 server onto a 20.04 server running the same Zulip version. When running <code>/home/zulip/deployments/current/scripts/setup/restore-backup</code>, I encounter the following error:</p>\n<div class=\"codehilite\"><pre><span></span><code>Error: Evaluation Error: Error while evaluating a Function Call, Could not find class ::zulip::voyager for zulip.domain.com (line: 3, column: 1) on node zulip.domain.com\n</code></pre></div>\n<p>the restore script is attempting to run this command:</p>\n<div class=\"codehilite\"><pre><span></span><code>puppet apply --modulepath=/home/zulip/deployments/2021-11-30-14-56-13/puppet -e &#39;Exec { path =&gt; &quot;/usr/sbin:/usr/bin:/sbin:/bin&quot; } include zulip::voyager&#39;\n</code></pre></div>\n<p>but the <code>zulip::voyager</code> class does not exist:</p>\n<div class=\"codehilite\"><pre><span></span><code># cat /var/lib/puppet/classes.txt | grep voyager\n#\n</code></pre></div>\n<p>if it's relevant, <code>/etc/zulip/zulip.conf</code> specifies the voyager class:</p>\n<div class=\"codehilite\"><pre><span></span><code> # cat /etc/zulip/zulip.conf\n[machine]\npuppet_classes = zulip::voyager\ndeploy_type = voyager\n\n[rabbitmq]\nnodename = zulip@localhost\n</code></pre></div>",
+        "id": 1289151,
+        "sender_full_name": "ncc",
+        "timestamp": 1638369101
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13263\">@ncc</span> are you sure the two systems are running the same version?</p>",
+        "id": 1289168,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638377179
+    },
+    {
+        "content": "<p>I'm pretty sure we removed the voyager class name in 4.0.</p>",
+        "id": 1289169,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638377212
+    },
+    {
+        "content": "<p>is referring to <code>/home/zulip/deployments/current/version</code> a good way to determine the version of a server? if so, they're both 4.7</p>",
+        "id": 1289175,
+        "sender_full_name": "ncc",
+        "timestamp": 1638378226
+    },
+    {
+        "content": "<p>if it matters, the 18.04 server that the backup was generated from was previously a 16.04 server running a 2.X version. I performed a do-release-upgrade per the zulip documentation, then performed an upgrade to zulip 4.7.</p>",
+        "id": 1289177,
+        "sender_full_name": "ncc",
+        "timestamp": 1638378313
+    },
+    {
+        "content": "<p>The upgrade process to Zulip 4.0 and above is supposed to rename those (<a href=\"https://github.com/zulip/zulip/blob/a3095331eb77410ab62ee3913aeb12b7f9b8c154/scripts/lib/upgrade-zulip-stage-2#L265-L288\">https://github.com/zulip/zulip/blob/a3095331eb77410ab62ee3913aeb12b7f9b8c154/scripts/lib/upgrade-zulip-stage-2#L265-L288</a>):</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"c1\"># Adjust Puppet class names for the manifest renames in the 4.0 release</span>\n<span class=\"n\">class_renames</span> <span class=\"o\">=</span> <span class=\"p\">{</span>\n    <span class=\"s2\">\"zulip::app_frontend\"</span><span class=\"p\">:</span> <span class=\"s2\">\"zulip::profile::app_frontend\"</span><span class=\"p\">,</span>\n    <span class=\"s2\">\"zulip::dockervoyager\"</span><span class=\"p\">:</span> <span class=\"s2\">\"zulip::profile::docker\"</span><span class=\"p\">,</span>\n    <span class=\"s2\">\"zulip::memcached\"</span><span class=\"p\">:</span> <span class=\"s2\">\"zulip::profile::memcached\"</span><span class=\"p\">,</span>\n    <span class=\"s2\">\"zulip::postgres_appdb_tuned\"</span><span class=\"p\">:</span> <span class=\"s2\">\"zulip::profile::postgresql\"</span><span class=\"p\">,</span>\n    <span class=\"s2\">\"zulip::postgres_backups\"</span><span class=\"p\">:</span> <span class=\"s2\">\"zulip::postgresql_backups\"</span><span class=\"p\">,</span>\n    <span class=\"s2\">\"zulip::rabbit\"</span><span class=\"p\">:</span> <span class=\"s2\">\"zulip::profile::rabbitmq\"</span><span class=\"p\">,</span>\n    <span class=\"s2\">\"zulip::voyager\"</span><span class=\"p\">:</span> <span class=\"s2\">\"zulip::profile::standalone\"</span><span class=\"p\">,</span>\n<span class=\"p\">}</span>\n<span class=\"n\">classes</span> <span class=\"o\">=</span> <span class=\"n\">re</span><span class=\"o\">.</span><span class=\"n\">split</span><span class=\"p\">(</span><span class=\"sa\">r</span><span class=\"s2\">\"\\s*,\\s*\"</span><span class=\"p\">,</span> <span class=\"n\">get_config</span><span class=\"p\">(</span><span class=\"n\">config_file</span><span class=\"p\">,</span> <span class=\"s2\">\"machine\"</span><span class=\"p\">,</span> <span class=\"s2\">\"puppet_classes\"</span><span class=\"p\">))</span>\n<span class=\"n\">new_classes</span> <span class=\"o\">=</span> <span class=\"p\">[</span><span class=\"n\">class_renames</span><span class=\"o\">.</span><span class=\"n\">get</span><span class=\"p\">(</span><span class=\"n\">c</span><span class=\"p\">,</span> <span class=\"n\">c</span><span class=\"p\">)</span> <span class=\"k\">for</span> <span class=\"n\">c</span> <span class=\"ow\">in</span> <span class=\"n\">classes</span> <span class=\"k\">if</span> <span class=\"n\">c</span> <span class=\"o\">!=</span> <span class=\"s2\">\"zulip::base\"</span><span class=\"p\">]</span>\n<span class=\"k\">if</span> <span class=\"n\">classes</span> <span class=\"o\">!=</span> <span class=\"n\">new_classes</span><span class=\"p\">:</span>\n    <span class=\"n\">logging</span><span class=\"o\">.</span><span class=\"n\">info</span><span class=\"p\">(</span><span class=\"s2\">\"Adjusting Puppet classes for renames...\"</span><span class=\"p\">)</span>\n    <span class=\"n\">subprocess</span><span class=\"o\">.</span><span class=\"n\">check_call</span><span class=\"p\">(</span>\n        <span class=\"p\">[</span>\n            <span class=\"s2\">\"crudini\"</span><span class=\"p\">,</span>\n            <span class=\"s2\">\"--set\"</span><span class=\"p\">,</span>\n            <span class=\"s2\">\"/etc/zulip/zulip.conf\"</span><span class=\"p\">,</span>\n            <span class=\"s2\">\"machine\"</span><span class=\"p\">,</span>\n            <span class=\"s2\">\"puppet_classes\"</span><span class=\"p\">,</span>\n            <span class=\"s2\">\", \"</span><span class=\"o\">.</span><span class=\"n\">join</span><span class=\"p\">(</span><span class=\"n\">new_classes</span><span class=\"p\">),</span>\n        <span class=\"p\">]</span>\n    <span class=\"p\">)</span>\n</code></pre></div>",
+        "id": 1289206,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638383946
+    },
+    {
+        "content": "<p>I don't think we encode in the backup tarball the version that it was backed up from (we should I think).  But if you still have the machine the backup was taken on, you can look at the upgrade logs and see if you see the \"Adjusting Puppet classes\" log line in <code>/var/log/zulip/upgrade.log</code></p>",
+        "id": 1289211,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638384143
+    },
+    {
+        "content": "<p>I do see that logged:</p>\n<div class=\"codehilite\"><pre><span></span><code>^[[92mZulip stopped successfully!^[[0m\n2021-11-29 20:08:14,073 upgrade-zulip-stage-2: Adjusting Puppet classes for renames...\n2021-11-29 20:08:14,110 upgrade-zulip-stage-2: Applying Puppet changes...\n</code></pre></div>",
+        "id": 1289234,
+        "sender_full_name": "ncc",
+        "timestamp": 1638385255
+    },
+    {
+        "content": "<p>could I just manually apply those renames to <code>/etc/zulip/zulip.conf</code>? is there anywhere else they'd need to be applied?</p>",
+        "id": 1289237,
+        "sender_full_name": "ncc",
+        "timestamp": 1638385293
+    },
+    {
+        "content": "<p>And what're the contents of <code>/etc/zulip/zulip.conf</code> on that host?</p>",
+        "id": 1289238,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638385300
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>[machine]\npuppet_classes = zulip::profile::standalone\ndeploy_type = voyager\n\n[rabbitmq]\nnodename = zulip@localhost\n\n\n[postgresql]\nversion = 10\n</code></pre></div>",
+        "id": 1289239,
+        "sender_full_name": "ncc",
+        "timestamp": 1638385328
+    },
+    {
+        "content": "<p>That is <em>probably</em> a reasonable solution -- I';m just wary of suggesting it since it points ot maybe the upgrade not completing, or the backup not being what you think.</p>",
+        "id": 1289240,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638385331
+    },
+    {
+        "content": "<p>OK, that looks right.  I think your backup predates the upgrade.</p>",
+        "id": 1289241,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638385343
+    },
+    {
+        "content": "<p>Check the timestamp on the backup file, compared to the upgrade log?</p>",
+        "id": 1289242,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638385425
+    },
+    {
+        "content": "<p>the original backup with the correct timestamp wasn't preserved, but I'm generating a new backup and decompressing the old one in the meantime.</p>",
+        "id": 1289247,
+        "sender_full_name": "ncc",
+        "timestamp": 1638385874
+    },
+    {
+        "content": "<p>so zulip.conf is copied from the backup as part of the restore process?</p>",
+        "id": 1289248,
+        "sender_full_name": "ncc",
+        "timestamp": 1638385889
+    },
+    {
+        "content": "<p>Yeah, the backup includes the zulip.conf, and restoring it puts it back into place.</p>",
+        "id": 1289258,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638386135
+    },
+    {
+        "content": "<p>yep, that was the issue, I was attempting to restore an older backup; thanks.</p>",
+        "id": 1289425,
+        "sender_full_name": "ncc",
+        "timestamp": 1638392571
+    },
+    {
+        "content": "<p>Glad that solved it!</p>",
+        "id": 1289426,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638392620
+    },
+    {
+        "content": "<p>I'm seeing a different issue now... before the restore, zulip is running with postgres 13:</p>\n<div class=\"codehilite\"><pre><span></span><code> # dpkg --list | grep postgresql\nii  pgdg-keyring                         2018.2                                all          keyring for apt.postgresql.org\nii  postgresql-13                        13.5-2.pgdg20.04+1                    amd64        The World&#39;s Most Advanced Open Source Relational Database\nii  postgresql-client                    14+232.pgdg20.04+1                    all          front-end programs for PostgreSQL (supported version)\nii  postgresql-client-13                 13.5-2.pgdg20.04+1                    amd64        front-end programs for PostgreSQL 13\nii  postgresql-client-14                 14.1-2.pgdg20.04+1                    amd64        front-end programs for PostgreSQL 14\nii  postgresql-client-common             232.pgdg20.04+1                       all          manager for multiple PostgreSQL client versions\nii  postgresql-common                    232.pgdg20.04+1                       all          PostgreSQL database-cluster manager\n # systemctl status postgresql@13-main.service\n● postgresql@13-main.service - PostgreSQL Cluster 13-main\n     Loaded: loaded (/lib/systemd/system/postgresql@.service; enabled-runtime; vendor preset: enabled)\n     Active: active (running) since Wed 2021-12-01 15:55:55 CST; 17h ago\n   Main PID: 422 (postgres)\n      Tasks: 13 (limit: 309304)\n     Memory: 110.9M\n     CGroup: /system.slice/system-postgresql.slice/postgresql@13-main.service\n             ├─  422 /usr/lib/postgresql/13/bin/postgres -D /var/lib/postgresql/13/main -c config_file=/etc/postgresql/13/main/postgresql.conf\n             ├─  500 postgres: 13/main: logger\n             ├─  504 postgres: 13/main: checkpointer\n             ├─  505 postgres: 13/main: background writer\n             ├─  506 postgres: 13/main: walwriter                                                                                                                                             ├─  507 postgres: 13/main: autovacuum launcher\n             ├─  508 postgres: 13/main: stats collector\n             ├─  509 postgres: 13/main: logical replication launcher                                                                                                                          ├─ 1194 postgres: 13/main: zulip zulip [local] idle\n             ├─ 1776 postgres: 13/main: zulip zulip [local] idle\n             ├─ 1777 postgres: 13/main: zulip zulip [local] idle\n             ├─73897 postgres: 13/main: zulip zulip [local] idle\n             └─73899 postgres: 13/main: zulip zulip [local] idle\n\nDec 01 15:55:52 zulip systemd[1]: Starting PostgreSQL Cluster 13-main...\nDec 01 15:55:55 zulip systemd[1]: Started PostgreSQL Cluster 13-main.\n</code></pre></div>\n<p>but the restore is installing postgres 10, and the restore fails when it tries to start postgres 10 (because there's already an active postgres daemon):</p>\n<div class=\"codehilite\"><pre><span></span><code>Notice: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 10 main restart]/returns: Job for postgresql@10-main.service failed because the service did not take the steps required by its unit configuration.\nNotice: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 10 main restart]/returns: See &quot;systemctl status postgresql@10-main.service&quot; and &quot;journalctl -xe&quot; for details.\nError: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 10 main restart]: Failed to call refresh: &#39;pg_ctlcluster 10 main restart&#39; returned 1 instead of one of [0]\nError: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 10 main restart]: &#39;pg_ctlcluster 10 main restart&#39; returned 1 instead of one of [0]\nNotice: /Stage[main]/Zulip::Supervisor/Service[supervisor]/ensure: ensure changed &#39;stopped&#39; to &#39;running&#39;\nNotice: Applied catalog in 31.85 seconds\n\nError running a subcommand of /home/zulip/deployments/current/scripts/setup/restore-backup: /home/zulip/deployments/2021-12-01-15-41-59/scripts/zulip-puppet-apply -f\nActual error output for the subcommand is just above this.\n\n # dpkg --list | grep postgresql\nii  pgdg-keyring                         2018.2                                all          keyring for apt.postgresql.org\nii  postgresql-10                        10.19-2.pgdg20.04+1                   amd64        The World&#39;s Most Advanced Open Source Relational Database\nii  postgresql-13                        13.5-2.pgdg20.04+1                    amd64        The World&#39;s Most Advanced Open Source Relational Database\nii  postgresql-client                    14+232.pgdg20.04+1                    all          front-end programs for PostgreSQL (supported version)\nii  postgresql-client-10                 10.19-2.pgdg20.04+1                   amd64        front-end programs for PostgreSQL 10\nii  postgresql-client-13                 13.5-2.pgdg20.04+1                    amd64        front-end programs for PostgreSQL 13\nii  postgresql-client-14                 14.1-2.pgdg20.04+1                    amd64        front-end programs for PostgreSQL 14\nii  postgresql-client-common             232.pgdg20.04+1                       all          manager for multiple PostgreSQL client versions\nii  postgresql-common                    232.pgdg20.04+1                       all          PostgreSQL database-cluster manager\n #\n</code></pre></div>",
+        "id": 1289947,
+        "sender_full_name": "ncc",
+        "timestamp": 1638461279
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13263\">@ncc</span> this configuration in <code>zulip.conf</code> is what determines what postgres version is supposed to be running:</p>\n<div class=\"codehilite\"><pre><span></span><code>[postgresql]\nversion = 10\n</code></pre></div>",
+        "id": 1290048,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638467624
+    },
+    {
+        "content": "<p>I'd check your original host that generated the backup; the most likely story is you're importing a backup generated on a postgres 10 host.</p>",
+        "id": 1290050,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638467651
+    },
+    {
+        "content": "<p>(i.e. before you upgraded)</p>",
+        "id": 1290051,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638467655
+    },
+    {
+        "content": "<p>Since I don't think it's very likely you'd have a Zulip instance running postgres 13 with <code>/etc/zulip/zulip.conf</code> having postgres 10 listed, but I suppose it's possible with enough manual intervention (i.e. not using our postgres upgrade tool).</p>",
+        "id": 1290054,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638467694
+    },
+    {
+        "content": "<p>that does indeed seem to be the case</p>",
+        "id": 1290070,
+        "sender_full_name": "ncc",
+        "timestamp": 1638468564
+    },
+    {
+        "content": "<p>what's the preferred way to resolve that? modify one of the zulip.conf's before taking  or restoring the backup?</p>",
+        "id": 1290071,
+        "sender_full_name": "ncc",
+        "timestamp": 1638468604
+    },
+    {
+        "content": "<p><a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-postgresql\">https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-postgresql</a> is the recommended way to upgrade postgres.</p>",
+        "id": 1290082,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638469958
+    },
+    {
+        "content": "<p>If you had already upgraded it some other way ... probably just changing that configuration line and then doing a <code>zulip-puppet-apply</code> will leave you in the same state as if you'd used our tool.</p>",
+        "id": 1290083,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638470011
+    },
+    {
+        "content": "<p>(And the <code>zulip-puppet-apply</code> isn't really necessary -- it just updates the postgres configuration to be tuned for use with Zulip, which won't matter if you're about to backup the system anyway)</p>",
+        "id": 1290085,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638470041
+    },
+    {
+        "content": "<p>And thus you could probably equivalently just change the value in your backup tarball and then run the backup restore command.</p>",
+        "id": 1290087,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638470071
+    },
+    {
+        "content": "<p>forgot to post an update here, but things are looking good after the postgres upgrade, thanks for the help!</p>",
+        "id": 1291019,
+        "sender_full_name": "ncc",
+        "timestamp": 1638567124
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"13263\">ncc</span> has marked this topic as resolved.</p>",
+        "id": 1291020,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1638567137
+    }
+]

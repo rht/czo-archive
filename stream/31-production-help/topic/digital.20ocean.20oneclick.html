@@ -1,0 +1,132 @@
+<html>
+<head><meta charset="utf-8"><title>digital ocean oneclick · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html">digital ocean oneclick</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="809840"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/809840" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vishnu KS <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#809840">(Jan 17 2020 at 04:40)</a>:</h4>
+<p>I was working on making a new release of DigitalOcean one click app. Running the install script from a droplet created from the image of 2.1.2 fails with the following error.</p>
+<div class="codehilite"><pre><span></span>You are now connected to database &quot;zulip&quot; as user &quot;postgres&quot;.
+CREATE SCHEMA zulip AUTHORIZATION zulip;
+CREATE SCHEMA
+++ dirname /home/zulip/deployments/2020-01-17-03-52-29/scripts/setup/postgres-init-db
++ /home/zulip/deployments/2020-01-17-03-52-29/scripts/setup/flush-memcached
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2020-01-17-03-52-29/scripts/setup/flush-memcached&quot;, line 18, in &lt;module&gt;
+    behaviors=settings.CACHES[&quot;default&quot;][&quot;OPTIONS&quot;]  # type: ignore # settings not typed properly
+pylibmc.SomeErrors: error 19 from flush_all: (0x2e32890) AUTHENTICATION FAILURE,  host: 127.0.0.1:11211 -&gt; libmemcached/sasl.cc:292
+
+Zulip installation failed (exit code 1)!
+
+The install process is designed to be idempotent, so you can retry after resolving whatever issue caused the failure (there should be a traceback above). A log of this installation is available in /var/log/zulip/install.log
+For troubleshooting see https://zulip.readthedocs.io/en/stable/production/troubleshooting.html.
+
+
+Run the following command or relogin to this server to retry installation
+  /opt/zulip/interactive_script.sh
+</pre></div>
+
+
+
+<a name="809841"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/809841" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#809841">(Jan 17 2020 at 05:40)</a>:</h4>
+<p><span class="user-mention" data-user-id="52">@Vishnu Ks</span> that looks to me like an authentication error attempting to use the memcached authentication credentials that we added in 2.1.2</p>
+
+
+
+<a name="809842"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/809842" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#809842">(Jan 17 2020 at 05:41)</a>:</h4>
+<p>I wonder if the problem is that the system's hostname has changed, since I just recalled that the SASL authentication that memcached uses includes both the hostname and the password.</p>
+
+
+
+<a name="809843"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/809843" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#809843">(Jan 17 2020 at 05:42)</a>:</h4>
+<p>This might be a broader problem for installations that end up migrating to a different hosting.  <span class="user-mention" data-user-id="699">@Anders Kaseorg</span> FYI; I wonder if we could use <code>127.0.0.1</code> as the hostname for the purposes of SASL authentication to avoid encoding the system's hostname in the memcached configuration?  Or alternatively, if we need to add some sort of record of the hostname used in that memcached stamp file to ensure that we update memached when running puppet after the hostname changes (which is roughly what's happening in this flow).</p>
+
+
+
+<a name="809844"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/809844" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vishnu KS <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#809844">(Jan 17 2020 at 05:44)</a>:</h4>
+<p>if it helps for debugging, I removed <code>username</code> and <code>password</code>as arguments  from pylibmc.Client and it seems to have fixed the error in <code>flush-memcached</code>.</p>
+
+
+
+<a name="809850"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/809850" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#809850">(Jan 17 2020 at 07:10)</a>:</h4>
+<p>The SASL hostname is not configurable in memcached; it just calls <code>gethostname()</code>. Recording it like <code>memcached-zulip-password</code> seems like a good plan.</p>
+
+
+
+<a name="809851"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/809851" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#809851">(Jan 17 2020 at 07:10)</a>:</h4>
+<p>But…does this mean that all droplets are using the same secrets?</p>
+
+
+
+<a name="809859"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/809859" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#809859">(Jan 17 2020 at 08:37)</a>:</h4>
+<p>I believe that they run the installer and then <code>rm -rf /etc/zulip</code>, similar to what Docker does.</p>
+
+
+
+<a name="810247"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/810247" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vishnu KS <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#810247">(Jan 20 2020 at 12:37)</a>:</h4>
+<blockquote>
+<p>I believe that they run the installer and then <code>rm -rf /etc/zulip</code>, similar to what Docker does.</p>
+</blockquote>
+<p>Yes. Thats how we do it currently.</p>
+
+
+
+<a name="810603"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/810603" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vishnu KS <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#810603">(Jan 21 2020 at 13:00)</a>:</h4>
+<p>Added a temporary fix by deleting <code> /etc/sasl2/memcached-sasldb2</code> and <code>/etc/sasl2/memcached-zulip-password</code> at the end of the one click image generator. Also submitted the image to DO marketplace.</p>
+<p><a href="https://github.com/hackerkid/marketplace-partners/commit/9b91a947a0d962178a31ab75585f9cff84b30a8e" target="_blank" title="https://github.com/hackerkid/marketplace-partners/commit/9b91a947a0d962178a31ab75585f9cff84b30a8e">https://github.com/hackerkid/marketplace-partners/commit/9b91a947a0d962178a31ab75585f9cff84b30a8e</a></p>
+
+
+
+<a name="810604"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/810604" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vishnu KS <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#810604">(Jan 21 2020 at 13:02)</a>:</h4>
+<p>Deletig the two files just before the image generation will result in them getting generated again when the user creates the droplet from the image and runs the installer.</p>
+
+
+
+<a name="810606"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/810606" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vishnu KS <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#810606">(Jan 21 2020 at 13:08)</a>:</h4>
+<p>I guess deleting <code>memcached-sasldb2</code> was not necessary. While generating <code>memcached-zulip-password</code> puppet would have generated a new <code>memcached-sasldb2</code> anyway.</p>
+
+
+
+<a name="810982"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/810982" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#810982">(Jan 22 2020 at 20:33)</a>:</h4>
+<p>Probably better to delete both just for cleanliness.</p>
+
+
+
+<a name="811455"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/811455" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vishnu KS <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#811455">(Jan 24 2020 at 07:55)</a>:</h4>
+<p>Yeah. The image that is live now on marketplace has both the files deleted.</p>
+
+
+
+<a name="811571"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/811571" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#811571">(Jan 24 2020 at 19:59)</a>:</h4>
+<p>Great!</p>
+
+
+
+<a name="811572"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/digital%20ocean%20oneclick/near/811572" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/digital.20ocean.20oneclick.html#811572">(Jan 24 2020 at 19:59)</a>:</h4>
+<p>Glad to hear that migration is complete in the DO environment as well <span aria-label="slight smile" class="emoji emoji-1f642" role="img" title="slight smile">:slight_smile:</span></p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

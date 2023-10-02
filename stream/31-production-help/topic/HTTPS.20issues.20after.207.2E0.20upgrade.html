@@ -1,0 +1,130 @@
+<html>
+<head><meta charset="utf-8"><title>HTTPS issues after 7.0 upgrade · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HTTPS.20issues.20after.207.2E0.20upgrade.html">HTTPS issues after 7.0 upgrade</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1582836"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HTTPS%20issues%20after%207.0%20upgrade/near/1582836" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Lumrenion <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HTTPS.20issues.20after.207.2E0.20upgrade.html#1582836">(Jun 01 2023 at 13:59)</a>:</h4>
+<p>Hi, I just upgraded my zulip instance to 7.0 and it seems I have issues with my reverse proxy. I noticed in the upgrade guide that you must set  the <code>X-Forwarded-Proto</code> in your reverse proxy configuration. I am using Zulip-Docker with a Traefik reverse proxy.</p>
+<ul>
+<li>I have set the environment variable <code>DISABLE_HTTPS: "True"</code> </li>
+<li>I am using the reverse proxy header <code>X-Forwarded-Proto=https</code> (Traefik label: <code>"traefik.http.middlewares.traefik-headers.headers.sslproxyheaders.X-Forwarded-Proto=https"</code>) </li>
+</ul>
+<p>When I try to sign in with SAML, I get redirected back to the login page with the message in <code>auth.log</code>:</p>
+<div class="codehilite"><pre><span></span><code>Authentication failed: SAML login failed: [&#39;invalid_response&#39;] (The response was received at http://chat.myzulip.de/complete/saml/ instead of https://chat.myzulip.de/complete/saml/)
+</code></pre></div>
+<p>In another session where I am still logged in, I encounter an infinite page refresh with an error in error.log</p>
+<div class="codehilite"><pre><span></span><code>2023-06-01 13:57:37.533 WARN [django.security.csrf] Forbidden (Origin checking failed - https://chat.ig-larp.de does not match any trusted origins.): /json/users/me/presence
+</code></pre></div>
+<p>Is there anything I missed in my configuration?</p>
+
+
+
+<a name="1583281"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HTTPS%20issues%20after%207.0%20upgrade/near/1583281" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HTTPS.20issues.20after.207.2E0.20upgrade.html#1583281">(Jun 01 2023 at 19:34)</a>:</h4>
+<p><span class="user-mention" data-user-id="20570">@Lumrenion</span> I'm not personally super familiar with Traefik, that certainly sounds related to <code>X-Forwarded-Proto</code>. <span class="user-mention" data-user-id="699">@Anders Kaseorg</span> do you have ideas for what would be misconfigured here?</p>
+
+
+
+<a name="1585195"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HTTPS%20issues%20after%207.0%20upgrade/near/1585195" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Lumrenion <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HTTPS.20issues.20after.207.2E0.20upgrade.html#1585195">(Jun 05 2023 at 11:27)</a>:</h4>
+<p>I was able to solve the infinite page refresh issue.I added the following to my <code>settings.py</code> (replaced the domain with my own of course):</p>
+<div class="codehilite" data-code-language="Python"><pre><span></span><code><span class="n">CSRF_TRUSTED_ORIGINS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"https://chat.example.org"</span><span class="p">]</span>
+</code></pre></div>
+<p>For docker usage it must be set as environment variable:</p>
+<div class="codehilite" data-code-language="YAML"><pre><span></span><code><span class="p p-Indicator">[</span><span class="nv">...</span><span class="p p-Indicator">]</span>
+<span class="nt">environment</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">ZULIP_CUSTOM_SETTINGS</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">    </span><span class="no">CSRF_TRUSTED_ORIGINS = ["https://chat.example.org"]</span>
+<span class="p p-Indicator">[</span><span class="nv">...</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+<p>The login issue still exists.</p>
+
+
+
+<a name="1585282"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HTTPS%20issues%20after%207.0%20upgrade/near/1585282" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HTTPS.20issues.20after.207.2E0.20upgrade.html#1585282">(Jun 05 2023 at 15:55)</a>:</h4>
+<p><span class="user-mention" data-user-id="20570">@Lumrenion</span>: The change in 7.0 is that we start ripping off the <code>X-Forwarded-Proto</code> header unless it is received from a trusted proxy -- see <a href="https://github.com/zulip/zulip/commit/0935d388f05337e73898d932ddb75b458cf4747e">0935d388f05337e73898d932ddb75b458cf4747e</a>.</p>
+<p>That you need to set <code>CSRF_TRUSTED_ORIGINS</code> implies that our nginx is stripping off that header.  Have you set <code>LOADBALANCER_IPS</code> to the IP address that the container sees the requests forwarded from Traefik as coming from?  Setting that correctly should remove the need to set <code>CSRF_TRUSTED_ORIGINS</code> and should fix the login problem.  It will also fix IP-based rate-limiting and IP addresses in access logs.</p>
+
+
+
+<a name="1585804"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HTTPS%20issues%20after%207.0%20upgrade/near/1585804" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matt <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HTTPS.20issues.20after.207.2E0.20upgrade.html#1585804">(Jun 06 2023 at 00:40)</a>:</h4>
+<p>Same here. Was bitten by this once before and now again after the upgrade. This appears to be a different issue as our nginx config changed after last time to match the docs referred from <a href="https://github.com/zulip/zulip/issues/24599">https://github.com/zulip/zulip/issues/24599</a></p>
+
+
+
+<a name="1585810"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HTTPS%20issues%20after%207.0%20upgrade/near/1585810" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matt <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HTTPS.20issues.20after.207.2E0.20upgrade.html#1585810">(Jun 06 2023 at 00:47)</a>:</h4>
+<p>I've also set LOADBALANCER_IPS = "127.0.0.1" in the settings file and checked this is the IP seen from nginx in front and still no dice.</p>
+<div class="codehilite"><pre><span></span><code>2023-06-06 00:46:24.311 INFO [zr:9800] 127.0.0.1       POST    200   3ms /api/v1/events/internal [0796a64e-fa84-4a66-842a-bca1bd00e1f6/0] (14@root via internal)
+2023-06-06 00:46:24.338 INFO [:9800] Client disconnected for queue d8a5270b-980a-499d-a021-d607eff04a6e (14 via ZulipElectron)
+2023-06-06 00:46:24.521 WARN [django.security.csrf:9800] Forbidden (Origin checking failed - https://xxxx.xxxx.xxx does not match any trusted origins.): /json/events
+</code></pre></div>
+
+
+
+<a name="1585967"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HTTPS%20issues%20after%207.0%20upgrade/near/1585967" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Lumrenion <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HTTPS.20issues.20after.207.2E0.20upgrade.html#1585967">(Jun 06 2023 at 06:39)</a>:</h4>
+<p><span class="user-mention" data-user-id="12178">@Alex Vandiver</span> thanks, this might be the issue. I tested with the <code>containous/whoami</code> image, if traefik sends the <code>X-Forwarded-*</code> headers:</p>
+<div class="codehilite"><pre><span></span><code>RemoteAddr: 172.16.238.254:46802
+X-Forwarded-For: 172.16.238.1
+X-Forwarded-Host: whoami.example.test
+X-Forwarded-Port: 443
+X-Forwarded-Proto: https
+X-Forwarded-Server: a4efbb326f29
+X-Real-Ip: 172.16.238.1
+</code></pre></div>
+<p>I also set a fixed internal IP for my traefik container:</p>
+<div class="codehilite" data-code-language="YAML"><pre><span></span><code><span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">traefik</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">traefik_proxy</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">ipv4_address</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">172.16.238.254</span>
+</code></pre></div>
+<p>finally I set <code>LOADBALANCER_IPS</code> as environment variable:</p>
+<div class="codehilite" data-code-language="YAML"><pre><span></span><code><span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">zulip</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">LOADBALANCER_IPS</span><span class="p">:</span><span class="w"> </span><span class="s">"172.16.238.254"</span>
+</code></pre></div>
+<p>But it does not work yet.</p>
+
+
+
+<a name="1589192"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HTTPS%20issues%20after%207.0%20upgrade/near/1589192" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Lumrenion <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HTTPS.20issues.20after.207.2E0.20upgrade.html#1589192">(Jun 09 2023 at 05:01)</a>:</h4>
+<p>I was able to solve the issue for me. The little hint in the documentation helped me find out the correct IP I need for <code>LOADBALANCER_IPS</code>: </p>
+<blockquote>
+<p>You can verify your work by looking at /var/log/zulip/server.log and checking it has the actual IP addresses of clients, not the IP address of the proxy server.</p>
+</blockquote>
+<p><code>LOADBALANCER_IPS</code> should not be the IP of the traefik container, but the IP of the Gateway of the network traefik uses (in my case the network is called <code>traefik_proxy</code>).</p>
+<p>You can create your network with a fixed subnet: </p>
+<div class="codehilite" data-code-language="Bash"><pre><span></span><code>docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span>traefik_proxy<span class="w"> </span>--subnet<span class="o">=</span><span class="m">172</span>.16.238.0/24
+</code></pre></div>
+<p>If you did not do so, use <code>docker network inspect traefik_proxy</code> to check for <code>IPAM.Config.0.Gateway</code>, which is the IP you need for <code>LOADBALANCER_IPS</code>. I think it should always be <code>x.x.x.1</code>.</p>
+
+
+
+<a name="1589733"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HTTPS%20issues%20after%207.0%20upgrade/near/1589733" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HTTPS.20issues.20after.207.2E0.20upgrade.html#1589733">(Jun 09 2023 at 19:45)</a>:</h4>
+<p><span class="user-mention" data-user-id="21057">@Matt</span> <a href="#narrow/stream/31-production-help/topic/HTTPS.20issues.20after.207.2E0.20upgrade/near/1585810">said</a>:</p>
+<blockquote>
+<p>I've also set LOADBALANCER_IPS = "127.0.0.1" in the settings file and checked this is the IP seen from nginx in front and still no dice.</p>
+</blockquote>
+<p>Your loadbalancer is not 127.0.0.1 -- that's the loopback address, which will only show up when Zulip makes a request to itself, to <code>/api/v1/events/internal</code>, which is the one log line you show:</p>
+<div class="codehilite"><pre><span></span><code>2023-06-06 00:46:24.311 INFO [zr:9800] 127.0.0.1       POST    200   3ms /api/v1/events/internal [0796a64e-fa84-4a66-842a-bca1bd00e1f6/0] (14@root via internal)
+</code></pre></div>
+<p>Look for any log line in <code>/var/log/nginx/access.log</code> which is <em>not</em> <code>127.0.0.1</code> and that should be the IP of the proxy.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

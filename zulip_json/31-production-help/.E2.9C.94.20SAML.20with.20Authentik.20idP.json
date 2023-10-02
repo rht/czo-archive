@@ -1,0 +1,182 @@
+[
+    {
+        "content": "<p>Does anybody have any pointers on how to configure SAML with Authentik? I tried to follow the documentation but there isn't a one to one mapping with the Authentik settings. I am able to authenticate to authentik which directs back o zulip but i still get the login page. Is there debug setting or something. I can see the encoded saml request in the django log and I've eliminated the errors in error.log but still no go.</p>",
+        "id": 1297460,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1639510424
+    },
+    {
+        "content": "<p>lxml.etree.XMLSyntaxError: Start tag expected, '&lt;' not found, line 1, column 1<br>\n2021-12-14 19:37:57.857 INFO [zulip.auth.saml] /complete/saml/: No valid IdP as issuer of the SAMLResponse.</p>",
+        "id": 1297461,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1639510726
+    },
+    {
+        "content": "<p>2021-12-14 19:51:40.417 INFO [zulip.auth.saml] Error while parsing SAMLResponse:<br>\nTraceback (most recent call last):<br>\n  File \"/home/zulip/deployments/2021-11-25-20-20-30/./zproject/backends.py\", line 2047, in get_issuing_idp<br>\n    resp = OneLogin_Saml2_Response(settings=saml_settings, response=SAMLResponse)<br>\n  File \"/srv/zulip-venv-cache/15c765f7404b30056169b3f53d3160f98ec1147d/zulip-py3-venv/lib/python3.8/site-packages/onelogin/saml2/response.py\", line 39, in __init__<br>\n    self.document = OneLogin_Saml2_XML.to_etree(self.response)<br>\n  File \"/srv/zulip-venv-cache/15c765f7404b30056169b3f53d3160f98ec1147d/zulip-py3-venv/lib/python3.8/site-packages/onelogin/saml2/xml_utils.py\", line 66, in to_etree<br>\n    return OneLogin_Saml2_XML._parse_etree(xml, forbid_dtd=True, forbid_entities=True)<br>\n  File \"/srv/zulip-venv-cache/15c765f7404b30056169b3f53d3160f98ec1147d/zulip-py3-venv/lib/python3.8/site-packages/onelogin/saml2/xmlparser.py\", line 137, in fromstring<br>\n    rootelement = _etree.fromstring(text, parser, base_url=base_url)<br>\n  File \"src/lxml/etree.pyx\", line 3237, in lxml.etree.fromstring<br>\n  File \"src/lxml/parser.pxi\", line 1896, in lxml.etree._parseMemoryDocument<br>\n  File \"src/lxml/parser.pxi\", line 1784, in lxml.etree._parseDoc<br>\n  File \"src/lxml/parser.pxi\", line 1141, in lxml.etree._BaseParser._parseDoc<br>\n  File \"src/lxml/parser.pxi\", line 615, in lxml.etree._ParserContext._handleParseResultDoc<br>\n  File \"src/lxml/parser.pxi\", line 725, in lxml.etree._handleParseResult<br>\n  File \"src/lxml/parser.pxi\", line 654, in lxml.etree._raiseParseError<br>\n  File \"&lt;string&gt;\", line 1<br>\nlxml.etree.XMLSyntaxError: Start tag expected, '&lt;' not found, line 1, column 1<br>\n2021-12-14 19:51:40.418 INFO [zulip.auth.saml] /complete/saml/: No valid IdP as issuer of the SAMLResponse.</p>",
+        "id": 1297469,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1639511551
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"4703\">@Oktay X</span> Hmm, I'd look at the SAMLResponse that your browser either POSTs or GETs  in the <code>SAMLResponse</code> to `/complete/saml/ after going through the IdP. You can use <a href=\"https://www.samltool.com/decode.php\">https://www.samltool.com/decode.php</a> to inspect it - it looks like Zulip may is e failing to parse it for some reason</p>",
+        "id": 1297475,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1639513035
+    },
+    {
+        "content": "<p><a href=\"https://paste.ee/p/9i8fI\">https://paste.ee/p/9i8fI</a>     Decoded response. Looks fine to me.</p>",
+        "id": 1297479,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1639513417
+    },
+    {
+        "content": "<p>What parameter maps to this issuer idP . Any idea?</p>",
+        "id": 1297480,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1639513446
+    },
+    {
+        "content": "<p>\"authentik\": {<br>\n \"entity_id\": \"<a href=\"https://sso.DOMAIN.de\">https://sso.DOMAIN.de</a>\",<br>\n        \"url\": \"<a href=\"https://sso.DOMAIN.de/application/saml/zulip/sso/binding/redirect/\">https://sso.DOMAIN.de/application/saml/zulip/sso/binding/redirect/</a>\",</p>",
+        "id": 1297481,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1639513636
+    },
+    {
+        "content": "<p>Is that verbatim decoded?  I believe it shouldn't start with JSON, but rather with line 17, the <code>&lt;samlP:response&gt;</code></p>",
+        "id": 1297482,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1639513650
+    },
+    {
+        "content": "<p>I was thinking issuer idP is that entity_id thing</p>",
+        "id": 1297483,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1639513654
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/SAML.20with.20Authentik.20idP/near/1297482\">dedi</a>:</p>\n<blockquote>\n<p>Is that verbatim decoded?  I believe it shouldn't start with JSON, but rather with line 17, the <code>&lt;samlP:response&gt;</code></p>\n</blockquote>\n<p>Encoded response fragmant is at the top.   That's the json. It's not verbatim, no. The decoded saml response is at the bottom.</p>",
+        "id": 1297484,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1639513712
+    },
+    {
+        "content": "<p>Wait I think i just got it.</p>",
+        "id": 1297485,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1639513869
+    },
+    {
+        "content": "<p>I changed the method to POST. It was Redirect. I thought I saw redirect somwhere in the docs.</p>",
+        "id": 1297486,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1639513897
+    },
+    {
+        "content": "<p>Yeah. This was actually kind of straight forward when it worked.</p>",
+        "id": 1297487,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1639514236
+    },
+    {
+        "content": "<p>\"redirect\" was mentioned casually in the Apache SSO settings apprently. My bad.</p>",
+        "id": 1297488,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1639514425
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"4703\">@Oktay X</span> do you want to contribute detailed documentation for using Authentik as the IdP to help others, now that you have it working?</p>",
+        "id": 1297559,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1639523162
+    },
+    {
+        "content": "<p>Yes I was already thinking about it. Didn't want to commit to it in public. :)</p>",
+        "id": 1297585,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1639524333
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> <a href=\"https://github.com/zulip/zulip/pull/20841\">https://github.com/zulip/zulip/pull/20841</a></p>",
+        "id": 1311883,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1642587459
+    },
+    {
+        "content": "<p><a href=\"https://goauthentik.io/integrations/services/zulip/\">https://goauthentik.io/integrations/services/zulip/</a>     Doc from their perspective went into the authentik site.</p>",
+        "id": 1319478,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1643631587
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"4703\">@Oktay X</span> cool!  The main edit I'd suggest is adding a few more links -- e.g. a direct link to our SAML authentication documentation, and another to how to restart the server.</p>",
+        "id": 1319645,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1643654771
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> I suppose we should add link to that page as well?</p>",
+        "id": 1319646,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1643654789
+    },
+    {
+        "content": "<p>Unfortunately they want to keep the documentation pretty spartan and it also has to match the other integration documents in style. I think what we can do, is make the document on the zulip side a bit more beefy and just submit the one link to that authentik documentation.</p>",
+        "id": 1319653,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1643655136
+    },
+    {
+        "content": "<p>Well, I was imagining just inline links on the text, if their formatting supports that, without adding additional words.</p>",
+        "id": 1319668,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1643655729
+    },
+    {
+        "content": "<p>But yeah, your approach may be better if they're not excited about additional helpful details.</p>",
+        "id": 1319669,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1643655745
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/SAML.20with.20Authentik.20idP/near/1319646\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> I suppose we should add link to that page as well?</p>\n</blockquote>\n<p>The PR links to that page at the top of the zulip-side instructions, so I think that element is good, unless you meant adding that link in another place?</p>",
+        "id": 1321382,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1643827601
+    },
+    {
+        "content": "<p>Oh, great.</p>",
+        "id": 1321603,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1643851305
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> do you want to just do a cleanup pass on <a href=\"https://github.com/zulip/zulip/pull/20841\">#20841</a> so that we can merge it and close this out?</p>",
+        "id": 1321604,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1643851334
+    },
+    {
+        "content": "<p>Sure, did an editing pass and pushed to the PR. I'll mark this topic as closed</p>",
+        "id": 1321839,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1643896574
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> has marked this topic as resolved.</p>",
+        "id": 1321840,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1643896579
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/.E2.9C.94.20SAML.20with.20Authentik.20idP/near/1319668\">dedi</a>:</p>\n<blockquote>\n<p>Well, I was imagining just inline links on the text, if their formatting supports that, without adding additional words.</p>\n</blockquote>\n<p>This seems to be the case unfortunately. However, there are additional settings that can be made. My setup was on the basic side. If I remember correctly security can be tightened further with certs etc.  I think I can point to the saml config page for further settings, not as inline links but as additional info at the bottom. And I doubt they'd say no to a page that has their name in it, i.e. this PR.</p>",
+        "id": 1322666,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1644003372
+    },
+    {
+        "content": "<p>Thanks for doing the docs <span class=\"user-mention\" data-user-id=\"4703\">@Oktay X</span>  I’m going to give Authentik a spin and see how it works.  I’m sure this will help a lot!</p>",
+        "id": 1344687,
+        "sender_full_name": "Pat Roam",
+        "timestamp": 1647318277
+    }
+]

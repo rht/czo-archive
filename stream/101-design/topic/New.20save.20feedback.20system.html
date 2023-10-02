@@ -1,0 +1,328 @@
+<html>
+<head><meta charset="utf-8"><title>New save feedback system · design · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/101-design/index.html">design</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html">New save feedback system</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="533774"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/533774" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#533774">(Mar 10 2018 at 18:39)</a>:</h4>
+<p><span class="user-mention" data-user-id="131">@Rishi Gupta</span> <span class="user-mention" data-user-id="7">@Tim Abbott</span> In organization settings page: ORGANIZATION PROFILE, ORGANIZATION SETTINGS, ORGANIZATION PERMISSIONS, EMOJI SETTINGS, USER GROUPS They all use old save feedback system, so in which areas we should implement new feedback system first.</p>
+
+
+
+<a name="533778"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/533778" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#533778">(Mar 10 2018 at 18:47)</a>:</h4>
+<p>Also, it looks like there are some other areas in "SETTINGS" where we can use this new system.</p>
+
+
+
+<a name="533846"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/533846" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#533846">(Mar 10 2018 at 20:31)</a>:</h4>
+<p>I've few questions here, </p>
+<ul>
+<li>do we want to extend <code>do_settings_change</code> to delete and post requests as well?<br>
+ (If yes, then we should give argument <code>request</code> in <code>do_settings_change</code>where it can be something like this:</li>
+</ul>
+<div class="codehilite"><pre><span></span><span class="nx">exports</span><span class="p">.</span><span class="nx">request_type</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nx">POST</span><span class="o">:</span>   <span class="mi">1</span><span class="p">,</span>
+    <span class="nx">PATCH</span><span class="o">:</span>  <span class="mi">2</span><span class="p">,</span>
+    <span class="nx">DEL</span><span class="o">:</span>    <span class="mi">3</span><span class="p">,</span>
+<span class="p">};</span>
+</pre></div>
+
+
+<ul>
+<li>Some requests do some additional things in their success callback, so if we want to use <code>do_settings_change</code> then we should also send another argument of these functions as a callback. Is this alright?</li>
+</ul>
+<p>If this is the case then <code>do_settings_change</code> should have definition something like this:</p>
+<div class="codehilite"><pre><span></span><span class="nx">exports</span><span class="p">.</span><span class="nx">do_settings_change</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">url</span><span class="p">,</span> <span class="nx">data</span><span class="p">,</span> <span class="nx">status_element</span><span class="p">,</span> <span class="nx">options</span><span class="p">)</span> <span class="p">{</span>
+</pre></div>
+
+
+<p>where options can contain optional arguments like success message and additional success callback.</p>
+
+
+
+<a name="533887"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/533887" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#533887">(Mar 10 2018 at 21:08)</a>:</h4>
+<p>what sort of additional things are done in the success callback?</p>
+
+
+
+<a name="533938"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/533938" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#533938">(Mar 10 2018 at 21:28)</a>:</h4>
+<p>Like here <a href="https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L421" target="_blank" title="https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L421">https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L421</a><br>
+Also, like here <a href="https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L536" target="_blank" title="https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L536">https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L536</a><br>
+As this type of callbacks aren't present in all the request that's why they should be optional.</p>
+
+
+
+<a name="534030"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/534030" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#534030">(Mar 11 2018 at 00:16)</a>:</h4>
+<p><span class="user-mention" data-user-id="2528">@Shubham Dhama</span> for the success callbacks, what I would do is have an <code>opts</code> structure where one can pass things like a <code>success</code> (that would just replace it) or a <code>success_continuation</code> (which would be called at the end of the existing callback).</p>
+<p>That said, <a href="https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L536" target="_blank" title="https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L536">https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L536</a> is really just trying to do the right thing with the <code>ui.report_success</code> style alerts, and I suspect wouldn't need a callback at all once converted.  I'm less sure about the other.</p>
+<p>In terms of structure, as I suggested, we should start with "Organization settings" only, to manage the scope of what we're changing to be one thing at a time.</p>
+
+
+
+<a name="534031"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/534031" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#534031">(Mar 11 2018 at 00:17)</a>:</h4>
+<p>For request type, I'd prefer to add a positional argument that's the actual name (e.g., "post", not a numeric code that means that), or possibly just pass in the value <code>channel.post</code>.</p>
+
+
+
+<a name="536222"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/536222" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#536222">(Mar 12 2018 at 16:46)</a>:</h4>
+<p>I have a question for a long time, why we have two <code>Save</code> button in <code>organization settings-Organization settings</code> section, as both do the same job, Does this is have any designing significance?</p>
+
+
+
+<a name="536230"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/536230" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#536230">(Mar 12 2018 at 16:47)</a>:</h4>
+<p>For organization permissions, we also have three section but only one save button, then why separate save button for two sections in organization settings?</p>
+
+
+
+<a name="536238"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/536238" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#536238">(Mar 12 2018 at 16:52)</a>:</h4>
+<p>If they both do the same thing, I'm guessing it's mostly a mistake :). It could be in the past we had more settings on that page, so had a few Save buttons spaced out. And then as we split the page up into subpages, the save buttons got moved around kind of randomly.</p>
+
+
+
+<a name="536254"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/536254" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#536254">(Mar 12 2018 at 17:00)</a>:</h4>
+<p>This makes sense, so should I clean this up?</p>
+
+
+
+<a name="536258"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/536258" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#536258">(Mar 12 2018 at 17:04)</a>:</h4>
+<p>have you chatted with Tim about what we were thinking here? Basically we want a "Save" and "Discard changes" button to appear in the heading of each section when you change something.</p>
+
+
+
+<a name="536450"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/536450" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#536450">(Mar 12 2018 at 19:23)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> For organization settings our current system for <code>property_types</code> made it bit difficult(but still is solvable) for each subsection of organization settings section to have a separate status indicator.</p>
+<blockquote>
+<p>Basically we want a "Save" and "Discard changes" button to appear in the heading of each section when you change something. </p>
+</blockquote>
+<p>Here I have the same idea to have a sticky <code>div</code> at the top or bottom of such sections (viz. org permissions or org settings) having <code>Save changes</code> button where we can also place this indicator, I think this will also be intuitive as user don't need to search for <code>save changes</code> button at each page and we don't need to have separate status indicator for each page.</p>
+
+
+
+<a name="536452"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/536452" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#536452">(Mar 12 2018 at 19:24)</a>:</h4>
+<p>I can experiment with it to show how it will look like.</p>
+
+
+
+<a name="536507"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/536507" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#536507">(Mar 12 2018 at 20:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="2528">@Shubham Dhama</span> I think the 2 save buttons is mostly historical, though I think nit's also worth noting that because some UI elements don't auto-save (and others do), we have to be pretty careful about placement of the save buttons in the current system to make it clearer which things the save buttons apply to.</p>
+
+
+
+<a name="536509"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/536509" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#536509">(Mar 12 2018 at 20:01)</a>:</h4>
+<p>I think having the buttons appear in the heading lines (where we do the feedback in "display settings") is the right approach.</p>
+
+
+
+<a name="536541"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/536541" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#536541">(Mar 12 2018 at 20:25)</a>:</h4>
+<p>Just to make sure, with this, we don't need to have saving action of one clicking <code>save</code> button on another sub-section like we have currently for Message feed and Language settings where saving for one subsection also save another subsection.</p>
+
+
+
+<a name="536650"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/536650" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#536650">(Mar 12 2018 at 21:39)</a>:</h4>
+<p>Correct, ideally the buttons would only apply to their section.</p>
+
+
+
+<a name="538086"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538086" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538086">(Mar 13 2018 at 17:46)</a>:</h4>
+<p><a href="/user_uploads/2/bb/mIPUqnU6ThedLrLqFIkHvvRo/First.gif" target="_blank" title="First.gif">First.gif</a> Is this something like what we want in settings(currently implemented for only one subsection(message feed)). Having a save icon for each subsection made it easy to implement new feedback system for each subsection.</p>
+<div class="message_inline_image"><a href="/user_uploads/2/bb/mIPUqnU6ThedLrLqFIkHvvRo/First.gif" target="_blank" title="First.gif"><img src="/user_uploads/2/bb/mIPUqnU6ThedLrLqFIkHvvRo/First.gif"></a></div>
+
+
+
+<a name="538100"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538100" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538100">(Mar 13 2018 at 17:50)</a>:</h4>
+<p>great! One note is the <code>Save Changes</code> button should appear just to the right of the heading, and then should turn into <code>Saving ..</code> and  <code>Saved</code> when you click on it.</p>
+
+
+
+<a name="538104"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538104" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538104">(Mar 13 2018 at 17:52)</a>:</h4>
+<p>Two more points:</p>
+<ul>
+<li>The Save Changes button should only appear if there are changes to be saved (i.e. only after they've clicked on a checkbox)</li>
+<li>It should just be "Save", since we also want a <code>Discard changes</code> button</li>
+</ul>
+
+
+
+<a name="538295"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538295" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538295">(Mar 13 2018 at 19:14)</a>:</h4>
+<p>I've tried to fit these conditions in <code>settings_ui.do_settings_change</code> but it looks this is gonna make <code>do_settings_change</code> function more complicated as then there will be no need for <code>loading</code> indicator. So, if I'm right we just want to change current save method, from one for the whole page/section to one for each sub-section with above behavior as pointed out by @RIshi.</p>
+
+
+
+<a name="538301"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538301" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538301">(Mar 13 2018 at 19:16)</a>:</h4>
+<blockquote>
+<p>I've tried to fit these conditions in <code>settings_ui.do_settings_change</code> but it looks this is gonna make <code>do_settings_change</code> function more complicated as then there will be no need for <code>loading</code> indicator.  </p>
+</blockquote>
+<p>This is because I think the main reason we want to use <code>do_settings_change</code> function is to use new "Saving" loading indicators.</p>
+
+
+
+<a name="538305"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538305" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538305">(Mar 13 2018 at 19:17)</a>:</h4>
+<p>So, this can be easily implemented by changing the text of these buttons, with the main logic I've implemented in above GIF prototype.</p>
+
+
+
+<a name="538311"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538311" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538311">(Mar 13 2018 at 19:18)</a>:</h4>
+<p>^ <span class="user-mention" data-user-id="131">@Rishi Gupta</span> <span class="user-mention" data-user-id="7">@Tim Abbott</span></p>
+
+
+
+<a name="538314"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538314" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538314">(Mar 13 2018 at 19:21)</a>:</h4>
+<p>It's both:</p>
+<ul>
+<li>we want to use the "Save" "Saving .." "Saved" pattern everywhere</li>
+<li>we want each sub-section to be independent</li>
+</ul>
+<p>or maybe I didn't understand your suggestion?</p>
+
+
+
+<a name="538317"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538317" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538317">(Mar 13 2018 at 19:22)</a>:</h4>
+<blockquote>
+<p>It's both:<br>
+* we want to use the "Save" "Saving .." "Saved" pattern everywhere<br>
+* we want each sub-section to be independent</p>
+<p>or maybe I didn't understand your suggestion?</p>
+</blockquote>
+<p>Yeah, this is clear, actually, I want to make sure, to implement above points do I necessarily need to use <code> settings_ui.do_settings_change </code>, because this can be easily implemented in <code>settings_org</code> .</p>
+
+
+
+<a name="538318"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538318" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538318">(Mar 13 2018 at 19:23)</a>:</h4>
+<p>I have already made each subsection independent.</p>
+
+
+
+<a name="538441"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538441" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538441">(Mar 13 2018 at 20:32)</a>:</h4>
+<p><span class="user-mention" data-user-id="2528">@Shubham Dhama</span> I think eventually we probably want to put something in <code>settings_ui</code>, but it's fine for the function to be separate from <code>do_settings_change</code> -- e.g. this could be a separate <code>ui.plan_settings_change</code> API.  But it's also fine to just do it in <code>settings_org</code> and then refactor.</p>
+
+
+
+<a name="538445"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538445" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538445">(Mar 13 2018 at 20:33)</a>:</h4>
+<p>Also, if you start having prep refactor commits that are ready to review/merge, feel free to submit those.  What Steve has been doing with his prep refactoring commits for his currently project is a great example of how to manage a big effort like this without getting a huge unreviewed branch built up :)</p>
+
+
+
+<a name="538457"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538457" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538457">(Mar 13 2018 at 20:36)</a>:</h4>
+<p>Okay, I've to revert some changes because I was unaware that we want the button needs to be updated. I'm updating it and will update the PR soon.</p>
+
+
+
+<a name="538719"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538719" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538719">(Mar 13 2018 at 22:22)</a>:</h4>
+<p>I've added some commits to PR <a href="https://github.com/zulip/zulip/pull/8650" target="_blank" title="https://github.com/zulip/zulip/pull/8650">#8650</a> but still UI changes to settings_org aren't pushed.</p>
+<p><span class="user-mention" data-user-id="131">@Rishi Gupta</span> How should UI look like, when  "Failed"/error and "No changes to save" case happens.</p>
+<p>For "Failed" I guess button should read "Failed" (it can't be two words because the button will look ugly otherwise.)</p>
+<p>And for "No changes to save" how about check whether there are any changes happened or not in frontend(currently we check whether there is any change or not from the response data). Whether we want to check it from response data or not, what should be the behavior then(I think we should leave to current behavior or add a similar element to the header of sub-section or another possibility button will read "No changes")?</p>
+
+
+
+<a name="538729"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/538729" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#538729">(Mar 13 2018 at 22:29)</a>:</h4>
+<ul>
+<li>The frontend should detect if there are any changes, and if there are not, then it should remove the "Save" and "Discard changes" buttons</li>
+<li>On clicking save, the "Discard changes" button should go away</li>
+<li>If there is no error message, I think "Save failed" in red in the button is likely fine?</li>
+<li>If there is an error message, <code>Save failed: Too many foos</code> in red text (no button) I think could work? </li>
+<li>No changes to save from the backend can now be treated as an error like any other, since we shouldn't show the Save button in that case</li>
+</ul>
+
+
+
+<a name="540235"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/540235" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#540235">(Mar 14 2018 at 17:32)</a>:</h4>
+<p><a href="/user_uploads/2/86/VvJM4jjmhGf25g-9n5md5Bwo/Peek-2018-03-14-22-56.gif" target="_blank" title="Peek-2018-03-14-22-56.gif">Peek-2018-03-14-22-56.gif</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/86/VvJM4jjmhGf25g-9n5md5Bwo/Peek-2018-03-14-22-56.gif" target="_blank" title="Peek-2018-03-14-22-56.gif"><img src="/user_uploads/2/86/VvJM4jjmhGf25g-9n5md5Bwo/Peek-2018-03-14-22-56.gif"></a></div>
+
+
+
+<a name="540240"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/540240" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#540240">(Mar 14 2018 at 17:33)</a>:</h4>
+<p>Here is how now org-settings page looks like. What still needs to be changed or what am I missing here?</p>
+
+
+
+<a name="540266"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/540266" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#540266">(Mar 14 2018 at 17:41)</a>:</h4>
+<p><span class="user-mention" data-user-id="2528">@Shubham Dhama</span> I think we may want to do some further passes on the CSS, but the logic looks about right; might be a good point to work on integrating into master.</p>
+
+
+
+<a name="540278"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/540278" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#540278">(Mar 14 2018 at 17:44)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> Okay so this means to update the PR for further review/merge.</p>
+
+
+
+<a name="540279"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/540279" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#540279">(Mar 14 2018 at 17:44)</a>:</h4>
+<p>yep, exactly.</p>
+
+
+
+<a name="540404"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/540404" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#540404">(Mar 14 2018 at 18:23)</a>:</h4>
+<p>just to check, this works if you click and unclick a setting? I.e. when if you click and unclick a setting, does it remove the "Save" and "Cancel" buttons?</p>
+
+
+
+<a name="540408"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/540408" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#540408">(Mar 14 2018 at 18:23)</a>:</h4>
+<p>It certainly should :)</p>
+
+
+
+<a name="540734"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/540734" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shubham Dhama <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#540734">(Mar 14 2018 at 23:02)</a>:</h4>
+<blockquote>
+<p>just to check, this works if you click and unclick a setting? I.e. when if you click and unclick a setting, does it remove the "Save" and "Cancel" buttons?</p>
+</blockquote>
+<p>(Sorry for missing the message), Yeah when click and unclick a setting, Save and Discard buttons get removed.<br>
+(Currently, I'm doing some more manual testing and trying to cover all the corner cases)</p>
+
+
+
+<a name="540869"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/New%20save%20feedback%20system/near/540869" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/101-design/topic/New.20save.20feedback.20system.html#540869">(Mar 15 2018 at 00:44)</a>:</h4>
+<p>cool. One more thing to note is "Discard" should be "Discard changes", and should be in black.<br>
+(We can play with making it look good afterwards)</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

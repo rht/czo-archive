@@ -1,0 +1,221 @@
+<html>
+<head><meta charset="utf-8"><title>6.2 -&gt; 7.0  attachments error 500 · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html">6.2 -&gt; 7.0  attachments error 500</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1588138"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588138" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cláudio Martins <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588138">(Jun 07 2023 at 23:55)</a>:</h4>
+<p>Hi, <br>
+I've upgraded to 7.0 some days ago, and I've been trying to sort out why attachments (new or old) give a 500 internal server error when trying to view them. Another thing is, despite the file being saved on s3, new files uploaded won't appear on the list of the user's uploaded files.</p>
+<p>I have already:</p>
+<ul>
+<li>upgraded settings.py    <a href="https://zulip.readthedocs.io/en/latest/production/upgrade.html#updating-settings-py-inline-documentation">https://zulip.readthedocs.io/en/latest/production/upgrade.html#updating-settings-py-inline-documentation</a></li>
+<li>verified that the files are in fact written to S3 storage and that the links correspond to folders on S3</li>
+<li>I have also switch between using s3_key and IAM role for EC2, and everything remains the same.</li>
+<li>According to the upgrades notes, this deployment is not heavy in attachments and has less than 50 users, so I didn't change s3 cache</li>
+</ul>
+<p>What am I missing?</p>
+<p>Thank you!</p>
+
+
+
+<a name="1588646"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588646" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588646">(Jun 08 2023 at 16:00)</a>:</h4>
+<p><span class="user-mention" data-user-id="27166">@Cláudio Martins</span>: Can you show any recent errors in <code>/var/log/zulip/errors.log</code> or <code>/var/log/nginx/error.log</code> ?</p>
+
+
+
+<a name="1588772"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588772" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cláudio Martins <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588772">(Jun 08 2023 at 17:39)</a>:</h4>
+<p>Thank you <span class="user-mention" data-user-id="12178">@Alex Vandiver</span> , in nginx error log, there is one repeating:</p>
+<p>' 2023/06/08 11:51:37 [error] 720#720: *1254 <a href="http://XXXX-uploaded-files.s3.amazonaws.com">XXXX-uploaded-files.s3.amazonaws.com</a> could not be resolved (110: Operation timed out), client: [MY IP ADDRESS], server: , request: "GET /user_uploads/2/_4MFBCSqaLpJHicpdYOjYO3m/filename.txt HTTP/2.0", host: "<a href="http://zulip.mydomain.org">zulip.mydomain.org</a>"'</p>
+<p>from the zulip error log is harder for me to pinpoint, but the errors I see there I cannot correlate with the hours I experiment with uploading or trying to access the link. Nevertheless, I noticed 11 lines there like:<br>
+"2023-06-02 05:00:17.179 WARN [] [DIFFERENT FILES NAMES HERE] does not exist. Its entry in the database will be removed."<br>
+And its on the night after I did the upgrade</p>
+<p>After that I have errors that I think to be connect to reboots I did on the server. (<a href="/user_uploads/2/53/vOKjC7ERop4jLD7Id5zjVLo6/zulipErrors.txt">zulipErrors.txt</a><br>
+)</p>
+
+
+
+<a name="1588778"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588778" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588778">(Jun 08 2023 at 18:02)</a>:</h4>
+<p>Is <code>XXXX-uploaded-files</code> the name of your S3 bucket?  Does that hostname resolve for you if you enter it in your browser, or run:</p>
+<div class="codehilite"><pre><span></span><code>host XXXX-uploaded-files.s3.amazonaws.com
+</code></pre></div>
+
+
+
+<a name="1588779"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588779" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cláudio Martins <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588779">(Jun 08 2023 at 18:04)</a>:</h4>
+<p>Yes, it is the name of the bucket and it resolves</p>
+
+
+
+<a name="1588780"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588780" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588780">(Jun 08 2023 at 18:04)</a>:</h4>
+<p>The "does not exist. Its entry in the database will be removed" warning is fine.  In 7.0 we started cleaning up attachments that were uploaded but were never referenced in messages, so were inaccessible.  In some cases when we go to clean those up, we find that the file never actually got stored in S3 at all -- that's what that warning is.</p>
+
+
+
+<a name="1588781"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588781" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588781">(Jun 08 2023 at 18:05)</a>:</h4>
+<p>Does it resolve if you run that command from on the Zulip server?</p>
+
+
+
+<a name="1588782"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588782" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588782">(Jun 08 2023 at 18:06)</a>:</h4>
+<p>Does it resolve if you run:</p>
+<div class="codehilite"><pre><span></span><code>dig XXXX-uploaded-files.s3.amazonaws.com @127.0.0.53
+</code></pre></div>
+
+
+
+<a name="1588784"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588784" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cláudio Martins <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588784">(Jun 08 2023 at 18:09)</a>:</h4>
+<p>The host command resolves either running from the server, or from my desktop. But the dig doesn't.</p>
+
+
+
+<a name="1588785"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588785" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588785">(Jun 08 2023 at 18:11)</a>:</h4>
+<p>OK, that's helpful.</p>
+<p>What version of Ubuntu / Debian?</p>
+
+
+
+<a name="1588786"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588786" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cláudio Martins <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588786">(Jun 08 2023 at 18:12)</a>:</h4>
+<p>Debian 11</p>
+
+
+
+<a name="1588787"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588787" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588787">(Jun 08 2023 at 18:12)</a>:</h4>
+<p>Can you show <code>resolvectl status</code> ?</p>
+
+
+
+<a name="1588788"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588788" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cláudio Martins <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588788">(Jun 08 2023 at 18:13)</a>:</h4>
+<p>Failed to get global data: Unit dbus-org.freedesktop.resolve1.service not found.</p>
+
+
+
+<a name="1588789"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588789" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588789">(Jun 08 2023 at 18:13)</a>:</h4>
+<p>That smells likely relevant.  Anything interesting about this install, network-wise?  What's your <code>/etc/resolve.conf</code>?</p>
+
+
+
+<a name="1588790"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588790" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588790">(Jun 08 2023 at 18:16)</a>:</h4>
+<p>Hm, OK.  I can replicate this with a stock Debian 11.</p>
+
+
+
+<a name="1588793"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588793" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cláudio Martins <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588793">(Jun 08 2023 at 18:18)</a>:</h4>
+<p>my '''/etc/resolv.conf''' :<br>
+domain eu-central-1.compute.internal<br>
+search eu-central-1.compute.internal<br>
+nameserver 172.31.0.2</p>
+
+
+
+<a name="1588794"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588794" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cláudio Martins <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588794">(Jun 08 2023 at 18:20)</a>:</h4>
+<p>This install is a stock debian, and strictly followed the documentation for installations and upgrades.</p>
+
+
+
+<a name="1588795"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588795" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cláudio Martins <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588795">(Jun 08 2023 at 18:20)</a>:</h4>
+<p>It's on EC2.</p>
+
+
+
+<a name="1588796"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588796" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588796">(Jun 08 2023 at 18:24)</a>:</h4>
+<p>Try <code>service systemd-resolved start</code> ?</p>
+
+
+
+<a name="1588798"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588798" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588798">(Jun 08 2023 at 18:34)</a>:</h4>
+<p>I think it’s expected that a system upgraded from Debian 10 to Debian 11 isn’t using systemd-resolved/resolvectl/127.0.0.53. That isn’t necessarily a problem.</p>
+
+
+
+<a name="1588799"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588799" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588799">(Jun 08 2023 at 18:35)</a>:</h4>
+<p>Even fresh installs of Debian 11 don't run systemd-resolved, apparently.</p>
+
+
+
+<a name="1588800"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588800" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588800">(Jun 08 2023 at 18:35)</a>:</h4>
+<p>Oh I see, our nginx configuration assumes 127.0.0.53.</p>
+
+
+
+<a name="1588801"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588801" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588801">(Jun 08 2023 at 18:35)</a>:</h4>
+<p>Because Ubuntu <em>does</em> always run it, I made the assumption in the nginx code (which requires an explicit nameserver to point to) that we could use 127.0.0.53.</p>
+
+
+
+<a name="1588802"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588802" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588802">(Jun 08 2023 at 18:37)</a>:</h4>
+<p>Yeah.  So I think it seems reasonable to make that dependency explicit in puppet, rather than trying to put anything else in the nginx config.</p>
+
+
+
+<a name="1588803"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588803" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588803">(Jun 08 2023 at 18:39)</a>:</h4>
+<p>It might depend on installation method? A freshly created container from <code>lxc launch images:debian/11</code> does run it, but <code>lxc launch images:debian/10</code> upgraded to 11 does not.</p>
+
+
+
+<a name="1588804"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588804" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588804">(Jun 08 2023 at 18:40)</a>:</h4>
+<p>Huh.  I installed a fresh Debian 11 on DO and didn't get one.</p>
+
+
+
+<a name="1588806"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588806" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cláudio Martins <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588806">(Jun 08 2023 at 18:41)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500/near/1588796">disse</a>:</p>
+<blockquote>
+<p>Try <code>service systemd-resolved start</code> ?</p>
+</blockquote>
+<p>That WORKS!</p>
+
+
+
+<a name="1588808"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588808" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588808">(Jun 08 2023 at 18:41)</a>:</h4>
+<p>Great, and thanks for the report.  We'll get this into 7.1.</p>
+
+
+
+<a name="1588809"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588809" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cláudio Martins <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588809">(Jun 08 2023 at 18:42)</a>:</h4>
+<p>Thank you for your help!</p>
+
+
+
+<a name="1588850"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/6.2%20-%3E%207.0%20%20attachments%20error%20500/near/1588850" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500.html#1588850">(Jun 08 2023 at 19:53)</a>:</h4>
+<p>Pushed <a href="https://github.com/zulip/zulip/pull/25944">#25944</a>.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

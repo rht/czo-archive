@@ -1,0 +1,368 @@
+[
+    {
+        "content": "<p>I'm trying to upgrade our production server (currently at 5.2) to 5.7 with the goal of going to 6 (was not sure if I should go directly to 6 so was stepping through the latest in the 5.x branch</p>",
+        "id": 1467658,
+        "sender_full_name": "Steven",
+        "timestamp": 1668910800
+    },
+    {
+        "content": "<p>at current I'm getting the following error using the release upgrade:</p>\n<div class=\"codehilite\"><pre><span></span><code>The following packages were automatically installed and are no longer required:\n  libevent-core-2.1-7 libevent-pthreads-2.1-7 libopts25 libreadline7\n  monitoring-plugins-basic monitoring-plugins-common postgresql-client-13\n  postgresql-client-14 python-pkg-resources sntp\nUse &#39;apt autoremove&#39; to remove them.\nThe following NEW packages will be installed:\n  libllvm9 libxmlb2 postgresql-15 postgresql-client-15 postgresql-doc-15\nThe following packages have been kept back:\n  postgresql-client-common postgresql-common\nThe following packages will be upgraded:\n  fwupd libfwupd2 libfwupdplugin5 postgresql postgresql-client\n  postgresql-contrib postgresql-doc\nThe following packages will be DOWNGRADED:\n  postgresql-12\n7 upgraded, 5 newly installed, 1 downgraded, 0 to remove and 2 not upgraded.\nE: Packages were downgraded and -y was used without --allow-downgrades.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2022-11-20-02-13-10/scripts/lib/upgrade-zulip-stage-2&quot;, line 231, in &lt;module&gt;\n    subprocess.check_call([&quot;apt-get&quot;, &quot;-y&quot;, &quot;--with-new-pkgs&quot;, &quot;upgrade&quot;])\n  File &quot;/usr/lib/python3.8/subprocess.py&quot;, line 364, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;apt-get&#39;, &#39;-y&#39;, &#39;--with-new-pkgs&#39;, &#39;upgrade&#39;]&#39; returned non-zero exit status 100.\n````\n</code></pre></div>",
+        "id": 1467659,
+        "sender_full_name": "Steven",
+        "timestamp": 1668910840
+    },
+    {
+        "content": "<p>It seems like it wants to downgrade postgresql and --allow-downgrades was missing from the script... Current version of postgres on the server is 14. I went in to /etc/zulip/zulip.conf and noticed postgresql was set to 12 so I changed it to 14 and re ran the uprgade command but I get the same error</p>",
+        "id": 1467660,
+        "sender_full_name": "Steven",
+        "timestamp": 1668910933
+    },
+    {
+        "content": "<p>Do I maybe need to restart zulip after the config change for the upgrade script to see the change? is there something now cached because I ran it with the config set to 12 the first time?</p>",
+        "id": 1467661,
+        "sender_full_name": "Steven",
+        "timestamp": 1668911012
+    },
+    {
+        "content": "<p>so after some digging it seems zulip uses pgcluster to allow it to run older versions of pgsql on newer daemons? if I run</p>\n<div class=\"codehilite\"><pre><span></span><code>pg_lsclusters -h\n12 main 5432 online postgres /var/lib/postgresql/12/main /var/log/postgresql/postgresql-%Y-%m-%d_%H%M%S.log\n</code></pre></div>\n<p>I can see that I have a cluster of pgsql v12 running eventhough my daemon is v14?<br>\nI'm guessing I have to set the /etc/zulip/zulip.conf back to 12 (since it is v12) and run the Postgresql upgrade process?</p>\n<div class=\"codehilite\"><pre><span></span><code>/home/zulip/deployments/current/scripts/setup/upgrade-postgresql\n</code></pre></div>\n<p>is that correct? is this safe to do in production with a backup as shown in the docs?</p>",
+        "id": 1467667,
+        "sender_full_name": "Steven",
+        "timestamp": 1668914399
+    },
+    {
+        "content": "<p>I followed the online instructions for the db upgrade and rad the upgrade from 12x to 14x with success and just started the upgrade to zulip 5.7 which now runs without trying / failing at the downgrade. Now just waiting for the 5.7 upgrade to complete</p>",
+        "id": 1467671,
+        "sender_full_name": "Steven",
+        "timestamp": 1668917168
+    },
+    {
+        "content": "<p>Success to 5.7 upgrade! not going to upgrade to 6.0</p>",
+        "id": 1467672,
+        "sender_full_name": "Steven",
+        "timestamp": 1668917554
+    },
+    {
+        "content": "<p>Success with upgrade to 6.0!</p>",
+        "id": 1467673,
+        "sender_full_name": "Steven",
+        "timestamp": 1668919147
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15835\">@Steven</span> the upgrade process you followed is correct. I'm curious if there's something we could tweak in the documentation that would have helped you feel more confidence in proceeding.</p>",
+        "id": 1468528,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1669137225
+    },
+    {
+        "content": "<p>I guess there's also something to investigate in why the system wanted to change the postgres version during the apt update step...</p>",
+        "id": 1468530,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1669137277
+    },
+    {
+        "content": "<p>There's no need to stop at 5.7 when upgrading from 5.2 -&gt; 6.0, unless there are errors in 5.2 in the bootstrapping part of the upgrade script -- which I don't think there were.</p>\n<blockquote>\n<p>I can see that I have a cluster of pgsql v12 running eventhough my daemon is v14?</p>\n</blockquote>\n<p>Do you remember what led you to believe that the \"my daemon is v14\"?  I feel like we've seen a few cases where <code>postgresql-14</code> or just <code>postgresql-client-14</code> are installed, but the former sits happily empty alongside the real postgres, and the latter is 100% compatible with earlier versions of the server.</p>\n<p>My <em>suspicion</em> is that the \"downgrade\" notice is related to <a href=\"https://github.com/zulip/zulip/commit/9c8d2b7be39314b41f04a1e1356942afe21ab223\">9c8d2b7be39314b41f04a1e1356942afe21ab223</a> somehow.</p>",
+        "id": 1469136,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1669216855
+    },
+    {
+        "content": "<p>Oho.  OK, I think I understand.</p>\n<p>In <a href=\"https://github.com/zulip/zulip/commit/472e216cecc4538a57f2e60ee6629f57fdda6539\">472e216cecc4538a57f2e60ee6629f57fdda6539</a> (which is in 5.7) we dropped the <code>--allow-downgrades</code> flag.  Except the pin that we installed earlier (in <a href=\"https://github.com/zulip/zulip/commit/9c8d2b7be39314b41f04a1e1356942afe21ab223\">9c8d2b7be39314b41f04a1e1356942afe21ab223</a>, which is in 5.2) doesn't get removed until we run <code>setup-apt-repo</code>, which happens when we run puppet.</p>",
+        "id": 1469138,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1669216976
+    },
+    {
+        "content": "<p>I would have been very interested to see <code>apt-cache policy postgresql-12</code> when this was failing.</p>",
+        "id": 1469139,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1669217070
+    },
+    {
+        "content": "<p>Because I'm not certain what version of <code>postrgesql-12</code> that implies you were running, and how it got into that state -- because if you were on 5.2, that means that pin should have already been in effect and you should still have been on 12.9.</p>",
+        "id": 1469140,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1669217172
+    },
+    {
+        "content": "<p>I guess I'll briefly try installing a 5.2 and see what happens on the upgrade to 5.7.</p>",
+        "id": 1469141,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1669217200
+    },
+    {
+        "content": "<p>Hi, was there any update on this error?</p>\n<div class=\"codehilite\"><pre><span></span><code>The following packages will be DOWNGRADED:\n  postgresql-12\n51 upgraded, 31 newly installed, 1 downgraded, 0 to remove and 2 not upgraded.\nE: Packages were downgraded and -y was used without --allow-downgrades.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2022-11-28-15-15-54/scripts/lib/upgrade-zulip-stage-2&quot;, line 237, in &lt;module&gt;\n    subprocess.check_call([&quot;apt-get&quot;, &quot;-y&quot;, &quot;--with-new-pkgs&quot;, &quot;upgrade&quot;])\n  File &quot;/usr/lib/python3.8/subprocess.py&quot;, line 364, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;apt-get&#39;, &#39;-y&#39;, &#39;--with-new-pkgs&#39;, &#39;upgrade&#39;]&#39; returned non-zero exit status 100.\n</code></pre></div>\n<p>I was also attempting to upgrade from 5.2 &gt; 6 and ran into the same error</p>\n<p>I was unable to upgrade postgres manually due to errors about locale</p>\n<div class=\"codehilite\"><pre><span></span><code>+ rm -rf /tmp/tmp.Artfkkl2Vu\n++ mktemp /var/log/zulip/upgrade-postgresql-12-14.XXXXXXXXX.log\n+ UPGRADE_LOG=/var/log/zulip/upgrade-postgresql-12-14.0ocsEg1VY.log\n+ pg_upgradecluster -v 14 12 main --method=upgrade --link\n+ tee /var/log/zulip/upgrade-postgresql-12-14.0ocsEg1VY.log\nStopping old cluster...\nperl: warning: Setting locale failed.\nperl: warning: Please check that your locale settings:\n        LANGUAGE = (unset),\n        LC_ALL = (unset),\n        LC_CTYPE = &quot;UTF-8&quot;,\n        LANG = &quot;C.UTF-8&quot;\n    are supported and installed on your system.\nperl: warning: Falling back to a fallback locale (&quot;C.UTF-8&quot;).\nError: The locale requested by the environment is invalid:\n  LANG: C.UTF-8\n  LC_CTYPE: UTF-8\nError: Could not create target cluster\n</code></pre></div>",
+        "id": 1470489,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1669650992
+    },
+    {
+        "content": "<p>Sorry, the holidays and some planning last week interfered.  Let me get back to replicating the issue.</p>",
+        "id": 1470511,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1669653934
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17540\">@Sean Yuan</span>: What were you running to upgrade postgres \"manually\"?</p>",
+        "id": 1470512,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1669653964
+    },
+    {
+        "content": "<p>Hi <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> <br>\nI followed the upgrade instructions here: <br>\n<a href=\"https://zulip.readthedocs.io/en/6.0/production/upgrade-or-modify.html#upgrading-postgresql\">https://zulip.readthedocs.io/en/6.0/production/upgrade-or-modify.html#upgrading-postgresql</a></p>",
+        "id": 1470902,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1669687249
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17540\">@Sean Yuan</span>: I can't replicate with a clean 5.2 with PostgreSQL 12 -- it upgrades to 5.7 with PostgreSQL 12 just fine.  Specifically, it upgrades from 12.9-2.pgdg20.04+1 to 12.13-1.pgdg20.04+1.</p>\n<p>If you're still in this situation, can you show the output of <code>apt-cache policy postgresql-12</code> ?</p>",
+        "id": 1474644,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670291587
+    },
+    {
+        "content": "<p>The locale question is also really odd, since <code>LC_CTYPE = \"UTF-8\"</code> is not valid.  I think this is <a href=\"https://unix.stackexchange.com/questions/503110/valid-values-for-lc-ctype\">https://unix.stackexchange.com/questions/503110/valid-values-for-lc-ctype</a></p>",
+        "id": 1474645,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670291915
+    },
+    {
+        "content": "<p>We can force a known <code>LC_ALL=C.UTF-8</code> in <code>scripts/setup/upgrade-postgresql</code>, I suppose.</p>",
+        "id": 1474647,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670292184
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/23755\">#23755</a>.</p>",
+        "id": 1474655,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670292687
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1474644\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"17540\">Sean Yuan</span>: I can't replicate with a clean 5.2 with PostgreSQL 12 -- it upgrades to 5.7 with PostgreSQL 12 just fine.  Specifically, it upgrades from 12.9-2.pgdg20.04+1 to 12.13-1.pgdg20.04+1.</p>\n<p>If you're still in this situation, can you show the output of <code>apt-cache policy postgresql-12</code> ?</p>\n</blockquote>\n<p>Hi, thanks for attempting to replicate it. Our install had been upgraded in the past from 4.x versions, so I'm not sure if it was a cumulative upgrade error.</p>\n<p>After running <code>apt-cache policy postgresql-12</code></p>\n<div class=\"codehilite\"><pre><span></span><code>apt-cache policy postgresql-12\npostgresql-12:\n  Installed: 12.11-1.pgdg20.04+1\n  Candidate: 12.9-2.pgdg20.04+1\n  Version table:\n     12.13-1.pgdg20.04+1 500\n        500 http://apt.postgresql.org/pub/repos/apt focal-pgdg/main amd64 Packages\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.12-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.12-0ubuntu0.20.04.1 500\n        500 http://asia-east1.gce.archive.ubuntu.com/ubuntu focal-updates/main amd64 Packages\n        500 http://security.ubuntu.com/ubuntu focal-security/main amd64 Packages\n *** 12.11-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n        100 /var/lib/dpkg/status\n     12.10-1.pgdg20.04+1+b1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.10-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.9-2.pgdg20.04+1 1000\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.9-1.pgdg20.04+1 1000\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.8-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.7-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.6-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.5-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.4-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.3-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.2-4 500\n        500 http://asia-east1.gce.archive.ubuntu.com/ubuntu focal/main amd64 Packages\n     12.2-3.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.2-2.pgdg20.04+1+b1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.2-2.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     12.2-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n</code></pre></div>",
+        "id": 1474695,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1670306455
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span></p>",
+        "id": 1474696,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1670306472
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1474647\">said</a>:</p>\n<blockquote>\n<p>We can force a known <code>LC_ALL=C.UTF-8</code> in <code>scripts/setup/upgrade-postgresql</code>, I suppose.</p>\n</blockquote>\n<p>Oh I never considered that the SSH client might set the locale ENV. Yes I am doing ssh from a mac machine</p>",
+        "id": 1474697,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1670306596
+    },
+    {
+        "content": "<p>Hm -- that's interesting.  It shouldn't be <em>possible</em> to have Zulip 5.2 and have PostgreSQL 12.11 -- Zulip 4.10 through 5.2 (inclusive) pin PostgreSQL 12.9 (<a href=\"https://github.com/zulip/zulip/commit/9c8d2b7be39314b41f04a1e1356942afe21ab223\">9c8d2b7be39314b41f04a1e1356942afe21ab223</a>).</p>\n<p>Do you take upgrades with <code>--skip-puppet</code> by any chance?  I think that would result in having the pin (which you clearly have in place) but not have forced the downgrade when you took the upgrade to 5.2.</p>",
+        "id": 1475673,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670385758
+    },
+    {
+        "content": "<p>Regardless, you should be able to upgrade PostgreSQL if you follow <a href=\"https://zulip.readthedocs.io/en/6.0/production/upgrade-or-modify.html#upgrading-postgresql\">the instructions</a> but substitute for step 4:</p>\n<div class=\"codehilite\"><pre><span></span><code># Run as root:\nLC_ALL=C.UTF-8 /home/zulip/deployments/current/scripts/setup/upgrade-postgresql\n</code></pre></div>",
+        "id": 1475674,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670385847
+    },
+    {
+        "content": "<p>Alternately, 6.1 will be out in the next ~week which will make the instructions-as-documented work for your situation.</p>",
+        "id": 1475675,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670385880
+    },
+    {
+        "content": "<p>Oh, though that won't help, because you need to have the newer PostgreSQL to take the Zulip 6 upgrade, right.</p>",
+        "id": 1475676,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670385921
+    },
+    {
+        "content": "<p>Once you're on PostgreSQL 14, you should be able to take the upgrade to 6.0 (or 6.1, if you wait) without issue.</p>",
+        "id": 1475677,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670385962
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1475673\">said</a>:</p>\n<blockquote>\n<p>Hm -- that's interesting.  It shouldn't be <em>possible</em> to have Zulip 5.2 and have PostgreSQL 12.11 -- Zulip 4.10 through 5.2 (inclusive) pin PostgreSQL 12.9 (<a href=\"https://github.com/zulip/zulip/commit/9c8d2b7be39314b41f04a1e1356942afe21ab223\">9c8d2b7be39314b41f04a1e1356942afe21ab223</a>).</p>\n<p>Do you take upgrades with <code>--skip-puppet</code> by any chance?  I think that would result in having the pin (which you clearly have in place) but not have forced the downgrade when you took the upgrade to 5.2.</p>\n</blockquote>\n<p>I have done all updates verbatim as documented in the upgrade guides, so I didn't use <code>--skip-puppet</code></p>\n<p>Thank you for the Postgres update instructions, I'll give them a go</p>",
+        "id": 1475828,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1670407948
+    },
+    {
+        "content": "<p>Well, drat. There goes my only theory for how things could have gotten into that state, then.</p>\n<p>We can possibly reconstruct the order of events by looking through the logs:</p>\n<div class=\"codehilite\"><pre><span></span><code>(zcat /var/log/apt/term.log.{10,9,8,7,7,6,5,4,3,2,1}.gz; cat /var/log/apt/term.log) | perl -nle &#39;$p=&quot;$_\\n&quot; if /Log started/;print &quot;$p$_&quot; and $p=&quot;&quot; if /postgresql-12/&#39;\n</code></pre></div>\n<p>and:</p>\n<div class=\"codehilite\"><pre><span></span><code>egrep &#39;upgrade-zulip(-from-git)?:|Upgrade complete&#39; /var/log/zulip/upgrade.log\n</code></pre></div>",
+        "id": 1475947,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670435692
+    },
+    {
+        "content": "<p>The latter unfortunately won't give us what version those upgrades were, but we can find out those manually.</p>",
+        "id": 1475952,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670435740
+    },
+    {
+        "content": "<p>Hi sorry it took me a long time to get to it<br>\nHere are the results of running the debug commands</p>\n<div class=\"codehilite\"><pre><span></span><code>seanyuan-work@zulip-v6:~$ (zcat /var/log/apt/term.log.{10,9,8,7,7,6,5,4,3,2,1}.gz; cat /var/log/apt/term.log) | perl -nle &#39;$p=&quot;$_\\n&quot; if /Log started/;print &quot;$p$_&quot; and $p=&quot;&quot; if /postgresql-12/&#39;\nLog started: 2022-02-06  18:32:50\nPreparing to unpack .../25-postgresql-12-pgdg-pgroonga_2.3.3-1_amd64.deb ...\nUnpacking postgresql-12-pgdg-pgroonga (2.3.3-1) over (2.3.1-1) ...\nSetting up postgresql-12-pgdg-pgroonga (2.3.3-1) ...\nLog started: 2022-03-17  06:19:47\nPreparing to unpack .../22-postgresql-12-pgdg-pgroonga_2.3.5-1_amd64.deb ...\nUnpacking postgresql-12-pgdg-pgroonga (2.3.5-1) over (2.3.3-1) ...\nSetting up postgresql-12-pgdg-pgroonga (2.3.5-1) ...\nLog started: 2022-05-13  16:11:19\nPreparing to unpack .../25-postgresql-12_12.11-1.pgdg20.04+1_amd64.deb ...\nUnpacking postgresql-12 (12.11-1.pgdg20.04+1) over (12.9-0ubuntu0.20.04.1) ...\nPreparing to unpack .../26-postgresql-12-pgdg-pgroonga_2.3.6-1_amd64.deb ...\nUnpacking postgresql-12-pgdg-pgroonga (2.3.6-1) over (2.3.5-1) ...\nSetting up postgresql-12 (12.11-1.pgdg20.04+1) ...\nSetting up postgresql-12-pgdg-pgroonga (2.3.6-1) ...\nLog started: 2022-05-13  16:11:19\nPreparing to unpack .../25-postgresql-12_12.11-1.pgdg20.04+1_amd64.deb ...\nUnpacking postgresql-12 (12.11-1.pgdg20.04+1) over (12.9-0ubuntu0.20.04.1) ...\nPreparing to unpack .../26-postgresql-12-pgdg-pgroonga_2.3.6-1_amd64.deb ...\nUnpacking postgresql-12-pgdg-pgroonga (2.3.6-1) over (2.3.5-1) ...\nSetting up postgresql-12 (12.11-1.pgdg20.04+1) ...\nSetting up postgresql-12-pgdg-pgroonga (2.3.6-1) ...\n</code></pre></div>\n<div class=\"codehilite\"><pre><span></span><code>sudo egrep &#39;upgrade-zulip(-from-git)?:|Upgrade complete&#39; /var/log/zulip/upgrade.log\n2021-04-18 15:47:45,122 upgrade-zulip-from-git: Cloning the repository\n2021-04-18 15:48:31,639 upgrade-zulip-from-git: Fetching the latest commits\n2021-04-18 15:56:30,545 upgrade-zulip-stage-2: Upgrade complete!\n2021-05-24 13:14:23,787 upgrade-zulip: Archiving the tarball under /home/zulip/archives\n2021-05-24 13:14:23,939 upgrade-zulip: Unpacking the tarball\n2021-05-24 13:21:57,095 upgrade-zulip-stage-2: Upgrade complete!\n2021-08-16 10:13:38,543 upgrade-zulip: Archiving the tarball under /home/zulip/archives\n2021-08-16 10:13:38,892 upgrade-zulip: Unpacking the tarball\n2021-08-16 10:16:54,082 upgrade-zulip-stage-2: Upgrade complete!\n2022-02-06 18:32:33,268 upgrade-zulip: Archiving the tarball under /home/zulip/archives\n2022-02-06 18:32:33,687 upgrade-zulip: Unpacking the tarball\n2022-02-06 18:38:27,685 upgrade-zulip-stage-2: Upgrade complete!\n2022-05-13 16:11:00,977 upgrade-zulip: Archiving the tarball under /home/zulip/archives\n2022-05-13 16:11:01,432 upgrade-zulip: Unpacking the tarball\n2022-05-13 16:18:41,965 upgrade-zulip-stage-2: Upgrade complete!\n</code></pre></div>",
+        "id": 1480588,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1671117059
+    },
+    {
+        "content": "<p>Ok!  To get the versions of those Zulip upgrades, can you run:</p>\n<div class=\"codehilite\"><pre><span></span><code>ls -l /home/zulip/archives\n</code></pre></div>",
+        "id": 1480596,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1671120278
+    },
+    {
+        "content": "<p>As for attempting to upgrade Postgres first, that also didn't work so well<br>\nEven with all locale ENVs set, the end still errored</p>\n<div class=\"codehilite\"><pre><span></span><code>LC_ALL=C.UTF-8 LANG=C.UTF-8 LANGUAGE=C.UTF-8 LC_CTYPE=C.UTF-8 /home/zulip/deployments/current/scripts/setup/upgrade-postgresql\n\nUpgrade Complete\n----------------\nOptimizer statistics are not transferred by pg_upgrade.\nOnce you start the new server, consider running:\n    /usr/lib/postgresql/14/bin/vacuumdb --all --analyze-in-stages\n\nRunning this script will delete the old cluster&#39;s data files:\n    ./delete_old_cluster.sh\npg_upgrade output scripts are in /var/log/postgresql/pg_upgradecluster-12-14-main.elkN\nDisabling automatic startup of old cluster...\n\nSuccess. Please check that the upgraded cluster works. If it does,\nyou can remove the old cluster with\n    pg_dropcluster 12 main\n\nVer Cluster Port Status Owner    Data directory              Log file\n12  main    5433 down   postgres /var/lib/postgresql/12/main /var/log/postgresql/postgresql-%Y-%m-%d_%H%M%S.log\nVer Cluster Port Status Owner    Data directory              Log file\n14  main    5432 down   postgres /var/lib/postgresql/14/main /var/log/postgresql/postgresql-%Y-%m-%d_%H%M%S.log\n++ grep -o &#39;/var/log/postgresql/pg_upgradecluster-12-14-main.*&#39; /var/log/zulip/upgrade-postgresql-12-14.OsZPiGMLS.log\n+ SCRIPTS_PATH=/var/log/postgresql/pg_upgradecluster-12-14-main.elkN\n+ crudini --set /etc/zulip/zulip.conf postgresql version 14\n+ su postgres -c &#39;/usr/lib/postgresql/14/bin/vacuumdb --all --analyze-only --jobs 10&#39;\nvacuumdb: error: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: No such file or directory\n        Is the server running locally and accepting connections on that socket?\n</code></pre></div>",
+        "id": 1480597,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1671121490
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>ls -l /home/zulip/archives\ntotal 90568\n-rw-rw-r-- 1 zulip zulip 92737433 Dec 15 16:18 zulip-server-latest.tar.gz\n</code></pre></div>",
+        "id": 1480598,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1671121522
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>root@zulip-v6:/home/zulip/archives# ls -la /home/zulip/archives\ntotal 90576\ndrwxr-xr-x  2 zulip zulip     4096 May 24  2021 .\ndrwxr-xr-x 12 zulip zulip     4096 Mar 19  2022 ..\n-rw-rw-r--  1 zulip zulip 92737433 Dec 15 16:18 zulip-server-latest.tar.gz\n</code></pre></div>",
+        "id": 1480601,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1671121584
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span></p>",
+        "id": 1480602,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1671121695
+    },
+    {
+        "content": "<p>Uh, well, I guess <code>/home/zulip/archives</code> isn't going to be helpful here.  Makes some sense in retrospect, but maybe we should think about making that more useful. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1480611,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1671122780
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17540\">@Sean Yuan</span>: Huh, postgres 14 looks like it's installed, just not running?</p>",
+        "id": 1480613,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1671122809
+    },
+    {
+        "content": "<p>Does <code>pg_ctlcluster 14 main start</code> work?</p>",
+        "id": 1480615,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1671122854
+    },
+    {
+        "content": "<p>And got extracting the versions, can you run:</p>\n<div class=\"codehilite\"><pre><span></span><code>grep &#39;ZULIP_VERSION = &quot;&#39;  ~zulip/deployments/2*/version.py\n</code></pre></div>",
+        "id": 1480616,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1671123012
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>grep &#39;ZULIP_VERSION = &quot;&#39;  ~zulip/deployments/2*/version.py\n/home/zulip/deployments/2022-02-06-18-32-33/version.py:ZULIP_VERSION = &quot;4.9&quot;\n/home/zulip/deployments/2022-05-13-16-11-01/version.py:ZULIP_VERSION = &quot;5.2&quot;\n/home/zulip/deployments/2022-12-15-16-18-39/version.py:ZULIP_VERSION = &quot;6.0&quot;\n</code></pre></div>",
+        "id": 1480625,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1671124913
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1480615\">said</a>:</p>\n<blockquote>\n<p>Does <code>pg_ctlcluster 14 main start</code> work?</p>\n</blockquote>\n<p>It does not have output. <br>\nWhen I run status command I get</p>\n<div class=\"codehilite\"><pre><span></span><code>pg_ctlcluster 14 main status\npg_ctl: server is running (PID: 885)\n/usr/lib/postgresql/14/bin/postgres &quot;-D&quot; &quot;/var/lib/postgresql/14/main&quot; &quot;-c&quot; &quot;config_file=/etc/postgresql/14/main/postgresql.conf&quot;\n</code></pre></div>",
+        "id": 1480626,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1671125005
+    },
+    {
+        "content": "<p>OK, I think you should be able to run the last steps:</p>\n<div class=\"codehilite\"><pre><span></span><code>su postgres -c &#39;/usr/lib/postgresql/14/bin/vacuumdb --all --analyze-only --jobs 10&#39;\n~zulip/scripts/zulip-puppet-apply -f\n</code></pre></div>",
+        "id": 1480630,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1671125217
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17540\">Sean Yuan</span> <a href=\"#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1480597\">said</a>:</p>\n<blockquote>\n<p>As for attempting to upgrade Postgres first, that also didn't work so well<br>\nEven with all locale ENVs set, the end still errored</p>\n<p><div class=\"codehilite\"><pre><span></span><code>LC_ALL=C.UTF-8 LANG=C.UTF-8 LANGUAGE=C.UTF-8 LC_CTYPE=C.UTF-8 /home/zulip/deployments/current/scripts/setup/upgrade-postgresql\n\nUpgrade Complete\n[...]\n</code></pre></div><br>\n</p>\n</blockquote>\n<p>Was this the start of the output from the command?  I'd have expected more above that.</p>",
+        "id": 1480631,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1671125258
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1480631\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"17540\">Sean Yuan</span> <a href=\"#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1480597\">said</a>:</p>\n<blockquote>\n<p>As for attempting to upgrade Postgres first, that also didn't work so well<br>\nEven with all locale ENVs set, the end still errored</p>\n<p><div class=\"codehilite\"><pre><span></span><code>LC_ALL=C.UTF-8 LANG=C.UTF-8 LANGUAGE=C.UTF-8 LC_CTYPE=C.UTF-8 /home/zulip/deployments/current/scripts/setup/upgrade-postgresql\n\nUpgrade Complete\n[...]\n</code></pre></div><br>\n</p>\n</blockquote>\n<p>Was this the start of the output from the command?  I'd have expected more above that.</p>\n</blockquote>\n<p>There was more, but I didn't paste them in</p>",
+        "id": 1480632,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1671125318
+    },
+    {
+        "content": "<p>OK, seeing that might be helpful in knowing how it got into the state where postgres wasn't running</p>",
+        "id": 1480633,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1671125340
+    },
+    {
+        "content": "<p><a href=\"https://pastebin.com/21FfEDqB\">https://pastebin.com/21FfEDqB</a></p>",
+        "id": 1480634,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1671125559
+    },
+    {
+        "content": "<p>Here is the full output</p>",
+        "id": 1480635,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1671125564
+    },
+    {
+        "content": "<p>Ah, OK.  Having half-completed the upgrade previously left things in a bad state.  And apparently we don't assert in puppet that postgres has to be ... running?  We can drop in a <code>pg_ctlcluster 14 main start</code> to be sure in <code>upgrade-postgresql</code></p>",
+        "id": 1480637,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1671125675
+    },
+    {
+        "content": "<p>Ok, I think it worked now, I managed to run the upgrade to completion</p>\n<ol>\n<li>upgrade PG to 14 with Locale ENV</li>\n<li>run <code>pg_ctlcluster 14 main start</code></li>\n<li>\n<p>run <code>su postgres -c '/usr/lib/postgresql/14/bin/vacuumdb --all --analyze-only --jobs 10'\n~zulip/scripts/zulip-puppet-apply -f</code></p>\n</li>\n<li>\n<p>run normal upgrade to v6</p>\n</li>\n</ol>",
+        "id": 1480643,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1671126471
+    },
+    {
+        "content": "<p>Thank you for your help</p>",
+        "id": 1480644,
+        "sender_full_name": "Sean Yuan",
+        "timestamp": 1671126505
+    },
+    {
+        "content": "<p>And it looks like, from the other information you gave, that the problem started out with an upgrade from 4.9 -&gt; 5.2, which upgraded postgresql 12.9-0ubuntu0.20.04.1 to 12.11-1.pgdg20.04+1.  We'll see if we can track down how that upgrade got us into the bad state.</p>",
+        "id": 1480676,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1671129851
+    },
+    {
+        "content": "<p>(deleted)</p>",
+        "id": 1481408,
+        "sender_full_name": "Fahad Ali",
+        "timestamp": 1671296202
+    },
+    {
+        "content": "<p>(deleted)</p>",
+        "id": 1481409,
+        "sender_full_name": "Fahad Ali",
+        "timestamp": 1671296486
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Upgrade.20from.205.2E2.20-.3E.205.2E7.20then.206/near/1480637\">said</a>:</p>\n<blockquote>\n<p>Ah, OK.  Having half-completed the upgrade previously left things in a bad state.  And apparently we don't assert in puppet that postgres has to be ... running?  We can drop in a <code>pg_ctlcluster 14 main start</code> to be sure in <code>upgrade-postgresql</code></p>\n</blockquote>\n<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> do we have an open issue for this potential follow-up?</p>",
+        "id": 1484091,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1672694341
+    },
+    {
+        "content": "<p>Nope.  Pushed <a href=\"https://github.com/zulip/zulip/pull/23963\">#23963</a> just now.</p>",
+        "id": 1484362,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1672761543
+    },
+    {
+        "content": "<p>Excellent, integrated and backported.</p>",
+        "id": 1484559,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1672775165
+    }
+]

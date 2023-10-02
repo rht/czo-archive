@@ -1,0 +1,416 @@
+<html>
+<head><meta charset="utf-8"><title>message delay · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html">message delay</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="671703"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/671703" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> YI Jeong <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#671703">(Dec 14 2018 at 01:52)</a>:</h4>
+<p>When a user enters a message, it sometimes takes a few seconds to send it, and sometimes it is over 10 seconds.<br>
+Where can I find more information?<br>
+Can you give me a hint about the solution?</p>
+
+
+
+<a name="671704"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/671704" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> YI Jeong <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#671704">(Dec 14 2018 at 01:52)</a>:</h4>
+<div class="codehilite"><pre><span></span>2018-12-14 01:41:26.624 INFO [zr] 123.456.789.123    SOCKET  200   0ms /socket/open [transport=websocket] (unknown via ?)
+2018-12-14 01:41:27.327 INFO [zr] 123.456.789.123    GET     200   7ms (lp: 473ms) /json/events [1544302822:51/1/message] (id@domain via ZulipElectron)
+2018-12-14 01:41:27.330 INFO [zr] 123.456.789.123    SOCKET  200   1ms (lp: 540ms) /socket/service_request [transport=websocket, queue_delay: 29ms/462ms, service_time: 47ms] (id@domain via ?)
+2018-12-14 01:41:27.593 INFO [zr] 123.456.789.123    SOCKET  200   0ms (db: 1ms/1q) /socket/close [transport=websocket] (id@domain via ?)
+2018-12-14 01:41:27.598 INFO [zr] 123.456.789.123    SOCKET  200  12ms (db: 1ms/1q) /socket/auth [transport=websocket] (id@domain via ?)
+2018-12-14 01:41:27.620 INFO [zr] 123.456.789.123    POST    200   9ms /json/report/send_times [4624ms/4356ms/(unknown)ms/echo:True/diff:False] (id@domain via ZulipElectron)
+2018-12-14 01:41:28.144 INFO [zr] 123.456.789.123    GET     200   6ms (lp: 220ms) /json/events [1544302822:51/1/message] (id@domain via ZulipElectron)
+2018-12-14 01:41:28.147 INFO [zr] 123.456.789.123    SOCKET  200   1ms (lp: 730ms) /socket/service_request [transport=websocket, queue_delay: 170ms/495ms, service_time: 64ms] (id@domain via ?)
+2018-12-14 01:41:28.161 INFO [zr] 123.456.789.123    POST    200   8ms /json/report/send_times [4105ms/4106ms/(unknown)ms/echo:True/diff:False] (id@domain via ZulipElectron)
+</pre></div>
+
+
+
+<a name="671713"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/671713" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#671713">(Dec 14 2018 at 04:58)</a>:</h4>
+<p><span class="user-mention" data-user-id="3667">@YI Jeong</span> so, the <code>send_times</code> report has the end-to-end time from when the user hit send to when they receive the message back, which includes RTTs.</p>
+
+
+
+<a name="671714"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/671714" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#671714">(Dec 14 2018 at 04:59)</a>:</h4>
+<p>So if you have a really slow network, that could be what's going on.</p>
+
+
+
+<a name="671715"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/671715" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#671715">(Dec 14 2018 at 04:59)</a>:</h4>
+<p>The actual backend send time is logged in <code>/var/log/zulip/events_message_sender.log</code>, and on our servers is generally in the ~20ms range.</p>
+
+
+
+<a name="671722"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/671722" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> YI Jeong <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#671722">(Dec 14 2018 at 05:40)</a>:</h4>
+<p>Thanks <span class="user-mention" data-user-id="7">@Tim Abbott</span> !!</p>
+<p>I tested sending messages from a client located in the same network band as the Zulip server.<br>
+Below is a ping test result from Zulip server to client.</p>
+<div class="codehilite"><pre><span></span>PING 123.123.123.123 (123.123.123.123) 56(84) bytes of data.
+64 bytes from 123.123.123.123: icmp_seq=1 ttl=128 time=0.538 ms
+64 bytes from 123.123.123.123: icmp_seq=2 ttl=128 time=0.613 ms
+64 bytes from 123.123.123.123: icmp_seq=3 ttl=128 time=0.651 ms
+64 bytes from 123.123.123.123: icmp_seq=4 ttl=128 time=0.573 ms
+64 bytes from 123.123.123.123: icmp_seq=5 ttl=128 time=0.520 ms
+--- 123.123.123.123 ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 3998ms
+rtt min/avg/max/mdev = 0.520/0.579/0.651/0.048 ms
+</pre></div>
+
+
+<p>The logs in the 'events_message_sender.log' file are not fast, but they do not seem to be slow either.</p>
+<div class="codehilite"><pre><span></span>2018-12-14 05:22:13.350 INFO [zr] 123.123.123.123    SOCKET  200  62ms (mem: 10ms/9) (db: 13ms/10q) /json/messages (id@domain via website)
+2018-12-14 05:22:13.357 INFO [zr] 123.123.123.123    SOCKET  200  62ms (mem: 7ms/8) (md: 10ms/1) (db: 9ms/9q) /json/messages (id@domain via website)
+2018-12-14 05:22:13.358 INFO [zr] 123.123.123.123    SOCKET  200  60ms (md: 7ms/1) (db: 10ms/9q) (+start: 5ms) /json/messages (id@domain via website)
+2018-12-14 05:22:13.383 INFO [zr] 123.123.123.123    SOCKET  200  86ms (mem: 12ms/8) (db: 17ms/9q) /json/messages (id@domain via website)
+2018-12-14 05:22:13.401 INFO [zr] 123.123.123.123    SOCKET  200  45ms (db: 8ms/9q) /json/messages (id@domain via website)
+2018-12-14 05:22:13.430 INFO [zr] 123.123.123.123    SOCKET  200  39ms (db: 9ms/9q) /json/messages (id@domain via website)
+</pre></div>
+
+
+<p>However, the final result in the 'server.log' file takes more than 14 seconds. Where do you think there might be a problem?</p>
+<div class="codehilite"><pre><span></span>2018-12-14 05:22:06.895 INFO [zr] 123.123.123.123    SOCKET  200   5ms (db: 1ms/1q) /socket/auth [transport=websocket] (id@domain via ?)
+2018-12-14 05:22:12.934 INFO [zr] 123.123.123.123    SOCKET  200   0ms /socket/open [transport=websocket] (unknown via ?)
+2018-12-14 05:22:13.242 INFO [zr] 123.123.123.123    GET     200   5ms (lp: 3.0s) /json/events [1544302822:27767/1] (id@domain via website)
+2018-12-14 05:22:13.244 INFO [zr] 123.123.123.123    SOCKET  200   0ms /socket/close [transport=websocket] (id@domain via ?)
+2018-12-14 05:22:13.272 INFO [zr] 123.123.123.123    SOCKET  200   5ms (db: 1ms/1q) /socket/auth [transport=websocket] (id@domain via ?)
+2018-12-14 05:22:13.365 INFO [zr] 123.123.123.123    GET     200   8ms (lp: 129ms) /json/events [1544302822:27767/1/message] (id@domain via website)
+2018-12-14 05:22:13.368 INFO [zr] 123.123.123.123    SOCKET  200   1ms (lp: 85ms) /socket/service_request [transport=websocket, queue_delay: 4ms/16ms, service_time: 64ms] (id@domain via ?)
+2018-12-14 05:22:13.371 INFO [zr] 123.123.123.123    SOCKET  200   1ms (lp: 83ms) /socket/service_request [transport=websocket, queue_delay: 6ms/14ms, service_time: 62ms] (id@domain via ?)
+2018-12-14 05:22:13.372 INFO [zr] 123.123.123.123    SOCKET  200   1ms (lp: 85ms) /socket/service_request [transport=websocket, queue_delay: 11ms/13ms, service_time: 60ms] (id@domain via ?)
+2018-12-14 05:22:13.391 INFO [zr] 123.123.123.123    SOCKET  200   1ms (lp: 106ms) /socket/service_request [transport=websocket, queue_delay: 11ms/8ms, service_time: 87ms] (id@domain via ?)
+2018-12-14 05:22:13.406 INFO [zr] 123.123.123.123    SOCKET  200   2ms (lp: 75ms) /socket/service_request [transport=websocket, queue_delay: 23ms/3ms, service_time: 47ms] (id@domain via ?)
+2018-12-14 05:22:13.439 INFO [zr] 123.123.123.123    SOCKET  200   1ms (lp: 103ms) /socket/service_request [transport=websocket, queue_delay: 54ms/8ms, service_time: 40ms] (id@domain via ?)
+2018-12-14 05:22:13.442 INFO [zr] 123.123.123.123    POST    200   9ms /json/report/send_times [14364ms/14306ms/(unknown)ms/echo:True/diff:False] (id@domain via website)
+2018-12-14 05:22:13.476 INFO [zr] 123.123.123.123    GET     200  12ms (+start: 5ms) /json/events [1544302822:27767/5] (id@domain via website)
+2018-12-14 05:22:13.861 INFO [zr] 123.123.123.123    POST    200  18ms /json/report/send_times [13468ms/13859ms/(unknown)ms/echo:True/diff:False] (id@domain via website)
+2018-12-14 05:22:13.880 INFO [zr] 123.123.123.123    POST    200  16ms /json/report/send_times [14071ms/14463ms/(unknown)ms/echo:True/diff:False] (id@domain via website)
+2018-12-14 05:22:13.889 INFO [zr] 123.123.123.123    POST    200  23ms /json/report/send_times [12872ms/13256ms/(unknown)ms/echo:False/diff:False] (id@domain via website)
+2018-12-14 05:22:13.892 INFO [zr] 123.123.123.123    POST    200   8ms /json/report/send_times [13753ms/14144ms/(unknown)ms/echo:True/diff:False] (id@domain via website)
+2018-12-14 05:22:13.911 INFO [zr] 123.123.123.123    POST    200  31ms (mem: 13ms/1) (+start: 8ms) /json/report/send_times [13147ms/13540ms/(unknown)ms/echo:True/diff:False] (id@domain via website)
+2018-12-14 05:22:16.954 INFO [zr] 123.123.123.123    GET     200   7ms (lp: 2.9s) /json/events [1544302822:27767/1/presence] (id@domain via website)
+</pre></div>
+
+
+
+<a name="671729"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/671729" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> YI Jeong <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#671729">(Dec 14 2018 at 06:02)</a>:</h4>
+<p>And we have bot participating in almost all streams.<br>
+In the 'events_slow_queries.log' file, only the bot related logs are recorded as shown below.<br>
+Do you think removing this bot and creating a new one will help improve performance?</p>
+<div class="codehilite"><pre><span></span>2018-12-14 05:57:30.234 INFO [] Slow query: 123.123.123.111    POST    200  4.5s (db: 1ms/1q) /api/v1/register (chat-bot@domain via ZulipPython) (chat-bot@domain)
+2018-12-14 05:57:30.234 INFO [] Slow query: 123.123.123.111    POST    200  1.5s (mem: 7ms/1) (db: 2ms/1q) /api/v1/register (chat-bot@domain via ZulipPython) (chat-bot@domain)
+2018-12-14 05:58:30.299 INFO [] Slow query: 123.123.123.111    POST    200  1.3s (db: 1ms/1q) /api/v1/register (chat-bot@domain via ZulipPython) (chat-bot@domain)
+2018-12-14 05:58:30.299 INFO [] Slow query: 123.123.123.111    POST    200  1.2s (db: 1ms/1q) /api/v1/register (chat-bot@domain via ZulipPython) (chat-bot@domain)
+2018-12-14 05:58:30.300 INFO [] Slow query: 123.123.123.111    POST    200  1.3s (db: 1ms/1q) /api/v1/register (chat-bot@domain via ZulipPython) (chat-bot@domain)
+2018-12-14 05:59:30.369 INFO [] Slow query: 123.123.123.111    POST    200  1.6s (db: 1ms/1q) /api/v1/register (chat-bot@domain via ZulipPython) (chat-bot@domain)
+2018-12-14 05:59:30.369 INFO [] Slow query: 123.123.123.111    POST    200  5.0s (db: 1ms/1q) /api/v1/register (chat-bot@domain via ZulipPython) (chat-bot@domain)
+</pre></div>
+
+
+
+<a name="671736"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/671736" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#671736">(Dec 14 2018 at 07:02)</a>:</h4>
+<p>Woah, those numbers <code> 5.0s (db: 1ms/1q)</code> are crazy.  Most of the work of the <code>/register</code> endpoint is supposed to in the database.</p>
+
+
+
+<a name="671737"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/671737" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#671737">(Dec 14 2018 at 07:03)</a>:</h4>
+<p>Can you talk about the rest of your configuration?  E.g. are all the Zulip services on the same machine?</p>
+
+
+
+<a name="671738"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/671738" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#671738">(Dec 14 2018 at 07:03)</a>:</h4>
+<p>I could imagine an issue with e.g. a remote memcached or redis server causing this, though it doesn't seem super plausible.</p>
+
+
+
+<a name="671778"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/671778" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> YI Jeong <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#671778">(Dec 14 2018 at 07:49)</a>:</h4>
+<p>We set up all the Zulip related services on one server, and in order to improve the DB performance, we use only the Postgresql service to migrate to the SSD-based server (same network subnet).</p>
+
+
+
+<a name="671781"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/671781" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#671781">(Dec 14 2018 at 07:56)</a>:</h4>
+<p>Huh, I don't have obvious guesses, may be worth some print debugging. Heading to sleep now</p>
+
+
+
+<a name="674765"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/674765" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> YI Jeong <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#674765">(Dec 21 2018 at 08:33)</a>:</h4>
+<p>Hello :) I want to ask again the question that I asked a few days ago. Please help me.<br>
+Below is the log of only one user in the log file recorded today.</p>
+<p><code>server.log</code></p>
+<div class="codehilite"><pre><span></span>2018-12-21 08:00:28.029 INFO [zr] 123.123.123.22    POST    200  42ms (db: 8ms/2q) /json/users/me/pointer [3530269] (userA@domain via website)
+2018-12-21 08:00:28.177 INFO [zr] 123.123.123.22    GET     200   5ms (lp: 2.9s) /json/events [1544907622:30225/1/pointer] (userA@domain via website)
+2018-12-21 08:00:30.733 INFO [zr] 123.123.123.22    GET     200  14ms (lp: 2.2s) /json/events [1544907622:30225/1/presence] (userA@domain via website)
+2018-12-21 08:00:40.193 INFO [zr] 123.123.123.22    POST    200  12ms /json/typing (userA@domain via website)
+2018-12-21 08:00:40.194 INFO [zr] 123.123.123.22    GET     200   6ms (lp: 8.8s) /json/events [1544907622:30225/1/typing] (userA@domain via website)
+2018-12-21 08:00:42.017 INFO [zr] 123.123.123.22    GET     200   7ms (lp: 1.8s) /json/events [1544907622:30225/1/presence] (userA@domain via website)
+2018-12-21 08:00:42.919 INFO [zr] 123.123.123.22    POST    200  11ms /json/typing (userA@domain via website)
+2018-12-21 08:00:45.183 INFO [zr] 123.123.123.22    GET     200   6ms (lp: 2.5s) /json/events [1544907622:30225/1/typing] (userA@domain via website)
+2018-12-21 08:00:46.142 INFO [zr] 123.123.123.22    GET     200   6ms /json/events [1544907622:30225/1/presence] (userA@domain via website)
+2018-12-21 08:00:46.731 INFO [zr] 123.123.123.22    POST    200  44ms (db: 8ms/3q) /json/users/me/presence (userA@domain via website)
+2018-12-21 08:00:47.483 INFO [zr] 123.123.123.22    SOCKET  200   0ms /socket/open [transport=websocket] (unknown via ?)
+2018-12-21 08:00:49.250 INFO [zr] 123.123.123.22    GET     200   6ms (lp: 2.5s) /json/events [1544907622:30225/1/presence] (userA@domain via website)
+2018-12-21 08:00:49.946 INFO [zr] 123.123.123.22    GET     200   5ms /json/events [1544907622:30225/1/presence] (userA@domain via website)
+2018-12-21 08:00:51.645 INFO [zr] 123.123.123.22    GET     200   6ms (lp: 463ms) /json/events [1544907622:30225/1/message] (userA@domain via website)
+2018-12-21 08:00:51.647 INFO [zr] 123.123.123.22    SOCKET  200   1ms (lp: 1.2s) /socket/service_request [transport=websocket, queue_delay: 326ms/800ms, service_time: 86ms] (userA@domain via ?)
+2018-12-21 08:00:54.209 INFO [zr] 123.123.123.22    SOCKET  200   0ms (db: 1ms/1q) /socket/close [transport=websocket] (userA@domain via ?)
+2018-12-21 08:00:54.210 INFO [zr] 123.123.123.22    SOCKET  200   6ms (db: 1ms/1q) /socket/auth [transport=websocket] (userA@domain via ?)
+2018-12-21 08:00:54.391 INFO [zr] 123.123.123.22    GET     200   7ms /json/events [1544907622:30225/1/presence] (userA@domain via website)
+2018-12-21 08:00:57.502 INFO [zr] 123.123.123.22    SOCKET  200   0ms /socket/open [transport=websocket] (unknown via ?)
+2018-12-21 08:00:57.616 INFO [zr] 123.123.123.22    GET     200   6ms /json/events [1544907622:30225/3] (userA@domain via website)
+2018-12-21 08:01:00.180 INFO [zr] 123.123.123.22    GET     200   6ms /json/events [1544907622:30225/3] (userA@domain via website)
+2018-12-21 08:01:00.676 INFO [zr] 123.123.123.22    SOCKET  200   0ms /socket/close [transport=websocket] (userA@domain via ?)
+2018-12-21 08:01:03.792 INFO [zr] 123.123.123.22    GET     200  12ms /json/events [1544907622:30225/1/presence] (userA@domain via website)
+2018-12-21 08:01:06.896 INFO [zr] 123.123.123.22    SOCKET  200   0ms /socket/open [transport=websocket] (unknown via ?)
+2018-12-21 08:01:07.056 INFO [zr] 123.123.123.22    GET     200   6ms (lp: 894ms) /json/events [1544907622:30225/1] (userA@domain via website)
+2018-12-21 08:01:07.057 INFO [] Disconnected handler for queue 1544907622:30225 (userA@domain/website)
+2018-12-21 08:01:07.285 INFO [zr] 123.123.123.22    SOCKET  200   4ms (db: 1ms/1q) /socket/auth [transport=websocket] (userA@domain via ?)
+2018-12-21 08:01:07.471 INFO [zr] 123.123.123.22    SOCKET  200   0ms (db: 2ms/2q) /socket/close [transport=websocket] (userA@domain via ?)
+2018-12-21 08:01:07.476 INFO [zr] 123.123.123.22    SOCKET  200   5ms (db: 3ms/3q) /socket/auth [transport=websocket] (userA@domain via ?)
+2018-12-21 08:01:07.501 INFO [zr] 123.123.123.22    POST    200   9ms /json/report/send_times [24580ms/8754ms/(unknown)ms/echo:True/diff:False] (userA@domain via website)
+2018-12-21 08:01:18.126 INFO [zr] 123.123.123.22    GET     200   8ms (lp: 11.1s) /json/events [1544907622:30225/1/presence] (userA@domain via website)
+2018-12-21 08:01:23.073 INFO [zr] 123.123.123.22    GET     200   6ms (lp: 4.3s) /json/events [1544907622:30225/1/presence] (userA@domain via website)
+2018-12-21 08:01:26.292 INFO [zr] 123.123.123.22    GET     200   6ms (lp: 2.6s) /json/events [1544907622:30225/1/presence] (userA@domain via website)
+2018-12-21 08:01:29.916 INFO [zr] 123.123.123.22    GET     200   6ms (lp: 2.0s) /json/events [1544907622:30225/1/presence] (userA@domain via website)
+2018-12-21 08:01:36.727 INFO [zr] 123.123.123.22    POST    200  39ms (db: 6ms/3q) /json/users/me/presence (userA@domain via website)
+2018-12-21 08:01:38.057 INFO [zr] 123.123.123.22    GET     200   5ms (lp: 6.4s) /json/events [1544907622:30225/1/message] (userA@domain via website)
+2018-12-21 08:01:38.161 INFO [zr] 123.123.123.22    POST    200  29ms (db: 6ms/3q) /json/messages/flags [add read/1] actually 1 (userA@domain via website)
+2018-12-21 08:01:38.291 INFO [zr] 123.123.123.22    GET     200   6ms (lp: 79ms) /json/events [1544907622:30225/1/update_message_flags] (userA@domain via website)
+2018-12-21 08:01:44.921 INFO [zr] 123.123.123.22    GET     200   7ms (lp: 6.5s) (+start: 6ms) /json/events [1544907622:30225/1/presence] (userA@domain via website)
+2018-12-21 08:01:56.308 INFO [zr] 123.123.123.22    GET     200   6ms (lp: 10.8s) /json/events [1544907622:30225/1/presence] (userA@domain via website)
+</pre></div>
+
+
+<p><code>events_message_sender.log</code></p>
+<div class="codehilite"><pre><span></span>2018-12-21 08:00:50.847 INFO [zr] 123.123.123.22    SOCKET  200  86ms (mem: 6ms/9) (md: 15ms/1) (db: 18ms/7q) /json/messages (userA@domain via website)
+</pre></div>
+
+
+<p>The values of send_times in <code>server.log</code> and <code>events_message_sender.log</code> are very different, where can I find a log of what happened between them?</p>
+
+
+
+<a name="674769"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/674769" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> YI Jeong <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#674769">(Dec 21 2018 at 08:37)</a>:</h4>
+<p><code>memcached stat</code></p>
+<div class="codehilite"><pre><span></span>admin@Zulip:/etc$ echo stats | nc localhost 11211
+STAT pid 805
+STAT uptime 1525931
+STAT time 1545378938
+STAT version 1.4.25 Ubuntu
+STAT libevent 2.0.21-stable
+STAT pointer_size 64
+STAT rusage_user 3465.080000
+STAT rusage_system 9988.944000
+STAT curr_connections 16
+STAT total_connections 25920020
+STAT rejected_connections 0
+STAT connection_structures 23
+STAT reserved_fds 20
+STAT cmd_get 132493555
+STAT cmd_set 935626
+STAT cmd_flush 0
+STAT cmd_touch 0
+STAT get_hits 131225223
+STAT get_misses 1268332
+STAT delete_misses 105911
+STAT delete_hits 53844
+STAT incr_misses 0
+STAT incr_hits 0
+STAT decr_misses 0
+STAT decr_hits 0
+STAT cas_misses 0
+STAT cas_hits 0
+STAT cas_badval 0
+STAT touch_hits 0
+STAT touch_misses 0
+STAT auth_cmds 0
+STAT auth_errors 0
+STAT bytes_read 9241037025
+STAT bytes_written 224160169312
+STAT limit_maxbytes 1044381696
+STAT accepting_conns 1
+STAT listen_disabled_num 0
+STAT time_in_listen_disabled_us 0
+STAT threads 4
+STAT conn_yields 0
+STAT hash_power_level 19
+STAT hash_bytes 4194304
+STAT hash_is_expanding 0
+STAT slab_reassign_rescues 6983
+STAT slab_reassign_evictions_nomem 0
+STAT slab_reassign_inline_reclaim 44
+STAT slab_reassign_busy_items 0
+STAT slab_reassign_running 0
+STAT slabs_moved 5
+STAT lru_crawler_running 0
+STAT lru_crawler_starts 10172
+STAT lru_maintainer_juggles 5913272
+STAT malloc_fails 0
+STAT bytes 374604208
+STAT curr_items 697773
+STAT total_items 942609
+STAT slab_global_page_pool 0
+STAT expired_unfetched 1597
+STAT evicted_unfetched 0
+STAT evictions 0
+STAT reclaimed 1401
+STAT crawler_reclaimed 112587
+STAT crawler_items_checked 258386241
+STAT lrutail_reflocked 201
+STAT moves_to_cold 481364
+STAT moves_to_warm 17513
+STAT moves_within_lru 629696
+STAT direct_reclaims 0
+END
+</pre></div>
+
+
+<p><code>redis stat</code></p>
+<div class="codehilite"><pre><span></span>127.0.0.1:6379&gt; info
+# Server
+redis_version:3.0.6
+redis_git_sha1:00000000
+redis_git_dirty:0
+redis_build_id:687a2a319020fa42
+redis_mode:standalone
+os:Linux 4.4.0-116-generic x86_64
+arch_bits:64
+multiplexing_api:epoll
+gcc_version:5.3.1
+process_id:991
+run_id:5139c0428d9f937fabeadec8798e7882e2ebcd0a
+tcp_port:6379
+uptime_in_seconds:1526204
+uptime_in_days:17
+hz:10
+lru_clock:1875341
+config_file:/etc/redis/redis.conf
+
+# Clients
+connected_clients:17
+client_longest_output_list:0
+client_biggest_input_buf:0
+blocked_clients:0
+
+# Memory
+used_memory:11688288
+used_memory_human:11.15M
+used_memory_rss:27496448
+used_memory_peak:14781552
+used_memory_peak_human:14.10M
+used_memory_lua:36864
+mem_fragmentation_ratio:2.35
+mem_allocator:jemalloc-3.6.0
+
+# Persistence
+loading:0
+rdb_changes_since_last_save:180193213
+rdb_bgsave_in_progress:0
+rdb_last_save_time:1543853009
+rdb_last_bgsave_status:ok
+rdb_last_bgsave_time_sec:-1
+rdb_current_bgsave_time_sec:-1
+aof_enabled:0
+aof_rewrite_in_progress:0
+aof_rewrite_scheduled:0
+aof_last_rewrite_time_sec:-1
+aof_current_rewrite_time_sec:-1
+aof_last_bgrewrite_status:ok
+aof_last_write_status:ok
+
+# Stats
+total_connections_received:50
+total_commands_processed:516661516
+instantaneous_ops_per_sec:2014
+total_net_input_bytes:39828915094
+total_net_output_bytes:6459607860
+instantaneous_input_kbps:151.79
+instantaneous_output_kbps:24.75
+rejected_connections:0
+sync_full:0
+sync_partial_ok:0
+sync_partial_err:0
+expired_keys:145594
+evicted_keys:0
+keyspace_hits:155236891
+keyspace_misses:51690466
+pubsub_channels:0
+pubsub_patterns:0
+latest_fork_usec:0
+migrate_cached_sockets:0
+
+# Replication
+role:master
+connected_slaves:0
+master_repl_offset:0
+repl_backlog_active:0
+repl_backlog_size:1048576
+repl_backlog_first_byte_offset:0
+repl_backlog_histlen:0
+
+# CPU
+used_cpu_sys:12843.21
+used_cpu_user:9016.87
+used_cpu_sys_children:0.00
+used_cpu_user_children:0.00
+
+# Cluster
+cluster_enabled:0
+
+# Keyspace
+db0:keys=9210,expires=9210,avg_ttl=41622136
+</pre></div>
+
+
+<p>If you have any additional information you need, please let me know.</p>
+
+
+
+<a name="674774"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/674774" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> YI Jeong <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#674774">(Dec 21 2018 at 09:27)</a>:</h4>
+<p>Oh, and Merry Christmas!</p>
+
+
+
+<a name="675489"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/675489" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#675489">(Dec 23 2018 at 12:17)</a>:</h4>
+<p><span class="user-mention" data-user-id="3667">@YI Jeong</span> so, looking at those logs, I believe the Zulip backend is behaving completely correctly; the <code> 86ms </code> in <code>events_message_sender.log</code> is showing that the backend spent a total of 86ms processing your request.</p>
+
+
+
+<a name="675490"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/675490" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#675490">(Dec 23 2018 at 12:19)</a>:</h4>
+<p>(I also don't see anything in those logs suggestive of the 5s result you showed for <code>/register</code> in the previous logs you posted)</p>
+
+
+
+<a name="675491"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/675491" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#675491">(Dec 23 2018 at 12:22)</a>:</h4>
+<p>One thing I do notice from <a href="#narrow/stream/31-production-help/subject/message.20delay/near/671729" title="#narrow/stream/31-production-help/subject/message.20delay/near/671729">https://chat.zulip.org/#narrow/stream/31-production-help/subject/message.20delay/near/671729</a> is that it appears your chat bot is hitting the /register API many times a second, which no correctly implemented client should be doing.  So if your server has low resources, it's possible your chat bot was mis-implemented and accidentally trying to DoS the server, and isn't anymore.</p>
+
+
+
+<a name="675492"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/message%20delay/near/675492" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/message.20delay.html#675492">(Dec 23 2018 at 12:24)</a>:</h4>
+<p>Given what you've said, this seems likely an issue with the specifics of your testing procedure/environment; I encourage you to contact <a href="mailto:support@zulipchat.com" title="mailto:support@zulipchat.com">support@zulipchat.com</a> to get a support contract if you need further help .</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

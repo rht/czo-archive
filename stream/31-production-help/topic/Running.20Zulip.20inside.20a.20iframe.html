@@ -1,0 +1,62 @@
+<html>
+<head><meta charset="utf-8"><title>Running Zulip inside a iframe · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Running.20Zulip.20inside.20a.20iframe.html">Running Zulip inside a iframe</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1461641"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Running%20Zulip%20inside%20a%20iframe/near/1461641" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aniket Sinha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Running.20Zulip.20inside.20a.20iframe.html#1461641">(Nov 09 2022 at 18:50)</a>:</h4>
+<p>Is it possible to run Zulip chat within an iframe?</p>
+<p>We tried out suggestions mentioned in this github issue answer - <a href="https://github.com/zulip/zulip/issues/11348#issuecomment-890026537">https://github.com/zulip/zulip/issues/11348#issuecomment-890026537</a>, but it did not work out. We are getting CSRF token missing errors on login.</p>
+
+
+
+<a name="1461650"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Running%20Zulip%20inside%20a%20iframe/near/1461650" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Running.20Zulip.20inside.20a.20iframe.html#1461650">(Nov 09 2022 at 19:00)</a>:</h4>
+<p><span class="user-mention" data-user-id="24972">@Aniket Sinha</span> it's possible but you need to fork Zulip to change some HTTP headers we set:</p>
+<div class="codehilite"><pre><span></span><code>$ cat puppet/zulip/files/nginx/zulip-include-common/headers
+# Enable HSTS: tell browsers to always use HTTPS
+add_header Strict-Transport-Security max-age=15768000 always;
+
+# Set X-Frame-Options to deny to prevent clickjacking
+add_header X-Frame-Options DENY always;
+
+add_header X-Content-Type-Options nosniff;
+</code></pre></div>
+
+
+
+<a name="1461657"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Running%20Zulip%20inside%20a%20iframe/near/1461657" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aniket Sinha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Running.20Zulip.20inside.20a.20iframe.html#1461657">(Nov 09 2022 at 19:13)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> Thanks again for the quick response. I will try this and post here in case of any queries.</p>
+
+
+
+<a name="1462150"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Running%20Zulip%20inside%20a%20iframe/near/1462150" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aniket Sinha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Running.20Zulip.20inside.20a.20iframe.html#1462150">(Nov 10 2022 at 10:57)</a>:</h4>
+<p>Hi, after updating the headers in there we ran into a CSRF issue - apparently the token needs to be modified to be allowed in a cross-site context.</p>
+<p>This was the console error - Cookie “__Host-csrftoken” has been rejected because it is in a cross-site context and its “SameSite” is “Lax” or “Strict”.</p>
+<p><a href="/user_uploads/2/59/tKeUKVompM6f971dVFKBAr48/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/59/tKeUKVompM6f971dVFKBAr48/image.png" title="image.png"><img src="/user_uploads/2/59/tKeUKVompM6f971dVFKBAr48/image.png"></a></div>
+
+
+
+<a name="1462787"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Running%20Zulip%20inside%20a%20iframe/near/1462787" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aniket Sinha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Running.20Zulip.20inside.20a.20iframe.html#1462787">(Nov 11 2022 at 12:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> Could you please help us in identifying this or suggest a solution?</p>
+
+
+
+<a name="1463514"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Running%20Zulip%20inside%20a%20iframe/near/1463514" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Running.20Zulip.20inside.20a.20iframe.html#1463514">(Nov 14 2022 at 18:36)</a>:</h4>
+<p><span class="user-mention" data-user-id="24972">@Aniket Sinha</span> I'd recommend reading Django's documentation on CSRF and changing it; we don't customize that aspect of Django, and it's a fairly technical topic.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

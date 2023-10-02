@@ -1,0 +1,170 @@
+[
+    {
+        "content": "<p>Hi folks! Not all server administrators subscribe to our announcement list or blog, or follow us on Twitter, so it's very possible for admins to be unaware when a new Zulip release comes out. We'd like to start showing a banner in the web app on self-hosted servers to encourage server admins to upgrade to the most recent stable release version, which has all the latest improvements and bug fixes (including security fixes).</p>\n<p>There are a bunch of questions about how best to communicate this message in a way that's helpful (and not too annoying ;). Here are some points for discussion:</p>\n<ol>\n<li>Who should see a banner (e.g. admins? everyone?)?</li>\n<li>What should the banner(s) say?</li>\n<li>How dismissable should the banner(s) be?</li>\n</ol>\n<p>Note that some of the answers to these questions could vary depending on how old the server version (e.g. prior stable release series vs. older).</p>\n<p>For reference, we <a href=\"https://github.com/zulip/zulip-mobile/blob/v27.182/src/common/ServerCompatBanner.js#L53-L64\">show a banner in mobile apps</a> at startup for <em>very</em> old server versions.</p>\n<ul>\n<li>For admins: '{realm} is running Zulip Server {serverVersion}, which is unsupported. Please upgrade your server as soon as possible.'</li>\n<li>For non-admins: '{realm} is running Zulip Server {serverVersion}, which is unsupported. Please contact your administrator about upgrading.'</li>\n</ul>",
+        "id": 1365162,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1649799067
+    },
+    {
+        "content": "<p>For (1), I think a nice touch is to start showing it to admins some time (like a week) before showing it to other users. That way, if the admins are on top of getting the server upgraded, their users never see the banner.</p>",
+        "id": 1365204,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1649800019
+    },
+    {
+        "content": "<p>For (3), for reference, our current answer in mobile is that you can dismiss the banner, and it comes back the next time the app starts up (if it still applies.)</p>",
+        "id": 1365211,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1649800242
+    },
+    {
+        "content": "<p>I should note we already have a version of this feature: <a href=\"https://zulip.readthedocs.io/en/latest/overview/release-lifecycle.html#upgrade-nag\">https://zulip.readthedocs.io/en/latest/overview/release-lifecycle.html#upgrade-nag</a></p>",
+        "id": 1365549,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1649810066
+    },
+    {
+        "content": "<p>And it implements the administrator-first policy:</p>\n<blockquote>\n<p>The nag will appear only to organization administrators starting a month before the deadline; after that, it will appear for all users on the server.</p>\n</blockquote>",
+        "id": 1365550,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1649810088
+    },
+    {
+        "content": "<p>(And I think we have the same dismissal policy as mentioned for mobile, but haven't tested)</p>",
+        "id": 1365551,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1649810127
+    },
+    {
+        "content": "<p>Yeah, so I think the new thing to do here may be basically:</p>\n<ul>\n<li>Add some plumbing for the server to actively learn when there's a new version, and perhaps also a couple of bits of metadata (like \"this is a security update\", or in the opposite direction \"this is an installer-only bugfix\") that influence how important it is to take the upgrade.</li>\n<li>Make a banner that we show much sooner than we show the existing one.</li>\n</ul>",
+        "id": 1365604,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1649812559
+    },
+    {
+        "content": "<p>The existing banner is quite conservative in when it shows. That's largely because the logic behind it has no information on whether there actually is a new release to update to, so it just waits until it's been such a long time that there must surely be important updates by now.</p>",
+        "id": 1365605,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1649812562
+    },
+    {
+        "content": "<p>Then the design question is: if we're showing a banner much sooner -- for example, immediately after we put out a new release with a security fix -- then what should it look like? I don't remember what our existing banner looks like, but it may be rather red and stern. For this situation, we'd want a gentler design, at least when it first appears.</p>",
+        "id": 1365608,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1649812668
+    },
+    {
+        "content": "<p>Would you like show such a banner for instances of the <code>main</code>-branch, too? Because sometimes I deliberately wait for certain features or fixes. And, in general, I feel that I shouldn't upgrade more frequently than ~ every 2 months <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span> </p>\n<p>Especially for large realms, I think that only owners should get such a banner, because it might be rather annoying to other users...</p>",
+        "id": 1365725,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1649842284
+    },
+    {
+        "content": "<p>Could someone share a screenshot of the banner we have? I'm not sure how to view it.</p>",
+        "id": 1366056,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1649878487
+    },
+    {
+        "content": "<p>It is indeed red and scary:</p>\n<p><a href=\"/user_uploads/2/ab/Mf_udfVxYdRwXq9RJkniMZd_/image.png\">image.png</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/ab/Mf_udfVxYdRwXq9RJkniMZd_/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/ab/Mf_udfVxYdRwXq9RJkniMZd_/image.png\"></a></div><p>You can get it like so:</p>\n<div class=\"codehilite\"><pre><span></span><code>index 3859981682..2b7100671f 100644\n--- a/zerver/lib/compatibility.py\n+++ b/zerver/lib/compatibility.py\n@@ -23,6 +23,8 @@ else:\n\n\n def is_outdated_server(user_profile: Optional[UserProfile]) -&gt; bool:\n+    return True\n+\n     # Release tarballs are unpacked via `tar -xf`, which means the\n     # `mtime` on files in them is preserved from when the release\n     # tarball was built.  Checking this allows us to catch cases where\n</code></pre></div>",
+        "id": 1367926,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1650060118
+    },
+    {
+        "content": "<p>The link is to here: <a href=\"https://zulip.readthedocs.io/en/latest/overview/release-lifecycle.html#upgrade-nag\">https://zulip.readthedocs.io/en/latest/overview/release-lifecycle.html#upgrade-nag</a></p>",
+        "id": 1367927,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1650060130
+    },
+    {
+        "content": "<p>One comparison point that I regularly see, and seems like it works reasonably well, is what Chrome does to bug you to update.</p>\n<p><a href=\"https://safecomputing.umich.edu/security-alerts/check-chrome-pending-updates\">Here's</a> screenshots in a university IT department's help pages -- I'm not sure they're the current design but they look familiar: <a href=\"/user_uploads/2/dd/gJLzma7qcQkgz06_Bp5ybqFe/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/dd/gJLzma7qcQkgz06_Bp5ybqFe/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/dd/gJLzma7qcQkgz06_Bp5ybqFe/image.png\"></a></div><blockquote>\n<p>Three dots: No updates pending that require a Chrome restart.<br>\nGreen arrow: An update requiring a Chrome restart has been available for two days<br>\nOrange arrow: An update requiring a Chrome restart has been available for four days.<br>\nRed arrow: An update requiring a Chrome restart has been available for seven days.</p>\n</blockquote>",
+        "id": 1368159,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1650066561
+    },
+    {
+        "content": "<p>Mm, yeah, that could be a nice paradigm. I guess for us we'd put something in the gear icon area? Perhaps just for admins?</p>\n<p>My Chrome currently looks like this:</p>\n<p><a href=\"/user_uploads/2/d0/PugzX6wU04jPatyA_D9ZIRzU/Screen-Shot-2022-04-18-at-1.54.31-PM.png\">Screen-Shot-2022-04-18-at-1.54.31-PM.png</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/d0/PugzX6wU04jPatyA_D9ZIRzU/Screen-Shot-2022-04-18-at-1.54.31-PM.png\" title=\"Screen-Shot-2022-04-18-at-1.54.31-PM.png\"><img src=\"/user_uploads/2/d0/PugzX6wU04jPatyA_D9ZIRzU/Screen-Shot-2022-04-18-at-1.54.31-PM.png\"></a></div><p><a href=\"/user_uploads/2/78/EGxpObH0B4faGhBbJqUcZsp1/Screen-Shot-2022-04-18-at-1.55.51-PM.png\">Screen-Shot-2022-04-18-at-1.55.51-PM.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/78/EGxpObH0B4faGhBbJqUcZsp1/Screen-Shot-2022-04-18-at-1.55.51-PM.png\" title=\"Screen-Shot-2022-04-18-at-1.55.51-PM.png\"><img src=\"/user_uploads/2/78/EGxpObH0B4faGhBbJqUcZsp1/Screen-Shot-2022-04-18-at-1.55.51-PM.png\"></a></div>",
+        "id": 1369462,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1650315371
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/server.20upgrade.20notice/near/1369462\">said</a>:</p>\n<blockquote>\n<p>My Chrome currently looks like this:</p>\n</blockquote>\n<p>Cool, yeah, I think that's what I've seen more recently too. Didn't happen to have a non-updated Chrome handy at that moment to get a screenshot from. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1369726,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1650344231
+    },
+    {
+        "content": "<p>And yeah, the gear icon area sounds like a good spot.</p>\n<p>I do kind of want to show it for non-admin users too, if it stays out of date for a while.</p>\n<p>I think in many orgs there may be very few admins and they may be quite busy; and probably in some orgs the admins aren't even active users of Zulip (e.g. they're the IT department), or perhaps are using some client that isn't showing them the warnings. So if they don't get to it for a while, I think it's healthy for other users to be made aware that it's out of date so they can bug the admins to get it upgraded.</p>",
+        "id": 1369727,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1650344466
+    },
+    {
+        "content": "<p>(Even the org admins may not have any more direct way to act on the warning than any other user does -- they may not be the people who have access to the underlying server, so the way they act on the warning may be to go bug the people who do.)</p>",
+        "id": 1369728,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1650344512
+    },
+    {
+        "content": "<p>I think having an \"Update\" button next to the gear menu, even if just takes you to documentation about how you're out of date or something, would be a nice way to make this visible without being as heavy as the fullscreen banner. Though we need to be careful when showing it to non-administrators about messaging -- they also need to update the desktop app, and I could imagine that being confusing for folks who don't know what a server is.</p>",
+        "id": 1373423,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1650931728
+    },
+    {
+        "content": "<p>I didn't design desktop app yet. But I suggest to show server upgrade to all of the users, so there would be a pressure to ask admins to update it. </p>\n<p>Desktop app update can be highlighted in the app settings<br>\n<a href=\"/user_uploads/2/37/_jM-JkTii9mU6C0jbGgiETBZ/selfhosted-upgrade.png\">selfhosted-upgrade.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/37/_jM-JkTii9mU6C0jbGgiETBZ/selfhosted-upgrade.png\" title=\"selfhosted-upgrade.png\"><img src=\"/user_uploads/2/37/_jM-JkTii9mU6C0jbGgiETBZ/selfhosted-upgrade.png\"></a></div>",
+        "id": 1389459,
+        "sender_full_name": "Vlad Korobov",
+        "timestamp": 1654565580
+    },
+    {
+        "content": "<p>Mm, yeah, something like that seems good! We can play with the wording, potentially making it more pushy for really old versions.</p>",
+        "id": 1389578,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1654586360
+    },
+    {
+        "content": "<p>I filed <a href=\"https://github.com/zulip/zulip/pull/22205\">#22205</a>. <span class=\"user-mention\" data-user-id=\"22433\">@Vlad Korobov</span> would you like to provide a more detailed specification before we mark this as \"help wanted\", or leave the issue as-is until we redesign the menu?</p>",
+        "id": 1389736,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1654621580
+    },
+    {
+        "content": "<p>I see how that task could be done without a redesign. I also see how we can focus on redesign pushing that task after the redesign is done. The question is how critical is this feature?</p>",
+        "id": 1390061,
+        "sender_full_name": "Vlad Korobov",
+        "timestamp": 1654654656
+    },
+    {
+        "content": "<p>It would be really good to have server upgrade notice in the 6.0 release, so I think we shouldn't block this one on the redesign.</p>",
+        "id": 1390352,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1654712850
+    },
+    {
+        "content": "<p>I added a couple of clarifying comments to the issue.</p>",
+        "id": 1390358,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1654713061
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/server.20upgrade.20notice/near/1390352\">said</a>:</p>\n<blockquote>\n<p>It would be really good to have server upgrade notice in the 6.0 release, so I think we shouldn't block this one on the redesign.</p>\n</blockquote>\n<p>Yeah, though I think it's worth keeping in mind that this is the kind of isolated design detail that perhaps could be done independently of \"completing the redesign\".</p>",
+        "id": 1397710,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1656372129
+    },
+    {
+        "content": "<p>Mm, that's exactly what I said (or at least intended to say) in the message you quoted. :)</p>",
+        "id": 1398054,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1656438664
+    },
+    {
+        "content": "<p>Oh great, I hadn't seen the issue somehow. And I see there's now a PR! <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1415378,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1659654282
+    }
+]

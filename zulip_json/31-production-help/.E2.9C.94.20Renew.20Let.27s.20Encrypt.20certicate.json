@@ -1,0 +1,122 @@
+[
+    {
+        "content": "<p>Hi <br>\nbetween 4 days hte certicate of my server zulip expired, but since I have the server installed, 2020, I don't remember ever renewing it manually, does it renew itself or do I have to follow the commands described below?</p>\n<hr>\n<p>FROM: <a href=\"https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html\">https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html</a></p>\n<p>To generate a self-signed certificate when first installing Zulip, just pass the --self-signed-cert flag when running the install script.</p>\n<p>To generate a self-signed certificate for an already-installed Zulip server, run the following commands:</p>\n<p>sudo -s  # If not already root<br>\n/home/zulip/deployments/current/scripts/setup/generate-self-signed-cert HOSTNAME<br>\nwhere HOSTNAME is the domain name (or IP address) to use on the generated certificate.</p>\n<p>After replacing the certificates, you need to reload nginx by running the following as root:</p>\n<p>service nginx reload</p>\n<p>THANKS</p>",
+        "id": 1273417,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1635416510
+    },
+    {
+        "content": "<p>in zulip.conf there is this setup</p>\n<div class=\"codehilite\"><pre><span></span><code>[machine]\npuppet_classes = zulip::profile::standalone\ndeploy_type = voyager\n\n[rabbitmq]\nnodename = zulip@localhost\n\n[certbot]\nauto_renew = yes\n\n[postgresql]\nversion = 10\n</code></pre></div>\n<p>and then I would expect automatic renewal or am I wrong?</p>",
+        "id": 1273453,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1635423571
+    },
+    {
+        "content": "<p>Yeah, that looks like it should be doing auto-renewal (which is the ~usual Let's Encrypt setup -- and those certs last three months, so if it's been most of a year since install, it probably once worked).</p>",
+        "id": 1273523,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1635439749
+    },
+    {
+        "content": "<p>In general (not Zulip specific), I've sometimes run into issues where the process hasn't restarted to pick up the new cert. It's possible restarting nginx will help? Running \"ls -l /etc/letsencrypt/live/*\" will probably give you a clue whether the certs are updated on disk but not picked up, or expired on disk.</p>\n<p>You could also check the LE logs -- /var/log/letsencrypt/letsencrypt.log -- and see if there's an error. (And, of course, if there is an error, the next step will depend on what it is. It may be obvious.)</p>",
+        "id": 1273524,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1635439975
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10544\">@Andrea Soc 🏂</span> that configuration should automatically renew certificates.</p>",
+        "id": 1273569,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635446345
+    },
+    {
+        "content": "<p>(And clearly used to, since they need to be renewed every 3 months)</p>",
+        "id": 1273570,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635446359
+    },
+    {
+        "content": "<p>The renewal cron job runs <code>/home/zulip/deployments/current/scripts/lib/certbot-maybe-renew</code> as root as the system; can you try running that manually and checking the output?</p>",
+        "id": 1273571,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635446406
+    },
+    {
+        "content": "<p>That's probably going to be more convenient to debug than checking the cron logs.</p>",
+        "id": 1273572,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635446418
+    },
+    {
+        "content": "<p>THANKS <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span></p>",
+        "id": 1273962,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1635518027
+    },
+    {
+        "content": "<p>this is the output error</p>\n<div class=\"codehilite\"><pre><span></span><code>Attempting to renew cert (mydomain) from /etc/letsencrypt/renewal/mydomain.conf produced an unexpected error: Failed authorization procedure. mydomain (http-01): urn:ietf:params:acme:error:unauthorized :: The client lacks sufficient authorization :: Invalid response from http://mydomain/.well-known/acme-challenge/8Hp-mdywtLJ0RibXzKkQa1xzXqbPmgTqbIRPrXBPfIw [MYPUBLICIP]: &quot;&lt;html lang=\\&quot;en\\&quot; xml:lang=\\&quot;en\\&quot; xmlns=\\&quot;http://www.w3.org/1999/xhtml\\&quot;&gt;\\n&lt;head&gt;\\n   &lt;title&gt;Connection denied by Geolocation&lt;/title&gt;\\n  &quot;. Skipping.\nAll renewal attempts failed. The following certs could not be renewed:\n  /etc/letsencrypt/live/mydomain/fullchain.pem (failure)\n</code></pre></div>",
+        "id": 1273963,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1635518071
+    },
+    {
+        "content": "<p>SOLVED! <br>\nI had set a security setting on the firewall and then the connection was denied based on the State</p>",
+        "id": 1273968,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1635518547
+    },
+    {
+        "content": "<p>While <a href=\"https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html#certbot-recommended\">https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html#certbot-recommended</a> mentions \"renew\", wouldn't it be safer that in <a href=\"https://zulip.readthedocs.io/en/latest/production/install.html\">https://zulip.readthedocs.io/en/latest/production/install.html</a>, \"auto-renew\" is mentioned in the <code>--cerbot</code> description?</p>",
+        "id": 1274615,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1635766784
+    },
+    {
+        "content": "<p>Hmm, yeah, we should probably document that Zulip installs a cron job to renew these automatically.</p>",
+        "id": 1274778,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635790583
+    },
+    {
+        "content": "<p>Opened <a href=\"https://github.com/zulip/zulip/pull/20125\">#20125</a> to adjust the documentation for this system in a way that I'd expect to help folks debug without needing to ask in the future.</p>",
+        "id": 1274861,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635795075
+    },
+    {
+        "content": "<p>how many days before should it update automatically? in mine there are 6 days left and it is about to expire</p>",
+        "id": 1369783,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1650360658
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10544\">@Andrea Soc</span>: That seems like it's not renewing.</p>\n<p><a href=\"https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html#troubleshooting\">https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html#troubleshooting</a> has some debugging tips.</p>",
+        "id": 1369955,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650389720
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"2\" href=\"/#narrow/stream/2-general/topic/Renew.20Let.27s.20Encrypt.20certicate\">#general &gt; Renew Let's Encrypt certicate</a> by <span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span>.</p>",
+        "id": 1369956,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1650389779
+    },
+    {
+        "content": "<p>solved same problem of Geolocation <span aria-label=\"face palm\" class=\"emoji emoji-1f926\" role=\"img\" title=\"face palm\">:face_palm:</span>  <span aria-label=\"face palm\" class=\"emoji emoji-1f926\" role=\"img\" title=\"face palm\">:face_palm:</span>  <span aria-label=\"face palm\" class=\"emoji emoji-1f926\" role=\"img\" title=\"face palm\">:face_palm:</span>  <span aria-label=\"face palm\" class=\"emoji emoji-1f926\" role=\"img\" title=\"face palm\">:face_palm:</span></p>",
+        "id": 1371048,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1650526170
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10544\">Andrea Soc</span> has marked this topic as resolved.</p>",
+        "id": 1371049,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1650526177
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/.E2.9C.94.20Renew.20Let's.20Encrypt.20certicate/near/1369955\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"10544\">Andrea Soc</span>: That seems like it's not renewing.</p>\n<p><a href=\"https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html#troubleshooting\">https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html#troubleshooting</a> has some debugging tips.</p>\n</blockquote>\n<p>thanks, with debug i found the error..</p>",
+        "id": 1371050,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1650526213
+    }
+]

@@ -1,0 +1,108 @@
+<html>
+<head><meta charset="utf-8"><title>Upgrading bullseye to Bookworm · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20bullseye.20to.20Bookworm.html">Upgrading bullseye to Bookworm</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1606527"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20bullseye%20to%20Bookworm/near/1606527" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Louis-Marie Gendron <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20bullseye.20to.20Bookworm.html#1606527">(Jul 09 2023 at 00:30)</a>:</h4>
+<p>I followed steps describe here : <a href="https://zulip.readthedocs.io/en/latest/production/upgrade.html#upgrading-from-debian-11-to-12">https://zulip.readthedocs.io/en/latest/production/upgrade.html#upgrading-from-debian-11-to-12</a></p>
+<p>Step five give me these errors :</p>
+<div class="codehilite"><pre><span></span><code>root@ct-zulip:~ # /home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 \
+    /home/zulip/deployments/current/ --ignore-static-assets --audit-fts-indexes
+2023-07-09 00:24:40,865 upgrade-zulip-stage-2: Upgrading from 7.2 to 7.2, in /home/zulip/deployments/current/
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2023-07-05-19-52-51/../current/manage.py&quot;, line 12, in &lt;module&gt;
+    setup_path()
+  File &quot;/home/zulip/deployments/2023-07-05-19-52-51/scripts/lib/setup_path.py&quot;, line 20, in setup_path
+    raise RuntimeError(venv + &quot; was not set up for this Python version&quot;)
+RuntimeError: /home/zulip/deployments/2023-07-05-19-52-51/zulip-py3-venv was not set up for this Python version
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2&quot;, line 212, in &lt;module&gt;
+    django_pg_version = subprocess.check_output(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/lib/python3.11/subprocess.py&quot;, line 466, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/usr/lib/python3.11/subprocess.py&quot;, line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command &#39;[&#39;../current/manage.py&#39;, &#39;shell&#39;, &#39;-c&#39;, &#39;from django.db import connection; print(int(connection.cursor().connection.server_version/10000))&#39;]&#39; returned non-zero exit status 1.
+</code></pre></div>
+<p>I tried with running this line <code>rm -rf /srv/zulip-venv-cache/*</code> and without running it.</p>
+<p>============</p>
+<p>I'm running Zulip 7.2 in an Proxmox LXC Debian container.</p>
+
+
+
+<a name="1606737"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20bullseye%20to%20Bookworm/near/1606737" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> cap <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20bullseye.20to.20Bookworm.html#1606737">(Jul 09 2023 at 20:38)</a>:</h4>
+<p>I have the same issue, but running Zulip inside a VM.</p>
+
+
+
+<a name="1606742"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20bullseye%20to%20Bookworm/near/1606742" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> cap <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20bullseye.20to.20Bookworm.html#1606742">(Jul 09 2023 at 21:46)</a>:</h4>
+<p><span class="user-mention" data-user-id="26472">@Louis-Marie Gendron</span> For me executing <code>/home/zulip/deployments/current/scripts/lib/create-production-venv /home/zulip/deployments/current</code> did the trick. After that <code>/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 \
+    /home/zulip/deployments/current/ --ignore-static-assets --audit-fts-indexes</code> did run through.<br>
+<code>supervisorctl status</code> also says that everything is running.</p>
+<p>But please do a snapshot before trying <span aria-label="sweat smile" class="emoji emoji-1f605" role="img" title="sweat smile">:sweat_smile:</span></p>
+
+
+
+<a name="1606774"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20bullseye%20to%20Bookworm/near/1606774" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Louis-Marie Gendron <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20bullseye.20to.20Bookworm.html#1606774">(Jul 10 2023 at 04:26)</a>:</h4>
+<p>Nice! Thank you, I will try that.</p>
+
+
+
+<a name="1606783"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20bullseye%20to%20Bookworm/near/1606783" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Louis-Marie Gendron <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20bullseye.20to.20Bookworm.html#1606783">(Jul 10 2023 at 05:05)</a>:</h4>
+<p>Finally, I couldn't wait to try what you found. It worked for me too. Thank you so much. Zulip Server 7.2 is now running in my Proxmox LXC container. A freshly updated Debian from bullseye to bookworm!</p>
+
+
+
+<a name="1606904"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20bullseye%20to%20Bookworm/near/1606904" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> cap <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20bullseye.20to.20Bookworm.html#1606904">(Jul 10 2023 at 12:23)</a>:</h4>
+<p>Glad to hear that.<br>
+It seems that the documentation on how to upgrade is flawed.<br>
+Could somebody please verify <a href="https://zulip.readthedocs.io/en/latest/production/upgrade.html#upgrading-from-debian-11-to-12">the documentation</a>?</p>
+
+
+
+<a name="1607000"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20bullseye%20to%20Bookworm/near/1607000" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20bullseye.20to.20Bookworm.html#1607000">(Jul 10 2023 at 15:44)</a>:</h4>
+<p><span class="user-mention" data-user-id="17716">@cap</span>: This is an error in the upgrade process, not an error in the documentation.  We'll get it fixed up.</p>
+
+
+
+<a name="1607007"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20bullseye%20to%20Bookworm/near/1607007" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Louis-Marie Gendron <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20bullseye.20to.20Bookworm.html#1607007">(Jul 10 2023 at 16:03)</a>:</h4>
+<p>What @cap found might be useful in this topic too <a href="#narrow/stream/31-production-help/topic/upgrade.20from.205.20to.207.20and.20debian.20distupgrade">upgrade from 5 to 7 and debian distupgrade</a></p>
+
+
+
+<a name="1607009"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20bullseye%20to%20Bookworm/near/1607009" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20bullseye.20to.20Bookworm.html#1607009">(Jul 10 2023 at 16:04)</a>:</h4>
+<p>Yup, that's the same failure mode.  Having the full stacktrace is very helpful here. <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<a name="1616387"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20bullseye%20to%20Bookworm/near/1616387" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Lauryn Menard <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20bullseye.20to.20Bookworm.html#1616387">(Jul 26 2023 at 09:39)</a>:</h4>
+<p>The bug reported in <a href="https://github.com/zulip/zulip/pull/26338">#26338</a> seems to be related to (or a duplicate of) this?</p>
+
+
+
+<a name="1616592"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20bullseye%20to%20Bookworm/near/1616592" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20bullseye.20to.20Bookworm.html#1616592">(Jul 26 2023 at 14:33)</a>:</h4>
+<p>Yes.  They don't say what version of Zulip they're on, but we should get a 7.3 out with this fix to address it.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

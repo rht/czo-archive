@@ -1,0 +1,230 @@
+[
+    {
+        "content": "<p>When trying to upgrade from Docker image 3.1 to 4.0 I get the following error.</p>\n<div class=\"codehilite\"><pre><span></span><code>django.db.utils.IntegrityError: could not create unique index &quot;zerver_stream_realm_id_name_uniq&quot;\nDETAIL:  Key (realm_id, upper(name::text))=(2, !DEACTIVATED:TEST) is duplicated.\n\n  Applying zerver.0302_case_insensitive_stream_name_index...Zulip migration failed with exit code 1. Exiting.\n</code></pre></div>",
+        "id": 1225972,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1625599256
+    },
+    {
+        "content": "<p>That says that your database got duplicated stream names somehow.  What's the upgrade history of this instance?  Has it had any manual changes to the database?</p>",
+        "id": 1225981,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1625599926
+    },
+    {
+        "content": "<p>Not that I know of, I'll ask our team as we have a developer that creates a custom image for us.</p>",
+        "id": 1225986,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1625600046
+    },
+    {
+        "content": "<p>:nod:  The fix is likely to adjust the stream names of the duplicates.  You can find out how wide-spread the issue is via running (by way of <code>./manage dbshell</code>):</p>\n<div class=\"codehilite\"><pre><span></span><code>select count(*), realm_id, upper(name) from zerver_stream group by 2, 3 having count(*) &gt; 1\n</code></pre></div>\n<p>It is likely that this is just that one deactivated \"test\" stream, but good to check.</p>",
+        "id": 1225990,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1625600226
+    },
+    {
+        "content": "<p>Was able to change one of the database entries and that fixed the problem.<br>\nWe now have a new issue as follows </p>\n<div class=\"codehilite\"><pre><span></span><code>zulip_1 | 2021-07-12 23:07:25,603 INFO success: process-fts-updates entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\nzulip_1 | 2021-07-12 23:07:25,603 INFO exited: process-fts-updates (exit status 1; not expected\n</code></pre></div>\n<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> you wouldn't know how I can start troubleshooting this one</p>",
+        "id": 1229969,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626132745
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/zerver_stream_realm_id_name_uniq\">#issues &gt; zerver_stream_realm_id_name_uniq</a> by <span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span></p>",
+        "id": 1229970,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1626132842
+    },
+    {
+        "content": "<p>First off, your duplicate-row issue above was quite probably related to <a href=\"https://github.com/zulip/zulip/pull/18847\">#18847</a> -- if you've not seen that, please take a gander.</p>\n<p>For the process-fts-updates error, can you show <code>/var/log/zulip/fts-updates.log</code>?  I don't recall where that lives in the Docker equivalent, but I can look it up if you're not finding it.</p>",
+        "id": 1229972,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626132973
+    },
+    {
+        "content": "<p>I'll have a look right now see if I can find it</p>",
+        "id": 1229973,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626133030
+    },
+    {
+        "content": "<p>finding the following msg </p>\n<div class=\"codehilite\"><pre><span></span><code>Traceback (most recent call last):\n  File &quot;/usr/local/bin/process_fts_updates&quot;, line 168, in &lt;module&gt;\n    conn = psycopg2.connect(**pg_args)\n  File &quot;/usr/lib/python3/dist-packages/psycopg2/__init__.py&quot;, line 127, in connect\n    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)\npsycopg2.OperationalError: could not connect to server: No such file or directory\n        Is the server running locally and accepting\n        connections on Unix domain socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot;?\n</code></pre></div>\n<p>odd looks like everything should be up</p>\n<div class=\"codehilite\"><pre><span></span><code>2bac6a7ffa77   zulip/zulip-postgresql                                    &quot;docker-entrypoint.s…&quot;   33 minutes ago   Up 33 minutes   5432/tcp                                   zulip-server_database_1\n5a6b131d96fd   rabbitmq:3.7.7                                            &quot;docker-entrypoint.s…&quot;   33 minutes ago   Up 33 minutes   4369/tcp, 5671-5672/tcp, 25672/tcp         zulip-server_rabbitmq_1\n2b90dc26bb3d   redis:alpine                                              &quot;docker-entrypoint.s…&quot;   33 minutes ago   Up 33 minutes   6379/tcp                                   zulip-server_redis_1\n1de49b7d9d2e   memcached:alpine                                          &quot;docker-entrypoint.s…&quot;   33 minutes ago   Up 33 minutes   11211/tcp                                  zulip-server_memcached_1\ne26693d0bbd1   zulip-server:v4.3.0.0   &quot;/sbin/entrypoint.sh…&quot;   33 minutes ago   Up 33 minutes   0.0.0.0:80-&gt;80/tcp, 0.0.0.0:443-&gt;443/tcp   zulip-server_zulip_1\n</code></pre></div>",
+        "id": 1229974,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626133272
+    },
+    {
+        "content": "<p>It looks like it's trying to connect over the socket, not over the TCP port.  This is 4.x, not master?</p>",
+        "id": 1229981,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626133829
+    },
+    {
+        "content": "<p>Ah, yeah, says 4.3.0</p>",
+        "id": 1229982,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626133840
+    },
+    {
+        "content": "<p>Is there away to force it to use one or the other</p>",
+        "id": 1229988,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626134359
+    },
+    {
+        "content": "<p>We changed how this logic works in master, but not in 4.3.  From my skim of the Docker code, it looks like it should be setting <code>REMOTE_POSTGRES_HOST = 127.0.0.1</code> in the <code>/etc/zulip/settings.py</code> that it builds in <code>entrypoint.sh</code>.</p>",
+        "id": 1229992,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626134679
+    },
+    {
+        "content": "<p>Do you see any output to that effect when the <code>zulip-server</code> image starts up?</p>",
+        "id": 1229994,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626134706
+    },
+    {
+        "content": "<p>I don't think that will work as the zulip-postgres container is separate from the zulip-server. I had it set to <code>REMOTE_POSTGRES_HOST = database</code><br>\nI'll give it a shot though</p>",
+        "id": 1230006,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626135286
+    },
+    {
+        "content": "<p>It certainly needs to be set to something that resolves.  You're right that in the docker-compose world., it's a separate host.</p>",
+        "id": 1230009,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626135324
+    },
+    {
+        "content": "<p>So zulip-server container crashes right away as can't connect to database</p>",
+        "id": 1230010,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626135340
+    },
+    {
+        "content": "<p>I'll flip it back</p>",
+        "id": 1230011,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626135364
+    },
+    {
+        "content": "<p>any other suggestions ?</p>",
+        "id": 1230014,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626135404
+    },
+    {
+        "content": "<p>The question is why process-fts-updates isn't correctly reading the config that is being written</p>",
+        "id": 1230016,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626135475
+    },
+    {
+        "content": "<p>We can try dropping in a version that has some more debugging in it</p>",
+        "id": 1230017,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626135489
+    },
+    {
+        "content": "<p>Try replacing <code>/usr/local/bin/process_fts_updates</code> with this version, which has a couple debugging statements in it:<br>\n<a href=\"/user_uploads/2/dd/9-eVK1PRp9CPRWCLsEezc7ZA/process_fts_updates\">process_fts_updates</a> </p>\n<p>Alternately, the diff is:</p>\n<div class=\"codehilite\" data-code-language=\"Diff\"><pre><span></span><code><span class=\"gh\">diff --git puppet/zulip/files/postgresql/process_fts_updates puppet/zulip/files/postgresql/process_fts_updates</span>\n<span class=\"gh\">index 8da1ae79a6..ababfd2bd3 100755</span>\n<span class=\"gd\">--- puppet/zulip/files/postgresql/process_fts_updates</span>\n<span class=\"gi\">+++ puppet/zulip/files/postgresql/process_fts_updates</span>\n<span class=\"gu\">@@ -95,7 +95,8 @@ try:</span>\n     if settings.REMOTE_POSTGRES_PORT != \"\":\n         pg_args[\"port\"] = settings.REMOTE_POSTGRES_PORT\n     USING_PGROONGA = settings.USING_PGROONGA\n<span class=\"gd\">-except ImportError:</span>\n<span class=\"gi\">+except ImportError as e:</span>\n<span class=\"gi\">+    logging.warning(\"Failed to import django settings: %s\", e)</span>\n     # process_fts_updates also supports running locally on a remote\n     # PostgreSQL server; in that case, one can just connect to localhost\n     USING_PGROONGA = False\n<span class=\"gu\">@@ -126,6 +127,8 @@ if \"host\" in pg_args:</span>\n else:\n     pg_args[\"user\"] = \"zulip\"\n\n<span class=\"gi\">+logging.warning(\"Got pg_args: %r\", pg_args)</span>\n<span class=\"gi\">+</span>\n conn = None\n\n retries = 1\n</code></pre></div>",
+        "id": 1230019,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626135757
+    },
+    {
+        "content": "<p>okay try this in just abit , dinner time for me.</p>",
+        "id": 1230022,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626135796
+    },
+    {
+        "content": "<p>Okay swapped out the <code>process_fts_updates</code> file by mounting the new one you gave me. When checking docker logs </p>\n<div class=\"codehilite\"><pre><span></span><code>=== Begin Initial Configuration Phase ===\nPreparing and linking the uploads folder ...\nPrepared and linked the uploads directory.\nExecuting nginx configuration ...\nNginx configuration succeeded.\nCertificates configuration succeeded.\nAuto backup enabled.\n=== End Initial Configuration Phase ===\n=== Begin Bootstrap Phase ===\nWaiting for database server to allow connections ...\nWild Test\nExecuting Zulip first start init ...\nFirst Start Init not needed. Continuing.\nMigrating Zulip to new version ...\nOperations to perform:\n  Apply all migrations: analytics, auth, confirmation, contenttypes, otp_static, otp_totp, sessions, social_django, two_factor, zerver\nRunning migrations:\n  No migrations to apply.\n  Your models in app(s): &#39;zerver&#39; have changes that are not yet reflected in a migration, and so won&#39;t be applied.\n  Run &#39;manage.py makemigrations&#39; to make new migrations, and then re-run &#39;manage.py migrate&#39; to apply them.\nZulip migration succeeded.\nPost setup scripts execution ...\nNo post-setup.d folder found. Continuing.\n=== End Bootstrap Phase ===\n=== Begin Run Phase ===\nStarting Zulip using supervisor with &quot;/etc/supervisor/supervisord.conf&quot; config ...\n\nCertbot is not scheduled to run.\n2021-07-13 03:13:52,671 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2021-07-13 03:13:52,671 WARN No file matches via include &quot;/etc/supervisor/conf.d/*.conf&quot;\n2021-07-13 03:13:52,671 INFO Included extra file &quot;/etc/supervisor/conf.d/zulip/cron.conf&quot; during parsing\n2021-07-13 03:13:52,671 INFO Included extra file &quot;/etc/supervisor/conf.d/zulip/nginx.conf&quot; during parsing\n2021-07-13 03:13:52,671 INFO Included extra file &quot;/etc/supervisor/conf.d/zulip/zulip-once.conf&quot; during parsing\n2021-07-13 03:13:52,671 INFO Included extra file &quot;/etc/supervisor/conf.d/zulip/zulip.conf&quot; during parsing\n2021-07-13 03:13:52,671 INFO Included extra file &quot;/etc/supervisor/conf.d/zulip/zulip_db.conf&quot; during parsing\n2021-07-13 03:13:52,697 INFO RPC interface &#39;supervisor&#39; initialized\n2021-07-13 03:13:52,698 CRIT Server &#39;unix_http_server&#39; running without any HTTP authentication checking\n2021-07-13 03:13:52,698 INFO supervisord started with pid 1\n2021-07-13 03:13:53,701 INFO spawned: &#39;zulip-django&#39; with pid 28\n2021-07-13 03:13:53,703 INFO spawned: &#39;zulip-tornado&#39; with pid 29\n2021-07-13 03:13:53,706 INFO spawned: &#39;process-fts-updates&#39; with pid 30\n2021-07-13 03:13:53,715 INFO spawned: &#39;cron&#39; with pid 31\n2021-07-13 03:13:53,719 INFO spawned: &#39;nginx&#39; with pid 32\n2021-07-13 03:13:53,733 INFO spawned: &#39;zulip_deliver_scheduled_emails&#39; with pid 33\n2021-07-13 03:13:53,743 INFO spawned: &#39;zulip_deliver_scheduled_messages&#39; with pid 34\n2021-07-13 03:13:53,755 INFO spawned: &#39;zulip_events_deferred_work&#39; with pid 35\n2021-07-13 03:13:53,785 INFO spawned: &#39;zulip_events_digest_emails&#39; with pid 36\n2021-07-13 03:13:53,796 INFO spawned: &#39;zulip_events_email_mirror&#39; with pid 37\n2021-07-13 03:13:53,800 INFO spawned: &#39;zulip_events_embed_links&#39; with pid 38\n2021-07-13 03:13:53,832 INFO spawned: &#39;zulip_events_embedded_bots&#39; with pid 39\n2021-07-13 03:13:53,836 INFO spawned: &#39;zulip_events_error_reports&#39; with pid 40\n2021-07-13 03:13:53,880 INFO spawned: &#39;zulip_events_invites&#39; with pid 41\n2021-07-13 03:13:53,916 INFO spawned: &#39;zulip_events_email_senders&#39; with pid 42\n2021-07-13 03:13:53,967 INFO spawned: &#39;zulip_events_missedmessage_emails&#39; with pid 43\n2021-07-13 03:13:54,056 INFO spawned: &#39;zulip_events_missedmessage_mobile_notifications&#39; with pid 44\n2021-07-13 03:13:54,060 INFO spawned: &#39;zulip_events_outgoing_webhooks&#39; with pid 45\n2021-07-13 03:13:54,116 INFO spawned: &#39;zulip_events_user_activity&#39; with pid 46\n2021-07-13 03:13:54,168 INFO spawned: &#39;zulip_events_user_activity_interval&#39; with pid 47\n2021-07-13 03:13:54,220 INFO spawned: &#39;zulip_events_user_presence&#39; with pid 48\n2021-07-13 03:13:54,272 INFO reaped unknown pid 26\n2021-07-13 03:13:55,282 INFO success: zulip-django entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,282 INFO success: zulip-tornado entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,282 INFO success: process-fts-updates entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,282 INFO success: cron entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,282 INFO success: nginx entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,282 INFO success: zulip_deliver_scheduled_emails entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,282 INFO success: zulip_deliver_scheduled_messages entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,283 INFO success: zulip_events_deferred_work entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,283 INFO success: zulip_events_digest_emails entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,283 INFO success: zulip_events_email_mirror entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,283 INFO success: zulip_events_embed_links entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,283 INFO success: zulip_events_embedded_bots entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,283 INFO success: zulip_events_error_reports entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,283 INFO success: zulip_events_invites entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,283 INFO success: zulip_events_email_senders entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,284 INFO success: zulip_events_missedmessage_emails entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,284 INFO success: zulip_events_missedmessage_mobile_notifications entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,284 INFO success: zulip_events_outgoing_webhooks entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,284 INFO success: zulip_events_user_activity entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,284 INFO success: zulip_events_user_activity_interval entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n2021-07-13 03:13:55,284 INFO success: zulip_events_user_presence entered RUNNING state, process has stayed up for &gt; than 1 seconds (startsecs)\n</code></pre></div>",
+        "id": 1230082,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626146254
+    },
+    {
+        "content": "<p>Also noticed this in the error.log</p>\n<div class=\"codehilite\"><pre><span></span><code>2021-07-13 03:38:07.505 ERR  [django.request] Internal Server Error: /login/\nTraceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/5a025c2397f3097648d641486caebf5ac226f263/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/exception.py&quot;, line 47, in inner\n    response = get_response(request)\n  File &quot;/srv/zulip-venv-cache/5a025c2397f3097648d641486caebf5ac226f263/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/base.py&quot;, line 181, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File &quot;./zerver/lib/request.py&quot;, line 390, in _wrapped_view_func\n    return view_func(request, *args, **kwargs)\n  File &quot;./zerver/views/auth.py&quot;, line 757, in login_page\n    extra_context.update(login_context(request))\n  File &quot;./zerver/context_processors.py&quot;, line 187, in login_context\n    realm_description = get_realm_rendered_description(realm)\n  File &quot;./zerver/lib/cache.py&quot;, line 204, in func_with_caching\n    val = func(*args, **kwargs)\n  File &quot;./zerver/lib/realm_description.py&quot;, line 14, in get_realm_rendered_description\n    return markdown_convert(realm_description_raw, message_realm=realm, no_previews=True)\n  File &quot;./zerver/lib/markdown/__init__.py&quot;, line 2681, in markdown_convert\n    ret = do_convert(\n  File &quot;./zerver/lib/markdown/__init__.py&quot;, line 2560, in do_convert\n    maybe_update_markdown_engines(linkifiers_key, email_gateway)\n  File &quot;./zerver/lib/markdown/__init__.py&quot;, line 2370, in maybe_update_markdown_engines\n    linkifiers = linkifiers_for_realm(linkifiers_key)\n  File &quot;./zerver/models.py&quot;, line 964, in linkifiers_for_realm\n    per_request_linkifiers_cache[realm_id] = linkifiers_for_realm_remote_cache(realm_id)\n  File &quot;./zerver/lib/cache.py&quot;, line 181, in func_with_caching\n    val = cache_get(key, cache_name=cache_name)\n  File &quot;./zerver/lib/cache.py&quot;, line 263, in cache_get\n    ret = cache_backend.get(final_key)\n  File &quot;/srv/zulip-venv-cache/5a025c2397f3097648d641486caebf5ac226f263/zulip-py3-venv/lib/python3.8/site-packages/django/core/cache/backends/memcached.py&quot;, line 77, in get\n    return self._cache.get(key, default)\n  File &quot;/srv/zulip-venv-cache/5a025c2397f3097648d641486caebf5ac226f263/zulip-py3-venv/lib/python3.8/site-packages/bmemcached/client/replicating.py&quot;, line 43, in get\n    value, cas = server.get(key)\n  File &quot;/srv/zulip-venv-cache/5a025c2397f3097648d641486caebf5ac226f263/zulip-py3-venv/lib/python3.8/site-packages/bmemcached/protocol.py&quot;, line 451, in get\n    raise MemcachedException(&#39;Code: %d Message: %s&#39; % (status, extra_content), status)\nbmemcached.exceptions.MemcachedException: (&quot;Code: 32 Message: b&#39;Auth failure.&#39;&quot;, 32)\n</code></pre></div>",
+        "id": 1230094,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626147718
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> I tried this morning also REINDEX the database but got the following again</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip=# REINDEX DATABASE zulip;\nERROR:  could not create unique index &quot;zerver_useractivity_user_profile_id_client_i_7a77114d_uniq&quot;\nDETAIL:  Key (user_profile_id, client_id, query)=(26, 8, /api/v1/fetch_api_key) is duplicated.\n</code></pre></div>",
+        "id": 1230319,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626193258
+    },
+    {
+        "content": "<p>The updated debug logging would show up in <code>/var/log/zulip/fts-updates.log</code>.  But it seems not able that memcached is _also_ having auth problems, which is essentially what process-fts-updates is having.  Has anything changed about your secrets or configuration file?</p>",
+        "id": 1230320,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626193372
+    },
+    {
+        "content": "<p>Yeah, it's expected that a <code>REINDEX</code> may turn up duplicates if you fell prey to <a href=\"https://github.com/zulip/zulip/pull/18847\">#18847</a>.  <span aria-label=\"sad\" class=\"emoji emoji-2639\" role=\"img\" title=\"sad\">:sad:</span>  Unfortunately, there's no magic bullet for those -- you'll need to resolve them by hand.  For that one, you can remove the duplicated row.</p>",
+        "id": 1230321,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626193516
+    },
+    {
+        "content": "<p>I haven't changed secrets at all just the docker zulip-server image from 3.x to 4.x</p>",
+        "id": 1230623,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626218572
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> I went through and changed duplicated names to ?test at the end. Also REINDEX the database which now pass. Still getting \"Internal server error\"</p>",
+        "id": 1231173,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626292149
+    },
+    {
+        "content": "<p>The reindex is a separate problem from the server errors.  I'm glad we've got that solved.</p>\n<p>Can you show the contents of <code>/var/log/zulip/fts-updates.log</code> which should have the updated logging?</p>",
+        "id": 1231225,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626294720
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/zerver_stream_realm_id_name_uniq/near/1231225\">said</a>:</p>\n<blockquote>\n<p>The reindex is a separate problem from the server errors.  I'm glad we've got that solved.</p>\n<p>Can you show the contents of <code>/var/log/zulip/fts-updates.log</code> which should have the updated logging?</p>\n</blockquote>\n<div class=\"codehilite\"><pre><span></span><code>2021-07-13 23:43:40,158 WARNING: Got pg_args: {&#39;host&#39;: &#39;database&#39;, &#39;password&#39;: &#39;xxxxxxxxxxxxx&#39;, &#39;user&#39;: &#39;zulip&#39;, &#39;dbname&#39;: &#39;zulip&#39;, &#39;sslmode&#39;: &#39;prefer&#39;, &#39;connect_timeout&#39;: &#39;600&#39;}\n2021-07-13 23:43:40,162 DEBUG: process_fts_updates: listening for search index updates\n2021-07-13 23:43:40,164 DEBUG: process_fts_updates: Processed 0 rows catching up\n2021-07-14 03:31:48,208 WARNING: Got pg_args: {&#39;host&#39;: &#39;database&#39;, &#39;password&#39;: &#39;xxxxxxxxxx&#39;, &#39;user&#39;: &#39;zulip&#39;, &#39;dbname&#39;: &#39;zulip&#39;, &#39;sslmode&#39;: &#39;prefer&#39;, &#39;connect_timeout&#39;: &#39;600&#39;}\n2021-07-14 03:31:48,225 DEBUG: process_fts_updates: listening for search index updates\n2021-07-14 03:31:48,227 DEBUG: process_fts_updates: Processed 0 rows catching up\n2021-07-14 19:44:58,933 WARNING: Got pg_args: {&#39;host&#39;: &#39;database&#39;, &#39;password&#39;: &#39;xxxxxxxxxxxxxxxx&#39;, &#39;user&#39;: &#39;zulip&#39;, &#39;dbname&#39;: &#39;zulip&#39;, &#39;sslmode&#39;: &#39;prefer&#39;, &#39;connect_timeout&#39;: &#39;600&#39;}\n2021-07-14 19:44:58,942 DEBUG: process_fts_updates: listening for search index updates\n2021-07-14 19:44:58,944 DEBUG: process_fts_updates: Processed 0 rows catching up\n2021-07-18 06:01:19,800 WARNING: Got pg_args: {&#39;host&#39;: &#39;database&#39;, &#39;password&#39;: &#39;xxxxxxxxxxxxxx&#39;, &#39;user&#39;: &#39;zulip&#39;, &#39;dbname&#39;: &#39;zulip&#39;, &#39;sslmode&#39;: &#39;prefer&#39;, &#39;connect_timeout&#39;: &#39;600&#39;}\n2021-07-18 06:01:19,813 DEBUG: process_fts_updates: listening for search index updates\n2021-07-18 06:01:19,815 DEBUG: process_fts_updates: Processed 0 rows catching up\n</code></pre></div>",
+        "id": 1235068,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626816916
+    },
+    {
+        "content": "<p>I know username and password are correct</p>",
+        "id": 1235072,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626817129
+    },
+    {
+        "content": "<p>Looks like attached to the same network </p>\n<div class=\"codehilite\"><pre><span></span><code>docker network inspect zulip-server_default -f &quot;{{json .Containers }}&quot;\n{&quot;2b085de620c3c35a2a12dd78155d25c3a1579da3c8fb2ea3be2a7d04db6edaf8&quot;:{&quot;Name&quot;:&quot;zulip-server_zulip_1&quot;,&quot;EndpointID&quot;:&quot;e4ac8d9d6b14aebb0a9adaf0090f8d64a2a2496e6e7b568f6dc15391734eb17a&quot;,&quot;MacAddress&quot;:&quot;02:42:ac:1c:00:04&quot;,&quot;IPv4Address&quot;:&quot;172.28.0.4/16&quot;,&quot;IPv6Address&quot;:&quot;&quot;},&quot;2f6259b16ceb992cc1ee689da9afb9ce877bd7ff4d0bca4b6ff5a31b524e9e43&quot;:{&quot;Name&quot;:&quot;zulip-server_database_1&quot;,&quot;EndpointID&quot;:&quot;4c7c11b905a0abd7fa688d64631df0db6b668fd93043b37c649dedd24729daab&quot;,&quot;MacAddress&quot;:&quot;02:42:ac:1c:00:05&quot;,&quot;IPv4Address&quot;:&quot;172.28.0.5/16&quot;,&quot;IPv6Address&quot;:&quot;&quot;},&quot;47cf0362bac862380710c68d3564da0fbcd0085f9e30424ec40919e2b37caa53&quot;:{&quot;Name&quot;:&quot;zulip-server_memcached_1&quot;,&quot;EndpointID&quot;:&quot;dabd68b769bb56d5ea0da3233ba9c8db16457be7cbab54a8a117645da91fecd4&quot;,&quot;MacAddress&quot;:&quot;02:42:ac:1c:00:02&quot;,&quot;IPv4Address&quot;:&quot;172.28.0.2/16&quot;,&quot;IPv6Address&quot;:&quot;&quot;},&quot;4e4741e11c0b6ec8420f00fab96f8a7beabe5a0fddcd0972c6a129b50c40fb80&quot;:{&quot;Name&quot;:&quot;zulip-server_redis_1&quot;,&quot;EndpointID&quot;:&quot;4d5bae85cfeb2a2c0f08b76ab5dd75ac5a47de16a172d78a78e1252d75a35e91&quot;,&quot;MacAddress&quot;:&quot;02:42:ac:1c:00:03&quot;,&quot;IPv4Address&quot;:&quot;172.28.0.3/16&quot;,&quot;IPv6Address&quot;:&quot;&quot;},&quot;7b84927738eeb9d9c013e1f514f6ff6dd9786c8d0c4256ca6424cd5a82e8457a&quot;:{&quot;Name&quot;:&quot;zulip-server_rabbitmq_1&quot;,&quot;EndpointID&quot;:&quot;d776e57900ea4adfd16879b09fd9a096e02d5ef39fc47d1c10387c1cdf35e232&quot;,&quot;MacAddress&quot;:&quot;02:42:ac:1c:00:06&quot;,&quot;IPv4Address&quot;:&quot;172.28.0.6/16&quot;,&quot;IPv6Address&quot;:&quot;&quot;}}\n</code></pre></div>",
+        "id": 1235077,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626817468
+    },
+    {
+        "content": "<p>Ran test from within zulip container </p>\n<div class=\"codehilite\"><pre><span></span><code>root@2b085de620c3:/# psql -h database -U zulip\nPassword for user zulip:\npsql (13.3 (Ubuntu 13.3-1.pgdg20.04+1), server 10.11)\nType &quot;help&quot; for help.\n\nzulip=# \\l\n                                 List of databases\n   Name    |  Owner   | Encoding |  Collate   |   Ctype    |   Access privileges\n-----------+----------+----------+------------+------------+-----------------------\n postgres  | postgres | UTF8     | en_US.utf8 | en_US.utf8 |\n template0 | postgres | UTF8     | en_US.utf8 | en_US.utf8 | =c/postgres          +\n           |          |          |            |            | postgres=CTc/postgres\n template1 | postgres | UTF8     | en_US.utf8 | en_US.utf8 | =c/postgres          +\n           |          |          |            |            | postgres=CTc/postgres\n zulip     | postgres | UTF8     | en_US.utf8 | en_US.utf8 |\n(4 rows)\n</code></pre></div>",
+        "id": 1235081,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626817594
+    },
+    {
+        "content": "<p>So its able to connect and see.</p>",
+        "id": 1235082,
+        "sender_full_name": "Blair MacInnis",
+        "timestamp": 1626817639
+    },
+    {
+        "content": "<p>Well, it was previously giving the error:</p>\n<div class=\"codehilite\"><pre><span></span><code>psycopg2.OperationalError: could not connect to server: No such file or directory\n        Is the server running locally and accepting\n        connections on Unix domain socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot;?\n</code></pre></div>\n<p>..so it looks like something has improved and <code>process-fts-updatres</code> is happily connecting to the database now.</p>\n<p>Are you still seeing internal server errors?</p>",
+        "id": 1235125,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626819797
+    },
+    {
+        "content": "<p>Those logs in <code>/var/log/zulip/fts-updates.log</code> look like I would expect for it running successfully.</p>",
+        "id": 1235126,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1626819837
+    }
+]

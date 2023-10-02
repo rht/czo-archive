@@ -1,0 +1,254 @@
+[
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"131\">@Rishi Gupta</span> <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> In organization settings page: ORGANIZATION PROFILE, ORGANIZATION SETTINGS, ORGANIZATION PERMISSIONS, EMOJI SETTINGS, USER GROUPS They all use old save feedback system, so in which areas we should implement new feedback system first.</p>",
+        "id": 533774,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520707158
+    },
+    {
+        "content": "<p>Also, it looks like there are some other areas in \"SETTINGS\" where we can use this new system.</p>",
+        "id": 533778,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520707628
+    },
+    {
+        "content": "<p>I've few questions here, </p>\n<ul>\n<li>do we want to extend <code>do_settings_change</code> to delete and post requests as well?<br>\n (If yes, then we should give argument <code>request</code> in <code>do_settings_change</code>where it can be something like this:</li>\n</ul>\n<div class=\"codehilite\"><pre><span></span><span class=\"nx\">exports</span><span class=\"p\">.</span><span class=\"nx\">request_type</span> <span class=\"o\">=</span> <span class=\"p\">{</span>\n    <span class=\"nx\">POST</span><span class=\"o\">:</span>   <span class=\"mi\">1</span><span class=\"p\">,</span>\n    <span class=\"nx\">PATCH</span><span class=\"o\">:</span>  <span class=\"mi\">2</span><span class=\"p\">,</span>\n    <span class=\"nx\">DEL</span><span class=\"o\">:</span>    <span class=\"mi\">3</span><span class=\"p\">,</span>\n<span class=\"p\">};</span>\n</pre></div>\n\n\n<ul>\n<li>Some requests do some additional things in their success callback, so if we want to use <code>do_settings_change</code> then we should also send another argument of these functions as a callback. Is this alright?</li>\n</ul>\n<p>If this is the case then <code>do_settings_change</code> should have definition something like this:</p>\n<div class=\"codehilite\"><pre><span></span><span class=\"nx\">exports</span><span class=\"p\">.</span><span class=\"nx\">do_settings_change</span> <span class=\"o\">=</span> <span class=\"kd\">function</span> <span class=\"p\">(</span><span class=\"nx\">request</span><span class=\"p\">,</span> <span class=\"nx\">url</span><span class=\"p\">,</span> <span class=\"nx\">data</span><span class=\"p\">,</span> <span class=\"nx\">status_element</span><span class=\"p\">,</span> <span class=\"nx\">options</span><span class=\"p\">)</span> <span class=\"p\">{</span>\n</pre></div>\n\n\n<p>where options can contain optional arguments like success message and additional success callback.</p>",
+        "id": 533846,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520713879
+    },
+    {
+        "content": "<p>what sort of additional things are done in the success callback?</p>",
+        "id": 533887,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1520716098
+    },
+    {
+        "content": "<p>Like here <a href=\"https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L421\" target=\"_blank\" title=\"https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L421\">https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L421</a><br>\nAlso, like here <a href=\"https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L536\" target=\"_blank\" title=\"https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L536\">https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L536</a><br>\nAs this type of callbacks aren't present in all the request that's why they should be optional.</p>",
+        "id": 533938,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520717318
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2528\">@Shubham Dhama</span> for the success callbacks, what I would do is have an <code>opts</code> structure where one can pass things like a <code>success</code> (that would just replace it) or a <code>success_continuation</code> (which would be called at the end of the existing callback).</p>\n<p>That said, <a href=\"https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L536\" target=\"_blank\" title=\"https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L536\">https://github.com/zulip/zulip/blob/master/static/js/settings_org.js#L536</a> is really just trying to do the right thing with the <code>ui.report_success</code> style alerts, and I suspect wouldn't need a callback at all once converted.  I'm less sure about the other.</p>\n<p>In terms of structure, as I suggested, we should start with \"Organization settings\" only, to manage the scope of what we're changing to be one thing at a time.</p>",
+        "id": 534030,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1520727402
+    },
+    {
+        "content": "<p>For request type, I'd prefer to add a positional argument that's the actual name (e.g., \"post\", not a numeric code that means that), or possibly just pass in the value <code>channel.post</code>.</p>",
+        "id": 534031,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1520727456
+    },
+    {
+        "content": "<p>I have a question for a long time, why we have two <code>Save</code> button in <code>organization settings-Organization settings</code> section, as both do the same job, Does this is have any designing significance?</p>",
+        "id": 536222,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520873162
+    },
+    {
+        "content": "<p>For organization permissions, we also have three section but only one save button, then why separate save button for two sections in organization settings?</p>",
+        "id": 536230,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520873278
+    },
+    {
+        "content": "<p>If they both do the same thing, I'm guessing it's mostly a mistake :). It could be in the past we had more settings on that page, so had a few Save buttons spaced out. And then as we split the page up into subpages, the save buttons got moved around kind of randomly.</p>",
+        "id": 536238,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1520873559
+    },
+    {
+        "content": "<p>This makes sense, so should I clean this up?</p>",
+        "id": 536254,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520874050
+    },
+    {
+        "content": "<p>have you chatted with Tim about what we were thinking here? Basically we want a \"Save\" and \"Discard changes\" button to appear in the heading of each section when you change something.</p>",
+        "id": 536258,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1520874272
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> For organization settings our current system for <code>property_types</code> made it bit difficult(but still is solvable) for each subsection of organization settings section to have a separate status indicator.</p>\n<blockquote>\n<p>Basically we want a \"Save\" and \"Discard changes\" button to appear in the heading of each section when you change something. </p>\n</blockquote>\n<p>Here I have the same idea to have a sticky <code>div</code> at the top or bottom of such sections (viz. org permissions or org settings) having <code>Save changes</code> button where we can also place this indicator, I think this will also be intuitive as user don't need to search for <code>save changes</code> button at each page and we don't need to have separate status indicator for each page.</p>",
+        "id": 536450,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520882587
+    },
+    {
+        "content": "<p>I can experiment with it to show how it will look like.</p>",
+        "id": 536452,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520882674
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2528\">@Shubham Dhama</span> I think the 2 save buttons is mostly historical, though I think nit's also worth noting that because some UI elements don't auto-save (and others do), we have to be pretty careful about placement of the save buttons in the current system to make it clearer which things the save buttons apply to.</p>",
+        "id": 536507,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1520884868
+    },
+    {
+        "content": "<p>I think having the buttons appear in the heading lines (where we do the feedback in \"display settings\") is the right approach.</p>",
+        "id": 536509,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1520884904
+    },
+    {
+        "content": "<p>Just to make sure, with this, we don't need to have saving action of one clicking <code>save</code> button on another sub-section like we have currently for Message feed and Language settings where saving for one subsection also save another subsection.</p>",
+        "id": 536541,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520886335
+    },
+    {
+        "content": "<p>Correct, ideally the buttons would only apply to their section.</p>",
+        "id": 536650,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1520890750
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/bb/mIPUqnU6ThedLrLqFIkHvvRo/First.gif\" target=\"_blank\" title=\"First.gif\">First.gif</a> Is this something like what we want in settings(currently implemented for only one subsection(message feed)). Having a save icon for each subsection made it easy to implement new feedback system for each subsection.</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/bb/mIPUqnU6ThedLrLqFIkHvvRo/First.gif\" target=\"_blank\" title=\"First.gif\"><img src=\"/user_uploads/2/bb/mIPUqnU6ThedLrLqFIkHvvRo/First.gif\"></a></div>",
+        "id": 538086,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520963168
+    },
+    {
+        "content": "<p>great! One note is the <code>Save Changes</code> button should appear just to the right of the heading, and then should turn into <code>Saving ..</code> and  <code>Saved</code> when you click on it.</p>",
+        "id": 538100,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1520963433
+    },
+    {
+        "content": "<p>Two more points:</p>\n<ul>\n<li>The Save Changes button should only appear if there are changes to be saved (i.e. only after they've clicked on a checkbox)</li>\n<li>It should just be \"Save\", since we also want a <code>Discard changes</code> button</li>\n</ul>",
+        "id": 538104,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1520963524
+    },
+    {
+        "content": "<p>I've tried to fit these conditions in <code>settings_ui.do_settings_change</code> but it looks this is gonna make <code>do_settings_change</code> function more complicated as then there will be no need for <code>loading</code> indicator. So, if I'm right we just want to change current save method, from one for the whole page/section to one for each sub-section with above behavior as pointed out by @RIshi.</p>",
+        "id": 538295,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520968481
+    },
+    {
+        "content": "<blockquote>\n<p>I've tried to fit these conditions in <code>settings_ui.do_settings_change</code> but it looks this is gonna make <code>do_settings_change</code> function more complicated as then there will be no need for <code>loading</code> indicator.  </p>\n</blockquote>\n<p>This is because I think the main reason we want to use <code>do_settings_change</code> function is to use new \"Saving\" loading indicators.</p>",
+        "id": 538301,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520968566
+    },
+    {
+        "content": "<p>So, this can be easily implemented by changing the text of these buttons, with the main logic I've implemented in above GIF prototype.</p>",
+        "id": 538305,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520968629
+    },
+    {
+        "content": "<p>^ <span class=\"user-mention\" data-user-id=\"131\">@Rishi Gupta</span> <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span></p>",
+        "id": 538311,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520968705
+    },
+    {
+        "content": "<p>It's both:</p>\n<ul>\n<li>we want to use the \"Save\" \"Saving ..\" \"Saved\" pattern everywhere</li>\n<li>we want each sub-section to be independent</li>\n</ul>\n<p>or maybe I didn't understand your suggestion?</p>",
+        "id": 538314,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1520968865
+    },
+    {
+        "content": "<blockquote>\n<p>It's both:<br>\n* we want to use the \"Save\" \"Saving ..\" \"Saved\" pattern everywhere<br>\n* we want each sub-section to be independent</p>\n<p>or maybe I didn't understand your suggestion?</p>\n</blockquote>\n<p>Yeah, this is clear, actually, I want to make sure, to implement above points do I necessarily need to use <code> settings_ui.do_settings_change </code>, because this can be easily implemented in <code>settings_org</code> .</p>",
+        "id": 538317,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520968979
+    },
+    {
+        "content": "<p>I have already made each subsection independent.</p>",
+        "id": 538318,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520969014
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2528\">@Shubham Dhama</span> I think eventually we probably want to put something in <code>settings_ui</code>, but it's fine for the function to be separate from <code>do_settings_change</code> -- e.g. this could be a separate <code>ui.plan_settings_change</code> API.  But it's also fine to just do it in <code>settings_org</code> and then refactor.</p>",
+        "id": 538441,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1520973122
+    },
+    {
+        "content": "<p>Also, if you start having prep refactor commits that are ready to review/merge, feel free to submit those.  What Steve has been doing with his prep refactoring commits for his currently project is a great example of how to manage a big effort like this without getting a huge unreviewed branch built up :)</p>",
+        "id": 538445,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1520973196
+    },
+    {
+        "content": "<p>Okay, I've to revert some changes because I was unaware that we want the button needs to be updated. I'm updating it and will update the PR soon.</p>",
+        "id": 538457,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520973401
+    },
+    {
+        "content": "<p>I've added some commits to PR <a href=\"https://github.com/zulip/zulip/pull/8650\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/8650\">#8650</a> but still UI changes to settings_org aren't pushed.</p>\n<p><span class=\"user-mention\" data-user-id=\"131\">@Rishi Gupta</span> How should UI look like, when  \"Failed\"/error and \"No changes to save\" case happens.</p>\n<p>For \"Failed\" I guess button should read \"Failed\" (it can't be two words because the button will look ugly otherwise.)</p>\n<p>And for \"No changes to save\" how about check whether there are any changes happened or not in frontend(currently we check whether there is any change or not from the response data). Whether we want to check it from response data or not, what should be the behavior then(I think we should leave to current behavior or add a similar element to the header of sub-section or another possibility button will read \"No changes\")?</p>",
+        "id": 538719,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1520979720
+    },
+    {
+        "content": "<ul>\n<li>The frontend should detect if there are any changes, and if there are not, then it should remove the \"Save\" and \"Discard changes\" buttons</li>\n<li>On clicking save, the \"Discard changes\" button should go away</li>\n<li>If there is no error message, I think \"Save failed\" in red in the button is likely fine?</li>\n<li>If there is an error message, <code>Save failed: Too many foos</code> in red text (no button) I think could work? </li>\n<li>No changes to save from the backend can now be treated as an error like any other, since we shouldn't show the Save button in that case</li>\n</ul>",
+        "id": 538729,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1520980182
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/86/VvJM4jjmhGf25g-9n5md5Bwo/Peek-2018-03-14-22-56.gif\" target=\"_blank\" title=\"Peek-2018-03-14-22-56.gif\">Peek-2018-03-14-22-56.gif</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/86/VvJM4jjmhGf25g-9n5md5Bwo/Peek-2018-03-14-22-56.gif\" target=\"_blank\" title=\"Peek-2018-03-14-22-56.gif\"><img src=\"/user_uploads/2/86/VvJM4jjmhGf25g-9n5md5Bwo/Peek-2018-03-14-22-56.gif\"></a></div>",
+        "id": 540235,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1521048755
+    },
+    {
+        "content": "<p>Here is how now org-settings page looks like. What still needs to be changed or what am I missing here?</p>",
+        "id": 540240,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1521048822
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2528\">@Shubham Dhama</span> I think we may want to do some further passes on the CSS, but the logic looks about right; might be a good point to work on integrating into master.</p>",
+        "id": 540266,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1521049285
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Okay so this means to update the PR for further review/merge.</p>",
+        "id": 540278,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1521049451
+    },
+    {
+        "content": "<p>yep, exactly.</p>",
+        "id": 540279,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1521049470
+    },
+    {
+        "content": "<p>just to check, this works if you click and unclick a setting? I.e. when if you click and unclick a setting, does it remove the \"Save\" and \"Cancel\" buttons?</p>",
+        "id": 540404,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1521051789
+    },
+    {
+        "content": "<p>It certainly should :)</p>",
+        "id": 540408,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1521051834
+    },
+    {
+        "content": "<blockquote>\n<p>just to check, this works if you click and unclick a setting? I.e. when if you click and unclick a setting, does it remove the \"Save\" and \"Cancel\" buttons?</p>\n</blockquote>\n<p>(Sorry for missing the message), Yeah when click and unclick a setting, Save and Discard buttons get removed.<br>\n(Currently, I'm doing some more manual testing and trying to cover all the corner cases)</p>",
+        "id": 540734,
+        "sender_full_name": "Shubham Dhama",
+        "timestamp": 1521068541
+    },
+    {
+        "content": "<p>cool. One more thing to note is \"Discard\" should be \"Discard changes\", and should be in black.<br>\n(We can play with making it look good afterwards)</p>",
+        "id": 540869,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1521074699
+    }
+]

@@ -1,0 +1,92 @@
+[
+    {
+        "content": "<p>I had a filter with the regex <code>CR:\\s*(?P&lt;id&gt;(?:[A-Z0-9]+-)+\\d+)</code> added via manage.py when using the 1.3 server.<br>\nTrying to delete and re-add this filter in the 1.5.3 UI produces a validation error (it doesn't like <code>:</code> or regex characters in the <code>OPTIONAL_PREFIX</code>)</p>",
+        "id": 266392,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1502719260
+    },
+    {
+        "content": "<p>What was the exact error message?  I think there is probably a simple patch you can make here to your server to allow this.</p>",
+        "id": 266394,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1502719424
+    },
+    {
+        "content": "<p><code>Failed: Invalid filter pattern, you must use the following format OPTIONAL_PREFIX(?P&lt;id&gt;.+)</code></p>",
+        "id": 266395,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1502719541
+    },
+    {
+        "content": "<p>manage.py throws an exception (ValidationError) with the same error message:</p>\n<div class=\"codehilite\"><pre><span></span>Traceback (most recent call last):\n  File &quot;./manage.py&quot;, line 29, in &lt;module&gt;\n    execute_from_command_line(sys.argv)\n  File &quot;/home/zulip/deployments/2017-06-15-22-17-02/zulip-venv/lib/python2.7/site-packages/django/core/management/__init__.py&quot;, line 367, in execute_from_command_line\n    utility.execute()\n  File &quot;/home/zulip/deployments/2017-06-15-22-17-02/zulip-venv/lib/python2.7/site-packages/django/core/management/__init__.py&quot;, line 359, in execute\n    self.fetch_command(subcommand).run_from_argv(self.argv)\n  File &quot;/home/zulip/deployments/2017-06-15-22-17-02/zulip-venv/lib/python2.7/site-packages/django/core/management/base.py&quot;, line 294, in run_from_argv\n    self.execute(*args, **cmd_options)\n  File &quot;/home/zulip/deployments/2017-06-15-22-17-02/zulip-venv/lib/python2.7/site-packages/django/core/management/base.py&quot;, line 345, in execute\n    output = self.handle(*args, **options)\n  File &quot;/home/zulip/deployments/2017-06-15-22-17-02/zerver/management/commands/realm_filters.py&quot;, line 62, in handle\n    do_add_realm_filter(realm, pattern, url_format_string)\n  File &quot;/home/zulip/deployments/2017-06-15-22-17-02/zerver/lib/actions.py&quot;, line 3598, in do_add_realm_filter\n    realm_filter.full_clean()\n  File &quot;/home/zulip/deployments/2017-06-15-22-17-02/zulip-venv/lib/python2.7/site-packages/django/db/models/base.py&quot;, line 1232, in full_clean\n    raise ValidationError(errors)\ndjango.core.exceptions.ValidationError: {&#39;pattern&#39;: [u&#39;Invalid filter pattern, you must use the following format OPTIONAL_PREFIX(?P&lt;id&gt;.+)&#39;]}\n</pre></div>",
+        "id": 266397,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1502720028
+    },
+    {
+        "content": "<p>I think you need to adjust this regex to allow \":\"</p>\n<div class=\"codehilite\"><pre><span></span>regex = re.compile(r&#39;(?:[\\w\\-#]*)(\\(\\?P&lt;\\w+&gt;.+\\))&#39;)\n</pre></div>",
+        "id": 266398,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1502720150
+    },
+    {
+        "content": "<p>or just remove \":\" from the filter</p>",
+        "id": 266399,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1502720186
+    },
+    {
+        "content": "<p>See <code>filter_pattern_validator</code> in <code>zerver/models.py</code>.</p>",
+        "id": 266400,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1502720220
+    },
+    {
+        "content": "<p>hmm, <code>\\w</code> would also not match the `\\s'... but writing a regex to validate arbritrary regexes seems difficult</p>",
+        "id": 266402,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1502720427
+    },
+    {
+        "content": "<p>yeah, that's the problem</p>",
+        "id": 266403,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1502720487
+    },
+    {
+        "content": "<p>Though there is code to test it compiles just below that</p>",
+        "id": 266404,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1502720555
+    },
+    {
+        "content": "<p>Yeah, the problem isn't so much that the regex won't compile; the problem is more that a regex will be expensive or have false positives that interfere with other markdown parsing.</p>",
+        "id": 266407,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1502720614
+    },
+    {
+        "content": "<p>I'll have a think about this, we have others that would no longer validate, e.g. <code>(RFC|rfc)-?(?P&lt;id&gt;\\d+)</code></p>",
+        "id": 266409,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1502720991
+    },
+    {
+        "content": "<p>Huh, this is an interesting problem! Thanks <span class=\"user-mention\" data-user-email=\"dbgshane@gmail.com\" data-user-id=\"2772\">@Shane Kearns</span> for raising it.</p>\n<blockquote>\n<p>the problem is more that a regex will be expensive</p>\n</blockquote>\n<p>This part we could solve by using <a href=\"https://swtch.com/~rsc/regexp/regexp1.html\" target=\"_blank\" title=\"https://swtch.com/~rsc/regexp/regexp1.html\">RE2</a>, which is efficient on any regexp.</p>\n<blockquote>\n<p>or have false positives that interfere with other markdown parsing.</p>\n</blockquote>\n<p>This is trickier. I feel like with some theory there should be a solution for this, but it'd require some thought.</p>",
+        "id": 266883,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1502736027
+    },
+    {
+        "content": "<p>Yeah, this is definitely an area where I'm not altogether happy with our current validation.</p>",
+        "id": 266894,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1502736207
+    },
+    {
+        "content": "<p>I'd be willing to be more \"accepting\" with our filter validations, and then just improve messaging and the ability to diagnose problems.</p>",
+        "id": 266910,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1502736693
+    }
+]

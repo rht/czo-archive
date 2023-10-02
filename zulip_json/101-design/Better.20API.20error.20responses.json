@@ -1,0 +1,236 @@
+[
+    {
+        "content": "<p>Currently, we have our custom validators that each raise a <code>ValidationError</code> of internationalized messages of the form <code>ValidationError(_(\"{var_name} is not a float\").format(var_name=var_name))</code> and the like.</p>",
+        "id": 1617568,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690578791
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19400\">Zixuan James Li</span> mentioned this topic in <strong><a href=\"#narrow/stream/101-design/topic/Code.20playgrounds/near/1617569\">#design &gt; Code playgrounds</a></strong>.</p>",
+        "id": 1617570,
+        "sender_full_name": "Topic Bridge Bot",
+        "timestamp": 1690578803
+    },
+    {
+        "content": "<p>In code playgrounds, we send inconsistent error messages because we have validations done at different layers.</p>\n<p>For <code>WildValue</code>, we intentionally want to avoid <code>ValidationError</code> because of its Django-specific semantics.</p>\n<p><span class=\"user-mention silent\" data-user-id=\"699\">Anders Kaseorg</span> <a href=\"#narrow/stream/3-backend/topic/WildJSON/near/1365631\">said</a>:</p>\n<blockquote>\n<p>The reason not to use <code>ValidationError</code> is that it’s owned by Django, not us. It’s thrown and caught by various Django functions and assigned a special meaning that might conflict with any special meaning we try to assign to it.</p>\n<p>Also, semantically, we want a specific class that says “the input payload that you sent us in your request doesn’t match the format we expect for that request”, not a general class that says “some value somewhere in the program doesn’t match the format some code somewhere else in the program expected for something”.</p>\n<p>We might want to show a detailed message explaining to the user what’s wrong with their own input value; we do not want to show a detailed message explaining what’s wrong with someone else’s value.</p>\n</blockquote>",
+        "id": 1617571,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690579360
+    },
+    {
+        "content": "<p><code>ValidationError</code> on its own can pop up when validating a field on a model, when validating incoming request payload, or in custom checks like this one:</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"k\">def</span> <span class=\"nf\">validate_domain</span><span class=\"p\">(</span><span class=\"n\">domain</span><span class=\"p\">:</span> <span class=\"n\">Optional</span><span class=\"p\">[</span><span class=\"nb\">str</span><span class=\"p\">])</span> <span class=\"o\">-&gt;</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n    <span class=\"k\">if</span> <span class=\"n\">domain</span> <span class=\"ow\">is</span> <span class=\"kc\">None</span> <span class=\"ow\">or</span> <span class=\"nb\">len</span><span class=\"p\">(</span><span class=\"n\">domain</span><span class=\"p\">)</span> <span class=\"o\">==</span> <span class=\"mi\">0</span><span class=\"p\">:</span>\n        <span class=\"k\">raise</span> <span class=\"n\">ValidationError</span><span class=\"p\">(</span><span class=\"n\">_</span><span class=\"p\">(</span><span class=\"s2\">\"Domain can't be empty.\"</span><span class=\"p\">))</span>\n    <span class=\"k\">if</span> <span class=\"s2\">\".\"</span> <span class=\"ow\">not</span> <span class=\"ow\">in</span> <span class=\"n\">domain</span><span class=\"p\">:</span>\n        <span class=\"k\">raise</span> <span class=\"n\">ValidationError</span><span class=\"p\">(</span><span class=\"n\">_</span><span class=\"p\">(</span><span class=\"s2\">\"Domain must have at least one dot (.)\"</span><span class=\"p\">))</span>\n    <span class=\"k\">if</span> <span class=\"nb\">len</span><span class=\"p\">(</span><span class=\"n\">domain</span><span class=\"p\">)</span> <span class=\"o\">&gt;</span> <span class=\"mi\">255</span><span class=\"p\">:</span>\n        <span class=\"k\">raise</span> <span class=\"n\">ValidationError</span><span class=\"p\">(</span><span class=\"n\">_</span><span class=\"p\">(</span><span class=\"s2\">\"Domain is too long\"</span><span class=\"p\">))</span>\n    <span class=\"k\">if</span> <span class=\"n\">domain</span><span class=\"p\">[</span><span class=\"mi\">0</span><span class=\"p\">]</span> <span class=\"o\">==</span> <span class=\"s2\">\".\"</span> <span class=\"ow\">or</span> <span class=\"n\">domain</span><span class=\"p\">[</span><span class=\"o\">-</span><span class=\"mi\">1</span><span class=\"p\">]</span> <span class=\"o\">==</span> <span class=\"s2\">\".\"</span><span class=\"p\">:</span>\n        <span class=\"k\">raise</span> <span class=\"n\">ValidationError</span><span class=\"p\">(</span><span class=\"n\">_</span><span class=\"p\">(</span><span class=\"s2\">\"Domain cannot start or end with a dot (.)\"</span><span class=\"p\">))</span>\n    <span class=\"k\">for</span> <span class=\"n\">subdomain</span> <span class=\"ow\">in</span> <span class=\"n\">domain</span><span class=\"o\">.</span><span class=\"n\">split</span><span class=\"p\">(</span><span class=\"s2\">\".\"</span><span class=\"p\">):</span>\n        <span class=\"k\">if</span> <span class=\"ow\">not</span> <span class=\"n\">subdomain</span><span class=\"p\">:</span>\n            <span class=\"k\">raise</span> <span class=\"n\">ValidationError</span><span class=\"p\">(</span><span class=\"n\">_</span><span class=\"p\">(</span><span class=\"s2\">\"Consecutive '.' are not allowed.\"</span><span class=\"p\">))</span>\n        <span class=\"k\">if</span> <span class=\"n\">subdomain</span><span class=\"p\">[</span><span class=\"mi\">0</span><span class=\"p\">]</span> <span class=\"o\">==</span> <span class=\"s2\">\"-\"</span> <span class=\"ow\">or</span> <span class=\"n\">subdomain</span><span class=\"p\">[</span><span class=\"o\">-</span><span class=\"mi\">1</span><span class=\"p\">]</span> <span class=\"o\">==</span> <span class=\"s2\">\"-\"</span><span class=\"p\">:</span>\n            <span class=\"k\">raise</span> <span class=\"n\">ValidationError</span><span class=\"p\">(</span><span class=\"n\">_</span><span class=\"p\">(</span><span class=\"s2\">\"Subdomains cannot start or end with a '-'.\"</span><span class=\"p\">))</span>\n        <span class=\"k\">if</span> <span class=\"ow\">not</span> <span class=\"n\">re</span><span class=\"o\">.</span><span class=\"n\">match</span><span class=\"p\">(</span><span class=\"s2\">\"^[a-z0-9-]*$\"</span><span class=\"p\">,</span> <span class=\"n\">subdomain</span><span class=\"p\">):</span>\n            <span class=\"k\">raise</span> <span class=\"n\">ValidationError</span><span class=\"p\">(</span><span class=\"n\">_</span><span class=\"p\">(</span><span class=\"s2\">\"Domain can only have letters, numbers, '.' and '-'s.\"</span><span class=\"p\">))</span>\n</code></pre></div>",
+        "id": 1617573,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690579443
+    },
+    {
+        "content": "<p>Some of these checks are probably specific to a user-provided value directly from a request, but some are called somewhere in our backend logic that may or may not directly come from the user.</p>",
+        "id": 1617576,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690579547
+    },
+    {
+        "content": "<p>We should not be using Django’s <code>ValidationError</code> for custom functions like that either, for the same reason.</p>",
+        "id": 1617579,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1690579607
+    },
+    {
+        "content": "<p><code>ValidationError</code> is for integration with Django’s <a href=\"https://docs.djangoproject.com/en/4.2/ref/forms/validation/\">form system</a>, not for anything else.</p>",
+        "id": 1617580,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1690579657
+    },
+    {
+        "content": "<p>From the API point of view, it might be useful to always send the path information in their request data in a consistent manner, along with the exact error message indicating what is wrong with the data.</p>",
+        "id": 1617582,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690579658
+    },
+    {
+        "content": "<p>We are semi-enforcing this in <code>zerver.lib.validators</code> by using the <code>{var_name} is something</code> format messages. But mixing <code>ValidationError</code> for request data validation with other things makes error handling ambiguous, and we do want to move away from <code>ValidationError</code>.</p>",
+        "id": 1617585,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690579806
+    },
+    {
+        "content": "<p>I think we can start with validations that happen to the request through <code>has_request_variables</code>, which:</p>\n<ul>\n<li>should not care about the <code>var_name</code> (which is actually the path information in the context of validating incoming requests);</li>\n<li>should only contain the user-facing information of the error itself;</li>\n<li>should not be a <code>ValidationError</code>.</li>\n</ul>",
+        "id": 1617595,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690580412
+    },
+    {
+        "content": "<p>We make the decorator responsible for formatting the error with the path information, by extending <a href=\"https://catt.rs/en/stable/cattrs.html#cattrs.v.format_exception\">cattrs's formatter</a>.</p>",
+        "id": 1617596,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690580470
+    },
+    {
+        "content": "<p>I'm not sure if we ever need to invent another <code>Execption</code> base class for such validation errors. We can use <code>TypeError</code> <code>ValueError</code> etc. whenever appropriate.</p>",
+        "id": 1617597,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690580561
+    },
+    {
+        "content": "<p>For validation errors that are raised inside the view functions, we should probably just use <code>JsonableError</code> when appropriate.</p>",
+        "id": 1617599,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690580632
+    },
+    {
+        "content": "<p>Optionally, we can think of a way to let the view function decorator associate metadata with the function parameters, which can later be used in the view function to associate the error with the path information in the user request.</p>",
+        "id": 1617602,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690580704
+    },
+    {
+        "content": "<p>We will then have two internationalized strings for each such error. One is the error message itself, another is one of the form <code>{error_message} in the request at {path}</code>, which is the same for all validation errors.</p>",
+        "id": 1617604,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690580792
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19400\">Zixuan James Li</span> <a href=\"#narrow/stream/101-design/topic/ValidationError.20Alternatives/near/1617597\">said</a>:</p>\n<blockquote>\n<p>I'm not sure if we ever need to invent another <code>Execption</code> base class for such validation errors. We can use <code>TypeError</code> <code>ValueError</code> etc. whenever appropriate.</p>\n</blockquote>\n<p>A counterargument to this is that we might want to use a special error to distinguish validation failures from programming errors. So that we can send back 500's, and make sure the error strings are all internationalized.</p>",
+        "id": 1617611,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690581311
+    },
+    {
+        "content": "<p>Definitely I think it's valuable to be able to continue returning 4xx responses when the client's request was malformed, and 5xx responses for exceptions we didn't anticipate (that therefore represent a server bug).</p>",
+        "id": 1617696,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1690588242
+    },
+    {
+        "content": "<p>That function is called from the Django forms system, I'm pretty sure.</p>",
+        "id": 1623197,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1691702992
+    },
+    {
+        "content": "<p>To avoid duplicating it, we need to either raise ValidationError and convert to JsonableError in non form code paths or the other way around.</p>",
+        "id": 1623198,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1691703053
+    },
+    {
+        "content": "<p>I don't think it really matters which one we do?</p>",
+        "id": 1623200,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1691703061
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19400\">@Zixuan James Li</span> I'm not sure what your constraints are but probably you can switch it to the other way as a quick prep PR if that somehow helps what you're trying to do.</p>",
+        "id": 1623203,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1691703162
+    },
+    {
+        "content": "<p>I don't see a reason we'd need a new class.</p>",
+        "id": 1623209,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1691703199
+    },
+    {
+        "content": "<p>That makes sense. I think once we start to use Pydantic, we can eliminate a handful of home-raised <code>ValidationError</code> without extra work. In any case, I agree that no new class is needed.</p>",
+        "id": 1623284,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1691706378
+    },
+    {
+        "content": "<blockquote>\n<p>That function is called from the Django forms system, I'm pretty sure.</p>\n</blockquote>\n<p>Which “that function”? The API of our validator functions is not even compatible with the API of <a href=\"https://docs.djangoproject.com/en/4.2/ref/forms/validation/\">Django form validators</a>. All they have in common is that they raise the same exception type for no reason.</p>",
+        "id": 1623285,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1691707019
+    },
+    {
+        "content": "<p>There’s no use of <code>zerver.lib.validator</code> within <code>zerver.forms</code> or vice versa.</p>",
+        "id": 1623286,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1691707138
+    },
+    {
+        "content": "<p>If we were to build a thing that converted Django’s <code>ValidationError</code> to our <code>JsonableError</code>, we would probably break all our forms.</p>",
+        "id": 1623288,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1691707230
+    },
+    {
+        "content": "<p>So instead of trying to build something that carefully decides which <code>ValidationError</code>s are Django’s and which our ours, we should have them not be the same type to begin with.</p>",
+        "id": 1623289,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1691707320
+    },
+    {
+        "content": "<p>New classes are cheap. Untangling exceptions that should have been different classes but weren’t is expensive.</p>",
+        "id": 1623290,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1691707425
+    },
+    {
+        "content": "<p>I think the function in question is <code>validate_domain</code> from <a href=\"#narrow/stream/101-design/topic/Better.20API.20error.20responses/near/1617573\">here</a>.</p>",
+        "id": 1623301,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1691708563
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/commit/06cc306d00c99899903a6722a17cce076a3647e8\">06cc306d00c99899903a6722a17cce076a3647e8</a> converted the errors from <code>ValueError</code> to Django's <code>ValidationError</code>.  I agree 100% with <span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> that we want to leave <code>ValidationError</code> to Django, and this is probably a pretty good example of where we can just clean up that mistake.</p>",
+        "id": 1623302,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1691708896
+    },
+    {
+        "content": "<p>This not-so-funny-but-funny thing about the commit here is that we basically catch the exception and re-brand it.</p>",
+        "id": 1623311,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1691708975
+    },
+    {
+        "content": "<p>This is clearly a code smell (even back in 2017):</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code>    <span class=\"k\">try</span><span class=\"p\">:</span>\n        <span class=\"n\">validate_domain</span><span class=\"p\">(</span><span class=\"n\">domain</span><span class=\"p\">)</span>\n    <span class=\"k\">except</span> <span class=\"n\">ValidationError</span> <span class=\"k\">as</span> <span class=\"n\">e</span><span class=\"p\">:</span>\n        <span class=\"k\">return</span> <span class=\"n\">json_error</span><span class=\"p\">(</span><span class=\"n\">_</span><span class=\"p\">(</span><span class=\"s1\">'Invalid domain: </span><span class=\"si\">{}</span><span class=\"s1\">'</span><span class=\"p\">)</span><span class=\"o\">.</span><span class=\"n\">format</span><span class=\"p\">(</span><span class=\"n\">e</span><span class=\"o\">.</span><span class=\"n\">messages</span><span class=\"p\">[</span><span class=\"mi\">0</span><span class=\"p\">]))</span>\n</code></pre></div>",
+        "id": 1623312,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1691709209
+    },
+    {
+        "content": "<p>We had commits like <a href=\"https://github.com/zulip/zulip/commit/3d25fbce4956cd079a0e1f7129795998003a0540\">3d25fbce4956cd079a0e1f7129795998003a0540</a> in 2013 to handle <code>JsonableError</code>.</p>",
+        "id": 1623313,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1691709362
+    },
+    {
+        "content": "<p>As an aside, I wonder if <code>JsonableError</code> is a bit overdue for a rename.  It would be a massive code sweep to rename it, so I don't think we should be rash about.  But most errors should kinda be json-able by default.  Whatever those errors have in common is probably something a little more specific than being json-able.  And, as Anders pointed out, new exception classes are cheap, so if we need to introduce a better system that maybe requires a few more classes to make the code more expressive, then we should IMHO.  (Apologies to Anders if I am misrepresenting any of his opinions in specifics, but we are definitely on the same page in terms of broad strokes.)</p>",
+        "id": 1623317,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1691710043
+    },
+    {
+        "content": "<p>Currently <code>JsonableError</code> inherits directly from <code>Exception</code> and there is surprisingly little code, at least in <code>middleware.py</code>, that is necessary to accommodate it.</p>",
+        "id": 1623318,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1691711177
+    },
+    {
+        "content": "<p>OTOH <code>JsonableError</code> itself has about ~35 subclasses.</p>",
+        "id": 1623322,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1691711423
+    },
+    {
+        "content": "<p>Ahh, <code>validate_domain</code> was not the function I was thinking of, which is <code>check_subdomain_available</code>, which is a function that we originally wrote for use in the Django forms but then reused in <code>zerver/views/realm.py</code> when adding an API query for the same:</p>\n<div class=\"codehilite\"><pre><span></span><code>from zerver.forms import check_subdomain_available as check_subdomain\ndef check_subdomain_available(request: HttpRequest, subdomain: str) -&gt; HttpResponse:\n    try:\n        check_subdomain(subdomain)\n        return json_success(request, data={&quot;msg&quot;: &quot;available&quot;})\n    except ValidationError as e:\n        return json_success(request, data={&quot;msg&quot;: e.message})\n</code></pre></div>",
+        "id": 1624060,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1691801721
+    },
+    {
+        "content": "<p>So in that particular case, what I think we should be doing is rewriting it to say <code>raise JsonableError</code>, and having the caller in <code>zerver/forms.py</code> be the one converting a thing to a <code>ValidationError</code>.</p>",
+        "id": 1624066,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1691801763
+    },
+    {
+        "content": "<p>Sorry for the confusion, I wasn't at a computer and <code>validate_domain</code> has a bad name for a function intended for the <code>RealmDomain</code> feature. The history for that one is likely that originally it was managed via a Django form and just got refactored into not that over the years.</p>",
+        "id": 1624067,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1691801814
+    }
+]

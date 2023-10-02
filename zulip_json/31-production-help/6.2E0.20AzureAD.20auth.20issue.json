@@ -1,0 +1,62 @@
+[
+    {
+        "content": "<p>We run self-hosted, on Ubuntu 20.04. We auth with Azure AD. This broke after 6.0 upgrade this week. People are still using Zulip, but new logins just fail. In the UI (web, mobile, all) we click on AAD, are sent over to log in, enter username and password, and are just kicked back to Zulip login. Can share logs of the auth if anyone are interested.</p>",
+        "id": 1492841,
+        "sender_full_name": "Gaute Lund",
+        "timestamp": 1674130309
+    },
+    {
+        "content": "<p>The settings.py and zulip-secrets.conf just contain an app id and a key which has not changed.</p>",
+        "id": 1492848,
+        "sender_full_name": "Gaute Lund",
+        "timestamp": 1674131149
+    },
+    {
+        "content": "<p>The upgrade happened 2023-01-16 in the afternoon (UTC+1), and the error was first reported this morning 2023-01-19 about 0600 (UTC+1). We can ofc not be 100% sure that the upgrade is the trigger here, but we know of no other \"new\" login attempts since the upgrade.</p>",
+        "id": 1492849,
+        "sender_full_name": "Gaute Lund",
+        "timestamp": 1674131356
+    },
+    {
+        "content": "<p>As said, just say if anyone want to see logs before &amp; after, we can just censor the keys.</p>",
+        "id": 1492851,
+        "sender_full_name": "Gaute Lund",
+        "timestamp": 1674131414
+    },
+    {
+        "content": "<div class=\"spoiler-block\"><div class=\"spoiler-header\">\n<p>Here is an entry from django.log:</p>\n</div><div class=\"spoiler-content\" aria-hidden=\"true\">\n<p>2023-01-19 12:06:43.444 INFO [zr] 62.97.244.38    GET     302   1ms /accounts/login/social/azuread-oauth2 (unauth@root via Mozilla)<br>\n[pid: 4103345|app: 0|req: 73030/93878] 62.97.244.38 () {62 vars in 1221 bytes} [Thu Jan 19 12:06:43 2023] GET /accounts/login/social/azuread-oauth2?next=%2F =&gt; generated 0 bytes in 5 msecs (HTTP/2.0 302) 5 headers in 244 bytes (1 switches on core 0)<br>\n2023-01-19 12:06:43.478 INFO [zr] 62.97.244.38    GET     302   1ms /login/azuread-oauth2/ (unauth@root via Mozilla)<br>\n[pid: 4103345|app: 0|req: 73031/93879] 62.97.244.38 () {62 vars in 1279 bytes} [Thu Jan 19 12:06:43 2023] GET /login/azuread-oauth2/?subdomain=&amp;is_signup=0&amp;multiuse_object_key=&amp;next=%2F =&gt; generated 0 bytes in 11 msecs (HTTP/2.0 302) 8 headers in 688 bytes (1 switches on core 0)<br>\n2023-01-19 12:06:57.396 WARN [zulip.auth.azuread-oauth2] Your credentials aren't allowed<br>\n2023-01-19 12:06:57.398 INFO [zr] 62.97.244.38    GET     302 251ms /complete/azuread-oauth2/ (unauth@root via Mozilla)<br>\n[pid: 4103345|app: 0|req: 73039/93889] 62.97.244.38 () {64 vars in 2908 bytes} [Thu Jan 19 12:06:57 2023] GET /complete/azuread-oauth2/?code=0.AQwAMKa6yRKxsUS3tl_qknmoekkpOei7s7ZKl1wU763PJuAAAAA.AgABAAIAAAD--DLA3VO7QrddgJg7WevrAgDs_wQA9P-2G_Z_WKJlas3y6XtwVkU9j-S0Yy... (snip)&amp;session_state=cbc4bc13-bf57-46b1-898e-763b08e1e38d =&gt; generated 0 bytes in 256 msecs (HTTP/2.0 302) 7 headers in 272 bytes (1 switches on core 0)</p>\n</div></div>\n<div class=\"spoiler-block\"><div class=\"spoiler-header\">\n<p>And meanwhile,  in server.log:</p>\n</div><div class=\"spoiler-content\" aria-hidden=\"true\">\n<p>2023-01-19 12:06:40.742 INFO [zr] 62.97.244.38    GET     302   1ms / (unauth@root via Mozilla)<br>\n2023-01-19 12:06:40.789 INFO [zr] 62.97.244.38    GET     200  13ms /login/ (unauth@root via Mozilla)<br>\n2023-01-19 12:06:43.444 INFO [zr] 62.97.244.38    GET     302   1ms /accounts/login/social/azuread-oauth2 (unauth@root via Mozilla)<br>\n2023-01-19 12:06:43.478 INFO [zr] 62.97.244.38    GET     302   1ms /login/azuread-oauth2/ (unauth@root via Mozilla)<br>\n2023-01-19 12:06:43.835 INFO [zr] 83.242.11.22    POST    200  12ms (db: 3ms/2q) /json/users/me/presence (848@root via ZulipElectron/5.8.1)<br>\n2023-01-19 12:06:46.423 INFO [zr] 83.242.11.22    POST    200  12ms (db: 3ms/2q) /json/users/me/presence (761@root via ZulipElectron/5.9.3)<br>\n2023-01-19 12:06:47.306 INFO [zr] 79.161.124.109  POST    200  11ms (db: 3ms/2q) /json/users/me/presence (854@root via ZulipElectron/5.9.3)<br>\n2023-01-19 12:06:48.008 INFO [zr] 62.97.244.38    POST    200  12ms (db: 3ms/2q) /json/users/me/presence (763@root via ZulipElectron/5.9.4)<br>\n2023-01-19 12:06:48.959 INFO [zr] 85.200.227.234  POST    200  12ms (db: 3ms/2q) /json/users/me/presence (863@root via ZulipElectron/5.9.4)<br>\n2023-01-19 12:06:51.610 INFO [zr:9800] 127.0.0.1       POST    200   4ms /api/v1/events/internal [331e935d-9d06-4bcc-be0d-a00421d9a5e0/0] (855@root via internal)<br>\n2023-01-19 12:06:51.621 INFO [zr:9800] 127.0.0.1       POST    200   2ms /api/v1/events/internal [331e935d-9d06-4bcc-be0d-a00421d9a5e0/0] (855@root via internal)<br>\n2023-01-19 12:06:51.623 INFO [zr] 185.78.210.132  POST    200  27ms (db: 2ms/1q) /api/v1/register (855@root via Go-http-client)<br>\n2023-01-19 12:06:51.673 INFO [zr] 185.78.210.132  GET     200  12ms (db: 2ms/2q) /api/v1/streams (855@root via Go-http-client)<br>\n2023-01-19 12:06:51.714 INFO [:9800] Tornado 9800 removed 0 expired event queues owned by 0 users in 0.000s.  Now 26 active queues, 24 handlers, latest ID 182464<br>\n2023-01-19 12:06:52.930 INFO [zr] 83.242.11.22    POST    200  11ms (db: 3ms/2q) /json/users/me/presence (769@root via ZulipElectron/5.9.4)<br>\n2023-01-19 12:06:55.443 INFO [:9800] Client disconnected for queue cf4c5654-14f4-4a78-b085-cb91935627ba (858 via website)<br>\n2023-01-19 12:06:55.455 INFO [zr:9800] 83.242.11.22    GET     200   5ms /json/events [cf4c5654-14f4-4a78-b085-cb91935627ba/0] (858@root via Mozilla)<br>\n2023-01-19 12:06:55.465 INFO [zr] 83.242.11.22    POST    200  18ms (db: 2ms/2q) /json/users/me/presence (858@root via Mozilla)<br>\n2023-01-19 12:06:57.396 WARN [zulip.auth.azuread-oauth2] Your credentials aren't allowed<br>\n2023-01-19 12:06:57.398 INFO [zr] 62.97.244.38    GET     302 251ms /complete/azuread-oauth2/ (unauth@root via Mozilla)<br>\n2023-01-19 12:06:57.442 INFO [zr] 62.97.244.38    GET     200   9ms /login/ (unauth@root via Mozilla)</p>\n</div></div>",
+        "id": 1492856,
+        "sender_full_name": "Gaute Lund",
+        "timestamp": 1674132328
+    },
+    {
+        "content": "<p>NVM, our bad:</p>",
+        "id": 1492860,
+        "sender_full_name": "Gaute Lund",
+        "timestamp": 1674133155
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/8/_2VBp1e5-SRVIASpd6IAImYs/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/8/_2VBp1e5-SRVIASpd6IAImYs/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/8/_2VBp1e5-SRVIASpd6IAImYs/image.png\"></a></div>",
+        "id": 1492861,
+        "sender_full_name": "Gaute Lund",
+        "timestamp": 1674133156
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"22331\">@Gaute Lund</span> can you confirm that everything is working after applying that configuration adjustment?</p>",
+        "id": 1493232,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1674158719
+    },
+    {
+        "content": "<p>We do have plans for a future setting system that would allow us to do this sort of settings variable name update automatically, so I'll count this as a data point on those plans being valuable once we're able to do them.</p>",
+        "id": 1493233,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1674158764
+    },
+    {
+        "content": "<p>For the sake of completeness: Yes, things are working.</p>",
+        "id": 1547881,
+        "sender_full_name": "Gaute Lund",
+        "timestamp": 1681471275
+    }
+]

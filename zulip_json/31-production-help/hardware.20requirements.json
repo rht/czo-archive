@@ -1,0 +1,470 @@
+[
+    {
+        "content": "<p>Hi :-)</p>\n<p>I installed a zulip server for the CS department of my university, but I need some help in order to be able to calculate the hardware requirements.<br>\nIf everything works fine, the server might get up to a few thousand users and at least ~1.000 daily users (average).</p>\n<p>I know the <a href=\"https://zulip.readthedocs.io/en/stable/production/requirements.html#scalability\">document on scalability</a> and that it's possible to <a href=\"https://zulip.readthedocs.io/en/stable/production/deployment.html#running-zulip-s-service-dependencies-on-different-machines\">outsource services</a>.</p>\n<p>But how exactly will the requirements change if I outsource the services? Could you give me a clue? That would be great! :-)</p>\n<p>PS: The maximum capacity of a single VM on our university: 4 cores, 16GB RAM, 80GB storage.</p>",
+        "id": 1027936,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1601459992
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert</span> I'd recommend that 16GB of RAM version, given those constraints.  That's how much resources this server has with ~15K total users, and I expect that'll be sufficient for the usage you describe.</p>",
+        "id": 1028047,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601484683
+    },
+    {
+        "content": "<p>Can you explain what you mean by \"outsource the services\"?</p>",
+        "id": 1028048,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601484697
+    },
+    {
+        "content": "<p>Thank you very much for your answer! :-)</p>\n<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/hardware.20requirements/near/1028048\">said</a>:</p>\n<blockquote>\n<p>Can you explain what you mean by \"outsource the services\"?</p>\n</blockquote>\n<p>Well, <a href=\"https://zulip.readthedocs.io/en/stable/production/deployment.html#running-zulip-s-service-dependencies-on-different-machines\">this</a>:</p>\n<blockquote>\n<p>Zulip has full support for each top-level service living on its own machine.</p>\n</blockquote>\n<p>Sorry, if it was the wrong wording...<br>\nDo you think that a single 16GB VM is sufficient for zulip and its services like the database, etc.?<br>\nBecause <a href=\"https://zulip.readthedocs.io/en/stable/production/requirements.html#scalability\">here</a> it seems that the absolute minimum requirements would be \"16GB of RAM for the Zulip application server, plus 16GB for the database\".</p>",
+        "id": 1028079,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1601487223
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert</span> my guess is that it will be; if you find it isn't, it's not hard to migrate to have those be different servers.</p>",
+        "id": 1028154,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601496684
+    },
+    {
+        "content": "<p>Ok, thank you! :-)</p>",
+        "id": 1028183,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1601498198
+    },
+    {
+        "content": "<p>One additional thing: Do you think that this is also sufficient for a peak of ~1.800 daily users? Or should the database in this case be on another server in any case?</p>",
+        "id": 1028195,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1601498514
+    },
+    {
+        "content": "<p>It really depends on how active those users will be.  Zulip load mainly scales with concurrent active users, which for 1800 daily users could be ~1000 or could be ~200 depending on how they end up using it.  Certainly you won't need to have a separate server at the 200 range, and you might not even at 1000.</p>",
+        "id": 1028197,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601498700
+    },
+    {
+        "content": "<p>I'm be tempted to set it up on a single server first, since that's easiest, and if you experience load issues, do the migration.</p>",
+        "id": 1028199,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601498760
+    },
+    {
+        "content": "<p>But if you're looking to minimize downtime, it's not hard to do postgres on a separate VM.</p>",
+        "id": 1028200,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601498787
+    },
+    {
+        "content": "<p>Ok, got it :-) Thanks!</p>",
+        "id": 1028279,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1601504192
+    },
+    {
+        "content": "<p>Hi :-)<br>\nI'm trying to install postgres on my second VM. So I fetched and unpacked a zulip tarball and executed <code>env PUPPET_CLASSES=zulip::base,zulip::apt_repository,zulip::postgres_appdb_tuned,zulip::localhost_camo ./scripts/setup/install --email=user@host --hostname=host</code> so postgres gets porperly installed and configured for zulip.<br>\nHowever, I got the following failure during the installation:</p>\n<div class=\"codehilite\"><pre><span></span><code>+ /tmp/tmp.vW8CV5zscR/zulip-server-3.2/scripts/zulip-puppet-apply --force --noop --write-catalog-summary --classfile=/var/lib/puppet/classes.txt\nError: Could not find resource &#39;Package[nginx-full]&#39; in parameter &#39;require&#39; (file: /tmp/tmp.vW8CV5zscR/zulip-server-3.2/puppet/zulip/manifests/localhost_camo.pp, line: 7) on node host\n\nZulip installation failed (exit code 1)!\n</code></pre></div>\n\n\n<p>Did I do anything wrong? I thought it might be a good idea to include the <code>zulip::localhost_camo</code> target as well as the VM runs Ubuntu (= Debian-based, see <a href=\"https://github.com/zulip/zulip/blob/master/puppet/zulip/manifests/voyager.pp#L30\">https://github.com/zulip/zulip/blob/master/puppet/zulip/manifests/voyager.pp#L30</a>)...<br>\nHelp is greatly appreciated! :-)</p>",
+        "id": 1037715,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602712447
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert</span> <code>localhost_camo</code> is for the app frontend servers. For a database-only server, you should install without it.</p>",
+        "id": 1037743,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1602714502
+    },
+    {
+        "content": "<p>Thank you! So just restart the installation without it? Or should I remove something before?</p>",
+        "id": 1037747,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602715707
+    },
+    {
+        "content": "<p>Yeah you can just retry without it.</p>",
+        "id": 1037750,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1602715892
+    },
+    {
+        "content": "<p>Hmm?</p>\n<div class=\"codehilite\"><pre><span></span><code>++ dirname /tmp/tmp.vW8CV5zscR/zulip-server-3.2/scripts/setup/postgres-init-db\n+ /tmp/tmp.vW8CV5zscR/zulip-server-3.2/scripts/setup/flush-memcached\nTraceback (most recent call last):\n  File &quot;/tmp/tmp.vW8CV5zscR/zulip-server-3.2/scripts/setup/flush-memcached&quot;, line 14, in &lt;module&gt;\n    from zproject import settings\n  File &quot;/tmp/tmp.vW8CV5zscR/zulip-server-3.2/scripts/setup/../../zproject/settings.py&quot;, line 19, in &lt;module&gt;\n    from .configured_settings import *  # noqa: F401,F403 isort: skip\n  File &quot;/tmp/tmp.vW8CV5zscR/zulip-server-3.2/scripts/setup/../../zproject/configured_settings.py&quot;, line 8, in &lt;module&gt;\n    from .default_settings import *  # noqa: F401,F403 isort: skip\n  File &quot;/tmp/tmp.vW8CV5zscR/zulip-server-3.2/scripts/setup/../../zproject/default_settings.py&quot;, line 13, in &lt;module&gt;\n    from .prod_settings import EXTERNAL_HOST, ZULIP_ADMINISTRATOR\nModuleNotFoundError: No module named &#39;zproject.prod_settings&#39;\n\nZulip installation failed (exit code 1)!\n</code></pre></div>",
+        "id": 1037751,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602716221
+    },
+    {
+        "content": "<p>That seems like a bug. <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> do you know how we’ve avoided running into this?</p>",
+        "id": 1037761,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1602717261
+    },
+    {
+        "content": "<p>Seems like we should have been seeing it since <a href=\"https://github.com/zulip/zulip/pull/13239\">#13239</a>.</p>",
+        "id": 1037762,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1602717453
+    },
+    {
+        "content": "<p>Oh, we’d have used <code>--no-init-db</code>.</p>",
+        "id": 1037764,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1602717884
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17322\">Robert</span> <del>I think you can just edit <code>scripts/setup/postgres-init-db</code> and comment out the <code>flush-memcached</code> line and retry.</del> Actually that doesn’t work, there are more bugs.</p>",
+        "id": 1037765,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1602717981
+    },
+    {
+        "content": "<p>I filed this as <a href=\"https://github.com/zulip/zulip/pull/16541\">#16541</a>.</p>",
+        "id": 1037769,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1602719716
+    },
+    {
+        "content": "<p>Thank you. Is there a temporary fix / workaround I could use?</p>",
+        "id": 1038182,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602753218
+    },
+    {
+        "content": "<p>My hope is we'll just fix it in the next day or so.</p>",
+        "id": 1038601,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602797844
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> are you working on this issue?</p>",
+        "id": 1038620,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602798044
+    },
+    {
+        "content": "<p>Hm, I found this: <a href=\"https://github.com/zulip/zulip/blob/3.x/scripts/lib/install#L389\">https://github.com/zulip/zulip/blob/3.x/scripts/lib/install#L389</a><br>\nMaybe this is the missing piece of code?</p>",
+        "id": 1038627,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602798367
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> I don’t see how this code path was ever supposed to work. <code>scripts/setup/initialize-database --quiet</code> and <code>manage.py generate_realm_creation_link</code> cannot run without Django being set up. I’m assuming the intended way to set up a database-only server is using <code>--no-init-db</code> and then manually running those commands later from the app frontend server, but this is not documented anywhere.</p>",
+        "id": 1038629,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1602798420
+    },
+    {
+        "content": "<p>Yeah, the assumption is that a database-only server doesn't get the config, because we don't want a venv -- so it's not in charge of setting up the DB.</p>",
+        "id": 1038630,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602798465
+    },
+    {
+        "content": "<p>In theory we should be able to initialize the database in the postgres server, connect the application server, and do Django migrations etc. from the application server side?</p>",
+        "id": 1038632,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602798528
+    },
+    {
+        "content": "<p>I don't think we have instructions for that sort of flow.</p>",
+        "id": 1038633,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602798536
+    },
+    {
+        "content": "<p>(We do actually get a venv, but we don’t get a Django configuration.)</p>",
+        "id": 1038636,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1602798540
+    },
+    {
+        "content": "<p>So basically there are like three of us for whom “it's not hard to do postgres on a separate VM” is actually true.</p>",
+        "id": 1038643,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1602798650
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert</span>: Can you run that the installer with <code>--no-init-db</code>?</p>\n<p>To be clear, you already have one host that you installed on -- does that one currently have a local postgres?</p>",
+        "id": 1038647,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602798741
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"699\">Anders Kaseorg</span> <a href=\"#narrow/stream/31-production-help/topic/hardware.20requirements/near/1038643\">said</a>:</p>\n<blockquote>\n<p>So basically there are like three of us for whom “it's not hard to do postgres on a separate VM” is actually true.</p>\n</blockquote>\n<p>I think the point you're attempting to make is that the documentation is lacking in how to do this, since it's seldom attempted.  Which yes, I agree with.</p>",
+        "id": 1038648,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602798776
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/commit/5b7be7ba5dc80626c297ae439a08ab47e6ecef1f\">5b7be7ba5dc80626c297ae439a08ab47e6ecef1f</a> is relevant here.</p>",
+        "id": 1038657,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602798895
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/hardware.20requirements/near/1038647\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"17322\">Robert</span>: Can you run that the installer with <code>--no-init-db</code>?</p>\n</blockquote>\n<p>Sure, I can try it.</p>\n<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/hardware.20requirements/near/1038647\">said</a>:</p>\n<blockquote>\n<p>To be clear, you already have one host that you installed on -- does that one currently have a local postgres?</p>\n</blockquote>\n<p>Yes and yes. (But there is no need to copy the contents of the old database to the new one. There haven't been any important contents yet).</p>",
+        "id": 1038668,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602798943
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> <br>\nDo you mean that I should run<br>\n<code>env PUPPET_CLASSES=zulip::base,zulip::apt_repository,zulip::postgres_appdb_tuned ./scripts/setup/install --no-init-db --email=user@host --hostname=host</code><br>\nor<br>\n<code>./scripts/setup/install --no-init-db --email=user@host --hostname=host</code>?</p>",
+        "id": 1038673,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602799095
+    },
+    {
+        "content": "<p>The former; sorry for not being specific.</p>",
+        "id": 1038674,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602799115
+    },
+    {
+        "content": "<p>Ok, I ran the command<br>\n<code>env PUPPET_CLASSES=zulip::base,zulip::apt_repository,zulip::postgres_appdb_tuned ./scripts/setup/install --no-init-db --email=user@host --hostname=host</code>.<br>\nI'm not sure to what extend the results of the last attempts have been reused, but the command resulted in</p>\n<div class=\"codehilite\"><pre><span></span><code> Success!\n\n Stopping because --no-init-db was passed.\n To complete the installation, configure postgres and then run:\n\n   su zulip -c &#39;/home/zulip/deployments/current/scripts/setup/initialize-database&#39;\n   su zulip -c &#39;/home/zulip/deployments/current/manage.py generate_realm_creation_link&#39;\n</code></pre></div>",
+        "id": 1038694,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602799380
+    },
+    {
+        "content": "<p>OK -- that's great!</p>\n<p>I think the right steps are to:</p>\n<ol>\n<li>Take a <a href=\"https://zulip.readthedocs.io/en/latest/production/export-and-import.html#backups\">backup</a>.</li>\n<li>Set <code>REMOTE_POSTGRES_HOST = 'your.postgres.hostname'</code> in <code>/etc/zulip/settings.py</code> on the main host.</li>\n<li><a href=\"https://zulip.readthedocs.io/en/latest/production/export-and-import.html#restoring-backups\">Restore</a> that same backup, which should set up the database tables in the remote postgres host.</li>\n</ol>",
+        "id": 1038696,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602799408
+    },
+    {
+        "content": "<p>Cleanup is then:</p>\n<ol>\n<li>Update <code>/etc/zulip/zulip.conf</code> on the application-frontend-only server to only have <code>puppet_classes = zulip::app_frontend, zulip::memcached, zulip::rabbit, zulip::redis</code>, so it doesn't think it needs to have a database.</li>\n<li>Drop the database from the app frontend server.</li>\n</ol>",
+        "id": 1038698,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602799517
+    },
+    {
+        "content": "<p>Oh, I skipped a step before step 3, which is to set up postgres auth such that the app server can talk to the pg server.</p>",
+        "id": 1038701,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602799885
+    },
+    {
+        "content": "<p>I think <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#using-zulip-with-amazon-rds-as-the-database\">https://zulip.readthedocs.io/en/latest/production/deployment.html#using-zulip-with-amazon-rds-as-the-database</a> is likely reasonably parallel to what needs to happen; we're at step 2, effectively.  Instead of a dump-and-restore for step 3, it's going to generate a new one, which sounds like it's fine for your use case.</p>",
+        "id": 1038725,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602800295
+    },
+    {
+        "content": "<p>That also elides the Postgres configuration necessary, which is mentioned only in passing in <a href=\"https://zulip.readthedocs.io/en/latest/production/postgres.html#remote-postgres-database\">https://zulip.readthedocs.io/en/latest/production/postgres.html#remote-postgres-database</a> as well.</p>",
+        "id": 1038736,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602800380
+    },
+    {
+        "content": "<p>Thank you!<br>\nSo I configured <code>REMOTE_POSTGRES_HOST</code> and set <code>REMOTE_POSTGRES_SSLMODE</code> to <code>verify-full</code> (on the application server side).<br>\nThen I checked the postgres on the remote postgres server we just installed and it seems to already have a zulip user:</p>\n<div class=\"codehilite\"><pre><span></span><code>postgres=# \\du\n                                   List of roles\n Role name |                         Attributes                         | Member of\n-----------+------------------------------------------------------------+-----------\n postgres  | Superuser, Create role, Create DB, Replication, Bypass RLS | {}\n zulip     |                                                            | {}\n</code></pre></div>\n\n\n<p>So the next step would be to set the password for the zulip user in the db and save it in the application server's settings.py as well, right?</p>",
+        "id": 1038760,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602800738
+    },
+    {
+        "content": "<p>(We should make sure we add better documentation for this process once we've helped Robert)</p>",
+        "id": 1038778,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602800940
+    },
+    {
+        "content": "<p>Yup; either password or certificate auth.  If you use the former, <code>postgres_password = abcd1234</code> goes in <code>/etc/zulip/zulip-secrets.conf</code></p>\n<p>And IIRC you'll need to set up postgres to listen not just on the loopback.</p>",
+        "id": 1038792,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602801094
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/hardware.20requirements/near/1038778\">said</a>:</p>\n<blockquote>\n<p>(We should make sure we add better documentation for this process once we've helped Robert)</p>\n</blockquote>\n<p>Of course.</p>",
+        "id": 1038794,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602801105
+    },
+    {
+        "content": "<p>I'll continue tomorrow and report on the results, thank you very much!<br>\n(I'm in Europe and it's 00:58...)</p>",
+        "id": 1038849,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602802717
+    },
+    {
+        "content": "<p>Hi, everything seems to be successfully setup now, thank you! The only thing I did not manage yet is the password authentication. If I want to run the first command of <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#step-3-configure-zulip-to-use-the-postgres-database\">step 3</a> or just <code>supervisorctl restart all</code>, I get:</p>\n<div class=\"codehilite\"><pre><span></span><code>psycopg2.OperationalError: FATAL:  password authentication failed for user &quot;zulip&quot;\n[...]\ndjango.db.utils.OperationalError: FATAL:  password authentication failed for user &quot;zulip&quot;\n</code></pre></div>\n\n\n<p>But Zulip supports the scram-sha-256 <a href=\"https://www.postgresql.org/docs/12/auth-password.html\">password authentication method</a>, doesn't it?</p>",
+        "id": 1039454,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602880560
+    },
+    {
+        "content": "<p>You've verified you can connect to the database host from the frontend via <code>psql</code> ?</p>",
+        "id": 1039456,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602881096
+    },
+    {
+        "content": "<p>Yes :-)</p>",
+        "id": 1039459,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602881621
+    },
+    {
+        "content": "<p>Using <code>psql \"host=localhost dbname=zulip user=zulip sslmode=require\"</code></p>",
+        "id": 1039460,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602881651
+    },
+    {
+        "content": "<p>Oh, I forgot to mention: The connection works also between the two hosts, not only on localhost.</p>",
+        "id": 1039464,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602882181
+    },
+    {
+        "content": "<p>Ah, yeah, verifying not just the password but also the cross-host bit was what I was getting at.</p>",
+        "id": 1039466,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602882661
+    },
+    {
+        "content": "<p>And the password is in <code>/etc/zulip/zulip-secrets.conf</code> as <code>postgres_password = xxxx</code> ?</p>",
+        "id": 1039467,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602882711
+    },
+    {
+        "content": "<p>We're just using Django's default Pg backend, which is psycopg2, which uses libpq, so it should support scram-sha-256.</p>",
+        "id": 1039468,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602882872
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/hardware.20requirements/near/1039467\">said</a>:</p>\n<blockquote>\n<p>And the password is in <code>/etc/zulip/zulip-secrets.conf</code> as <code>postgres_password = xxxx</code> ?</p>\n</blockquote>\n<p>Yes</p>\n<p>Do you know anything I could do to further investigate this issue?</p>",
+        "id": 1039469,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602882986
+    },
+    {
+        "content": "<p>Or are there restrictions regarding the password? (max length, invalid characters)?</p>",
+        "id": 1039470,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602883062
+    },
+    {
+        "content": "<p>Let's try this:</p>\n<div class=\"codehilite\"><pre><span></span><code>sudo -i -u zulip\ncd ~/deployments/current\nsource zulip-py3-venv/bin/activate\nipython3\n\nimport psycopg2\npsycopg2.connect(&quot;host=your-db-hostname.here dbname=zulip user=zulip sslmode=require password=hunter2&quot;)\n</code></pre></div>\n\n\n<p>(Edited to use the same format as you have above, if you prefer that)</p>",
+        "id": 1039471,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602883110
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17322\">Robert</span> <a href=\"#narrow/stream/31-production-help/topic/hardware.20requirements/near/1039470\">said</a>:</p>\n<blockquote>\n<p>Or are there restrictions regarding the password? (max length, invalid characters)?</p>\n</blockquote>\n<p>Not that I know of.</p>",
+        "id": 1039472,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602883116
+    },
+    {
+        "content": "<p>We use certificate authentication in production, but others are happily using password auth.</p>",
+        "id": 1039473,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602883180
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/hardware.20requirements/near/1039472\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"17322\">Robert</span> <a href=\"#narrow/stream/31-production-help/topic/hardware.20requirements/near/1039470\">said</a>:</p>\n<blockquote>\n<p>Or are there restrictions regarding the password? (max length, invalid characters)?</p>\n</blockquote>\n<p>Not that I know of.</p>\n</blockquote>\n<p>There are (somewhere, maybe it got saved in a wrong way in the database?). I just tried a password using only 30 alphanumeric characters and now, it works...</p>",
+        "id": 1039474,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602883363
+    },
+    {
+        "content": "<p>I tried to use the HTTPS certificates, but I think, I would need a special certificate for the client?</p>",
+        "id": 1039475,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602883388
+    },
+    {
+        "content": "<p>Yeah, HTTPS certificates use a client certificate to identify who is connecting.</p>",
+        "id": 1039476,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602883414
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17322\">Robert</span> <a href=\"#narrow/stream/31-production-help/topic/hardware.20requirements/near/1039474\">said</a>:</p>\n<blockquote>\n<p>There are (somewhere, maybe it got saved in a wrong way in the database?). I just tried a password using only 30 alphanumeric characters and now, it works...</p>\n</blockquote>\n<p>Oho!  Can you share what you were using for the non-working password, if it's random and you're not using it anymore?</p>",
+        "id": 1039477,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602883445
+    },
+    {
+        "content": "<p>Or some hint at the non-alphanumeric characters and/or length.</p>",
+        "id": 1039478,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602883465
+    },
+    {
+        "content": "<p>Sure: <code>|'c)l&gt;!Q\"fSqefj\"=m|Z*OoA_r@vIx=Dv:LnF?r7^\\hy.J&gt;oR5#D#K3i8SCx9[y7mU;Bl2g=c_#6erx3U|B/MMm1Qu}vl_vcAH#q</code><br>\n(I use a password manager, so it does not matter for me how complicate the password is... <span aria-label=\"joy\" class=\"emoji emoji-1f602\" role=\"img\" title=\"joy\">:joy:</span> )</p>",
+        "id": 1039479,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602883515
+    },
+    {
+        "content": "<p>Great; I'll see if I can replicate.</p>",
+        "id": 1039480,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602883644
+    },
+    {
+        "content": "<p>Regarding the certificates: I tried to reuse the HTTPS certificates of my two VMs as auth for postgres, but that did not work. I assumed that they may be the wrong certificates for this purpose, because the purpose stored in the certificate is \"Server Authentication\". Or am I wrong? Then I might retry it...</p>",
+        "id": 1039481,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602883694
+    },
+    {
+        "content": "<p>Yeah, client certificates are different than HTTPS server certificates.</p>",
+        "id": 1039482,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602883725
+    },
+    {
+        "content": "<p>Client certificates are signed by the server's certificates.  In this case, that means the frontend has a certificate signed by the postgres server's certificate; in general, these certs are only used for this specific authentication.</p>",
+        "id": 1039483,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602883838
+    },
+    {
+        "content": "<p>Parts of postgres apparently truncate password entry at 99 characters: <a href=\"https://github.com/postgres/postgres/blob/REL_12_STABLE/src/bin/psql/command.c#L1828-L1829\">https://github.com/postgres/postgres/blob/REL_12_STABLE/src/bin/psql/command.c#L1828-L1829</a></p>",
+        "id": 1039503,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602885737
+    },
+    {
+        "content": "<p>This is fixed in master a month ago, but not any released versions of Postgres: <a href=\"https://github.com/postgres/postgres/commit/67a472d71c98c3d2fa322a1b4013080b20720b98\">https://github.com/postgres/postgres/commit/67a472d71c98c3d2fa322a1b4013080b20720b98</a></p>",
+        "id": 1039505,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602885951
+    },
+    {
+        "content": "<p>So yes, 101-character long passwords may be a problem in some contexts. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1039506,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602885978
+    },
+    {
+        "content": "<p>Ok, thank you :-)<br>\nI had some trouble trying to use certificates, so I purged postgresql using apt and reinstalled it as we discussed here.<br>\nHowever, if I like to create the organization after successfully setting up the db using <code>sudo -u zulip /home/zulip/deployments/current/scripts/setup/initialize-database</code>, I got:<br>\n<code>[Django] host: insert or update on table \"zerver_useractivity\" violates foreign key constraint \"zerver_useractivity_client_id_bb848fef_fk_zerver_client_id\"\\nDETAIL:  Key (client_id)=(5) is not present in table \"zerver_client\".\\n</code><br>\nthe first time and<br>\n<code>[Django] host: insert or update on table \"zerver_message\" violates foreign key constraint \"zerver_message_sending_client_id_1c38413f_fk_zerver_client_id\"\\nDETAIL:  Key (sending_client_id)=(2) is not present in table \"zerver_client\".\\n</code><br>\nthe second time I tried it (after another reinstall).<br>\nDid I forgot anything?</p>",
+        "id": 1039968,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602938817
+    },
+    {
+        "content": "<p>Or maybe you could tell me how to properly remove the database so I can reinstall it cleanly? I'm still a beginner and I think, I played around too much...</p>",
+        "id": 1039969,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602943030
+    },
+    {
+        "content": "<p>I tried again and here the detailed process:</p>\n<ul>\n<li>purge all packages containing 'postgres' in their name using aptitude</li>\n<li>manually remove /var/lib/postgresql/ and /usr/share/postgresql/</li>\n<li>run <code>sudo env PUPPET_CLASSES=zulip::base,zulip::apt_repository,zulip::postgres_appdb_tuned ./scripts/setup/install --no-init-db</code> [success]</li>\n<li>comment out the line <code>\"$(dirname \"$0\")/flush-memcached\"</code> in scripts/setup/postgres-init-db and run it using sudo [success]</li>\n<li>make some changes in <code>postgresql.conf</code> and <code>pg_hba.conf</code> and restart the database [success]</li>\n<li>set the correct password for the <code>zulip</code> user in the database</li>\n<li>switch to application server (= postgres server client)</li>\n<li>set the correct password in <code>settings.py</code></li>\n<li>run <code>sudo -u zulip /home/zulip/deployments/current/scripts/setup/initialize-database</code> [success]</li>\n<li>run <code>sudo -u zulip /home/zulip/deployments/current/manage.py generate_realm_creation_link</code> [success]</li>\n<li>go to realm creation link and sign up</li>\n<li>get redirected to <code>Internal server error</code> in the browser and receive email with subject:</li>\n</ul>\n<div class=\"codehilite\"><pre><span></span><code>[Django] host: insert or update on table &quot;zerver_message&quot; violates foreign key constraint &quot;zerver_message_sending_client_id_1c38413f_fk_zerver_client_id&quot;\\nDETAIL:  Key (sending_client_id)=(2) is not present in table &quot;zerver_client&quot;.\\n\n</code></pre></div>",
+        "id": 1040086,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602969159
+    },
+    {
+        "content": "<p>follow-up question in <a class=\"stream-topic\" data-stream-id=\"31\" href=\"/#narrow/stream/31-production-help/topic/New.20remote.20postgres.20DB\">#production help &gt; New remote postgres DB</a>, thank you :-)</p>",
+        "id": 1040606,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603048289
+    }
+]

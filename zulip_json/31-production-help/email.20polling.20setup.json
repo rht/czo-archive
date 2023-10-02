@@ -1,0 +1,140 @@
+[
+    {
+        "content": "<p>Hi, I am trying to set up incoming email integration with gmail account, as reference I followed this guide <a href=\"https://zulip.readthedocs.io/en/latest/production/email-gateway.html\">https://zulip.readthedocs.io/en/latest/production/email-gateway.html</a> and as the last step I restarted zulip (service, not os, it should be added as the last step IMHO).<br>\nNow I can see addresses generated for each stream but zulip cant fetch/recognize the email sent to those addresses - I dont what the problem is because I am not able to find logs correlated to fetching email from the server. <br>\nAny help where can I find logs which gonna show what is not working as intended with fetching emails?</p>",
+        "id": 1051468,
+        "sender_full_name": "Bartlomiej P",
+        "timestamp": 1603999046
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"14911\">@Bartlomiej P</span> the code for the job is zerver/management/commands/email_mirror.py if you want to print debug.</p>\n<p>It logs to <code>/var/log/zulip/email_mirror.log</code> -- have you checked there?</p>",
+        "id": 1051502,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1604000297
+    },
+    {
+        "content": "<p>(We should probably document that logging location as a troubleshooting note, at the very least).</p>",
+        "id": 1051503,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1604000311
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/email.20polling.20setup/near/1051502\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"14911\">Bartlomiej P</span> the code for the job is zerver/management/commands/email_mirror.py if you want to print debug.</p>\n<p>It logs to <code>/var/log/zulip/email_mirror.log</code> -- have you checked there?</p>\n</blockquote>\n<p>Yes, I have, that file is completely empty.</p>",
+        "id": 1051507,
+        "sender_full_name": "Bartlomiej P",
+        "timestamp": 1604000364
+    },
+    {
+        "content": "<p>And it appears that the fetching script is launched every 60s because in <code>manage.log</code> I can see <code>2020-10-29 19:39:01,484: Ran './manage.py email_mirror'</code></p>",
+        "id": 1051509,
+        "sender_full_name": "Bartlomiej P",
+        "timestamp": 1604000429
+    },
+    {
+        "content": "<p>OK -- I'd recommend adding print statements to the fetching script to try to figure out what's happening. (You can run it manually rather than waiting for cron while you debug)</p>",
+        "id": 1051516,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1604000561
+    },
+    {
+        "content": "<p>We'll want to fix the fact that it currently doesn't log anything for whatever failure you're seeing in master, but we need to identify your problem first <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1051518,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1604000593
+    },
+    {
+        "content": "<p>roger that</p>",
+        "id": 1051519,
+        "sender_full_name": "Bartlomiej P",
+        "timestamp": 1604000614
+    },
+    {
+        "content": "<p>I will try to figure out where is the problem, tbh I could not find where the script is that supposed to fetch email, thank you for that</p>",
+        "id": 1051521,
+        "sender_full_name": "Bartlomiej P",
+        "timestamp": 1604000644
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  Did I executed it properly?</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip01:/home/zulip/deployments/current# su zulip -c &quot;cd /home/zulip/deployments/current &amp;&amp; ./manage.py email_mirror&quot;\nTraceback (most recent call last):\n  File &quot;./manage.py&quot;, line 50, in &lt;module&gt;\n    execute_from_command_line(sys.argv)\n  File &quot;/home/zulip/deployments/2020-07-24-22-29-45/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/__init__.py&quot;, line 381, in execute_from_command_line\n    utility.execute()\n  File &quot;/home/zulip/deployments/2020-07-24-22-29-45/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/__init__.py&quot;, line 375, in execute\n    self.fetch_command(subcommand).run_from_argv(self.argv)\n  File &quot;/home/zulip/deployments/2020-07-24-22-29-45/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py&quot;, line 323, in run_from_argv\n    self.execute(*args, **cmd_options)\n  File &quot;/home/zulip/deployments/2020-07-24-22-29-45/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py&quot;, line 364, in execute\n    output = self.handle(*args, **options)\n  File &quot;/home/zulip/deployments/2020-07-24-22-29-45/zerver/management/commands/email_mirror.py&quot;, line 77, in handle\n    process_message(message)\n  File &quot;/home/zulip/deployments/2020-07-24-22-29-45/zerver/lib/email_mirror.py&quot;, line 405, in process_message\n    to = find_emailgateway_recipient(message)\n  File &quot;/home/zulip/deployments/2020-07-24-22-29-45/zerver/lib/email_mirror.py&quot;, line 313, in find_emailgateway_recipient\n    for addr in header_value.addresses:\nAttributeError: &#39;_UnstructuredHeader&#39; object has no attribute &#39;addresses&#39;\n</code></pre></div>",
+        "id": 1051530,
+        "sender_full_name": "Bartlomiej P",
+        "timestamp": 1604001074
+    },
+    {
+        "content": "<p>Ok, I think I know here the problem is, it might the email structure that gmail operates, I made some changes in <code>zerver/lib/email_mirror.py</code> and now it fetches and rocognizes email properly</p>",
+        "id": 1051573,
+        "sender_full_name": "Bartlomiej P",
+        "timestamp": 1604002855
+    },
+    {
+        "content": "<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"k\">def</span> <span class=\"nf\">find_emailgateway_recipient</span><span class=\"p\">(</span><span class=\"n\">message</span><span class=\"p\">:</span> <span class=\"n\">EmailMessage</span><span class=\"p\">)</span> <span class=\"o\">-&gt;</span> <span class=\"nb\">str</span><span class=\"p\">:</span>\n    <span class=\"c1\"># We can't use Delivered-To; if there is a X-Gm-Original-To</span>\n    <span class=\"c1\"># it is more accurate, so try to find the most-accurate</span>\n    <span class=\"c1\"># recipient list in descending priority order</span>\n    <span class=\"n\">recipient_headers</span> <span class=\"o\">=</span> <span class=\"p\">[</span><span class=\"s2\">\"X-Gm-Original-To\"</span><span class=\"p\">,</span> <span class=\"s2\">\"Delivered-To\"</span><span class=\"p\">,</span> <span class=\"s2\">\"Envelope-To\"</span><span class=\"p\">,</span>\n                         <span class=\"s2\">\"Resent-To\"</span><span class=\"p\">,</span> <span class=\"s2\">\"Resent-CC\"</span><span class=\"p\">,</span> <span class=\"s2\">\"To\"</span><span class=\"p\">,</span> <span class=\"s2\">\"CC\"</span><span class=\"p\">]</span>\n\n    <span class=\"n\">pattern_parts</span> <span class=\"o\">=</span> <span class=\"p\">[</span><span class=\"n\">re</span><span class=\"o\">.</span><span class=\"n\">escape</span><span class=\"p\">(</span><span class=\"n\">part</span><span class=\"p\">)</span> <span class=\"k\">for</span> <span class=\"n\">part</span> <span class=\"ow\">in</span> <span class=\"n\">settings</span><span class=\"o\">.</span><span class=\"n\">EMAIL_GATEWAY_PATTERN</span><span class=\"o\">.</span><span class=\"n\">split</span><span class=\"p\">(</span><span class=\"s1\">'</span><span class=\"si\">%s</span><span class=\"s1\">'</span><span class=\"p\">)]</span>\n    <span class=\"n\">match_email_re</span> <span class=\"o\">=</span> <span class=\"n\">re</span><span class=\"o\">.</span><span class=\"n\">compile</span><span class=\"p\">(</span><span class=\"s2\">\".*?\"</span><span class=\"o\">.</span><span class=\"n\">join</span><span class=\"p\">(</span><span class=\"n\">pattern_parts</span><span class=\"p\">))</span>\n\n    <span class=\"k\">for</span> <span class=\"n\">header_name</span> <span class=\"ow\">in</span> <span class=\"n\">recipient_headers</span><span class=\"p\">:</span>\n        <span class=\"k\">for</span> <span class=\"n\">header_value</span> <span class=\"ow\">in</span> <span class=\"n\">message</span><span class=\"o\">.</span><span class=\"n\">get_all</span><span class=\"p\">(</span><span class=\"n\">header_name</span><span class=\"p\">,</span> <span class=\"p\">[]):</span>\n            <span class=\"nb\">print</span><span class=\"p\">(</span><span class=\"n\">header_value</span><span class=\"p\">)</span> <span class=\"c1\"># added for testing</span>\n            <span class=\"k\">if</span> <span class=\"n\">match_email_re</span><span class=\"o\">.</span><span class=\"n\">match</span><span class=\"p\">(</span><span class=\"n\">header_value</span><span class=\"p\">):</span> <span class=\"c1\">#changed</span>\n                <span class=\"k\">return</span> <span class=\"n\">header_value</span> <span class=\"c1\">#changed</span>\n<span class=\"c1\">#            for addr in header_value.addresses:</span>\n<span class=\"c1\">#                if match_email_re.match(addr.addr_spec):</span>\n<span class=\"c1\">#                    return addr.addr_spec</span>\n</code></pre></div>",
+        "id": 1051579,
+        "sender_full_name": "Bartlomiej P",
+        "timestamp": 1604002943
+    },
+    {
+        "content": "<p>and the result of the above code is properly fetched and recognized message:</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip01:/home/zulip/deployments/current# su zulip -c &quot;cd /home/zulip/deployments/current &amp;&amp; ./manage.py email_mirror&quot;\nfoobar+o-playground.f51eca18fc599fb1541a3d803c1aabf4.show-sender@gmail.com\n2020-10-29 20:19:00.980 INFO [zerver.lib.email_mirror] Successfully processed email to o playground ()\n</code></pre></div>",
+        "id": 1051582,
+        "sender_full_name": "Bartlomiej P",
+        "timestamp": 1604003063
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> <span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> that exception looks like it might be a bug in the conversion to the modern Python email library?</p>",
+        "id": 1051640,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1604009607
+    },
+    {
+        "content": "<p>This looks like the bug we fixed in <a href=\"https://github.com/zulip/zulip/pull/15869\">#15869</a>.</p>",
+        "id": 1051642,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1604009778
+    },
+    {
+        "content": "<p>We backported that fix in 3.1. <span class=\"user-mention\" data-user-id=\"14911\">@Bartlomiej P</span> are you still on 3.0?</p>",
+        "id": 1051643,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1604009873
+    },
+    {
+        "content": "<p>Yes, I am on 3.0</p>",
+        "id": 1051645,
+        "sender_full_name": "Bartlomiej P",
+        "timestamp": 1604010089
+    },
+    {
+        "content": "<p>You should upgrade to 3.2, which contains the fix. (We dropped a version component between the 2.1.x series and the 3.x series, so this is a minor release with selected bug fixes only.)</p>",
+        "id": 1051646,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1604010187
+    },
+    {
+        "content": "<p>Ok, I will do the upgrade during the weekend I hope</p>",
+        "id": 1051647,
+        "sender_full_name": "Bartlomiej P",
+        "timestamp": 1604010248
+    },
+    {
+        "content": "<p>Sorry  for fuss guys, my google-it-skills did not work this time as they should</p>",
+        "id": 1051648,
+        "sender_full_name": "Bartlomiej P",
+        "timestamp": 1604010393
+    },
+    {
+        "content": "<p>All good. We have a lot of issues and Google doesn’t index them all, so the GitHub issues search bar often works better.</p>",
+        "id": 1051649,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1604010569
+    },
+    {
+        "content": "<p>Short update, after the upgrade to version 3.2 email polling works as expected.</p>",
+        "id": 1053264,
+        "sender_full_name": "Bartlomiej P",
+        "timestamp": 1604181733
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"14911\">@Bartlomiej P</span> thanks for the confirmation!</p>",
+        "id": 1054971,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1604361075
+    }
+]

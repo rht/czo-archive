@@ -1,0 +1,326 @@
+[
+    {
+        "content": "<p>Hey there,<br>\nI'm running docker-zulip with docker-compose and it seems to work really great. I'm considering switching from Slack and Twist to just Zulip.</p>\n<p>I'm running into an issue with my setup: <br>\n• Ubuntu 18 server, running apt installed Nginx 1.14.0<br>\n• Zulip running with: </p>\n<div class=\"codehilite\"><pre><span></span>DISABLE_HTTPS: &quot;True&quot;\nSETTING_ALLOWED_HOSTS: &quot;[&#39;zulip.myhostnameihaveindeedchanged.com&#39;, &#39;127.0.0.1&#39;]&quot;\nSETTING_USE_X_FORWARDED_HOST: &quot;True&quot;\n</pre></div>\n\n\n<p>And with ports mapping:</p>\n<div class=\"codehilite\"><pre><span></span>    ports:\n      - &#39;40340:80&#39;\n      - &#39;40343:443&#39;\n</pre></div>\n\n\n<p>• Reverse proxy setup on nginx listening on port 443, proxying to <a href=\"http://127.0.0.1:40340\" target=\"_blank\" title=\"http://127.0.0.1:40340\">http://127.0.0.1:40340</a> (as I'm not using SSL in Zulip).</p>\n<p>Created the org, when trying to add it in the desktop client I get the usual error (not a valid Zulip server etc).</p>\n<p>The cert is a Let's Encrypt one, so there should be no issues with that. I'm pretty sure this is because I'm terminating https at the Nginx layer, but I'm not sure about that and I'd like to avoid having SSL on Nginx and on Zulip).</p>\n<p>Thanks in advance for any help :)</p>",
+        "id": 662102,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542322835
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10325\">@Michel Tomas</span> so, the thing the desktop app is checking is whether a certain API endpoint on the Zulip server works (<code>/api/v1/server_settings</code>)</p>",
+        "id": 662108,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542323088
+    },
+    {
+        "content": "<p>I'm curious if you have <code>EXTERNAL_HOST</code> set properly to use the port of the <code>nginx</code> server in front.</p>",
+        "id": 662109,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542323117
+    },
+    {
+        "content": "<p>I should note that while the HTTPS disabled setting definitely works in normal Zulip, we've had a few reports of folks having trouble getting it working in <code>docker-zulip</code> in the last few days, so it's possible there's a bug here we need to track down.</p>",
+        "id": 662110,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542323180
+    },
+    {
+        "content": "<p>Did you follow our docs for setting up an <code>nginx</code> reverse proxy properly, BTW?</p>",
+        "id": 662111,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542323202
+    },
+    {
+        "content": "<p>But I'm not aware of an obvious reason the desktop app would fail if the webapp works here, other than your SSL cert being slightly malformed (e.g. not having a proper certificate chain).  <a href=\"https://www.ssllabs.com/\" target=\"_blank\" title=\"https://www.ssllabs.com/\">https://www.ssllabs.com/</a> may help debug if that's the case.</p>",
+        "id": 662112,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542323287
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> thanks, yeah, I've followed the documentation and the wiki page for the Nginx reverse proxy configuration, slightly modified .<br>\nI'll set the 443 port to <code>EXTERNAL_HOST</code> just in case</p>",
+        "id": 662113,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542323355
+    },
+    {
+        "content": "<p>ssllabs test is OK, no chain issues, only no DNS CAA but that's usual with LE certs. Setting <code>SETTING_EXTERNAL_HOST: 'zulip.superbiche.co:443'</code> didn't help either</p>",
+        "id": 662116,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542323918
+    },
+    {
+        "content": "<p>Hmm, it is not obvious to me what's wrong there.</p>",
+        "id": 662117,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542324029
+    },
+    {
+        "content": "<p><span class=\"user-group-mention\" data-user-group-id=\"95\">@desktop</span> I know Akash is still recovering from surgery, but do any of you have ideas for what we can check here?  </p>\n<p>Given that the webapp is working properly, it seems like it must be a desktop app bug.</p>",
+        "id": 662118,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542324092
+    },
+    {
+        "content": "<p>Would I have any chance of getting more detailed issue message by building the desktop client and debugging it?</p>",
+        "id": 662119,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542324097
+    },
+    {
+        "content": "<p>Yeah, tried the webapp again with port 443 appended and it still worked nicely</p>",
+        "id": 662120,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542324121
+    },
+    {
+        "content": "<p>Very likely you could debug by adding <code>console.log</code> statements in the right place with a debug build, yeah.</p>",
+        "id": 662121,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542324132
+    },
+    {
+        "content": "<p>(Perhaps we have some issue with how we handle port numbers in the app's URL munging logic?)</p>",
+        "id": 662122,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542324145
+    },
+    {
+        "content": "<p>this wouldn't be surprising, I've seen many OSS projects using Docker where I had to struggle with ports and protocols (Gitlab a few years ago omg)</p>",
+        "id": 662125,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542324206
+    },
+    {
+        "content": "<p>I'm cloning the project, I'll let you know what I find out</p>",
+        "id": 662126,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542324225
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10325\">@Michel Tomas</span> One thing I see on <a href=\"https://www.ssllabs.com/ssltest/analyze.html?d=zulip.superbiche.co\" target=\"_blank\" title=\"https://www.ssllabs.com/ssltest/analyze.html?d=zulip.superbiche.co\">the ssllabs report</a> is:</p>\n<blockquote>\n<p>Server sent invalid HSTS policy. See below for further information.</p>\n</blockquote>",
+        "id": 662129,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542324558
+    },
+    {
+        "content": "<p>We've seen that error once before, and another symptom was that the site wouldn't load on iOS even in a browser. The Zulip iOS app also wouldn't connect to it.</p>",
+        "id": 662130,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542324629
+    },
+    {
+        "content": "<p>Do you think the iOS Simulator would be enough? I have no iDevices available</p>",
+        "id": 662131,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542324669
+    },
+    {
+        "content": "<p>Hmm, actually it works for me in Safari on an iOS 10 device I have for testing.</p>",
+        "id": 662132,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542324743
+    },
+    {
+        "content": "<p>But that might be because iOS 10 isn't picky -- I don't know.</p>",
+        "id": 662133,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542324790
+    },
+    {
+        "content": "<p>Anyway, that is an error that's known to cause some clients to refuse to connect -- so it'd be good to fix, and is a good candidate for the cause of the desktop app not connecting.</p>",
+        "id": 662134,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542324810
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10325\">@Michel Tomas</span> if you have cloned the zulip-electron project, I think adding <code>console.log(error, response)</code> <a href=\"https://github.com/zulip/zulip-electron/blob/master/app/renderer/js/utils/domain-util.js#L151\" target=\"_blank\" title=\"https://github.com/zulip/zulip-electron/blob/master/app/renderer/js/utils/domain-util.js#L151\">here</a> might give a hint about the actual error.</p>",
+        "id": 662135,
+        "sender_full_name": "Priyank Patel",
+        "timestamp": 1542324954
+    },
+    {
+        "content": "<p>Huh, and it works in Chrome and in Zulip on that device too... and just checked in Safari on a colleague's iOS 12 device, and that also successfully connects. <img alt=\":shrug:\" class=\"emoji\" src=\"/user_avatars/2/emoji/images/31.png\" title=\"shrug\"> </p>\n<p>So I don't know what variable differs.</p>",
+        "id": 662136,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542325028
+    },
+    {
+        "content": "<p>Oh, reading more closely, that previous case also had an unrelated problem in their TLS setup (weak Diffie-Hellman keys), and that must have been the cause of the trouble there. So the double HSTS is probably a red herring.</p>",
+        "id": 662138,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542325133
+    },
+    {
+        "content": "<p>also the double HSTS should not be an issue as it's allowed in the RFC. I'm building the Electron client, keep you updated</p>",
+        "id": 662139,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542325476
+    },
+    {
+        "content": "<p>Error EPROTO, not much details</p>",
+        "id": 662142,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542326780
+    },
+    {
+        "content": "<p>Also I suck at Electron and cannot get console.log output when starting <code>yarn dev</code>, either in the terminal or in the Electron window DevTools <span class=\"emoji emoji-1f605\" title=\"sweat smile\">:sweat_smile:</span></p>",
+        "id": 662143,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542326839
+    },
+    {
+        "content": "<p>So I end up with <code>alert(JSON.stringify(error))</code>, feeling a bit dirty</p>",
+        "id": 662144,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542326863
+    },
+    {
+        "content": "<p>Soooo coffee helping to suck less at Electron, this is what I get:</p>\n<div class=\"codehilite\"><pre><span></span>{ Error: write EPROTO 4673709504:error:14077410:SSL routines:SSL23_GET_SERVER_HELLO:sslv3 alert handshake failure:../../vendor/node/deps/openssl/openssl/ssl/s23_clnt.c:802:\n\n    at _errnoException (util.js:1024:11)\n    at WriteWrap.afterWrite [as oncomplete] (net.js:867:14) code: &#39;EPROTO&#39;, errno: &#39;EPROTO&#39;, syscall: &#39;write&#39; }\n</pre></div>",
+        "id": 662145,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542328385
+    },
+    {
+        "content": "<p><code>response</code> is <code>undefined</code></p>",
+        "id": 662148,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542328562
+    },
+    {
+        "content": "<p>Hmm, well it does sound like it not liking the SSL on your server.</p>",
+        "id": 662154,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542328752
+    },
+    {
+        "content": "<p>This looks like someone hitting a potentially similar issue:<br>\n<a href=\"https://github.com/nodejs/node/issues/16196\" target=\"_blank\" title=\"https://github.com/nodejs/node/issues/16196\">https://github.com/nodejs/node/issues/16196</a></p>",
+        "id": 662156,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542328897
+    },
+    {
+        "content": "<p>Broadly, it looks like this error comes from the client and server failing to find a version of SSL/TLS, and/or a ciphersuite, that they both like.</p>",
+        "id": 662159,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542328975
+    },
+    {
+        "content": "<p>When I do <code>openssl s_client -connect zulip.superbiche.co:443</code>, the negotiation has this result:</p>\n<div class=\"codehilite\"><pre><span></span>    Protocol  : TLSv1.3\n    Cipher    : TLS_AES_256_GCM_SHA384\n</pre></div>",
+        "id": 662161,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542329061
+    },
+    {
+        "content": "<p>Which appears to be the server's first choice, according to <a href=\"https://www.ssllabs.com/ssltest/analyze.html?d=zulip.superbiche.co\" target=\"_blank\" title=\"https://www.ssllabs.com/ssltest/analyze.html?d=zulip.superbiche.co\">https://www.ssllabs.com/ssltest/analyze.html?d=zulip.superbiche.co</a> .</p>",
+        "id": 662163,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542329092
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span> well done pointing that GH issues, I confirm that adding <code>ecdhCurve: \"auto\"</code> fixes it: </p>\n<div class=\"codehilite\"><pre><span></span>const checkDomain = {\n            url: domain + &#39;/static/audio/zulip.ogg&#39;,\n            ca: (certificateLocation) ? certificateLocation : &#39;&#39;,\n            proxy: proxyEnabled ? ProxyUtil.getProxy(domain) : &#39;&#39;,\n            ecdhCurve: &#39;auto&#39;\n        };\n</pre></div>\n\n\n<p>then I can login</p>",
+        "id": 662165,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542329395
+    },
+    {
+        "content": "<p>As <code>auto</code> seems quite a gentle option, do you think this could be an acceptable fix?</p>",
+        "id": 662166,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542329429
+    },
+    {
+        "content": "<p>Great! That's good progress <span class=\"emoji emoji-263a\" title=\"smile\">:smile:</span> </p>\n<p>I'm not sure that's a good general fix -- that probably allows some old and weak curves.</p>",
+        "id": 662169,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542329471
+    },
+    {
+        "content": "<p>Hmm, reading more of the issue thread now and maybe it makes sense after all -- I'm not sure yet just what it actually means.</p>",
+        "id": 662172,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542329534
+    },
+    {
+        "content": "<p>I see, that's the default in newer versions of Node. (Hopefully that means it allows only reasonable choices!) So I agree, that seems like the right fix.</p>",
+        "id": 662176,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542329705
+    },
+    {
+        "content": "<p>well, I hope so! Another temporary and probably less aggressive fix, is allowing <code>prime256v1</code> along: <code>    ssl_ecdh_curve prime256v1:secp384r1;</code></p>",
+        "id": 662177,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542329882
+    },
+    {
+        "content": "<p>seems to be working this way, though I had to modify it at the <code>http</code> level, at the <code>server</code> level it didn't work</p>",
+        "id": 662178,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542329928
+    },
+    {
+        "content": "<p>and having to change it for all your nginx config seems less safe than letting request use \"sensible\" defaults, I guess</p>",
+        "id": 662179,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542329981
+    },
+    {
+        "content": "<p>Yeah, and I'd worry about any change that required explicitly listing a couple of curves</p>",
+        "id": 662181,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542330039
+    },
+    {
+        "content": "<p>That list will want to change as people come up with newer and better curves, and as key sizes increase -- and I want to leave that kind of choice delegated to the maintainers of things like OpenSSL and nginx and browsers <span class=\"emoji emoji-1f642\" title=\"slight smile\">:slight_smile:</span></p>",
+        "id": 662182,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542330119
+    },
+    {
+        "content": "<p>Yup reading that in a documentation won't make people feel safe :D</p>",
+        "id": 662183,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542330135
+    },
+    {
+        "content": "<p>I'm creating an issue in the repo</p>",
+        "id": 662184,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542330513
+    },
+    {
+        "content": "<p>For anyone interested in following this issue, <a href=\"https://github.com/zulip/zulip-electron/issues/594\" target=\"_blank\" title=\"https://github.com/zulip/zulip-electron/issues/594\">https://github.com/zulip/zulip-electron/issues/594</a><br/>\nDon't hesitate if you think I can help further.<br/>\nAnd really kudos for the help, great first impression of the community, I'm adding the curve and making the switch to Zulip <span class=\"emoji emoji-1f44d\" title=\"thumbs up\">:thumbs_up:</span></p>",
+        "id": 662189,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542331252
+    },
+    {
+        "content": "<p>Excellent. Thanks for all the investigation, and that writeup!</p>",
+        "id": 662362,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542395425
+    },
+    {
+        "content": "<p>Yeah, great issue writeup.</p>",
+        "id": 662378,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542396252
+    },
+    {
+        "content": "<p>My pleasure guys, I'm really considering using Zulip extensively for the company I'm building right now and the two people I'm hiring tried it moments ago and gave me thumbsup so, I guess we're gonna be around for a while to help make it even better! Thanks a lot for your help!<br>\nBtw do you think submitting a PR for this issue would help? I really have no idea about the amount of people tackling issues in the repos so I'd be glad to help as soon as I can</p>",
+        "id": 662400,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542397960
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10325\">@Michel Tomas</span> that'd be very welcome <span class=\"emoji emoji-1f642\" title=\"slight smile\">:slight_smile:</span>.  Merging may be slow because our desktop release manager just had surgery, but having a PR will likely help it get integrated faster (and there's always room for more contributors who communicate clearly about their work).</p>",
+        "id": 662403,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542398186
+    },
+    {
+        "content": "<p>ok cool! Added in my todo. See you around soon ;)</p>",
+        "id": 662404,
+        "sender_full_name": "Michel Tomas",
+        "timestamp": 1542398277
+    }
+]

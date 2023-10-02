@@ -1,0 +1,83 @@
+<html>
+<head><meta charset="utf-8"><title>docker zulip · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20zulip.html">docker zulip</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="999156"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20zulip/near/999156" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vishnu KS <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20zulip.html#999156">(Aug 25 2020 at 17:38)</a>:</h4>
+<p>I have been working on <a href="https://github.com/zulip/docker-zulip/pull/262">#262</a> to make docker-zulip use zulip's built in export system. Currently docker-zulip implements it's own command <code>app:backup</code> in <a href="http://entrpoint.sh">entrpoint.sh</a> for handling the backup.</p>
+<p>I have some queries on the expected behavior of commands like <code>app:backup</code>. </p>
+<p>From my understanding most of these commands are supposed to be run using <code>docker-compose run &lt;command name&gt;</code>. </p>
+<ul>
+<li>app:help</li>
+<li>app:managepy</li>
+<li>app:restore</li>
+<li>app:run</li>
+</ul>
+<p>Among them, <code>docker-compose run app:managepy</code> doesn't work because the secrets are not included in the newly created container.  Including <code>initialConfiguration</code> in the command definition does make it work. </p>
+<div class="codehilite"><pre><span></span><code>appManagePy() {
+    COMMAND=&quot;$1&quot;
+    shift 1
+    if [ -z &quot;$COMMAND&quot; ]; then
+        echo &quot;No command given for manage.py. Defaulting to \&quot;shell\&quot;.&quot;
+        COMMAND=&quot;shell&quot;
+    fi
+    echo &quot;Running manage.py ...&quot;
+    set +e
+<span class="gi">+  initialConfiguration</span>
+    exec su zulip -c &quot;/home/zulip/deployments/current/manage.py $(printf &#39;%q &#39; &quot;$COMMAND&quot; &quot;$@&quot;)&quot;
+}
+</code></pre></div>
+
+
+<p>I am curious why was <code>initialConfiguration</code> not included in the first place? Is <code>app:managepy</code> not supposed to be run using <code>docker-compose run</code>? </p>
+<p>Then there is the <code>app:backup</code> command which at the moment is invoked within an existing container as a cronjob. </p>
+<div class="codehilite"><pre><span></span><code>autoBackupConfiguration<span class="o">()</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;</span><span class="nv">$AUTO_BACKUP_ENABLED</span><span class="s2">&quot;</span> !<span class="o">=</span> <span class="s2">&quot;True&quot;</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">&quot;</span><span class="nv">$AUTO_BACKUP_ENABLED</span><span class="s2">&quot;</span> !<span class="o">=</span> <span class="s2">&quot;true&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+        rm -f /etc/cron.d/autobackup
+        <span class="nb">echo</span> <span class="s2">&quot;Auto backup is disabled. Continuing.&quot;</span>
+        <span class="k">return</span> <span class="m">0</span>
+    <span class="k">fi</span>
+    <span class="nb">printf</span> <span class="s1">&#39;MAILTO=&quot;&quot;\n%s cd /;/entrypoint.sh app:backup\n&#39;</span> <span class="s2">&quot;</span><span class="nv">$AUTO_BACKUP_INTERVAL</span><span class="s2">&quot;</span> &gt; /etc/cron.d/autobackup
+    <span class="nb">echo</span> <span class="s2">&quot;Auto backup enabled.&quot;</span>
+<span class="o">}</span>
+</code></pre></div>
+
+
+<p>Calling <code>docker-compose run app:backup</code> doesn't work because the command does not invoke <code>initialConfiguration</code>. Including <code>initialConfiguration</code> does make the command work. But then it cannot be called from within the cronjob since we don't likely want to call <code>initialConfiguration</code> in a container which is already configured.</p>
+<p>I am actually a bit confused on what is design principle here.  Is it fine for some of these commands to be run inside the container (like the app:backup is called in a cronjob) and some to be run via <code>docker-compose run</code>? Or should we have a uniform style for all? Or am I missing something here?</p>
+
+
+
+<a name="999252"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20zulip/near/999252" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20zulip.html#999252">(Aug 25 2020 at 18:51)</a>:</h4>
+<p><span class="user-mention" data-user-id="77">@Alexander Trost</span> FYI in case case he remembers; most of the existing code around this was written by him before Zulip adopted the project.</p>
+
+
+
+<a name="999254"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20zulip/near/999254" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20zulip.html#999254">(Aug 25 2020 at 18:51)</a>:</h4>
+<p>I think I'd prefer for these to all work the same way; if I had to guess, the <code>initialConfiguration</code> missing there is an oversight.</p>
+
+
+
+<a name="999438"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20zulip/near/999438" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vishnu KS <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20zulip.html#999438">(Aug 25 2020 at 20:06)</a>:</h4>
+<p>Okay. I guess we want all the commands to be run using docker-compose run. What should be done about the backup cronjob which is configured in <code>initialConfiguration</code>? Do we want it to be there? In that case I can make it work directly <code>./managepy backup backup</code> instead of  invoking <code>/entrypoint.sh app:backup</code>. if not I will remove the whole thing and leave it up to the admins to setup the backup.</p>
+
+
+
+<a name="999470"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20zulip/near/999470" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20zulip.html#999470">(Aug 25 2020 at 20:31)</a>:</h4>
+<p>I'd like to remove the entire legacy backup system; folks can always run a cron job on the outside to run the backup command if they want that.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

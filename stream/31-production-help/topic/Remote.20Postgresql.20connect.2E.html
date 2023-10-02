@@ -1,0 +1,116 @@
+<html>
+<head><meta charset="utf-8"><title>Remote Postgresql connect. · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html">Remote Postgresql connect.</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="904502"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Remote%20Postgresql%20connect./near/904502" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html#904502">(Jun 15 2020 at 10:19)</a>:</h4>
+<p>Hi all.<br>
+I have a trouble with connect to remote postgresql host.<br>
+Used <a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#configuring-zulip-to-allow-http">https://zulip.readthedocs.io/en/latest/production/deployment.html#configuring-zulip-to-allow-http</a> tutorial<br>
+docker-compose.yml:<br>
+POSTGRES_DB: 'zulip'<br>
+POSTGRES_USER: 'zulip'<br>
+DB_HOST: '10.10.10.10'<br>
+DB_HOST_PORT: '5432'<br>
+DB_USER: 'zulip'<br>
+ERROR: django.db.utils.InternalError: could not open dictionary file "/usr/share/pgsql/tsearch_data/en_us.dict": No such file or directory<br>
+Thanks for your help.</p>
+
+
+
+<a name="904846"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Remote%20Postgresql%20connect./near/904846" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html#904846">(Jun 15 2020 at 18:13)</a>:</h4>
+<p><span class="user-mention" data-user-id="16256">@Rostyslav Matiusha</span> I believe the issue is that your remote postgres host doesn't have the dictionary files that Zulip expects installed.</p>
+
+
+
+<a name="904847"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Remote%20Postgresql%20connect./near/904847" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html#904847">(Jun 15 2020 at 18:14)</a>:</h4>
+<p>If you run our <code>postgres_appdb</code> puppet rules on your remote postgres host, they'll install it.</p>
+
+
+
+<a name="904848"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Remote%20Postgresql%20connect./near/904848" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html#904848">(Jun 15 2020 at 18:15)</a>:</h4>
+<p>The code is here: <code>puppet/zulip/manifests/postgres_appdb_base.pp</code> if you want to do it manually because your database is managed by other tooling.</p>
+
+
+
+<a name="905734"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Remote%20Postgresql%20connect./near/905734" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html#905734">(Jun 16 2020 at 08:09)</a>:</h4>
+<p>Thanks Tim.<br>
+How i can install "dictionary files " on my remote DB srv without puppet ?</p>
+
+
+
+<a name="905740"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Remote%20Postgresql%20connect./near/905740" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html#905740">(Jun 16 2020 at 08:15)</a>:</h4>
+<p>You can copy the files described in that puppet module into place.</p>
+
+
+
+<a name="905843"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Remote%20Postgresql%20connect./near/905843" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html#905843">(Jun 16 2020 at 13:38)</a>:</h4>
+<p>"You can copy the files described in that puppet module into place."<br>
+on docker contener root_database_1  there are no these files, but the container starts normally (((</p>
+
+
+
+<a name="905886"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Remote%20Postgresql%20connect./near/905886" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html#905886">(Jun 16 2020 at 14:15)</a>:</h4>
+<p>ok, this error i has fixed BUT another<br>
+ File "/home/zulip/deployments/2020-04-17-01-15-14/zerver/lib/db.py", line 18, in wrapper_execute<br>
+    return action(sql, params)<br>
+psycopg2.errors.SyntaxError: syntax error at or near "NOT"<br>
+LINE 2:             CREATE INDEX IF NOT EXISTS zerver_usermessage_st...</p>
+
+
+
+<a name="906080"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Remote%20Postgresql%20connect./near/906080" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html#906080">(Jun 16 2020 at 17:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="16256">@Rostyslav Matiusha</span> what version of postgres is your database running?  That looks like the kind of error one gets from running an unsupported old postgres release.</p>
+
+
+
+<a name="906813"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Remote%20Postgresql%20connect./near/906813" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html#906813">(Jun 17 2020 at 06:44)</a>:</h4>
+<p>Hi Tim<br>
+pg_ctl -V<br>
+pg_ctl (PostgreSQL) 9.2.24</p>
+
+
+
+<a name="906818"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Remote%20Postgresql%20connect./near/906818" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html#906818">(Jun 17 2020 at 06:46)</a>:</h4>
+<p>I think we only support PostgreSQL 10 and newer. <code>CREATE INDEX IF NOT EXISTS</code> is new in 9.5 so anything older definitely won’t work.</p>
+
+
+
+<a name="906831"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Remote%20Postgresql%20connect./near/906831" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html#906831">(Jun 17 2020 at 06:56)</a>:</h4>
+<p>I think 2.1.x still supports 9.6 (whatever came with Xenial).</p>
+
+
+
+<a name="906834"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Remote%20Postgresql%20connect./near/906834" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html#906834">(Jun 17 2020 at 06:56)</a>:</h4>
+<p>9.5 then.</p>
+
+
+
+<a name="907997"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Remote%20Postgresql%20connect./near/907997" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rostyslav Matiusha <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Remote.20Postgresql.20connect.2E.html#907997">(Jun 18 2020 at 09:16)</a>:</h4>
+<p>Many thanks guys.<br>
+I installed psql (PostgreSQL) 10.13 and it is working )</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

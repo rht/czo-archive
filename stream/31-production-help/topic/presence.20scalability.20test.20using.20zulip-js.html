@@ -1,0 +1,160 @@
+<html>
+<head><meta charset="utf-8"><title>presence scalability test using zulip-js · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20scalability.20test.20using.20zulip-js.html">presence scalability test using zulip-js</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1249746"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20scalability%20test%20using%20zulip-js/near/1249746" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jeremy Geras <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20scalability.20test.20using.20zulip-js.html#1249746">(Aug 25 2021 at 00:43)</a>:</h4>
+<p>Hello,</p>
+<p>I'm evaluating Zulip for a project where:<br>
+1) we'd like to use the API (namely zulip-js) for our client implementation<br>
+2) we need to create many realms with anywhere from 1 to 500 users per realm<br>
+3) users will be fairly active, both in terms of messaging and presence (we'd like an "on the phone" state...)</p>
+<p>To that end, I created a test application using zulip-js that creates a user, registers an event queue (for "presence" and "user_status"), and then enters a loop where it sets self presence to something new every 20 seconds. (I realize this is a pretty stressful test, but ...  I need to understand bottlenecks). (Also note, I did need to extend zulip-js to support this).</p>
+<p>I'm testing against an instance of Zulip installed per the instructions at <a href="https://zulip.readthedocs.io/en/latest/production/install.html">https://zulip.readthedocs.io/en/latest/production/install.html</a> on a GCP VM instance.</p>
+<p>I'm attaching a screenshot showing 500 instances of my test application running (all users in the same realm). The screenshot is taken <em>after</em> the user creation phase has completed -- so basically at the point where the clients are just flipping presence every 20 seconds.</p>
+<p>The CPU usage is definitely higher than I'd hoped, and I'm wondering about a couple of things:<br>
+1) Is using the API (via zulip-js) a factor here (vs. what we'd see using e.g. the default web interface?)<br>
+2) Am I inadvertently doing something heavy/wrong in my creation of the event queue? (see code snippet below)</p>
+<p>Thanks!<br>
+Jeremy</p>
+<p>relevant code snippets:</p>
+<div class="codehilite"><pre><span></span><code>(async () =&gt; {
+  const zulip = await zulipInit(config);
+  // The zulip object now initialized with config
+  //console.log(await zulip.streams.subscriptions.retrieve());
+  //console.log(await zulip.users.retrieve());
+
+    let randUsername = randomBase64Id(12);
+
+    const user_params = {
+        email: randUsername + &quot;@zulip1.example.com&quot;,
+        password: &quot;&quot;,
+        full_name: randUsername,
+    };
+
+    console.log(await zulip.users.create(user_params));
+
+    const newUserConfig = {
+        username: user_params.email,
+        password: user_params.password,
+        realm: &quot;https://zulip1.example.com&quot;
+    };
+    const userZulip = await zulipInit(newUserConfig);
+
+    console.log(await userZulip.users.me.status.update(false));
+    console.log(await userZulip.users.me.presence.update(&#39;active&#39;));
+
+    const params = {
+        event_types: [&quot;presence&quot;, &quot;user_status&quot;],
+    };
+
+    var regResponse = await userZulip.queues.register(params);
+    if (regResponse.result === &#39;success&#39;) {
+        //console.log(regResponse.presences);
+        subscribePresence(userZulip, regResponse.queue_id, -1);
+        //console.log(regResponse);
+    }
+
+    for (var i=0; i&lt;100; i++) {
+        await new Promise(r =&gt; setTimeout(r, 20000));
+        await userZulip.users.me.status.update(i % 2 === 0);
+        await userZulip.users.me.presence.update((i % 2 === 0 ? &#39;active&#39; : &#39;inactive&#39;));
+    }
+})();
+
+
+async function subscribePresence(zulip, queue_id, last_event_id) {
+    const eventParams = {
+      queue_id: queue_id,
+      last_event_id: last_event_id
+    };
+    let resp = await zulip.events.retrieve(eventParams);
+    if (resp.result === &#39;success&#39;) {
+        //console.log(resp);
+        let lastEvtId = -1;
+        resp.events.forEach(function(evt) {
+            //console.log(evt);
+            lastEvtId = evt.id;
+        });
+        await subscribePresence(zulip, queue_id, lastEvtId);
+    }
+}
+</code></pre></div>
+<p><a href="/user_uploads/2/34/0Qvmqg7dyb1xQIk5PEevw7w1/Zulip8cores500users_presenceEvery20secondsSsh.png">Zulip8cores500users_presenceEvery20secondsSsh.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/34/0Qvmqg7dyb1xQIk5PEevw7w1/Zulip8cores500users_presenceEvery20secondsSsh.png" title="Zulip8cores500users_presenceEvery20secondsSsh.png"><img src="/user_uploads/2/34/0Qvmqg7dyb1xQIk5PEevw7w1/Zulip8cores500users_presenceEvery20secondsSsh.png"></a></div>
+
+
+
+<a name="1249807"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20scalability%20test%20using%20zulip-js/near/1249807" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20scalability.20test.20using.20zulip-js.html#1249807">(Aug 25 2021 at 11:31)</a>:</h4>
+<p><span class="user-mention" data-user-id="21312">@Jeremy Geras</span> We have an unmerged PR changing how presence works behind the scene to be less resource intensive at <a href="https://github.com/zulip/zulip/pull/16381">https://github.com/zulip/zulip/pull/16381</a> Let me know if you'd be willing to test it (I think I'll have to rebase again to make the database migrations have the correct numbering )</p>
+
+
+
+<a name="1249838"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20scalability%20test%20using%20zulip-js/near/1249838" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jeremy Geras <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20scalability.20test.20using.20zulip-js.html#1249838">(Aug 25 2021 at 15:52)</a>:</h4>
+<p>Sure, I can give it a try.</p>
+
+
+
+<a name="1249841"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20scalability%20test%20using%20zulip-js/near/1249841" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Neil Pilgrim (neiljp) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20scalability.20test.20using.20zulip-js.html#1249841">(Aug 25 2021 at 16:51)</a>:</h4>
+<p><span class="user-mention" data-user-id="21312">@Jeremy Geras</span> Does this generate a worst-case situation where every user changes state near-simultaneously?<br>
+Have you explored offsetting (randomly or otherwise) the switch time?<br>
+This is not to say that a worst-case situation isn't worth exploring, but perhaps switches will be more uniformly spread in most situations?</p>
+
+
+
+<a name="1249846"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20scalability%20test%20using%20zulip-js/near/1249846" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jeremy Geras <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20scalability.20test.20using.20zulip-js.html#1249846">(Aug 25 2021 at 17:23)</a>:</h4>
+<p>I don't believe so; the script I use to start the 500 instances pauses for 1 second at each iteration. (The user creation phase is also pretty heavy, so I wanted to make sure things were spaced out...)</p>
+
+
+
+<a name="1250364"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20scalability%20test%20using%20zulip-js/near/1250364" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20scalability.20test.20using.20zulip-js.html#1250364">(Aug 28 2021 at 17:22)</a>:</h4>
+<p><span class="user-mention" data-user-id="21312">@Jeremy Geras</span> I've rebased the pull request, so you can you can use it for running your tests. Let me know if it's useful for me to to write up some instructions on how to install/upgrade to the PR version</p>
+
+
+
+<a name="1251156"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20scalability%20test%20using%20zulip-js/near/1251156" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20scalability.20test.20using.20zulip-js.html#1251156">(Aug 31 2021 at 21:59)</a>:</h4>
+<p><span class="user-mention" data-user-id="21312">@Jeremy Geras</span> I'd be very curious to hear what sort of project you're hoping to use Zulip for, if you're willing to share (either here or in PMs). :)</p>
+
+
+
+<a name="1251285"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20scalability%20test%20using%20zulip-js/near/1251285" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20scalability.20test.20using.20zulip-js.html#1251285">(Sep 01 2021 at 00:24)</a>:</h4>
+<p><span class="user-mention" data-user-id="21312">@Jeremy Geras</span> just to be clear, do you have 500 realms each with 100 users, for a total of 50K user accounts?  I don't see the 500 in your script anywhere.</p>
+
+
+
+<a name="1251287"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20scalability%20test%20using%20zulip-js/near/1251287" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20scalability.20test.20using.20zulip-js.html#1251287">(Sep 01 2021 at 00:25)</a>:</h4>
+<p>You can shard some parts of the system to improve scalability of this sort of thing, but 50K users flipping presence every 20s is pretty intense load.  (Note that official Zulip clients send presence updates once a minute).</p>
+
+
+
+<a name="1251355"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20scalability%20test%20using%20zulip-js/near/1251355" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Neil Pilgrim (neiljp) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20scalability.20test.20using.20zulip-js.html#1251355">(Sep 01 2021 at 02:20)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="21312">Jeremy Geras</span> <a href="#narrow/stream/31-production-help/topic/presence.20scalability.20test.20using.20zulip-js/near/1249746">said</a>:</p>
+<blockquote>
+<p>...<br>
+1) we'd like to use the API (namely zulip-js) for our client implementation<br>
+2) we need to create many realms with anywhere from 1 to 500 users per realm<br>
+3) users will be fairly active, both in terms of messaging and presence (we'd like an "on the phone" state...)<br>
+...</p>
+</blockquote>
+<p>Tim, I think <span class="user-mention silent" data-user-id="21312">Jeremy Geras</span> is only testing with one realm/org - the 100 is the state switching, the 500 the number of users?</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,92 @@
+[
+    {
+        "content": "<p>The example settings.py has 5 attributes listed for mapping.  Email,first and last name are all self explanatory.  What are user_permanent_id and username used for with zulip and are they visible in the gui and/or database? I'm trying to determine best practices for user creation and attribute mapping with saml sso.</p>",
+        "id": 852944,
+        "sender_full_name": "Jeremy Bascom",
+        "timestamp": 1586815237
+    },
+    {
+        "content": "<p>I see short_name in the db... is that where username maps to?</p>",
+        "id": 852949,
+        "sender_full_name": "Jeremy Bascom",
+        "timestamp": 1586815557
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15619\">@Jeremy Bascom</span> I assume you're looking at this block:</p>\n<div class=\"codehilite\"><pre><span></span>        <span class=\"c1\"># The part below corresponds to what&#39;s likely referred to as something like</span>\n        <span class=\"c1\"># &quot;Attribute Statements&quot; (with Okta as your IdP) or &quot;Attribute Mapping&quot; (with G Suite).</span>\n        <span class=\"c1\"># The names on the right side need to correspond to the names under which</span>\n        <span class=\"c1\"># the IdP will send the user attributes. With these defaults, it&#39;s expected</span>\n        <span class=\"c1\"># that the user&#39;s email will be sent with the &quot;email&quot; attribute name,</span>\n        <span class=\"c1\"># the first name and the last name with the &quot;first_name&quot;, &quot;last_name&quot; attribute names.</span>\n        <span class=\"s2\">&quot;attr_user_permanent_id&quot;</span><span class=\"p\">:</span> <span class=\"s2\">&quot;email&quot;</span><span class=\"p\">,</span>\n        <span class=\"s2\">&quot;attr_first_name&quot;</span><span class=\"p\">:</span> <span class=\"s2\">&quot;first_name&quot;</span><span class=\"p\">,</span>\n        <span class=\"s2\">&quot;attr_last_name&quot;</span><span class=\"p\">:</span> <span class=\"s2\">&quot;last_name&quot;</span><span class=\"p\">,</span>\n        <span class=\"s2\">&quot;attr_username&quot;</span><span class=\"p\">:</span> <span class=\"s2\">&quot;email&quot;</span><span class=\"p\">,</span>\n        <span class=\"s2\">&quot;attr_email&quot;</span><span class=\"p\">:</span> <span class=\"s2\">&quot;email&quot;</span><span class=\"p\">,</span>\n</pre></div>",
+        "id": 852976,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1586817224
+    },
+    {
+        "content": "<p>Generally that layout is how we expect things -- those field names are picked by the third-party library we use.</p>",
+        "id": 852977,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1586817245
+    },
+    {
+        "content": "<p>Zulip only stores a \"Full Name\" and Email constructed from these attributes (\"Full Name\" is better than \"First\" + \"Last\" for i18n reasons, why is why it's our data model).  We don't do anything with the <code>short_name</code> field in the database today, but someday it might become a username for organizations where we've set email addresses to be private.</p>",
+        "id": 852981,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1586817309
+    },
+    {
+        "content": "<p>So our intent is <code>attr_username</code> and <code>attr_email</code> and <code>attr_user_permanent_id</code> should always all be the same, the user's email address.</p>",
+        "id": 852982,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1586817343
+    },
+    {
+        "content": "<p>That clarifies it perfectly, thank you.</p>",
+        "id": 853000,
+        "sender_full_name": "Jeremy Bascom",
+        "timestamp": 1586818039
+    },
+    {
+        "content": "<p>We're testing login flows.<br>\nWhen a user starts by authenticating to Okta and then clicking the zulip app icon, it takes them to the login screen.  I can see the post to /complete/saml/ , though the response headers look different than if I had initiated the login process from the zulip login page.  Is there additional setup required to enable this other login method to work?</p>",
+        "id": 854315,
+        "sender_full_name": "Jeremy Bascom",
+        "timestamp": 1586977793
+    },
+    {
+        "content": "<p>Hmm, yeah, my guess is that post from Okta isn't formatted properly.</p>",
+        "id": 854317,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1586977861
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> can you look into how to make the \"Okta auth button\" integration work properly?  We might need to add some documentation details or code changes to support it.</p>",
+        "id": 854318,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1586977899
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15619\">@Jeremy Bascom</span> if you have other thoughts on how we can improve the documentation for integrating with Okta, BTW, we'd appreciate it!</p>",
+        "id": 854319,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1586977930
+    },
+    {
+        "content": "<p>The core detail that makes coming from Okta impossible currently is <a href=\"#narrow/stream/31-production-help/topic/GSuite.20SAML/near/854080\" title=\"#narrow/stream/31-production-help/topic/GSuite.20SAML/near/854080\">https://chat.zulip.org/#narrow/stream/31-production-help/topic/GSuite.20SAML/near/854080</a></p>\n<p>One of the details that are stored under the token in <code>RelayState</code> is what organization this auth attempt is for. With multiple organization setup, we do <code>/complete/...</code> step of authentication on the <code>auth.</code> subdomain - it'll be ambiguous to which organization to take the user from there if using the \"Okta auth button\" unless the IdP is enabled only for a single organization <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>",
+        "id": 854384,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1586980133
+    },
+    {
+        "content": "<p>Yeah, and I guess the problem is that Okta only has the one URL for the <code>auth</code> subdomain configured?</p>",
+        "id": 854386,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1586980300
+    },
+    {
+        "content": "<p>If we can use separate URLs, we could have the Okta/Google link go to the target subdomain start URL.</p>",
+        "id": 854390,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1586980354
+    },
+    {
+        "content": "<p>Not sure if that made sense, but in theory the \"Login to Zulip\" button on Okta doesn't need to go to the same URL as the Okta redirect URL back to Zulip after a Zulip-initiated authentication request.</p>",
+        "id": 854391,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1586980433
+    }
+]

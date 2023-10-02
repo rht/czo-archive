@@ -1,0 +1,140 @@
+[
+    {
+        "content": "<p>When running the install script on a fresh arm64 machine (AWS t4g EC2 instance) I get this error:</p>\n<div class=\"codehilite\"><pre><span></span><code>Notice: /Stage[main]/Zulip::Smokescreen/Exec[compile smokescreen]/returns: /srv/zulip-golang-1.17.3/bin/go: 1: ELF: not found\nNotice: /Stage[main]/Zulip::Smokescreen/Exec[compile smokescreen]/returns: /srv/zulip-golang-1.17.3/bin/go: 2: Syntax error: &quot;)&quot; unexpected\nError: &#39;/srv/zulip-golang-1.17.3/bin/go build -o /usr/local/bin/smokescreen-dc403015f563eadc556a61870c6ad327688abe88-go-1.17.3&#39; returned 2 instead of one of [0]\nError: /Stage[main]/Zulip::Smokescreen/Exec[compile smokescreen]/returns: change from &#39;notrun&#39; to [&#39;0&#39;] failed: &#39;/srv/zulip-golang-1.17.3/bin/go build -o /usr/local/bin/smokescreen-dc403015f563eadc556a61870c6ad327688abe88-go-1.17.3&#39; returned 2 instead of one of [0]\nNotice: /Stage[main]/Zulip::Smokescreen/File[/usr/local/bin/smokescreen-dc403015f563eadc556a61870c6ad327688abe88-go-1.17.3]: Dependency Exec[compile smokescreen] has failures: true\nWarning: /Stage[main]/Zulip::Smokescreen/File[/usr/local/bin/smokescreen-dc403015f563eadc556a61870c6ad327688abe88-go-1.17.3]: Skipping because of failed dependencies\nWarning: /Stage[main]/Zulip::Smokescreen/Tidy[/usr/local/bin/smokescreen-*]: Skipping because of failed dependencies\nWarning: /Stage[main]/Zulip::Smokescreen/File[/etc/supervisor/conf.d/zulip/smokescreen.conf]: Skipping because of failed dependencies\nNotice: /Stage[main]/Zulip::Camo/Zulip::External_dep[go-camo]/Zulip::Sha256_tarball_to[go-camo]/Exec[https://github.com/cactus/go-camo/releases/download/v2.3.0/go-camo-2.3.0.go1171.linux-amd64.tar.gz]/returns: executed successfully\nNotice: /Stage[main]/Zulip::Camo/File[/etc/supervisor/conf.d/zulip/go-camo.conf]/ensure: defined content as &#39;{md5}615fb3e5920253f79d10ac6edc1e96d7&#39;\nWarning: /Stage[main]/Zulip::Supervisor/Service[supervisor]: Skipping because of failed dependencies\nWarning: /Stage[main]/Zulip::Supervisor/Exec[supervisor-restart]: Skipping because of failed dependencies\nNotice: Applied catalog in 113.83 seconds\n\nZulip installation failed (exit code 1)!\n</code></pre></div>\n<p>It seems the installer is using the wrong go executable. Things work just fine on an x86 machine.</p>",
+        "id": 1292257,
+        "sender_full_name": "Ed",
+        "timestamp": 1638803846
+    },
+    {
+        "content": "<p>Hm, yeah, we're not testing on arm right now; we probably should.</p>",
+        "id": 1292332,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638811878
+    },
+    {
+        "content": "<p>Let me get a fix for you.</p>",
+        "id": 1292333,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638811892
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16628\">@Ed</span>: Can you try this, applied atop 4.8?<br>\n<a href=\"https://github.com/zulip/zulip/commit/83640818f7bc59849b468a31ae90af166ddd7004.patch\">https://github.com/zulip/zulip/commit/83640818f7bc59849b468a31ae90af166ddd7004.patch</a></p>",
+        "id": 1292347,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638812862
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> do we want to move that to the <code>4.x</code> branch so he just doesn't need to deal with patches to test?</p>",
+        "id": 1292694,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1638826509
+    },
+    {
+        "content": "<p>I already did.</p>",
+        "id": 1292695,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638826519
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/commit/859d88f76c454aaf60dd7ed93b0e0181bfdf6337\">859d88f76c454aaf60dd7ed93b0e0181bfdf6337</a></p>",
+        "id": 1292699,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638826553
+    },
+    {
+        "content": "<p>(I sent the message while I was still whipping up the patch)</p>",
+        "id": 1292700,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638826573
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16628\">@Ed</span>: You can install with that patch hand-applied, or from git from the <code>4.x</code> or <code>main</code> branches, or wait for 4.9 to come out.</p>",
+        "id": 1292707,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1638826660
+    },
+    {
+        "content": "<p>Thanks, <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> .</p>",
+        "id": 1292938,
+        "sender_full_name": "Ed",
+        "timestamp": 1638837344
+    },
+    {
+        "content": "<p>That’s not going to work, since all of the SHA-256 hashes were computed from the amd64 tarballs. Also, someone will need to check whether <code>${::architecture}</code> spells this platform as arm64 or aarch64.</p>",
+        "id": 1298685,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1639693165
+    },
+    {
+        "content": "<p>Hmm, good point.</p>",
+        "id": 1298713,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1639694027
+    },
+    {
+        "content": "<p>Mmm, yeah.  One of my goals with <code>external_dep</code> was so we could move to a single central file that listed versions and hashes.  I guess that needs to be 2d, for each arch.</p>",
+        "id": 1298718,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1639694150
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/20659\">#20659</a>.</p>\n<p>The limitation is that full installs don't work yet, because wal-g only provides builds for amd64, and <a href=\"https://github.com/wal-g/wal-g/blob/master/docs/PostgreSQL.md#installing\">their build process</a> was not trivial enough to roll into that series.</p>",
+        "id": 1302489,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1640816465
+    },
+    {
+        "content": "<p>Hm.  859d88f76c is the broken commit that got backported.  The right fix was considerably more involved 11-commit series on <code>main</code> which ended in c094867a74.</p>\n<p>We can revert 859d88f76c in 4.x since it doesn't work, but it seems like rather than try to backport the larger series, saying that 5.0 is the first release which supports arm64 may make sense.</p>",
+        "id": 1304074,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1641337182
+    },
+    {
+        "content": "<p>Yeah, that WFM.</p>",
+        "id": 1304075,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1641337213
+    },
+    {
+        "content": "<p>Since there's no major downside to installing a 5.0 beta for such a new feature.</p>",
+        "id": 1304076,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1641337235
+    },
+    {
+        "content": "<p>Done.</p>\n<p>Also, we still need to have a solution for wal-g before we really have full support.</p>",
+        "id": 1304085,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1641337442
+    },
+    {
+        "content": "<p>Hmm, yeah.</p>",
+        "id": 1304114,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1641338171
+    },
+    {
+        "content": "<p>It looks <a href=\"https://github.com/wal-g/wal-g/blob/master/docs/PostgreSQL.md\">straightforward</a> to compile, so we should be able to handle it similarly to smokescreen, right?</p>",
+        "id": 1304119,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1641338790
+    },
+    {
+        "content": "<p>Yeah. It's likely just \"script some make commands\" but we may need to install some more libraries / binaries.  I don't think it's Hard.</p>",
+        "id": 1304120,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1641339156
+    },
+    {
+        "content": "<p>Also we need to decide if we compile for all arches, or just arm64.</p>",
+        "id": 1304121,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1641339181
+    },
+    {
+        "content": "<p>Filed <a href=\"https://github.com/zulip/zulip/pull/21070\">#21070</a> for wal-g support.</p>",
+        "id": 1324972,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1644361239
+    }
+]

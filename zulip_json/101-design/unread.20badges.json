@@ -1,0 +1,140 @@
+[
+    {
+        "content": "<p>There is something wrong  with unread counts.<br>\nIt seems that clicking some parts of the interface will clean up all unread messages notifications, making users missing them.<br>\nSome things I found that trigger the issue is going to All messages and scroll, or Private messages and scroll.<br>\nSo, say user has multiple unread messages under Private messages, but the PM is collapsed. User opens the PM to see the unread messages, scroll or clicks and all the unread badges are gone.</p>",
+        "id": 670895,
+        "sender_full_name": "Ricardo Duarte",
+        "timestamp": 1544612469
+    },
+    {
+        "content": "<p>clicking a Stream makes the Count disappear.  It would be better if it stayed, and showed which topic actually had unread messages.</p>",
+        "id": 670897,
+        "sender_full_name": "Alex-CL",
+        "timestamp": 1544615842
+    },
+    {
+        "content": "<p>Problem here is that it cleans all unread badges, not only the ones that were clicked.</p>",
+        "id": 670900,
+        "sender_full_name": "Ricardo Duarte",
+        "timestamp": 1544616398
+    },
+    {
+        "content": "<p>What are the steps to reproduce this?</p>",
+        "id": 670901,
+        "sender_full_name": "Alex-CL",
+        "timestamp": 1544616488
+    },
+    {
+        "content": "<p>I'm trying to figure it out.<br>\nBut I guess that if I click \"Private Messages\", all badges below it will get cleaned.</p>",
+        "id": 670902,
+        "sender_full_name": "Ricardo Duarte",
+        "timestamp": 1544616874
+    },
+    {
+        "content": "<p>Say two users PM me and Private Messages is collapsed.<br>\nI have to open it to see who PM me, and if I click the badges get cleaned.</p>",
+        "id": 670903,
+        "sender_full_name": "Ricardo Duarte",
+        "timestamp": 1544616908
+    },
+    {
+        "content": "<p>also seems to me that if I have more than one user that PM me, when I click the first user the other badges are removed as well, even when I did not read their messages</p>",
+        "id": 670912,
+        "sender_full_name": "Ricardo Duarte",
+        "timestamp": 1544617615
+    },
+    {
+        "content": "<p>to sum up</p>\n<ul>\n<li>expanding \"Private Messages\" should not mark all messages as read.</li>\n<li>reading a Private Message from one user should not mark other users messages as read</li>\n</ul>",
+        "id": 670913,
+        "sender_full_name": "Ricardo Duarte",
+        "timestamp": 1544617718
+    },
+    {
+        "content": "<p>I think there's some confusion about how this works.  <a href=\"https://zulip.readthedocs.io/en/latest/subsystems/pointer.html#unread-count-logic\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/subsystems/pointer.html#unread-count-logic\">https://zulip.readthedocs.io/en/latest/subsystems/pointer.html#unread-count-logic</a> explains the precise algorithm -- we'll only mark everything in the stream as read when you visit if there's only a few messages in the stream and you can see the bottom.</p>",
+        "id": 671028,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1544635964
+    },
+    {
+        "content": "<p>Some thoughts:</p>\n<ul>\n<li>The fact that we mark messages as read when you click into an interleaved view is bad UX, and is something on our priority list to change. It turns out to be a somewhat complex change technically, which is why it hasn't happened yet. </li>\n<li>The algorithm is essentially: we mark 1 message as read if there are a lot of messages, and all messages as read if you can see all the messages on your screen. </li>\n<li>One workaround is to use the <code>n</code> keyboard shortcut to navigate (and <code>p</code> for private messages), since that takes you topic by topic</li>\n</ul>",
+        "id": 671050,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1544638557
+    },
+    {
+        "content": "<ul>\n<li>You can tell which messages are being marked as read by looking at the left edge of the message (this is pretty helpful for figuring out what our \"mark as read\" algorithm is doing)</li>\n</ul>",
+        "id": 671051,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1544638609
+    },
+    {
+        "content": "<p>as a workaround, couldn't you add a flag to \"search\" when clicking \"All messages\" or \"Private Messages\" that would say \"search this, but don't mark as read\". <br>\nSomething like <em>is:private markasread:false</em></p>",
+        "id": 671056,
+        "sender_full_name": "Ricardo Duarte",
+        "timestamp": 1544638928
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"131\">@Rishi Gupta</span> Is this in the frontend or backend?</p>",
+        "id": 677514,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1546286070
+    },
+    {
+        "content": "<p>I think you mean this?</p>\n<blockquote>\n<p>The fact that we mark messages as read when you click into an interleaved view is bad UX, and is something on our priority list to change. </p>\n</blockquote>\n<p>I think the current plan involves both a backend and frontend change. The main backend change is to add a \"fake\" message at the top of stream narrows, so that there's a default place for the blue box to go in a totally-unread stream narrow.</p>\n<p>Though Tim is probably the right person to ask for details, since now that I write this it seems like the initial hello message would fit that bill :). So potentially it's a frontend-only change, which is to restyle the initial hello message and automatically mark it as read.</p>",
+        "id": 677568,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1546349983
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"131\">@Rishi Gupta</span> the initial \"hello\" message doesn't suffice, because e.g. topic narrows might have 0 messages.</p>",
+        "id": 677681,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1546406210
+    },
+    {
+        "content": "<p>hm. ok, maybe we should talk about this more at some point.</p>",
+        "id": 677765,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1546434363
+    },
+    {
+        "content": "<p>So, the design I had in mind is changing the <code>selected_message</code> logic to support selecting the top-of-feed Z block (eventually to become a notification) (with effectively message ID -1, which is the guard value we use for no selected message anyway if I'm remembering correctly), and to change our logic for navigation to allow walking onto that message object in the case that the message feed is caught up on top.</p>",
+        "id": 677822,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1546448924
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> So this would mean there is always a 'valid' place to put a stream/PM/search cursor, from the UI code perspective? So the backend wouldn't need to change for this?</p>",
+        "id": 677827,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1546450057
+    },
+    {
+        "content": "<p>Exactly.</p>",
+        "id": 677847,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1546452028
+    },
+    {
+        "content": "<p>Well, the backend would change to replace <code>use_first_unread</code> with <code>use_last_read</code>, or something, but that's relatively minoir.</p>",
+        "id": 677848,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1546452044
+    },
+    {
+        "content": "<p>This is something I keep hearing from my users, and that also makes me stress.<br>\nEvery time I see a unread badge &gt; 1 I know I will have a hard time following up on all messages, because it is hard to get all context from the \"Private Message\" root node.<br>\nAnd then I no longer have the unread badge to show me what users PM me.</p>",
+        "id": 720423,
+        "sender_full_name": "Ricardo Duarte",
+        "timestamp": 1552863088
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10530\">@Ricardo Duarte</span> completely agree, and something we're currently working on. A workaround in the meantime is to use the keyboard shortcut <code>p</code>, which does the right thing</p>",
+        "id": 720431,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1552873415
+    },
+    {
+        "content": "<p>(and <code>n</code>, for the corresponding problem on streams)</p>",
+        "id": 720432,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1552873441
+    }
+]

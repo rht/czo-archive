@@ -1,0 +1,68 @@
+[
+    {
+        "content": "<p>When I'm crafting templates for incoming messages from a bot (e.g., for a GitHub PR notification, or a GitHub Actions issue-based trigger), I have to decide between:</p>\n<ul>\n<li>Stable topic name across all message (e.g., \"New issue labeled 'X'!\")<ul>\n<li>Pro: Easy for people to mute all messages of a given type</li>\n<li>Con: Hard to manage threaded conversations on Zulip since everything's lumped</li>\n</ul>\n</li>\n<li>Distinct topics for each message (e.g., \"New issue labeled 'X': <em>How to format docs <a href=\"https://github.com/zulip/zulip/pull/45\">#45</a>!</em>)<ul>\n<li>Pro: Easy to manage threaded conversations on Zulip, and easy to link out from topic name</li>\n<li>Con: Hard for folks to pro-actively mute, if they're not interested in any messages of this type</li>\n</ul>\n</li>\n</ul>\n<p>One way to \"get the best of both worlds\" is to use a separate stream for all these messages, so folks can subscribe to the stream or not. But especially for private streams, having to manage two (one for \"Chat\" and one for \"Notifications\") is a pain for synchronization and discovery. So this isn't great.</p>\n<p>Another idea would be to allow \"muting by pattern\" -- e.g., \"mute all threads starting with 'New issue labeled...'\" -- but this has its own complexity. Have other folks run into this issue, and are there good mitigations?</p>",
+        "id": 1162584,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1618427996
+    },
+    {
+        "content": "<p>I think the solution we've mostly applied for our own use is the separate stream, with distinct topics. And then we just have a lot of streams, including a number of different private streams that have the same people in them.</p>",
+        "id": 1162587,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1618428177
+    },
+    {
+        "content": "<p>For example we have a stream that gets notifications on production errors. The topic is the error message -- so it's often different for each message, and sometimes the same when an error is recurring, and the threading works great.</p>\n<p>We'll also discuss there; probably the large majority of the messages in the stream are human discussion of the errors, not the bot messages about them.</p>\n<p>But then we also have a stream for \"production\" in general, as well as all the (public) streams about developing the software.</p>",
+        "id": 1162589,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1618428303
+    },
+    {
+        "content": "<p>Thanks <span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span>; and you just let the private stream members in the chat stream know about the notifications stream, or you auto-add them and figure they can mute if they don't care? (I'm wondering if it might help to have a way to designate a private stream as \"following\" another stream, so members of A are automatically members of B, or maybe are automatically <em>added</em> but can remove themselves. I get that complexity and transparency here are tough; so at this stage just understanding these practices is helpful for me.)</p>",
+        "id": 1162702,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1618434018
+    },
+    {
+        "content": "<p>Yeah, we basically auto-add them. Those are streams that are for Kandra Labs employees, so they're just in our checklist for onboarding new employees -- they're both in the same list of streams to add people to, which is one of the items in that checklist.</p>",
+        "id": 1162719,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1618435432
+    },
+    {
+        "content": "<p>If we were a somewhat bigger organization, I'd probably want better tools for managing that.</p>\n<p>As is, we do occasionally have something slip through the cracks -- we'll be onboarding someone and I'll go take that as a prompt to compare the existing membership of different streams, and find we forgot to add someone somewhere. (Though never somewhere critical to their work, or we'd have noticed and fixed it much sooner.)</p>",
+        "id": 1162723,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1618435683
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"111\">Josh Mandel</span> <a href=\"#narrow/stream/101-design/topic/Muting.20sets.20of.20topics/near/1162702\">said</a>:</p>\n<blockquote>\n<p>I'm wondering if it might help to have a way to designate a private stream as \"following\" another stream, so members of A are automatically members of B</p>\n</blockquote>\n<p>Reminds me of <a href=\"http://kb.mit.edu/confluence/pages/viewpage.action?pageId=3907000\">Moira</a> <span aria-label=\"smiley\" class=\"emoji emoji-1f603\" role=\"img\" title=\"smiley\">:smiley:</span>. Which in its context was a pretty great system!</p>",
+        "id": 1162726,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1618435803
+    },
+    {
+        "content": "<p>i do think it'd be sort of nice to have this. i have a #rss stream on a personal zulip instance, which pulls stuff from a bunch of different blogs, and it'd be nice if people could mute topics from specific blogs. i think having a different stream for each would be too much, since there are like 50 rss feeds, and only a dozen or so other streams.</p>\n<p>i can imagine letting people mute streams via regex, but that's possibly a too power-user feature to be reasonable <span aria-label=\"sweat smile\" class=\"emoji emoji-1f605\" role=\"img\" title=\"sweat smile\">:sweat_smile:</span></p>",
+        "id": 1163117,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1618465192
+    },
+    {
+        "content": "<p>Hmm, I think it actually would not be that hard to have some sort of pattern feature for topic muting, just given that we only have a handful of places that need to implement logic for them.</p>",
+        "id": 1163692,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1618514441
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"111\">@Josh Mandel</span> one other thought is that I don't think you want a topic for \"New issue labeled X\" -- you want a topic for \"issue X\", so that additional automated messages related to that issue go to that topic (E.g. when it's closed!).</p>",
+        "id": 1163696,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1618514490
+    },
+    {
+        "content": "<p>In that example, \"X\" is a label, so you do want more than that in the topic (if you're doing the distinct-topics approach discussed above.)</p>\n<p>One form I might try for messages like that is \"How to format docs <a href=\"https://github.com/zulip/zulip/pull/45\">#45</a> (X)\", with the specific issue's title at the beginning. That way the topics show up distinctly in the left sidebar.</p>",
+        "id": 1165246,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1618613863
+    }
+]

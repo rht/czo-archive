@@ -1,0 +1,140 @@
+[
+    {
+        "content": "<p>Is it really sensible that failing to send an email (e.g. <code>zerver/emails/notify_new_login</code>) should result in a 500 error and prevent the user from being able to log in?</p>",
+        "id": 211020,
+        "sender_full_name": "Reid Barton",
+        "timestamp": 1495668372
+    },
+    {
+        "content": "<p>I guess maybe it's good in that it forces new installations of zulip to set up working outgoing email, but couldn't it also fail sporadically?</p>",
+        "id": 211030,
+        "sender_full_name": "Reid Barton",
+        "timestamp": 1495668517
+    },
+    {
+        "content": "<p>If you believe the notification is an important part of the security story, it might be good to block logins, in case an attacker figures out a way to fail outgoing emails while they log in...?</p>",
+        "id": 211054,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1495668757
+    },
+    {
+        "content": "<p>Hmm, interesting question.  I think it could be reasonable to move sending that email into a queue to happen later</p>",
+        "id": 211104,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1495669580
+    },
+    {
+        "content": "<p>I guess maybe? But I don't think we confirm that the user receives the email before being allowed to log in...</p>",
+        "id": 211190,
+        "sender_full_name": "Reid Barton",
+        "timestamp": 1495671541
+    },
+    {
+        "content": "<p>Yeah, I was surprised in part about the fact that it wasn't using the outgoing email queue.</p>",
+        "id": 211191,
+        "sender_full_name": "Reid Barton",
+        "timestamp": 1495671581
+    },
+    {
+        "content": "<p>yeah, I think maybe we should put that into one of our queues</p>",
+        "id": 211214,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1495672146
+    },
+    {
+        "content": "<p>Seems generally saner</p>",
+        "id": 211215,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1495672151
+    },
+    {
+        "content": "<p>ok, I'll file an issue then</p>",
+        "id": 211219,
+        "sender_full_name": "Reid Barton",
+        "timestamp": 1495672231
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/5039\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/5039\">#5039</a></p>",
+        "id": 211266,
+        "sender_full_name": "Reid Barton",
+        "timestamp": 1495673680
+    },
+    {
+        "content": "<p>Hello, I have a similar issue: the email settings was incorrect after server installation, so the server has several messages in queue which it couldn't send because the sender email is incorrect. Is there a way to purge the email queue? I know there is a manage.py command to purge queues, but I don't know the name of the correct queue.</p>",
+        "id": 260659,
+        "sender_full_name": "Yuliy",
+        "timestamp": 1501591060
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"um@umneem.org\" data-user-id=\"2177\">@Yuliy</span> you can use <code>sudo rabbitmqctl list_queues</code> to see the  list of queues and their sizes for purging.</p>",
+        "id": 260711,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1501602555
+    },
+    {
+        "content": "<p>Tim, thank you! </p>\n<div class=\"codehilite\"><pre><span></span>sudo rabbitmqctl list_queues\n</pre></div>\n\n\n<p>showed several queues:</p>\n<div class=\"codehilite\"><pre><span></span>digest_emails   1\nuser_activity   559\nuser_presence   434\n</pre></div>\n\n\n<p>I issued </p>\n<div class=\"codehilite\"><pre><span></span>sudo rabbitmqctl purge_queue digest_emails\n</pre></div>\n\n\n<p>The same command shows that all queues are zero length now. But the process <em>zulip-workers:zulip_deliver_enqueued_emails</em> still uses a lot of processor time.</p>",
+        "id": 260908,
+        "sender_full_name": "Yuliy",
+        "timestamp": 1501617404
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"um@umneem.org\" data-user-id=\"2177\">@Yuliy</span> cool!  Let me look into the <code>deliver_enqueued_emails</code> issue.</p>",
+        "id": 260924,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1501619746
+    },
+    {
+        "content": "<p>I'm not sure I see a reason that would be using a lot of processor time, but it should use some.  <code>zerver/management/commands/deliver_email.py</code> is the code, in case you want to do some print-debugging</p>",
+        "id": 260926,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1501619925
+    },
+    {
+        "content": "<p>In theory, it should be basically idle.</p>",
+        "id": 260927,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1501619940
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> thank you. The process starts, works for about ten seconds, then restarts again. And the <em>events_deliver_enqueued_emails.log</em> file still shows it can't send some messages.</p>\n<p>Just in case I have restarted the system, but the e-mail worker still tries to send some messages.</p>",
+        "id": 261285,
+        "sender_full_name": "Yuliy",
+        "timestamp": 1501652697
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"um@umneem.org\" data-user-id=\"2177\">@Yuliy</span> hrm, well you clear its backlog in a <code>manage.py shell</code> with <code>ScheduledJob.objects.all().delete()</code></p>",
+        "id": 261286,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1501652786
+    },
+    {
+        "content": "<p>Try doing that and seeing if it solves the problem. If it doesn't, then maybe it's the case that any new emails that get scheduled aren't able to be sent with your email provider</p>",
+        "id": 261287,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1501652818
+    },
+    {
+        "content": "<p>I issued this command and got a result:  <em>(13, {u'zerver.ScheduledJob': 13})</em>.<br>\nAfter that the system load average decreased by 1, also <em>events_deliver_enqueued_emails.log</em> file doesn't show more errors. And according to supervisorctl <em>zulip_deliver_enqueued_emails</em> doesn't restart every ten seconds, but just hangs in background using a small amount of CPU time.<br>\nThank you once more, looks like it is solved.</p>",
+        "id": 261295,
+        "sender_full_name": "Yuliy",
+        "timestamp": 1501653461
+    },
+    {
+        "content": "<p>Interesting; I'm a bit surprised that the 13 emails didn't get cleaned out automatically; the code looks like it should handle that for you</p>",
+        "id": 261298,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1501653491
+    },
+    {
+        "content": "<p>How are they usually cleaned out? By timer or somehow else?</p>",
+        "id": 261302,
+        "sender_full_name": "Yuliy",
+        "timestamp": 1501653559
+    },
+    {
+        "content": "<p>It's effectively a cron-like system; they get sent the day after each user signs up (etc.)</p>",
+        "id": 261319,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1501656025
+    }
+]

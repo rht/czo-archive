@@ -1,0 +1,86 @@
+[
+    {
+        "content": "<p>Currently trying to migrate a Zulip server that was installed with docker-zulip to a Zulip server installed by following the official guide and stopping at step 3 when the realm creating link is posted in the console (without clicking it).</p>\n<p>I've upgrade the existing server to 5.2, the fresh server that was installed via the guide is already on 5.2.</p>\n<p>I then ran this on the existing server:<br>\n<code>su zulip -c '/home/zulip/deployments/current/manage.py backup'</code></p>\n<p>Copied the file to the new server and then ran:<br>\n<code>/home/zulip/deployments/current/scripts/setup/restore-backup /path/to/backup</code></p>\n<p>With zulip user this resulted in </p>\n<div class=\"codehilite\"><pre><span></span><code>Traceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/setup/restore-backup&quot;, line 158, in &lt;module&gt;\n    restore_backup(tarball_file)\n  File &quot;/home/zulip/deployments/current/scripts/setup/restore-backup&quot;, line 55, in restore_backup\n    os.setresuid(0, 0, 0)\nPermissionError: [Errno 1] Operation not permitted\n</code></pre></div>\n<p>As root this error occured:</p>\n<div class=\"codehilite\"><pre><span></span><code>+ tar -C /tmp/zulip-restore-backup-9omc2bh1 &#39;--transform=s|^zulip-backup/settings(/.*)?$|/etc/zulip\\1|x&#39; &#39;--transform=s|^zulip-backup/zproject(/.*)?$|/home/zulip/deployments/2022-06-09-11-51-44/zproject\\1|x&#39; &#39;--transform=s|^zulip-backup/uploads(/.*)?$|/home/zulip/uploads\\1|x&#39; -xPz\n+ chown -R postgres -- /tmp/zulip-restore-backup-9omc2bh1\n+ /home/zulip/deployments/2022-06-09-11-51-44/scripts/setup/terminate-psql-sessions zulip\npsql: error: could not translate host name &quot;database&quot; to address: Temporary failure in name resolution\n\nError running a subcommand of /home/zulip/deployments/current/scripts/setup/restore-backup: /home/zulip/deployments/2022-06-09-11-51-44/scripts/setup/terminate-psql-sessions zulip\nActual error output for the subcommand is just above this.\n</code></pre></div>\n<p>What am I doing wrong or how can I successfully import the data?</p>",
+        "id": 1390895,
+        "sender_full_name": "Marvin",
+        "timestamp": 1654790570
+    },
+    {
+        "content": "<p>I assume this is due to docker-compose having this entry and the import is trying to reach it:<br>\n<code>REMOTE_POSTGRES_HOST = 'database'</code></p>\n<p>How would I migrate this over to non-docker?</p>",
+        "id": 1390902,
+        "sender_full_name": "Marvin",
+        "timestamp": 1654791037
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/Unable.20to.20restore.20backup\">#issues &gt; Unable to restore backup</a> by <span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span>.</p>",
+        "id": 1390938,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1654794462
+    },
+    {
+        "content": "<p>It does need to run as root -- we should make that more explicit.</p>",
+        "id": 1390978,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1654797977
+    },
+    {
+        "content": "<p>It also assumes that the settings are going to be the same, where it's being restored, as where it was taken from.  The <code>REMOTE_POSTGRES_HOST</code> setting is indeed one of the issues there.</p>",
+        "id": 1390979,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1654798015
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24119\">@Marvin</span>: My suggestion is to edit <code>/etc/zulip/settings.conf</code> to work for your intended use case, then comment out the lines in <code>scripts/setup/resotre-backup</code> that would overwrite them:<br>\n<a href=\"https://github.com/zulip/zulip/blob/0430705d13927eba1979fbf29c6234a6ae1545b3/scripts/setup/restore-backup#L33-L37\">https://github.com/zulip/zulip/blob/0430705d13927eba1979fbf29c6234a6ae1545b3/scripts/setup/restore-backup#L33-L37</a></p>",
+        "id": 1390980,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1654798151
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/22231\">#22231</a> adds flags for those.</p>",
+        "id": 1391034,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1654801008
+    },
+    {
+        "content": "<p>After my restore attempt I can't get zulip to properly start anymore, so I'll get to doing a fresh install and then look into manual postgres export import so I can move the data from the docker-zulip included postgres to the non docker one that comes with regular zulip</p>",
+        "id": 1391260,
+        "sender_full_name": "Marvin",
+        "timestamp": 1654845612
+    },
+    {
+        "content": "<p>Is there any guide as to how I can migrate docker-zulip to non-docker zulip? I did remove the remote databases, but still struggling to import, currently it's complaining about zulip-secrets.conf even though I've moved it over..</p>\n<p>I'd prefer not to use the export function as those don't include passwords and API keys</p>",
+        "id": 1393953,
+        "sender_full_name": "Marvin",
+        "timestamp": 1655740196
+    },
+    {
+        "content": "<p>Got a bit further, now stuck here.. really frustrating</p>\n<div class=\"codehilite\"><pre><span></span><code>+ pg_restore --dbname=zulip -- /tmp/zulip-restore-backup-pnow_x6i/zulip-backup/database\npg_restore: while PROCESSING TOC:\npg_restore: from TOC entry 2; 3079 16387 EXTENSION pgroonga (no owner)\npg_restore: error: could not execute query: ERROR:  could not open extension control file &quot;/usr/share/postgresql/14/extension/pgroonga.control&quot;: No such file or directory\nCommand was: CREATE EXTENSION IF NOT EXISTS pgroonga WITH SCHEMA zulip;\n\n\npg_restore: from TOC entry 4870; 0 0 COMMENT EXTENSION pgroonga\npg_restore: error: could not execute query: ERROR:  extension &quot;pgroonga&quot; does not exist\nCommand was: COMMENT ON EXTENSION pgroonga IS &#39;Super fast and all languages supported full text search index based on Groonga&#39;;\n\n\npg_restore: warning: errors ignored on restore: 2\n\nError running a subcommand of /home/zulip/deployments/current/scripts/setup/restore-backup: pg_restore --dbname=zulip -- /tmp/zulip-restore-backup-pnow_x6i/zulip-backup/database\nActual error output for the subcommand is just above this.\n</code></pre></div>",
+        "id": 1393957,
+        "sender_full_name": "Marvin",
+        "timestamp": 1655741954
+    },
+    {
+        "content": "<p>Looks like I've managed to manually pull a backup and restore it without using the zulip tools. Server works fine, all data is there, API keys still the same.</p>\n<p>Unfortunately no notifications again which was the reason for setting up a non-docker zulip, as on an empty server notifications worked there. Strange they don't now.. I'll setup a fresh zulip again..</p>",
+        "id": 1394339,
+        "sender_full_name": "Marvin",
+        "timestamp": 1655805840
+    },
+    {
+        "content": "<p>I don't get it, now desktop notifications don't work on the fresh server either.. I don't get it.. Thankfully only have to deal with it for a few more months.....</p>",
+        "id": 1394342,
+        "sender_full_name": "Marvin",
+        "timestamp": 1655806412
+    },
+    {
+        "content": "<p>The issue from yesterday was <code>pgroonga</code> not being enabled -- <a href=\"https://zulip.readthedocs.io/en/latest/subsystems/full-text-search.html#enabling-pgroonga\">our documentation</a> for that may no long er be relevant, if you got things working.</p>",
+        "id": 1394411,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655833267
+    },
+    {
+        "content": "<p>Hi there,</p>\n<p>we are using zulip as our internal chat system since version 2.0.0. it is great chat system and a lot of help to us. but now I'm trying to move to cloud server and update to latest version. but I got an issue as 400 status code after restoring the back.</p>\n<p>This is the steps I tried to restore the backup:</p>\n<ol>\n<li>setup the virtualbox and install ubuntu 18.04</li>\n<li>install necessary lib and postgresql-11</li>\n<li>clone the zulip server and checkout to 2.0.0</li>\n<li>install the zulip on virtualbox: sudo -s  /home/thura/1_zulip/zulip/scripts/setup/install --self-signed-cert --email=tr@local.thura --hostname=chat.local.thura - so far, the chat.local.thura was up and I can setup the organisation.</li>\n<li>after executing the /home/zulip/deployments/current/scripts/setup/restore-backup Desktop/zulip-backup-2023-07-20-16-00-12-_mfzbbce.tar.gz, I got  </li>\n</ol>\n<ul>\n<li>/home/zulip/deployments/2023-07-26-13-54-34/zproject/../scripts/setup/flush-memcached</li>\n<li>Flushing memcached...</li>\n<li>OK</li>\n</ul>\n<p>but when I browse the url, I got 400 status code and cannot login.</p>\n<p>Could you help me to sorted it out? Thanks in advance.</p>",
+        "id": 1616495,
+        "sender_full_name": "Thu Ra",
+        "timestamp": 1690377391
+    }
+]

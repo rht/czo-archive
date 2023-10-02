@@ -1,0 +1,190 @@
+<html>
+<head><meta charset="utf-8"><title>How to send out stream message to stream subscribers · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers.html">How to send out stream message to stream subscribers</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1360616"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/How%20to%20send%20out%20stream%20message%20to%20stream%20subscribers/near/1360616" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> jcheng <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers.html#1360616">(Apr 05 2022 at 20:24)</a>:</h4>
+<p>Hello,<br>
+I have a general question on how to send out stream messages to stream subscribers' email addresses. <br>
+Our server has configured to run as a SMTP mail server. <br>
+I also have added SETTING_EMAIL_HOST: "localhost" and SETTING_EMAIL_GATEWAY_PATTERN: "%s@abc.edu"<br>
+However, I never receive any stream messages from zulip. <br>
+Have I missed any other configurations?<br>
+Or is there any log files that I can read any errors about this issue?<br>
+(there is no recorded in both email_deliverer.log and send_email.log )<br>
+Ps: however zulip administrator receives stream message.<br>
+Thank you so much. :)</p>
+
+
+
+<a name="1361460"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/How%20to%20send%20out%20stream%20message%20to%20stream%20subscribers/near/1361460" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> jcheng <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers.html#1361460">(Apr 06 2022 at 21:41)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="22988">jcheng</span> <a href="#narrow/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers/near/1360616">said</a>:</p>
+<blockquote>
+<p>Hello,<br>
+I have a general question on how to send out stream messages to stream subscribers' email addresses. <br>
+Our server has configured to run as a SMTP mail server. <br>
+I also have added SETTING_EMAIL_HOST: "localhost" and SETTING_EMAIL_GATEWAY_PATTERN: "%s@abc.edu"<br>
+However, I never receive any stream messages from zulip. <br>
+Have I missed any other configurations?<br>
+Or is there any log files that I can read any errors about this issue?<br>
+(there is no recorded in both email_deliverer.log and send_email.log )<br>
+Ps: however zulip administrator receives stream message.<br>
+Thank you so much. :)</p>
+</blockquote>
+<p>When I ran send test email script, I got the following error. </p>
+<p>root@c3cf3527b976:/# su zulip -c '/home/zulip/deployments/current/manage.py send_test_email <a href="mailto:abc@gmail.com">abc@gmail.com</a>'</p>
+<p>If you run into any trouble, read:</p>
+<p><a href="https://zulip.readthedocs.io/en/latest/production/email.html#troubleshooting">https://zulip.readthedocs.io/en/latest/production/email.html#troubleshooting</a></p>
+<p>The most common error is not setting <code>ADD_TOKENS_TO_NOREPLY_ADDRESS=False</code> when<br>
+using an email provider that doesn't support that feature.</p>
+<p>Sending 2 test emails from:<br>
+  *
+Traceback (most recent call last):<br>
+  File "/home/zulip/deployments/current/manage.py", line 52, in &lt;module&gt;<br>
+    execute_from_command_line(sys.argv)<br>
+.......<br>
+.......<br>
+new_socket = socket.create_connection((host, port), timeout,<br>
+File "/usr/lib/python3.8/socket.py", line 808, in create_connection<br>
+raise err<br>
+File "/usr/lib/python3.8/socket.py", line 796, in create_connection<br>
+sock.connect(sa)<br>
+OSError: [Errno 99] Cannot assign requested address</p>
+<p>Then, I added the following line to docker-compose.yml.<br>
+SETTING_ADD_TOKENS_TO_NOREPLY_ADDRESS: "False"</p>
+<p>However, I still get the same error. <br>
+Does anyone have any suggestions for this type of error?<br>
+Thank you so much.</p>
+
+
+
+<a name="1361467"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/How%20to%20send%20out%20stream%20message%20to%20stream%20subscribers/near/1361467" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers.html#1361467">(Apr 06 2022 at 21:49)</a>:</h4>
+<p><span class="user-mention" data-user-id="22988">@jcheng</span>: <code>SETTING_ADD_TOKENS_TO_NOREPLY_ADDRESS</code> and <code>SETTING_EMAIL_GATEWAY_PATTERN</code> are both irrelevant here -- I don't suggest setting them right now, since your problem is a far more fundamental one:</p>
+<div class="codehilite"><pre><span></span><code>OSError: [Errno 99] Cannot assign requested address
+</code></pre></div>
+<p>Your server is trying to connect to <code>localhost</code>, and failing because it either can't resolve the host, or because it can't allocate a local socket.</p>
+<p>What do you have <code>SETTING_EMAIL_PORT</code> set to?</p>
+<p>Does it fix anything to set <code>SETTING_EMAIL_HOST</code> to <code>127.0.0.1</code> instead of <code>localhost</code>?</p>
+
+
+
+<a name="1361532"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/How%20to%20send%20out%20stream%20message%20to%20stream%20subscribers/near/1361532" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> jcheng <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers.html#1361532">(Apr 06 2022 at 22:55)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers/near/1361467">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="22988">jcheng</span>: <code>SETTING_ADD_TOKENS_TO_NOREPLY_ADDRESS</code> and <code>SETTING_EMAIL_GATEWAY_PATTERN</code> are both irrelevant here -- I don't suggest setting them right now, since your problem is a far more fundamental one:</p>
+<div class="codehilite"><pre><span></span><code>OSError: [Errno 99] Cannot assign requested address
+</code></pre></div>
+<p>Your server is trying to connect to <code>localhost</code>, and failing because it either can't resolve the host, or because it can't allocate a local socket.</p>
+<p>What do you have <code>SETTING_EMAIL_PORT</code> set to?</p>
+<p>Does it fix anything to set <code>SETTING_EMAIL_HOST</code> to <code>127.0.0.1</code> instead of <code>localhost</code>?</p>
+</blockquote>
+<p>Hi Alex,<br>
+Thank you so much for taking the time to reply to my message. <br>
+I really appreciate your help. <br>
+After I changed SETTING_EMAIL_HOST to 127.0.0.1, I got a different error message. <br>
+The message is ConnectionRefusedError: [Errno 111] Connection refused<br>
+Looks like maybe I have incorrect port number for SETTING_EMAIL_PORT which I use port 25. <br>
+Do I need to use different port number since we use zulip docker container?<br>
+Also, I have removed  SETTING_ADD_TOKENS_TO_NOREPLY_ADDRESS: "False".<br>
+Or do you think that SETTING_EMAIL_USE_SSL: "True" should be false?</p>
+<p>Thank you so much again. :)</p>
+
+
+
+<a name="1361533"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/How%20to%20send%20out%20stream%20message%20to%20stream%20subscribers/near/1361533" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers.html#1361533">(Apr 06 2022 at 23:01)</a>:</h4>
+<p>If you're using the Docker container, your mailserver is not in the container, so neither <code>127.0.0.1</code> nor <code>localhost</code> is going to work.  You'll need to put in the name of the host which is running the mailserver.</p>
+<p><code>SETTING_EMAIL_USE_SSL</code> and <code>SETTING_EMAIL_PORT </code> depend on how you've configured your email server.</p>
+
+
+
+<a name="1361556"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/How%20to%20send%20out%20stream%20message%20to%20stream%20subscribers/near/1361556" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> jcheng <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers.html#1361556">(Apr 06 2022 at 23:16)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers/near/1361533">said</a>:</p>
+<blockquote>
+<p>If you're using the Docker container, your mailserver is not in the container, so neither <code>127.0.0.1</code> nor <code>localhost</code> is going to work.  You'll need to put in the name of the host which is running the mailserver.</p>
+<p><code>SETTING_EMAIL_USE_SSL</code> and <code>SETTING_EMAIL_PORT </code> depend on how you've configured your email server.</p>
+</blockquote>
+<p>Our system admin has configurated the local server as a SMTP server. It will send out message; however , it wouldn't be able to receive any email. <br>
+Does that mean I need to use the gateway that he gave it to me to put in SETTING_EMAIL_HOST? <br>
+Such as SETTING_EMAIL_HOST: "<a href="http://gateway.abc.com">gateway.abc.com</a>"?<br>
+He also mentioned to me that the port number is 25 and the local SMTP_SSL is yes.<br>
+Do I use the same parameters for the docker container or they will be different?</p>
+<p>Thank you so much for your message again. :)</p>
+
+
+
+<a name="1361560"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/How%20to%20send%20out%20stream%20message%20to%20stream%20subscribers/near/1361560" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers.html#1361560">(Apr 06 2022 at 23:21)</a>:</h4>
+<p>The answers to those questions depend on where the Docker container is running, how you've configured Docker networking, and how you've configured the local mailserver.  I don't think we can help with those details.</p>
+<p>You may find <a href="https://stackoverflow.com/questions/24319662/from-inside-of-a-docker-container-how-do-i-connect-to-the-localhost-of-the-mach">https://stackoverflow.com/questions/24319662/from-inside-of-a-docker-container-how-do-i-connect-to-the-localhost-of-the-mach</a> or similar to be helpful.</p>
+
+
+
+<a name="1361562"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/How%20to%20send%20out%20stream%20message%20to%20stream%20subscribers/near/1361562" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers.html#1361562">(Apr 06 2022 at 23:22)</a>:</h4>
+<p>You can see if <code>host.docker.internal</code> works as the hostname instead of <code>127.0.0.1</code>, as a first try.</p>
+
+
+
+<a name="1362278"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/How%20to%20send%20out%20stream%20message%20to%20stream%20subscribers/near/1362278" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> jcheng <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers.html#1362278">(Apr 07 2022 at 21:57)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers/near/1361560">said</a>:</p>
+<blockquote>
+<p>The answers to those questions depend on where the Docker container is running, how you've configured Docker networking, and how you've configured the local mailserver.  I don't think we can help with those details.</p>
+<p>You may find <a href="https://stackoverflow.com/questions/24319662/from-inside-of-a-docker-container-how-do-i-connect-to-the-localhost-of-the-mach">https://stackoverflow.com/questions/24319662/from-inside-of-a-docker-container-how-do-i-connect-to-the-localhost-of-the-mach</a> or similar to be helpful.</p>
+</blockquote>
+<p>Alex,<br>
+Thank you so much again. <br>
+I tried to use docker0 gateway in SETTING_EMAIL_HOST: "172.17.0.1", but that didn't work. <br>
+However, I was able to make it to work by using SMTP gateway that was given to me by our system admin. <br>
+I was able to send test email by using send_test_email command. </p>
+<p>My next question is that do you know how I can let zulip streams to send posted messages to my email inbox?<br>
+I have enabled the email notification on zulip stream, but I just don't receive any message from my zulip.</p>
+<p>Do I still miss any other configurations? <br>
+Thank you so much. Again I am using zulip docker container.</p>
+
+
+
+<a name="1362283"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/How%20to%20send%20out%20stream%20message%20to%20stream%20subscribers/near/1362283" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers.html#1362283">(Apr 07 2022 at 22:02)</a>:</h4>
+<p>Zulip only sends you email notifications if you're not logged in when the message was sent.</p>
+<p>Were you logged in?  Do you see anything in <code>/var/log/zulip/events.log</code> ?</p>
+
+
+
+<a name="1362316"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/How%20to%20send%20out%20stream%20message%20to%20stream%20subscribers/near/1362316" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers.html#1362316">(Apr 07 2022 at 22:26)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers/near/1362283">said</a>:</p>
+<blockquote>
+<p>Zulip only sends you email notifications if you're not logged in when the message was sent.</p>
+</blockquote>
+<p>To be more precise, it will send them if you're logged in but have been idle for a while. See <a href="https://zulip.com/help/email-notifications#delay-before-sending-emails">https://zulip.com/help/email-notifications#delay-before-sending-emails</a> for details on how this works.</p>
+
+
+
+<a name="1362383"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/How%20to%20send%20out%20stream%20message%20to%20stream%20subscribers/near/1362383" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> jcheng <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers.html#1362383">(Apr 08 2022 at 00:31)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers/near/1362283">said</a>:</p>
+<blockquote>
+<p>Zulip only sends you email notifications if you're not logged in when the message was sent.</p>
+<p>Were you logged in?  Do you see anything in <code>/var/log/zulip/events.log</code> ?</p>
+</blockquote>
+<p>Hi Alex,<br>
+I didn't know that zulip won't send out messages when users were logged in. <br>
+I will give it a try. Thank you so much for your help. :)</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

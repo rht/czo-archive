@@ -1,0 +1,104 @@
+[
+    {
+        "content": "<p>Hi,<br>\nWe are running Zulip 5.2 (update is planned but not for today) dockerized, since years. As of today, we started encountering some errors looking like : <code>[zulip.auth.google] Session value state missing.</code>. This happens only for new sessions, since already registered users can still use Zulip perfectly fine.<br>\nAll of our members do use Google Auth since years without problem, but as of now if you disconnect from Zulip and try to reconnect, you'll get the Zulip Error 500 screen for a 502 Bad Gateway, and I can't understand why...</p>",
+        "id": 1473060,
+        "sender_full_name": "ImplicitDeny",
+        "timestamp": 1669997231
+    },
+    {
+        "content": "<p>There is pretty much nothing in the logs, Google-side seems ok (we have others app using Google Auth), nothing is expired or blocked in Workspace console...</p>",
+        "id": 1473061,
+        "sender_full_name": "ImplicitDeny",
+        "timestamp": 1669997274
+    },
+    {
+        "content": "<p>I can't find much info on this <code>[zulip.auth.google] Session value state missing.</code> error. It seems there was a few PR a while back in order to stop display 500 errors when Google Auth and Github Auth was not working, but I can't really relate to those</p>",
+        "id": 1473062,
+        "sender_full_name": "ImplicitDeny",
+        "timestamp": 1669997318
+    },
+    {
+        "content": "<p>I could try a restart of the VM hosting zulip / container, but I'm afraid this action will kill existing sessions and prevent all users from reconnecting back, since so far it is only affecting a few people</p>",
+        "id": 1473063,
+        "sender_full_name": "ImplicitDeny",
+        "timestamp": 1669997383
+    },
+    {
+        "content": "<p>any idea where I can dig for more info ?</p>",
+        "id": 1473064,
+        "sender_full_name": "ImplicitDeny",
+        "timestamp": 1669997427
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"23081\">@ImplicitDeny</span> If the server is returning 500s, are there any resulting tracebacks in <code>/var/log/zulip/errors.logs</code>?</p>",
+        "id": 1473075,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1670000696
+    },
+    {
+        "content": "<p>Also, are you able to test this broken authentication process by yourself, via a test account or something? It would be helpful if you could check through the browser developer tools if the session cookie is passed to us when the browser gets redirected back to <code>/complete/google/</code> after going through Google (the last step of the authentication flow). The error message suggests it might be missing.</p>",
+        "id": 1473077,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1670000948
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"23081\">ImplicitDeny</span> <a href=\"#narrow/stream/31-production-help/topic/Session.20value.20state.20missing/near/1473063\">said</a>:</p>\n<blockquote>\n<p>I could try a restart of the VM hosting zulip / container, but I'm afraid this action will kill existing sessions and prevent all users from reconnecting back, since so far it is only affecting a few people</p>\n</blockquote>\n<p>Restarting the container will not destroy sessions, as they're stored in the databases. Though I'm not sure why it be relevant to the weird behavior you're seeing.</p>",
+        "id": 1473160,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1670006619
+    },
+    {
+        "content": "<p>Double-check your disk volumes aren't full?</p>",
+        "id": 1473259,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670010782
+    },
+    {
+        "content": "<p>Oh yeah, good thought!</p>",
+        "id": 1473346,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1670012939
+    },
+    {
+        "content": "<p>thanks for these clues. Today morning, the 500 is gone. The container rebooted yesterday at 3AM, due to our systemd config (so, normal operation)</p>",
+        "id": 1474115,
+        "sender_full_name": "ImplicitDeny",
+        "timestamp": 1670230470
+    },
+    {
+        "content": "<p>this seems to have fixed the issue, probably temporarily.</p>",
+        "id": 1474116,
+        "sender_full_name": "ImplicitDeny",
+        "timestamp": 1670230484
+    },
+    {
+        "content": "<p>disk/volume space seems totally ok. I'll have a look at the history, but this is something we monitor. If any problem happened with disk space/IO we would have been alerted, in theory</p>",
+        "id": 1474117,
+        "sender_full_name": "ImplicitDeny",
+        "timestamp": 1670230556
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <a href=\"#narrow/stream/31-production-help/topic/Session.20value.20state.20missing/near/1473075\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"23081\">ImplicitDeny</span> If the server is returning 500s, are there any resulting tracebacks in <code>/var/log/zulip/errors.logs</code>?</p>\n</blockquote>\n<p>precisely, no logging in there :/ There were some older errors, but nothing systemically linked to 500 occurences</p>",
+        "id": 1474118,
+        "sender_full_name": "ImplicitDeny",
+        "timestamp": 1670230622
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <a href=\"#narrow/stream/31-production-help/topic/Session.20value.20state.20missing/near/1473077\">said</a>:</p>\n<blockquote>\n<p>Also, are you able to test this broken authentication process by yourself, via a test account or something? </p>\n</blockquote>\n<p>yep, I could reproduce by simply trying to log through my web browser in Private mode. Today it's ok</p>",
+        "id": 1474119,
+        "sender_full_name": "ImplicitDeny",
+        "timestamp": 1670230678
+    },
+    {
+        "content": "<p>might also have been a temporarily failure on google-side</p>",
+        "id": 1474121,
+        "sender_full_name": "ImplicitDeny",
+        "timestamp": 1670230837
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <a href=\"#narrow/stream/31-production-help/topic/Session.20value.20state.20missing/near/1473077\">said</a>:</p>\n<blockquote>\n<p>It would be helpful if you could check through the browser developer tools if the session cookie is passed to us when the browser gets redirected back to <code>/complete/google/</code> after going through Google (the last step of the authentication flow). The error message suggests it might be missing.</p>\n</blockquote>\n<p>I can't reproduce today, but I very clearly remember seeing a value after /complete/google last week. I remember checking it because I initially suspected a problem with Google Oauth service or something. I'm not an Oauth expert but I checked values I could compare on zulip and google side, and from what I could find, everything was ok authentication-wise</p>",
+        "id": 1474124,
+        "sender_full_name": "ImplicitDeny",
+        "timestamp": 1670231602
+    }
+]

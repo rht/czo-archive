@@ -1,0 +1,164 @@
+<html>
+<head><meta charset="utf-8"><title>RabbitMQ auth error after backup and restore · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html">RabbitMQ auth error after backup and restore</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="727295"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/727295" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hong Jiang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#727295">(Apr 03 2019 at 13:25)</a>:</h4>
+<p>Hi all. I recently moved our self-hosted Zulip to a larger machine. I backed up the old instance using the <a href="https://zulip.readthedocs.io/en/stable/production/maintain-secure-upgrade.html#backups" target="_blank" title="https://zulip.readthedocs.io/en/stable/production/maintain-secure-upgrade.html#backups">official method</a>, and then did a fresh install on the new machine and enabled <a href="https://zulip.readthedocs.io/en/stable/subsystems/full-text-search.html?highlight=full-text#an-optional-full-text-search-implementation" target="_blank" title="https://zulip.readthedocs.io/en/stable/subsystems/full-text-search.html?highlight=full-text#an-optional-full-text-search-implementation">fulltext search with PGroonga</a>. But as soon as I finish running the restore script, the Zulip error log was filled with:</p>
+<div class="codehilite"><pre><span></span>2019-04-03 13:07:45.475 ERR  [pika.connection] Connection setup failed due to Client was disconnected at a connection stage indicating a probable authentication error: (403, &#39;ACCESS_REFUSED - Login was refused using authentication mechanism PLAIN. For details see the broker logfile.&#39;)
+2019-04-03 13:07:45.476 WARN [zulip.queue] TornadoQueueClient couldn&#39;t connect to RabbitMQ, retrying in 2 secs...
+</pre></div>
+
+
+<p>I also checked the RabbitMQ log:</p>
+<div class="codehilite"><pre><span></span>=ERROR REPORT==== 3-Apr-2019::09:08:29 ===
+closing AMQP connection &lt;0.7757.0&gt; (127.0.0.1:46996 -&gt; 127.0.0.1:5672):
+{handshake_error,starting,0,
+                 {amqp_error,access_refused,
+                             &quot;PLAIN login refused: user &#39;zulip&#39; - invalid credentials&quot;,
+                             &#39;connection.start_ok&#39;}}
+</pre></div>
+
+
+<p>So it seems somehow restoring data caused RabbitMQ authentication to fail. Has anyone run into this problem before? The Zulip version is 2.0.2, OS version is 16.04. Thanks!</p>
+
+
+
+<a name="727299"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/727299" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hong Jiang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#727299">(Apr 03 2019 at 13:50)</a>:</h4>
+<p>I tried running <code>scripts/setup/configure-rabbitmq</code>. This seems to solve the problem.</p>
+
+
+
+<a name="727775"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/727775" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#727775">(Apr 04 2019 at 00:42)</a>:</h4>
+<p><span class="user-mention" data-user-id="9044">@Hong Jiang</span> yes, running <code>configure-rabbitmq</code> is what to do to fix that error.</p>
+
+
+
+<a name="727778"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/727778" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#727778">(Apr 04 2019 at 00:42)</a>:</h4>
+<p>I'm puzzled you ran into it; I would have expected the restoration script to run it for you.</p>
+
+
+
+<a name="727781"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/727781" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#727781">(Apr 04 2019 at 00:45)</a>:</h4>
+<p><span class="user-mention" data-user-id="699">@Anders Kaseorg</span> can you look into this?  I'm a worried that possible the restoration tool is running <code>configure-rabbitmq</code> only during the installer, and that after we restore <code>/etc/zulip</code> from backups, the username/password Zulip has on file changes, and we need to run it again.</p>
+
+
+
+<a name="727784"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/727784" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#727784">(Apr 04 2019 at 00:48)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> You came up with the list of commands that <code>restore-backup</code> runs, and you’d have a better idea whether <code>configure-rabbitmq</code> needs to be one of them. (Did you see <a href="https://github.com/zulip/zulip/pull/12029" target="_blank" title="https://github.com/zulip/zulip/pull/12029">#12029</a>, by the way?)</p>
+
+
+
+<a name="727799"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/727799" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#727799">(Apr 04 2019 at 01:00)</a>:</h4>
+<p>Presumably it shouldn’t be unconditional, since RabbitMQ might be running on some other machine.</p>
+
+
+
+<a name="727800"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/727800" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#727800">(Apr 04 2019 at 01:05)</a>:</h4>
+<p>Well, my read is that I was wrong before and we do need to include it if it's running on the system (or run <code>scripts/setup/install</code> as part of the backup tool after restoring settings?)</p>
+
+
+
+<a name="727801"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/727801" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#727801">(Apr 04 2019 at 01:05)</a>:</h4>
+<p>Not sure what the right fix is</p>
+
+
+
+<a name="727803"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/727803" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#727803">(Apr 04 2019 at 01:18)</a>:</h4>
+<p>I think it's just rabbitmq that has this issue.</p>
+
+
+
+<a name="727804"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/727804" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#727804">(Apr 04 2019 at 01:20)</a>:</h4>
+<p>It's quite rare for rabbitmq to be hosted externally, but I think you can check for whether there's a <code>rabbitmq</code> block in <code>/etc/zulip/zulip.conf</code> to determine if it's hosted locally.</p>
+
+
+
+<a name="727805"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/727805" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#727805">(Apr 04 2019 at 01:21)</a>:</h4>
+<p><span class="user-mention" data-user-id="699">@Anders Kaseorg</span> haven't looked at <a href="https://github.com/zulip/zulip/pull/12029" target="_blank" title="https://github.com/zulip/zulip/pull/12029">#12029</a> just because I've been sick.</p>
+
+
+
+<a name="727807"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/727807" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#727807">(Apr 04 2019 at 01:26)</a>:</h4>
+<p>I know docker-zulip uses a separate rabbitmq container.</p>
+
+
+
+<a name="728129"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/728129" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#728129">(Apr 04 2019 at 17:59)</a>:</h4>
+<p><span class="user-mention" data-user-id="699">@Anders Kaseorg</span> yeah, that's the main environment that does this differently.  I believe the check I suggested should handle that case, but it's worth testing (it's possible our docker container has its zulip.conf setup oddly)</p>
+
+
+
+<a name="728130"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/728130" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#728130">(Apr 04 2019 at 17:59)</a>:</h4>
+<p>Actually, what am I talking about, we should just use <code>dpkg</code> to check if <code>rabbitmq-server</code> is installer.</p>
+
+
+
+<a name="728142"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/728142" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#728142">(Apr 04 2019 at 18:20)</a>:</h4>
+<p>I thought we have some level of CentOS support?</p>
+
+
+
+<a name="728144"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/728144" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#728144">(Apr 04 2019 at 18:21)</a>:</h4>
+<p>We have preliminary CentOS support only in development, but that's a good point, we'll want to add that eventually.</p>
+
+
+
+<a name="728145"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/728145" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#728145">(Apr 04 2019 at 18:21)</a>:</h4>
+<p>So, the place we definitively know whether we're using rabbitmq on the system is in puppet.</p>
+
+
+
+<a name="728146"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/728146" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#728146">(Apr 04 2019 at 18:21)</a>:</h4>
+<p>I don't want to run configure-rabbitmq unconditionally when we run puppet, since that will cause issues for already-running systems.</p>
+
+
+
+<a name="728148"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/728148" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#728148">(Apr 04 2019 at 18:22)</a>:</h4>
+<p>But I could imagine adding an <code>Exec</code> rule in there that's conditional on a stamp file existing (and have it auto-delete that afterwards)</p>
+
+
+
+<a name="728149"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/728149" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#728149">(Apr 04 2019 at 18:22)</a>:</h4>
+<p>That avoids needing to come up with weird workarounds for trying to detect whether rabbitmq is supposed to be setup and managed by Zulip on the system.</p>
+
+
+
+<a name="757012"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RabbitMQ%20auth%20error%20after%20backup%20and%20restore/near/757012" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> John <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RabbitMQ.20auth.20error.20after.20backup.20and.20restore.html#757012">(Jun 20 2019 at 09:25)</a>:</h4>
+<blockquote>
+<p>I tried running <code>scripts/setup/configure-rabbitmq</code>. This seems to solve the problem.</p>
+</blockquote>
+<p>I would like to notice that before running this script you should stop the server: <code>supervisorctl stop all</code>. RabbitMQ reconfigured successfully only after that command, in my case at least =) Then start the sever back: <code>supervisorctl start all</code></p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

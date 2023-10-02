@@ -1,0 +1,104 @@
+[
+    {
+        "content": "<p>Until the last few months, we've had the Slack integration working with a third party software provider. Although this randomly stopped and they claim the data they're sending is the same but our end starting returning errors.</p>",
+        "id": 1418817,
+        "sender_full_name": "Matt",
+        "timestamp": 1660312521
+    },
+    {
+        "content": "<p>In the logs for Zulip we see <code>[\"payload['attachments'][0]['title'] is not a string\"]</code>.</p>",
+        "id": 1418818,
+        "sender_full_name": "Matt",
+        "timestamp": 1660312530
+    },
+    {
+        "content": "<p>I have checked what they're sending and what they used to send and both are <code>\"title\": null,</code> within the attachments block. No other title variables exist.</p>",
+        "id": 1418819,
+        "sender_full_name": "Matt",
+        "timestamp": 1660312551
+    },
+    {
+        "content": "<p>I don't believe this is required but wonder if this is a change on your end? and if so, should be failing in this way as title doesn't seem to need a value.</p>",
+        "id": 1418820,
+        "sender_full_name": "Matt",
+        "timestamp": 1660312617
+    },
+    {
+        "content": "<p>This is likely a bug in the WildValue migration for that webhook; <span class=\"user-mention\" data-user-id=\"16383\">@Hari Prashant</span> can you investigate?</p>",
+        "id": 1418918,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660332886
+    },
+    {
+        "content": "<p>Thanks. It looks like there are quite a few other values passed over as null that each trip up too.</p>",
+        "id": 1419304,
+        "sender_full_name": "Matt",
+        "timestamp": 1660399003
+    },
+    {
+        "content": "<p>Within <code>attachments</code> in the incoming payload, there are legacy fields that the Slack documentation <a href=\"https://api.slack.com/reference/messaging/attachments#legacy_fields\">mentions</a> as optional. From what <span class=\"user-mention silent\" data-user-id=\"21057\">Matt</span> reports, it seems that these optional fields might exist within <code>attachments</code> with a null value. The documentation isn't clear on null values being passed within <code>attachments</code> but that's the only conclusion I could derive.</p>",
+        "id": 1421156,
+        "sender_full_name": "Hari Prashant",
+        "timestamp": 1660819115
+    },
+    {
+        "content": "<p>Within <code>blocks</code>, there's a reference in the <a href=\"https://api.slack.com/reference/block-kit/blocks#video_fields\">Video Block documentation</a> that mentions that the developers have the flexibility to leave non-mandatory fields as null, so I think it's safe to assume that is the case for any non-mandatory field under all types of blocks since nothing has been explicitly mentioned about null values otherwise. With this assumption, I've also added a <code>None</code> check for non-mandatory fields within our <code>block</code>-handling code.</p>",
+        "id": 1421157,
+        "sender_full_name": "Hari Prashant",
+        "timestamp": 1660819425
+    },
+    {
+        "content": "<p>I'm not sure how to test these since Slack allows this as a specification for incoming webhooks; would it be fair to test Slack's incoming API with our assumptions and use accepted payloads as test fixtures for our own?</p>",
+        "id": 1421158,
+        "sender_full_name": "Hari Prashant",
+        "timestamp": 1660819553
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16383\">@Hari Prashant</span> yeah, I think that'd be a reasonable way to test -- try sending it a payload with those various values being <code>null</code>.</p>",
+        "id": 1421260,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660848197
+    },
+    {
+        "content": "<p>Updated <a href=\"https://github.com/zulip/zulip/pull/22738\">#22738</a>, which is no longer WIP.</p>\n<p>I used different variations of a sample \"attachment\" payload to write tests for our integration, all of which have been verified directly on the Slack API. The assumption I've stated above about the optional fields being present with null values has been confirmed through these tests, and the fields are now handled appropriately.</p>",
+        "id": 1422859,
+        "sender_full_name": "Hari Prashant",
+        "timestamp": 1661182038
+    },
+    {
+        "content": "<p>I could also observe that Falsy values for these optional keys (\"\" for string and 0 for int) were handled the same way as null values through the Slack API, and so I've replicated that same strategy within our integration as well.</p>",
+        "id": 1422860,
+        "sender_full_name": "Hari Prashant",
+        "timestamp": 1661182053
+    },
+    {
+        "content": "<p>One other thing I wanted to highlight was the handling of the <code>attachment</code> payload when all its keys have null values. Slack just sends an empty message to the channel as a result. On our end, this is currently a no-op.</p>",
+        "id": 1422863,
+        "sender_full_name": "Hari Prashant",
+        "timestamp": 1661182318
+    },
+    {
+        "content": "<p>Feedback welcome and appreciated!</p>",
+        "id": 1422865,
+        "sender_full_name": "Hari Prashant",
+        "timestamp": 1661182419
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16383\">@Hari Prashant</span> awesome, thanks for doing that investigation!</p>",
+        "id": 1423230,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1661211628
+    },
+    {
+        "content": "<p>The PR fixed this. :)</p>",
+        "id": 1444618,
+        "sender_full_name": "Matt",
+        "timestamp": 1664915119
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"21057\">Matt</span> has marked this topic as resolved.</p>",
+        "id": 1444619,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1664915122
+    }
+]

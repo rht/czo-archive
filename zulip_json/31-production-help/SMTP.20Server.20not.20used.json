@@ -1,0 +1,38 @@
+[
+    {
+        "content": "<p>Hello, in setting up zulip (docker), I can not get zulip to use the SMTP mail server I entered. The emails arrive but are being sent from the wrong email address to the spam folder since they are not sent over the SMTP server, but directly. <br>\nThe mail server uses STARTTLS over port 587. It works when entering the credentials in Thunderbird for example. </p>\n<p>Following email related variables are set in the docker-compose.yml:</p>\n<div class=\"codehilite\"><pre><span></span>SECRETS_email_password: &#39;mypasswd&#39;\nSETTING_EMAIL_HOST: &#39;myMailserver.tld&#39;\nSETTING_EMAIL_HOST_USER: &#39;my@email.tld&#39;\nSETTING_EMAIL_PORT: &#39;587&#39;\nSETTING_EMAIL_USE_SSL: &#39;False&#39;\nSETTING_EMAIL_USE_TLS: &#39;True&#39;\n</pre></div>\n\n\n<p>I can also see them in the settings.py and secrets conf file. </p>\n<p>Is there anything wrong with my configuration, or where could I take a look to see why the emails aren't being sent over the SMTP server?</p>",
+        "id": 744742,
+        "sender_full_name": "Daniel",
+        "timestamp": 1558535769
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12541\">@Daniel</span> if you can see the configuration properly in your <code>/etc/zulip/settings.py</code> inside the container, that's definitely how the configuration is read.</p>",
+        "id": 744789,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1558546959
+    },
+    {
+        "content": "<p>But based on your explanation, are you sure the problem is the emails being sent directly?  <a href=\"https://zulip.readthedocs.io/en/latest/production/email.html#troubleshooting\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/email.html#troubleshooting\">https://zulip.readthedocs.io/en/latest/production/email.html#troubleshooting</a> may be helpful.  The <code>EMAIL_HOST_USER</code> is only used for authentication to the mail server; a Zulip server sends emails using multiple from addresses (e.g. the <code>NOREPLY_EMAIL_ADDRESS</code> setting)</p>",
+        "id": 744790,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1558547005
+    },
+    {
+        "content": "<p>Thank you for your reply! :)</p>\n<p>The emails were in fact being sent over the SMTP server, the issue was the from address. Both failed, rightfully, because of SPF.<br>\nI did not know that the setting <code>NOREPLY_EMAIL_ADDRESS</code> existed. It used noreply@, as I read in the docs, but then the domain of the zulip server instead of the mail server,  so SPF failed and it went to spam. That issue is resolved now.</p>\n<p>For the other 'from' address, <code>ZULIP_ADMINISTRATOR</code>, I don't understand why zulip uses that as 'from' address. Since I am the admin, I put my GMail address there, and of course SPF fails. It goes to spam because my mail-server is not allowed to send emails from the from address @gmail.com. GMail even displays a massive yellow warning for phishing. <br>\nIn the docs, it states: <em>The email address of the person or team who should <strong>get</strong> support and error emails from this Zulip server</em>. How is this email being used exactly and are there more 'from' addresses? A 'from' address and the email who should receive the support and error emails are quite different.</p>",
+        "id": 744816,
+        "sender_full_name": "Daniel",
+        "timestamp": 1558550208
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12541\">@Daniel</span> yeah, one of the challenges with the Docker setup is that we have a lot of nice documentation for our options in inline comments in the <code>settings.py</code> files, but folks don't end up looking at those while working on Docker.</p>",
+        "id": 744849,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1558560149
+    },
+    {
+        "content": "<p>Good question about <code>ZULIP_ADMINISTRATOR</code>; I think changing the default of <code>SERVER_EMAIL</code> (the Django email address for error emails) from <code>ZULIP_ADMINISTRATOR</code> to the noreply email address may make sense.  Though it would be a regression for some sites -- if you use e.g. <code>ops-team@example.com</code> as <code>ZULIP_ADMINSTRATOR</code>, it's kinda nice to be able to just reply-all to the email without getting a bounce.</p>",
+        "id": 744852,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1558560290
+    }
+]

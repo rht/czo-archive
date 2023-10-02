@@ -1,0 +1,241 @@
+<html>
+<head><meta charset="utf-8"><title>HA Zulip · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html">HA Zulip</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="44651"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44651" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44651">(Oct 21 2016 at 19:13)</a>:</h4>
+<p>So, running Zulip in an HA environment is... a constant adventure.</p>
+
+
+
+<a name="44652"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44652" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44652">(Oct 21 2016 at 19:14)</a>:</h4>
+<p>There are a handful of problems, several probably self-inflicted.</p>
+
+
+
+<a name="44653"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44653" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44653">(Oct 21 2016 at 19:15)</a>:</h4>
+<p>I'm going to give an overview of what our current setup looks like, some history, and what just caused me to shoot myself in the foot (this time!).</p>
+
+
+
+<a name="44654"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44654" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44654">(Oct 21 2016 at 19:16)</a>:</h4>
+<p>And let me preface all of this by saying that I love Zulip and all of you, and any annoyance you detect is transient. <img alt=":heart_eyes_cat:" class="emoji" src="/static/third/gemoji/images/emoji/heart_eyes_cat.png" title=":heart_eyes_cat:">  </p>
+
+
+
+<a name="44656"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44656" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44656">(Oct 21 2016 at 19:16)</a>:</h4>
+<p>Our current setup is two different servers, geographically distributed.  They are setup in a master/slave pair, with manual failover coordinated by DNS.</p>
+
+
+
+<a name="44658"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44658" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44658">(Oct 21 2016 at 19:17)</a>:</h4>
+<p>Postgresql streaming replication, over TLS with mutual auth, is configured, along with a backup system.</p>
+
+
+
+<a name="44660"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44660" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44660">(Oct 21 2016 at 19:19)</a>:</h4>
+<p>Currently, we manually rsync the uploads and avatars across when we do failovers, but we plan to configure something DBRD-or-something like to handle the non-anticipated case. </p>
+
+
+
+<a name="44662"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44662" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44662">(Oct 21 2016 at 19:19)</a>:</h4>
+<p>These servers are also CDN-fronted, and use an external SSO provider.</p>
+
+
+
+<a name="44663"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44663" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44663">(Oct 21 2016 at 19:20)</a>:</h4>
+<p>Our Zulip installation is several years old at this point.  I believe we were one of the few commercial users of Zulip prior to its acquisition by Dropbox.</p>
+
+
+
+<a name="44667"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44667" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44667">(Oct 21 2016 at 19:22)</a>:</h4>
+<p>I'm about to run to lunch, so bug me if I forget to followup later, but for uploads/avatars, it'd be pretty easy to switch that to support storage in things other than S3 and local disk if you folks were interested in that.</p>
+
+
+
+<a name="44672"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44672" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44672">(Oct 21 2016 at 19:23)</a>:</h4>
+<p>We definitely might be; that would be awesome.</p>
+
+
+
+<a name="44674"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44674" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44674">(Oct 21 2016 at 19:23)</a>:</h4>
+<p>One of the tricky things that's bitten us a couple of times in the past is how to keep the installation consistent across both installations.</p>
+
+
+
+<a name="44675"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44675" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44675">(Oct 21 2016 at 19:24)</a>:</h4>
+<p>In the past, we've tried upgrading Zulip on both nodes, but the upgrade has been difficult when the DB is in a R/O state on the slave.</p>
+
+
+
+<a name="44676"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44676" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44676">(Oct 21 2016 at 19:24)</a>:</h4>
+<p>And we obviously don't want to run the DB upgrade twice on the master.</p>
+
+
+
+<a name="44678"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44678" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44678">(Oct 21 2016 at 19:24)</a>:</h4>
+<p>So this time, we took a different approach.</p>
+
+
+
+<a name="44679"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44679" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44679">(Oct 21 2016 at 19:25)</a>:</h4>
+<p>We rsync'ed over the deployments/, local-static/, prod-static/, upload/ directories over from the master to the slave.</p>
+
+
+
+<a name="44680"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44680" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44680">(Oct 21 2016 at 19:25)</a>:</h4>
+<p>And then made sure that the system installed modules were correctly in place.</p>
+
+
+
+<a name="44681"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44681" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44681">(Oct 21 2016 at 19:26)</a>:</h4>
+<p>Then, on the master, we stopped nginx, paused, <code>supervisorctl stop all</code>, paused, then shut down postgresql on the master.</p>
+
+
+
+<a name="44682"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44682" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44682">(Oct 21 2016 at 19:26)</a>:</h4>
+<p>On the slave, we then promoted the DB to master, started rabbitmq, <code>supervisorctl start all</code>, and then started nginx.</p>
+
+
+
+<a name="44686"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44686" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44686">(Oct 21 2016 at 19:27)</a>:</h4>
+<p>What ended up going wrong was that the zulip-venv symlink that's in deployments/current maps to a directory in /srv, where the modules are installed.</p>
+
+
+
+<a name="44687"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44687" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44687">(Oct 21 2016 at 19:27)</a>:</h4>
+<p>Though I checked to make sure python-apns-client was installed on both halves, since I noticed that it was installed on the master, we hit the apns failure.</p>
+
+
+
+<a name="44688"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44688" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44688">(Oct 21 2016 at 19:27)</a>:</h4>
+<p>Then I ran face-first into the Debian rabbitmq bug.</p>
+
+
+
+<a name="44689"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44689" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44689">(Oct 21 2016 at 19:28)</a>:</h4>
+<p>I was able to fix it by rsync'ing over the /srv/zulip-venv-cache directory and then restarting everything.</p>
+
+
+
+<a name="44690"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44690" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44690">(Oct 21 2016 at 19:28)</a>:</h4>
+<p>But not without missing my downtime window and getting made fun of my by userbase. :(</p>
+
+
+
+<a name="44691"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44691" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44691">(Oct 21 2016 at 19:29)</a>:</h4>
+<p>I'd love some input on if there's an easier way to keep these installations in sync with each other.</p>
+
+
+
+<a name="44692"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44692" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44692">(Oct 21 2016 at 19:29)</a>:</h4>
+<p>One possibility I've been considering is ripping apart the upgrade scripts and converting it all to use puppet/ansible/whatever</p>
+
+
+
+<a name="44694"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44694" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44694">(Oct 21 2016 at 19:29)</a>:</h4>
+<p>In which case you could run upgrades atomically and separately from database upgrades.</p>
+
+
+
+<a name="44695"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44695" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44695">(Oct 21 2016 at 19:30)</a>:</h4>
+<p>I've also thought about whether I could just shove this entire thing into a docker container and ship that around.</p>
+
+
+
+<a name="44696"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44696" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44696">(Oct 21 2016 at 19:30)</a>:</h4>
+<p>That's a really "lazy" solution though, and has bad-sysadmin-smell to me.</p>
+
+
+
+<a name="44697"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44697" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44697">(Oct 21 2016 at 19:30)</a>:</h4>
+<p><span class="user-mention" data-user-email="tabbott@zulipchat.com">@Tim Abbott</span>, I hope you aren't staying here to watch this --- go to lunch.  Everything's working now, this can wait. :)</p>
+
+
+
+<a name="44700"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44700" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44700">(Oct 21 2016 at 19:32)</a>:</h4>
+<p>I've got to step away from my desk for fifteen minutes or so, but I'd love to get people's input here.</p>
+
+
+
+<a name="44704"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44704" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44704">(Oct 21 2016 at 19:42)</a>:</h4>
+<p>Just to be clear: is the reason you're upgrading the slave first rather than the master directly to make sure the upgrade works before you deploy to prod?  Or is it to try to have 0 interruption when you upgrade?</p>
+
+
+
+<a name="44705"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44705" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44705">(Oct 21 2016 at 19:43)</a>:</h4>
+<p>We actually have much of the tooling you're thinking about here, because we use it to operate <a href="http://zulipchat.com" target="_blank" title="http://zulipchat.com">zulipchat.com</a></p>
+
+
+
+<a name="44706"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44706" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44706">(Oct 21 2016 at 19:44)</a>:</h4>
+<p>Look at <code>scripts/upgrade-zulip-from-git</code> and the options to control whether migrations/puppet are run while the service is down</p>
+
+
+
+<a name="44707"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44707" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44707">(Oct 21 2016 at 19:45)</a>:</h4>
+<p>Assuming you're confident in the testing side of things (which we can talk about how to solve separately by using an actual test system), you can almost always run puppet + migrations before starting downtime, and then the code swap involves like 3s of downtime.</p>
+
+
+
+<a name="44722"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44722" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44722">(Oct 21 2016 at 19:54)</a>:</h4>
+<p>Neither, really, <span class="user-mention" data-user-email="tabbott@zulipchat.com">@Tim Abbott</span>.  We usually upgrade the master directly.</p>
+
+
+
+<a name="44723"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44723" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44723">(Oct 21 2016 at 19:54)</a>:</h4>
+<p>This is explicitly for the case where we need to cut over to the slave /anyway/,</p>
+
+
+
+<a name="44724"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/HA%20Zulip/near/44724" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Harlan Lieberman-Berg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/HA.20Zulip.html#44724">(Oct 21 2016 at 19:54)</a>:</h4>
+<p>Because we don't want to be accidentally having old code run on the new DB style.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,230 @@
+[
+    {
+        "content": "<p>So, running Zulip in an HA environment is... a constant adventure.</p>",
+        "id": 44651,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077231
+    },
+    {
+        "content": "<p>There are a handful of problems, several probably self-inflicted.</p>",
+        "id": 44652,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077269
+    },
+    {
+        "content": "<p>I'm going to give an overview of what our current setup looks like, some history, and what just caused me to shoot myself in the foot (this time!).</p>",
+        "id": 44653,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077304
+    },
+    {
+        "content": "<p>And let me preface all of this by saying that I love Zulip and all of you, and any annoyance you detect is transient. <img alt=\":heart_eyes_cat:\" class=\"emoji\" src=\"/static/third/gemoji/images/emoji/heart_eyes_cat.png\" title=\":heart_eyes_cat:\">  </p>",
+        "id": 44654,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077369
+    },
+    {
+        "content": "<p>Our current setup is two different servers, geographically distributed.  They are setup in a master/slave pair, with manual failover coordinated by DNS.</p>",
+        "id": 44656,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077410
+    },
+    {
+        "content": "<p>Postgresql streaming replication, over TLS with mutual auth, is configured, along with a backup system.</p>",
+        "id": 44658,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077453
+    },
+    {
+        "content": "<p>Currently, we manually rsync the uploads and avatars across when we do failovers, but we plan to configure something DBRD-or-something like to handle the non-anticipated case. </p>",
+        "id": 44660,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077542
+    },
+    {
+        "content": "<p>These servers are also CDN-fronted, and use an external SSO provider.</p>",
+        "id": 44662,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077584
+    },
+    {
+        "content": "<p>Our Zulip installation is several years old at this point.  I believe we were one of the few commercial users of Zulip prior to its acquisition by Dropbox.</p>",
+        "id": 44663,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077647
+    },
+    {
+        "content": "<p>I'm about to run to lunch, so bug me if I forget to followup later, but for uploads/avatars, it'd be pretty easy to switch that to support storage in things other than S3 and local disk if you folks were interested in that.</p>",
+        "id": 44667,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1477077759
+    },
+    {
+        "content": "<p>We definitely might be; that would be awesome.</p>",
+        "id": 44672,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077802
+    },
+    {
+        "content": "<p>One of the tricky things that's bitten us a couple of times in the past is how to keep the installation consistent across both installations.</p>",
+        "id": 44674,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077830
+    },
+    {
+        "content": "<p>In the past, we've tried upgrading Zulip on both nodes, but the upgrade has been difficult when the DB is in a R/O state on the slave.</p>",
+        "id": 44675,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077859
+    },
+    {
+        "content": "<p>And we obviously don't want to run the DB upgrade twice on the master.</p>",
+        "id": 44676,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077872
+    },
+    {
+        "content": "<p>So this time, we took a different approach.</p>",
+        "id": 44678,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077879
+    },
+    {
+        "content": "<p>We rsync'ed over the deployments/, local-static/, prod-static/, upload/ directories over from the master to the slave.</p>",
+        "id": 44679,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077907
+    },
+    {
+        "content": "<p>And then made sure that the system installed modules were correctly in place.</p>",
+        "id": 44680,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077930
+    },
+    {
+        "content": "<p>Then, on the master, we stopped nginx, paused, <code>supervisorctl stop all</code>, paused, then shut down postgresql on the master.</p>",
+        "id": 44681,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077967
+    },
+    {
+        "content": "<p>On the slave, we then promoted the DB to master, started rabbitmq, <code>supervisorctl start all</code>, and then started nginx.</p>",
+        "id": 44682,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477077995
+    },
+    {
+        "content": "<p>What ended up going wrong was that the zulip-venv symlink that's in deployments/current maps to a directory in /srv, where the modules are installed.</p>",
+        "id": 44686,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477078021
+    },
+    {
+        "content": "<p>Though I checked to make sure python-apns-client was installed on both halves, since I noticed that it was installed on the master, we hit the apns failure.</p>",
+        "id": 44687,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477078046
+    },
+    {
+        "content": "<p>Then I ran face-first into the Debian rabbitmq bug.</p>",
+        "id": 44688,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477078063
+    },
+    {
+        "content": "<p>I was able to fix it by rsync'ing over the /srv/zulip-venv-cache directory and then restarting everything.</p>",
+        "id": 44689,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477078089
+    },
+    {
+        "content": "<p>But not without missing my downtime window and getting made fun of my by userbase. :(</p>",
+        "id": 44690,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477078104
+    },
+    {
+        "content": "<p>I'd love some input on if there's an easier way to keep these installations in sync with each other.</p>",
+        "id": 44691,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477078141
+    },
+    {
+        "content": "<p>One possibility I've been considering is ripping apart the upgrade scripts and converting it all to use puppet/ansible/whatever</p>",
+        "id": 44692,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477078168
+    },
+    {
+        "content": "<p>In which case you could run upgrades atomically and separately from database upgrades.</p>",
+        "id": 44694,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477078179
+    },
+    {
+        "content": "<p>I've also thought about whether I could just shove this entire thing into a docker container and ship that around.</p>",
+        "id": 44695,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477078207
+    },
+    {
+        "content": "<p>That's a really \"lazy\" solution though, and has bad-sysadmin-smell to me.</p>",
+        "id": 44696,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477078217
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\">@Tim Abbott</span>, I hope you aren't staying here to watch this --- go to lunch.  Everything's working now, this can wait. :)</p>",
+        "id": 44697,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477078235
+    },
+    {
+        "content": "<p>I've got to step away from my desk for fifteen minutes or so, but I'd love to get people's input here.</p>",
+        "id": 44700,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477078345
+    },
+    {
+        "content": "<p>Just to be clear: is the reason you're upgrading the slave first rather than the master directly to make sure the upgrade works before you deploy to prod?  Or is it to try to have 0 interruption when you upgrade?</p>",
+        "id": 44704,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1477078973
+    },
+    {
+        "content": "<p>We actually have much of the tooling you're thinking about here, because we use it to operate <a href=\"http://zulipchat.com\" target=\"_blank\" title=\"http://zulipchat.com\">zulipchat.com</a></p>",
+        "id": 44705,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1477079026
+    },
+    {
+        "content": "<p>Look at <code>scripts/upgrade-zulip-from-git</code> and the options to control whether migrations/puppet are run while the service is down</p>",
+        "id": 44706,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1477079065
+    },
+    {
+        "content": "<p>Assuming you're confident in the testing side of things (which we can talk about how to solve separately by using an actual test system), you can almost always run puppet + migrations before starting downtime, and then the code swap involves like 3s of downtime.</p>",
+        "id": 44707,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1477079140
+    },
+    {
+        "content": "<p>Neither, really, <span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\">@Tim Abbott</span>.  We usually upgrade the master directly.</p>",
+        "id": 44722,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477079648
+    },
+    {
+        "content": "<p>This is explicitly for the case where we need to cut over to the slave /anyway/,</p>",
+        "id": 44723,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477079663
+    },
+    {
+        "content": "<p>Because we don't want to be accidentally having old code run on the new DB style.</p>",
+        "id": 44724,
+        "sender_full_name": "Harlan Lieberman-Berg",
+        "timestamp": 1477079681
+    }
+]

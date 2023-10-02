@@ -1,0 +1,308 @@
+<html>
+<head><meta charset="utf-8"><title>OIDC error when login · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html">OIDC error when login</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1541674"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1541674" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> A. Casanova <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1541674">(Apr 05 2023 at 10:55)</a>:</h4>
+<p>Hi, I am trying to log in by using OICD, my IdP is Keycloak. (I am running zulip within a container.)</p>
+<p>I get this error after clicking on "Log In with App Name":<br>
+<a href="/user_uploads/2/fe/Po8ERxIq3P-SRCtz4KDCKBM0/image.png">image.png</a> </p>
+<div class="message_inline_image"><a href="/user_uploads/2/fe/Po8ERxIq3P-SRCtz4KDCKBM0/image.png" title="image.png"><img src="/user_uploads/2/fe/Po8ERxIq3P-SRCtz4KDCKBM0/image.png"></a></div><p>this is the request:<br>
+<a href="/user_uploads/2/7d/CZ5hcdfomdTyAGnZd1JPoemL/image.png">image.png</a> </p>
+<div class="message_inline_image"><a href="/user_uploads/2/7d/CZ5hcdfomdTyAGnZd1JPoemL/image.png" title="image.png"><img src="/user_uploads/2/7d/CZ5hcdfomdTyAGnZd1JPoemL/image.png"></a></div><p>Do you know if there is any log file where I can get more information? <code>/var/log/zulip/auth.log</code> is empty.</p>
+<p>I followed the official documentation in <code>/etc/zulip/settings.py</code> (and in the web-docs):</p>
+<div class="codehilite"><pre><span></span><code>########
+## Generic OpenID Connect (OIDC).  See also documentation here:
+##
+##     https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#openid-connect
+##
+
+SOCIAL_AUTH_OIDC_ENABLED_IDPS: Dict[str, Any] = {
+    ## This field (example: &quot;idp_name&quot;) may appear in URLs during
+    ## authentication, but is otherwise not user-visible.
+    &quot;idp_name&quot;: {
+        ## The base path to the provider&#39;s OIDC API. Zulip fetches the
+        ## IdP&#39;s configuration from the discovery endpoint, which will be
+        ## &quot;{oidc_url}/.well-known/openid-configuration&quot;.
+        &quot;oidc_url&quot;: &quot;https://example.com/api/openid&quot;,
+        ## The display name, used for &quot;Log in with &lt;display name&gt;&quot; buttons.
+        &quot;display_name&quot;: &quot;Example&quot;,
+        ## Optional: URL of an icon to decorate &quot;Log in with &lt;display name&gt;&quot; buttons.
+        &quot;display_icon&quot;: None,
+        ## The client_id and secret provided by your OIDC IdP. To keep
+        ## settings.py free of secrets, the get_secret call below
+        ## reads the secret with the specified name from zulip-secrets.conf.
+        &quot;client_id&quot;: &quot;&lt;your client id&gt;&quot;,
+        &quot;secret&quot;: get_secret(&quot;social_auth_oidc_secret&quot;),
+        ## Determines whether &quot;Log in with OIDC&quot; will automatically
+        ## register a new account if one does not already exist. By
+        ## default, Zulip asks the user whether they want to create an
+        ## account or try to log in again using another method.
+        # &quot;auto_signup&quot;: False,
+    }
+}
+
+## For documentation on this setting, see the relevant part of
+## https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#openid-connect
+# SOCIAL_AUTH_OIDC_FULL_NAME_VALIDATED = True
+</code></pre></div>
+<p>This is my settings.py file after the boot-up (This is a mock example, so I have let the secret on purpose. (I will use get_secret(...) in the real production)) :</p>
+<div class="codehilite"><pre><span></span><code>...
+ALLOWED_HOSTS = [&#39;zulip.yourdomain.com&#39;, &#39;127.0.0.1&#39;, &#39;localhost&#39;]
+EXTERNAL_HOST = &#39;localhost:9143&#39;
+
+AUTHENTICATION_BACKENDS = (&#39;zproject.backends.EmailAuthBackend&#39;,)
+AUTHENTICATION_BACKENDS += (&#39;zproject.backends.GenericOpenIdConnectBackend&#39;,)
+
+SOCIAL_AUTH_OIDC_ENABLED_IDPS = {&quot;keycloak&quot;:{&quot;oidc_url&quot;:&quot;http://localhost:8090/auth/realms/myrealm/&quot;,&quot;display_name&quot;:&quot;App Name&quot;,&quot;display_icon&quot;: None,&quot;client_id&quot;: &quot;zulip&quot;,&quot;secret&quot;: &quot;QxJapZRum6efqohMuRLfFxDuhyt5SoOV&quot;,&quot;auto_signup&quot;: False,}}
+SOCIAL_AUTH_OIDC_FULL_NAME_VALIDATED = True
+</code></pre></div>
+<p>If I go to my oidc_url/.well-known/openid-configuration, then I get the json with the keycloak's configuration.</p>
+<p>Do you know if I am missing something in the OIDC configuation.</p>
+<p>Any help would be appreciated</p>
+
+
+
+<a name="1541684"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1541684" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> A. Casanova <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1541684">(Apr 05 2023 at 11:27)</a>:</h4>
+<p>I find the correct log. In the file <code>/var/log/zulip/server.log</code>  I get:<br>
+The last line is the one showing the error (407)</p>
+<div class="codehilite"><pre><span></span><code>2023-04-05 11:22:22.770 ERR  [django.request] Internal Server Error: /login/oidc/
+Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/exception.py&quot;, line 55, in inner
+    response = get_response(request)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/base.py&quot;, line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/views/decorators/cache.py&quot;, line 62, in _wrapped_view_func
+    response = view_func(request, *args, **kwargs)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/social_django/utils.py&quot;, line 46, in wrapper
+    return func(request, backend, *args, **kwargs)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/social_django/views.py&quot;, line 23, in auth
+    return do_auth(request.backend, redirect_name=REDIRECT_FIELD_NAME)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/social_core/actions.py&quot;, line 29, in do_auth
+    return backend.start()
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/social_core/backends/base.py&quot;, line 35, in start
+    return self.strategy.redirect(self.auth_url())
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/social_core/backends/oauth.py&quot;, line 328, in auth_url
+    params = self.auth_params(state)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/social_core/backends/open_id_connect.py&quot;, line 119, in auth_params
+    self.authorization_url(), state
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/social_core/backends/open_id_connect.py&quot;, line 65, in authorization_url
+    self.oidc_config().get(&#39;authorization_endpoint&#39;)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/social_core/utils.py&quot;, line 300, in wrapped
+    cached_value = fn(this)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/social_core/backends/open_id_connect.py&quot;, line 99, in oidc_config
+    return self.get_json(self.oidc_endpoint() +
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/social_core/backends/base.py&quot;, line 242, in get_json
+    return self.request(url, *args, **kwargs).json()
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/social_core/backends/base.py&quot;, line 238, in request
+    response.raise_for_status()
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/requests/models.py&quot;, line 1021, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 407 Client Error: Proxy Authentication Required for url: http://localhost:8090/auth/realms/myrealm/.well-known/openid-configuration
+</code></pre></div>
+<p>I am working on this, I will put here the missing configuration</p>
+
+
+
+<a name="1541691"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1541691" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> A. Casanova <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1541691">(Apr 05 2023 at 11:51)</a>:</h4>
+<p>Related: <br>
+(Open Issue) <a href="https://github.com/zulip/zulip/issues/20490">https://github.com/zulip/zulip/issues/20490</a><br>
+(Another topic) <a href="#narrow/stream/31-production-help/topic/OIDC.20connection">https://chat.zulip.org/#narrow/stream/31-production-help/topic/OIDC.20connection</a><br>
+(Proxy congiguration) <a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#customizing-the-outgoing-http-proxy">https://zulip.readthedocs.io/en/latest/production/deployment.html#customizing-the-outgoing-http-proxy</a></p>
+
+
+
+<a name="1545057"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1545057" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> A. Casanova <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1545057">(Apr 11 2023 at 08:30)</a>:</h4>
+<p>cat /var/log/zulip/smokescreen.log</p>
+<div class="codehilite"><pre><span></span><code>...
+{&quot;allow&quot;:false,&quot;content_length&quot;:197,&quot;decision_reason&quot;:&quot;The destination address (127.0.0.1) was denied by rule &#39;Deny: Not Global Unicast&#39;. destination address was denied by rule, see error&quot;,&quot;dns_lookup_time_ms&quot;:0,&quot;enforce_would_deny&quot;:true,&quot;id&quot;:&quot;cgqi72o07r1lbgtiu9ag&quot;,&quot;inbound_remote_addr&quot;:&quot;127.0.0.1:41464&quot;,&quot;level&quot;:&quot;warning&quot;,&quot;msg&quot;:&quot;CANONICAL-PROXY-DECISION&quot;,&quot;project&quot;:&quot;&quot;,&quot;proxy_type&quot;:&quot;http&quot;,&quot;requested_host&quot;:&quot;trikora_keycloak_dev:8090&quot;,&quot;role&quot;:&quot;&quot;,&quot;start_time&quot;:&quot;2023-04-11T09:08:27.904051658Z&quot;,&quot;time&quot;:&quot;2023-04-11T09:08:27Z&quot;,&quot;trace_id&quot;:&quot;&quot;}
+</code></pre></div>
+
+
+
+<a name="1545081"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1545081" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> A. Casanova <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1545081">(Apr 11 2023 at 10:07)</a>:</h4>
+<p><span class="user-mention" data-user-id="12178">@Alex Vandiver</span> , You have any idea about the error 'Deny: Not Global Unicast'? <br>
+I have overwrite the smokescream with this:<br>
+PD, for this example you can use podman as a complete alias for docker</p>
+<div class="codehilite" data-code-language="Bash"><pre><span></span><code>podman<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-it<span class="w"> </span>container_name<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>/bin/bash<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-c<span class="w"> </span><span class="s2">"cat &lt;&lt;EOF &gt;/etc/supervisor/conf.d/zulip/smokescreen.conf</span>
+<span class="s2">[program:smokescreen]</span>
+<span class="s2">command=/usr/local/bin/smokescreen-5b7c3b74c3243e167cb650a91406c11e80532319-go-1.19.3 --listen-ip 127.0.0.1 --unsafe-allow-private-ranges</span>
+<span class="s2">priority=15</span>
+<span class="s2">autostart=true</span>
+<span class="s2">autorestart=true</span>
+<span class="s2">user=zulip</span>
+<span class="s2">redirect_stderr=true</span>
+<span class="s2">stdout_logfile=/var/log/zulip/smokescreen.log</span>
+<span class="s2">EOF</span>
+<span class="s2">"</span>
+</code></pre></div>
+<p>In order to complete disable the protections.(Just to see if smoke screen was the issue) Then I have applied the changes with:</p>
+<div class="codehilite" data-code-language="Bash"><pre><span></span><code>podman<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-it<span class="w"> </span>container_name<span class="w"> </span>supervisorctl<span class="w"> </span>reread
+podman<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-it<span class="w"> </span>container_name<span class="w"> </span>supervisorctl<span class="w"> </span>update
+podman<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-it<span class="w"> </span>container_name<span class="w"> </span>supervisorctl<span class="w"> </span>restart<span class="w"> </span>smokescreen
+</code></pre></div>
+<p>But the error remains.</p>
+
+
+
+<a name="1545285"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1545285" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1545285">(Apr 11 2023 at 15:22)</a>:</h4>
+<p>Apparently <code>--unsafe-allow-private-ip-ranges</code> is only for, well, private IP ranges, like <code>192.168.0.0/16</code>.  It doesn't affect <code>127.0.0.1</code>.</p>
+
+
+
+<a name="1545289"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1545289" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1545289">(Apr 11 2023 at 15:30)</a>:</h4>
+<p>I think we need to walk around the environment-default proxy for the OIDC server, then (and you should revert the change you made to Smokescreen, which makes it insecure).  Source-diving, it looks like there's <a href="https://github.com/python-social-auth/social-core/blob/master/social_core/backends/base.py#L226">a <code>PROXIES</code> setting we can set</a>.</p>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span>, what's the right way to plumb things through into <code>self.setting("PROXIES")</code> via the <code>setting.py</code> settings?  I think if we set it to <code>{}</code> that should cause it to not use the proxy.</p>
+
+
+
+<a name="1545299"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1545299" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1545299">(Apr 11 2023 at 16:10)</a>:</h4>
+<p>I think that's going to be the <code>SOCIAL_AUTH_PROXIES</code> Django setting; all python-social-auth settings have that prefix appended.</p>
+
+
+
+<a name="1545300"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1545300" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1545300">(Apr 11 2023 at 16:11)</a>:</h4>
+<p>It seems totally undocumented upstream, but <a href="https://github.com/python-social-auth/social-core/issues/146#issuecomment-924157186">https://github.com/python-social-auth/social-core/issues/146#issuecomment-924157186</a> confirms that.</p>
+
+
+
+<a name="1546088"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1546088" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1546088">(Apr 12 2023 at 16:33)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/OIDC.20error.20when.20login/near/1545299">said</a>:</p>
+<blockquote>
+<p>I think that's going to be the <code>SOCIAL_AUTH_PROXIES</code> Django setting; all python-social-auth settings have that prefix appended.</p>
+</blockquote>
+<p>Yeah, that's right, tested quickly to confirm the value gets grabbed by the OIDC backend. <code>SOCIAL_AUTH_OIDC_PROXIES</code> works as well, in case one wants it to be backend-specific and not affect some other social auth backend</p>
+
+
+
+<a name="1546096"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1546096" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1546096">(Apr 12 2023 at 16:43)</a>:</h4>
+<p><span class="user-mention" data-user-id="26668">@A. Casanova</span>: In case you didn't see the above, give setting <code>SOCIAL_AUTH_PROXIES = {}</code> a try, along with unsetting your smokescreen supervisor changes.</p>
+
+
+
+<a name="1546194"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1546194" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> A. Casanova <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1546194">(Apr 12 2023 at 18:34)</a>:</h4>
+<p>hello, I found here <a href="https://github.com/python-social-auth/social-core/issues/474">https://github.com/python-social-auth/social-core/issues/474</a>,<br>
+that we can set the proxy with this syntax :<code>SOCIAL_AUTH_PROXIES = {'http:' 'http://IP: PORT', 'https': 'https://IP: PORT'}</code></p>
+<p>As we are in a container, remember that we need to append <code>SETTINGS_</code> before the canonical name.</p>
+<p>I will try this out ASAS, I will share the results.</p>
+
+
+
+<a name="1546197"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1546197" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1546197">(Apr 12 2023 at 18:35)</a>:</h4>
+<p>I think setting it to <code>{}</code> will <em>unset</em> the default of Smokescreen that it picks up from the environment.</p>
+
+
+
+<a name="1546199"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1546199" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1546199">(Apr 12 2023 at 18:36)</a>:</h4>
+<p>You may need <code>{"http": None, "https": None}</code> but I expect the empty list is enough.</p>
+
+
+
+<a name="1546210"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1546210" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> A. Casanova <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1546210">(Apr 12 2023 at 18:39)</a>:</h4>
+<p>Okay, thanks. I didn't realize about the empty dict <span aria-label="+1" class="emoji emoji-1f44d" role="img" title="+1">:+1:</span></p>
+
+
+
+<a name="1546267"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1546267" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1546267">(Apr 12 2023 at 19:27)</a>:</h4>
+<p>Once we confirm this works, we should consider whether this <code>SOCIAL_AUTH_PROXIES</code> change is a thing we want to make the default.</p>
+
+
+
+<a name="1548972"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1548972" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> A. Casanova <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1548972">(Apr 17 2023 at 10:17)</a>:</h4>
+<p>Empty dict, give me the following error while building the container image</p>
+<div class="codehilite"><pre><span></span><code>Error: parsing main Dockerfile: /&lt;my-path&gt;/Dockerfile: Syntax error - can&#39;t find = in &quot;SETTING_SOCIAL_AUTH_PROXIES&quot;. Must be of the form: name=value
+</code></pre></div>
+<p>So I changed by:</p>
+<div class="codehilite"><pre><span></span><code>SETTING_SOCIAL_AUTH_PROXIES=&#39;{&quot;http&quot;: None, &quot;https&quot;: None}&#39;
+</code></pre></div>
+<p>And the dockerfile compiles. </p>
+<p>But there is a bug while initializing the property.</p>
+<p>From the initial logs:</p>
+<div class="codehilite"><pre><span></span><code>Setting key &quot;SOCIAL_AUTH_PROXIES&quot;, type &quot;string&quot; in file &quot;/etc/zulip/settings.py&quot;.
+</code></pre></div>
+<p>The proxy is set as a string instead of an array. This is probably since string type is a default. You should set the <code>SOCIAL_AUTH_PROXIES</code> as an array in order to make this work properly.</p>
+<p>If a try to log in with OIDC, I get : (<code>/var/log/zulip/server.log </code>)</p>
+<div class="codehilite"><pre><span></span><code>  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/requests/sessions.py&quot;, line 758, in merge_environment_settings
+    no_proxy = proxies.get(&quot;no_proxy&quot;) if proxies is not None else None
+AttributeError: &#39;str&#39; object has no attribute &#39;get&#39;
+</code></pre></div>
+<p>So I decided to add the property manually (using cat &gt;&gt; ....) into the <code>settings.py</code> and restart the server. <strong>And it works</strong>.</p>
+<p>It give me another error related with OIDC but not with the proxy <span aria-label="+1" class="emoji emoji-1f44d" role="img" title="+1">:+1:</span>. </p>
+<p>It would be fine to be able to set the proxies env variable from the dockerfile. In order to automate the whole thing without restarting the server</p>
+
+
+
+<a name="1548997"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1548997" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> A. Casanova <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1548997">(Apr 17 2023 at 11:30)</a>:</h4>
+<p>This definitively works:</p>
+<div class="codehilite"><pre><span></span><code>[podman | docker] exec -it  &lt;zulip-container&gt;\
+  /bin/bash \
+  -c &quot;echo &#39;SOCIAL_AUTH_PROXIES = {\&quot;http\&quot;: None, \&quot;https\&quot;: None}&#39; &gt;&gt;/etc/zulip/settings.py&quot;
+[podman | docker] exec -u zulip &lt;zulip-container&gt; bash -c &quot;/home/zulip/deployments/current/scripts/restart-server&quot;
+</code></pre></div>
+<p>Then, the error disappears. Thanks you guys !!</p>
+
+
+
+<a name="1549037"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1549037" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1549037">(Apr 17 2023 at 14:27)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>Setting key &quot;SOCIAL_AUTH_PROXIES&quot;, type &quot;string&quot; in file &quot;/etc/zulip/settings.py&quot;.
+</code></pre></div>
+<p>Gr.  Yeah, this is due to the very hacky settings code that the Docker container users, which assumes it knows the types of all of the settings variables, which is clearly untrue.</p>
+
+
+
+<a name="1549038"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1549038" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1549038">(Apr 17 2023 at 14:31)</a>:</h4>
+<p>You should be able to set <code>ZULIP_CUSTOM_SETTINGS</code> to <code>SOCIAL_AUTH_PROXIES = {"http": None, "https": None}</code> which should do the equivalent of your echo.</p>
+
+
+
+<a name="1549145"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1549145" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1549145">(Apr 17 2023 at 16:29)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/OIDC.20error.20when.20login/near/1546267">said</a>:</p>
+<blockquote>
+<p>Once we confirm this works, we should consider whether this <code>SOCIAL_AUTH_PROXIES</code> change is a thing we want to make the default.</p>
+</blockquote>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> what are your thoughts on this question? My current thinking is that we probably don't ever intend for API requests by authentication backends to go out via Smokescreen, since those requests target URLs are not user-controlled.</p>
+
+
+
+<a name="1549169"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/OIDC%20error%20when%20login/near/1549169" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/OIDC.20error.20when.20login.html#1549169">(Apr 17 2023 at 16:53)</a>:</h4>
+<p>There is still utility to routing requests we don't ever <em>expect</em> to be user-controlled through Smokescreen:</p>
+<ul>
+<li>It's still a single controlled egress point, which means one consistent IP that the auth backend might see, no matter how many frontend boxes there are</li>
+<li>It's a centralized logging point for request information</li>
+<li>If we actually manage to get auth to Smokescreen working in a reasonable way, it provides defense in depth against code which might be able to be tricked into making requests to user-controlled URLs, by being able to ACL the individual smokescreen roles down to particular destinations.</li>
+</ul>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

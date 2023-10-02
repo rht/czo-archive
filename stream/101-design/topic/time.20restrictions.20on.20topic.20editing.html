@@ -1,0 +1,573 @@
+<html>
+<head><meta charset="utf-8"><title>time restrictions on topic editing · design · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/101-design/index.html">design</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html">time restrictions on topic editing</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1357753"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1357753" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1357753">(Apr 01 2022 at 00:03)</a>:</h4>
+<p>We have a complex set of time-based restrictions on topic editing, which can result in unexpected behavior when editing and resolving topics (cf. <a class="stream-topic" data-stream-id="9" href="/#narrow/stream/9-issues/topic/if.20marked.20as.20resolved.20it.20duplicates.20the.20argument">#issues &gt; if marked as resolved it duplicates the argument</a> for a recent example). Rather than specifically trying to patch resolving topics, I  think it's worth discussing whether we should change/simplify the system overall.</p>
+<p>Based on the spelunking <span class="user-mention" data-user-id="10242">@Sahil Batra</span> did for the <a class="stream-topic" data-stream-id="9" href="/#narrow/stream/9-issues/topic/topic.20resolution.20error">#issues &gt; topic resolution error</a> discussion and the help center docs, the current time-based rules are (with some caveats below):</p>
+<ol>
+<li>In general, only administrators and moderators can edit the topics of messages that were sent more than 3 days ago, regardless of what topic editing permissions are set to. (<a href="https://zulip.com/help/configure-who-can-edit-topics">https://zulip.com/help/configure-who-can-edit-topics</a>)</li>
+<li>If you are a moderator or admin, the 3-day restriction does not affect you.</li>
+<li>If message editing is allowed, editing the topic of your own message is <em>also</em> controlled by the time limit for editing messages (<a href="https://zulip.com/help/configure-message-editing-and-deletion">https://zulip.com/help/configure-message-editing-and-deletion</a>). In particular, if the time limit for editing messages is N days and N &gt; 3, you can edit topics of your messages for N days. (Someone should check what happens when N &lt; 3, but I would think editing the topic would be allowed.)</li>
+</ol>
+
+
+
+<a name="1357755"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1357755" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1357755">(Apr 01 2022 at 00:06)</a>:</h4>
+<p>In general, if you can't edit the topic of a message, you just won't see the menu option for that message. But based on testing on <code>dev</code>,  the behavior doesn't entirely match the above description.</p>
+<p>In particular, consider this situation:</p>
+<ul>
+<li>You are a regular user (not a moderator/admin).</li>
+<li>You're allowed to edit your messages (say, without a time limit).</li>
+</ul>
+
+
+
+<a name="1357761"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1357761" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1357761">(Apr 01 2022 at 00:12)</a>:</h4>
+<p>If you sent a message to some topic more than three days ago, it turns out you can change the topic of that message and all messages that were sent afterwards to the same topic. This is regardless of whether they were sent more than 3 days ago, or who they were sent by.</p>
+
+
+
+<a name="1357784"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1357784" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1357784">(Apr 01 2022 at 00:31)</a>:</h4>
+<p>You can do it via the three-dot message menu by by choosing the "Change later messages to this topic" option. You can also do it by editing the topic in the message header bar, as long as you can get a header bar. You always have one if your message was the first in the topic, but you can also get one via search, and it works the same way.</p>
+
+
+
+<a name="1357786"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1357786" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1357786">(Apr 01 2022 at 00:33)</a>:</h4>
+<p>The motivation for the 3-day time limit:</p>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/9-issues/topic/topic.20resolution.20error/near/1261383">said</a>:</p>
+<blockquote>
+<p>Do we just want to remove the "3 days" restriction?  In general I don't think that sort of restriction with a hardcoded time limit is a good pattern.</p>
+<p>However, the feature as presently designed does protect against a potentially very annoying possible form of abuse, where a random user renames all the historical topics in a stream, destroying information.  </p>
+<p>So I'm not sure I see a straightforward way to remove the topic editing limitation without creating the other.  </p>
+<p>I do think for resolving topics in particular, that we could exempt "resolve topic" from the 3-day restriction, since the worst a bad actor could do is toggling the resolved status of every topic, which is not particularly destructive.</p>
+</blockquote>
+
+
+
+<a name="1357789"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1357789" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1357789">(Apr 01 2022 at 00:36)</a>:</h4>
+<p>However, the present situation is super complicated! And while it prevent sabotage by a <em>random</em> user, it doesn't do that if the user sent a message to that topic earlier.</p>
+
+
+
+<a name="1357802"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1357802" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1357802">(Apr 01 2022 at 00:41)</a>:</h4>
+<p>I think the core of what makes it tricky to manage the UI is being able to edit the topic for some messages but not others. We have a couple of layers of this:</p>
+<ol>
+<li>The concept of having a time limit for editing topics.</li>
+<li>The idea of having different topic editing permissions for your own messages vs. someone else's.</li>
+</ol>
+<p>Even (1) creates some complexity, but (2) is what we are currently failing to fully implement. And fundamentally being able to move your own messages but not other people's is useful only in a subset of situations when you might want to change a topic.</p>
+
+
+
+<a name="1357805"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1357805" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1357805">(Apr 01 2022 at 00:43)</a>:</h4>
+<p>So one possible direction would be:</p>
+<ol>
+<li>Topic editing permissions are always the same, regardless of whether the message was sent by you or someone else. Being able to edit message content does not mean that you can edit the topic.</li>
+<li>Change the "3 days" restriction to be a variable, and make it not apply in the special case of resolving topics.</li>
+</ol>
+
+
+
+<a name="1358021"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1358021" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1358021">(Apr 01 2022 at 10:51)</a>:</h4>
+<blockquote>
+<p>If message editing is allowed, editing the topic of your own message is also controlled by the time limit for editing messages (<a href="https://zulip.com/help/configure-message-editing-and-deletion">https://zulip.com/help/configure-message-editing-and-deletion</a>). In particular, if the time limit for editing messages is N days and N &gt; 3, you can edit topics of your messages for N days. (Someone should check what happens when N &lt; 3, but I would think editing the topic would be allowed.)</p>
+</blockquote>
+<p>I don't think this is the current behavior as per the code. Topic editing depends on message editing permission only in one way, i.e. - we do not allow topic editing when message editing is set to <code>Never</code>. Otherwise if time limit of editing messages is set to N days (doesn't matter if N &gt; 3 or N &lt; 3), editing topic of one's own message is allowed always. <del>We should altleast make this clear in the docs, till we decide what should the correct behavior here.</del></p>
+
+
+
+<a name="1358022"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1358022" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1358022">(Apr 01 2022 at 10:54)</a>:</h4>
+<p>Also, the docs mentions this in the bullet points below the table -</p>
+<blockquote>
+<p>Allow message editing can be set to Never, Any time or Up to [a customizable time limit] after posting. If set to Never, users cannot edit message topics either. For any other value, users can edit message topics at any time.</p>
+</blockquote>
+
+
+
+<a name="1358195"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1358195" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1358195">(Apr 01 2022 at 19:26)</a>:</h4>
+<p>Ohh, interesting. That is perhaps even more confusing than I thought. :)</p>
+
+
+
+<a name="1358200"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1358200" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1358200">(Apr 01 2022 at 19:29)</a>:</h4>
+<p>OK, let me try to repost the summary of the situation; I think the discussion above is all still applicable.</p>
+<ol>
+<li>In general, only administrators and moderators can edit the topics of messages that were sent more than 3 days ago, regardless of what topic editing permissions are set to. (<a href="https://zulip.com/help/configure-who-can-edit-topics">https://zulip.com/help/configure-who-can-edit-topics</a>)</li>
+<li>If you are a moderator or admin, the 3-day restriction does not affect you.</li>
+<li>If message editing is allowed in the organization, you can <em>always</em> edit the topic of <strong>your own messages</strong> (no time limit). This is the case <em>regardless</em> of the time limit set on message content editing. (<a href="https://zulip.com/help/configure-message-editing-and-deletion">https://zulip.com/help/configure-message-editing-and-deletion</a>)</li>
+</ol>
+
+
+
+<a name="1360830"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1360830" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1360830">(Apr 05 2022 at 23:30)</a>:</h4>
+<p><em>bump</em> for feedback on this, at least from <span class="user-mention" data-user-id="7">@Tim Abbott</span> .</p>
+
+
+
+<a name="1363138"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363138" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363138">(Apr 08 2022 at 22:59)</a>:</h4>
+<p>I filed <a href="https://github.com/zulip/zulip/pull/21739">#21739</a> after some live discussion/feedback. <span class="user-mention" data-user-id="10242">@Sahil Batra</span> would you be up for taking this on?</p>
+
+
+
+<a name="1363151"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363151" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363151">(Apr 08 2022 at 23:04)</a>:</h4>
+<p>I think one detail that we need to think about is the case that you sent a message to a new topic and that topic name has a typo -- I think that corner case is that motivated the extra permissions for moving your own topics. It feels like a bad experience to not be able to fix your own typo.</p>
+
+
+
+<a name="1363153"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363153" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363153">(Apr 08 2022 at 23:05)</a>:</h4>
+<p>I don't think we should do anything about that corner case. Suppose someone sends a reply 5 seconds after your message... now what?</p>
+
+
+
+<a name="1363154"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363154" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363154">(Apr 08 2022 at 23:05)</a>:</h4>
+<p>Well, I was thinking about a refinement that lets you rename a topic that contains only messages that you yourself sent.</p>
+
+
+
+<a name="1363156"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363156" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363156">(Apr 08 2022 at 23:06)</a>:</h4>
+<p>The org admins can allow topic editing for 2 minutes if they just want typo fixes to be possible.</p>
+
+
+
+<a name="1363160"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363160" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363160">(Apr 08 2022 at 23:07)</a>:</h4>
+<p>Well, but they probably want to allow moderators to allow topic editing for any period of time but normal users to be able to do it for 2 minutes.</p>
+
+
+
+<a name="1363161"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363161" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363161">(Apr 08 2022 at 23:07)</a>:</h4>
+<p>And that preference would I think not be possible to represent with the currently imagined model?</p>
+
+
+
+<a name="1363162"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363162" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363162">(Apr 08 2022 at 23:07)</a>:</h4>
+<p>We can add that level of fine-grained permission as a follow up.</p>
+
+
+
+<a name="1363163"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363163" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363163">(Apr 08 2022 at 23:08)</a>:</h4>
+<p>But these settings shouldn't involve complex rules about who sent messages to what topic.</p>
+
+
+
+<a name="1363164"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363164" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363164">(Apr 08 2022 at 23:08)</a>:</h4>
+<p>Well I think we need to think about this type of problem statement in order to think about the data model we want for settings.</p>
+
+
+
+<a name="1363166"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363166" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363166">(Apr 08 2022 at 23:09)</a>:</h4>
+<p>Sure, so in a future iteration (but not now), I can imagine setting time limits on a per-role basis.</p>
+
+
+
+<a name="1363170"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363170" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363170">(Apr 08 2022 at 23:10)</a>:</h4>
+<p>OK, I think that means we should name variables for the settings (etc.) in a way that imagines such a refinement might happen.</p>
+
+
+
+<a name="1363171"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363171" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363171">(Apr 08 2022 at 23:11)</a>:</h4>
+<p>What do you think we'd recommend (or set as the default values) of these settings for an open organization?</p>
+
+
+
+<a name="1363172"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363172" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363172">(Apr 08 2022 at 23:13)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/101-design/topic/time.20restrictions.20on.20topic.20editing/near/1363170">said</a>:</p>
+<blockquote>
+<p>OK, I think that means we should name variables for the settings (etc.) in a way that imagines such a refinement might happen.</p>
+</blockquote>
+<p>Sure, added a note to the issue.</p>
+
+
+
+<a name="1363174"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363174" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363174">(Apr 08 2022 at 23:15)</a>:</h4>
+<p>Hm, I was thinking allowing topic editing any time might be fine, but I guess something like 1 week is closer to the current state.</p>
+
+
+
+<a name="1363175"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363175" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363175">(Apr 08 2022 at 23:16)</a>:</h4>
+<p>My concern here is that I think many open organizations might pick something like "Open organization where only moderators can move topics" -- that's certainly our configuration here. And that this change might make it impossible for normal users to fix typos in new topics that they started without asking a moderator for help (which I expect to feel frustrating).</p>
+
+
+
+<a name="1363176"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363176" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363176">(Apr 08 2022 at 23:16)</a>:</h4>
+<p>An alternative refinement to this plan would be to allow you to change the topic for a message that you yourself if you also have permission to edit the content of the message at the current moment. (Possibly as an independent checkbox setting).</p>
+
+
+
+<a name="1363177"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363177" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363177">(Apr 08 2022 at 23:17)</a>:</h4>
+<p>I think it's hard to avoid super-weird experiences when topic editing permissions for your own messages are not the same as for other users'. Keep in mind that our current experience is <em>buggy</em>.</p>
+
+
+
+<a name="1363178"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363178" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363178">(Apr 08 2022 at 23:17)</a>:</h4>
+<p>That still feels like it'd be frustrating, I can imagine the thread where the first reply is "You mispelled the topic name" and now you're stuck.</p>
+
+
+
+<a name="1363179"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363179" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363179">(Apr 08 2022 at 23:18)</a>:</h4>
+<p>I understand the current experience is buggy -- but the context is that we created this special 3-day permission thing in response to some very frustrated user complaints, and I'm trying to figure out how to avoid reintroducing the combination of permissions that prompted them.</p>
+
+
+
+<a name="1363180"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363180" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363180">(Apr 08 2022 at 23:18)</a>:</h4>
+<p>Well, if you think this is critical, then maybe having per-role time limits should be part of this issue. Then you can make it 2 or 10 minutes for members and any time for moderators+, for instance.</p>
+
+
+
+<a name="1363182"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363182" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363182">(Apr 08 2022 at 23:20)</a>:</h4>
+<p>Let me see if I can track down the original discussions around this feature.</p>
+
+
+
+<a name="1363183"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363183" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363183">(Apr 08 2022 at 23:21)</a>:</h4>
+<p>In your proposal, when your first reply is "You mispelled the topic name", you can move your message, but not that reply. So it's still a mess.</p>
+
+
+
+<a name="1363185"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363185" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363185">(Apr 08 2022 at 23:25)</a>:</h4>
+<p>Yeah, maybe I can't come up with a proposal that's better than having a different time limit for different roles.</p>
+
+
+
+<a name="1363186"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363186" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363186">(Apr 08 2022 at 23:26)</a>:</h4>
+<p>Or at least having two time limits -- one for everyone and one for moderators. I'll need to think a bit about how to do this in the upcoming Groups model in a way that feels sane.</p>
+
+
+
+<a name="1363187"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363187" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363187">(Apr 08 2022 at 23:26)</a>:</h4>
+<p>OK, I'll leave the issue as-is for now?</p>
+
+
+
+<a name="1363188"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363188" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363188">(Apr 08 2022 at 23:27)</a>:</h4>
+<p>Or would you like to have multiple time limits immediately? There is already no time limit for admins, as it's written.</p>
+
+
+
+<a name="1363189"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363189" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363189">(Apr 08 2022 at 23:32)</a>:</h4>
+<p>I think if we want to avoid unhappy users complaining about a substantial regression, we probably need it to be possible to generate a configuration where:</p>
+<ul>
+<li>Admins/moderators can move topics without a deadline.</li>
+<li>Full Members can move topics within a limited window of time (less than a week), potentially only within a stream.</li>
+</ul>
+<p>Since I think that's what I'd want for <a href="http://chat.zulip.org">chat.zulip.org</a>, and expect many larger open organizations to want.</p>
+<p>There's a few configurations through which we could do this -- e.g. one option would be to have a separate "Who + time limit" for "Moving messages anywhere" and another for "Move to a different topic within current stream". I'm not thrilled with the complexity of the overlap possibility there, but it at least feels like it could be clearly explained with some effort.</p>
+
+
+
+<a name="1363193"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363193" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363193">(Apr 08 2022 at 23:35)</a>:</h4>
+<p>Would resolving topics be limited in the same way, or be its own carve-out?</p>
+
+
+
+<a name="1363199"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363199" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363199">(Apr 08 2022 at 23:40)</a>:</h4>
+<p>I was imagining that the time limitations for moving within vs. across streams would be the same... hmm.</p>
+<p>Is it common to set different role permissions for those two? What are the use cases?</p>
+
+
+
+<a name="1363202"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363202" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363202">(Apr 08 2022 at 23:41)</a>:</h4>
+<p>Ok, what if we just turn off the time limit for topic editing for both admins and moderators (without a setting)? And assume it's very rare to want moderators to be able to edit topics, but only for a limited time period?</p>
+
+
+
+<a name="1363206"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363206" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363206">(Apr 08 2022 at 23:42)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/101-design/topic/time.20restrictions.20on.20topic.20editing/near/1363193">said</a>:</p>
+<blockquote>
+<p>Would resolving topics be limited in the same way, or be its own carve-out?</p>
+</blockquote>
+<p>I was thinking that this would ideally be controlled separately, but can be a follow-on. The note on the issue:</p>
+<ul>
+<li>Ideally, resolving topics would be controlled separately from other types of topic editing; cf. <a href="https://github.com/zulip/zulip/pull/19955">#19955</a>.</li>
+</ul>
+
+
+
+<a name="1363210"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363210" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363210">(Apr 08 2022 at 23:44)</a>:</h4>
+<p>We may want to pull out the global "resolve topic" setting into its own issue, I guess.</p>
+
+
+
+<a name="1363415"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363415" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363415">(Apr 09 2022 at 04:51)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="19257">Alya Abbott</span> <a href="#narrow/stream/101-design/topic/time.20restrictions.20on.20topic.20editing/near/1363138">said</a>:</p>
+<blockquote>
+<p>I filed <a href="https://github.com/zulip/zulip/pull/21739">#21739</a> after some live discussion/feedback. <span class="user-mention silent" data-user-id="10242">Sahil Batra</span> would you be up for taking this on?</p>
+</blockquote>
+<p>Yes sure.</p>
+
+
+
+<a name="1363416"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363416" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363416">(Apr 09 2022 at 04:53)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="19257">Alya Abbott</span> <a href="#narrow/stream/101-design/topic/time.20restrictions.20on.20topic.20editing/near/1363202">said</a>:</p>
+<blockquote>
+<p>Ok, what if we just turn off the time limit for topic editing for both admins and moderators (without a setting)? And assume it's very rare to want moderators to be able to edit topics, but only for a limited time period?</p>
+</blockquote>
+<p>Yes, I think we can remove time limit for admins and moderators (as we do now) to handle situations like typos in topic that Tim mentioned.</p>
+
+
+
+<a name="1363434"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363434" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363434">(Apr 09 2022 at 05:32)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="10242">Sahil Batra</span> <a href="#narrow/stream/101-design/topic/time.20restrictions.20on.20topic.20editing/near/1363416">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="19257">Alya Abbott</span> <a href="#narrow/stream/101-design/topic/time.20restrictions.20on.20topic.20editing/near/1363202">said</a>:</p>
+<blockquote>
+<p>Ok, what if we just turn off the time limit for topic editing for both admins and moderators (without a setting)? And assume it's very rare to want moderators to be able to edit topics, but only for a limited time period?</p>
+</blockquote>
+<p>Yes, I think we can remove time limit for admins and moderators (as we do now) to handle situations like typos in topic that Tim mentioned.</p>
+</blockquote>
+<p>I updated the issue accordingly.</p>
+
+
+
+<a name="1363720"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363720" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> shlok (madrix01) <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363720">(Apr 09 2022 at 19:03)</a>:</h4>
+<p>I guess revamping the topic editing permission can also resolve some problems faced in issue <a href="https://github.com/zulip/zulip/pull/19886">#19886</a> (PR <a href="https://github.com/zulip/zulip/pull/20293">#20293</a>)</p>
+
+
+
+<a name="1363724"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1363724" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> shlok (madrix01) <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1363724">(Apr 09 2022 at 19:10)</a>:</h4>
+<p>But getting the first message of the topic will still will be an issue.</p>
+
+
+
+<a name="1364257"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1364257" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1364257">(Apr 11 2022 at 11:39)</a>:</h4>
+<p>I have started working on this issue.</p>
+<p>What we want to do if user sets time limit for editing as 0 after selecting <code>custom</code> option from the dropdown? Currently we set the dropdown to <code>never</code> in that case.<br>
+For the delete message limit setting, we do not allow 0 as value and we show error while doing so.</p>
+
+
+
+<a name="1364292"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1364292" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1364292">(Apr 11 2022 at 15:07)</a>:</h4>
+<p>I think requiring all those custom times to be <code>&gt; 0</code> is good, including the editing time limit, since we're moving the question of whether editing is allowed into a separate checkbox.</p>
+
+
+
+<a name="1364293"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1364293" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1364293">(Apr 11 2022 at 15:10)</a>:</h4>
+<p>Can we disable the "Save" button when the time is not valid in all these fields, and show something like, "Time must be greater than zero." in the tooltip? Should I file a separate issue?</p>
+<p>If that's difficult for some reason, we should at least update the error message to be user-friendly; currently it's: <code>Save failed: Bad value for 'message_content_delete_limit_seconds': -60</code>.</p>
+
+
+
+<a name="1364478"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1364478" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1364478">(Apr 11 2022 at 18:17)</a>:</h4>
+<p>Should not be much work to disable the button. Will do this in the same PR.</p>
+
+
+
+<a name="1364479"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1364479" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1364479">(Apr 11 2022 at 18:20)</a>:</h4>
+<p>Also, in some cases we currently enable/disable the other dependent settings on first saving the original setting. I think we should do that as soon as setting is changed. Like initally the <code>Allow message editing</code> was unchecked and the time limit setting was disabled. Now when I check the <code>Allow message editing</code> setting, the dropdown should be enabled just after that, not after I click <code>Save changes</code> button and then change the time limit setting again.</p>
+
+
+
+<a name="1364524"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1364524" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1364524">(Apr 11 2022 at 19:15)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="10242">Sahil Batra</span> <a href="#narrow/stream/101-design/topic/time.20restrictions.20on.20topic.20editing/near/1364479">said</a>:</p>
+<blockquote>
+<p>Also, in some cases we currently enable/disable the other dependent settings on first saving the original setting. I think we should do that as soon as setting is changed. Like initally the <code>Allow message editing</code> was unchecked and the time limit setting was disabled. Now when I check the <code>Allow message editing</code> setting, the dropdown should be enabled just after that, not after I click <code>Save changes</code> button and then change the time limit setting again.</p>
+</blockquote>
+<p>Agreed!</p>
+
+
+
+<a name="1369794"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1369794" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1369794">(Apr 19 2022 at 09:59)</a>:</h4>
+<p>Opened <a href="https://github.com/zulip/zulip/pull/21837">#21837</a> as a first PR for this.</p>
+
+
+
+<a name="1427478"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1427478" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Neil Pilgrim (neiljp) <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1427478">(Aug 30 2022 at 01:56)</a>:</h4>
+<p>I came here after trying to understand the existing documentation and searching on czo :)</p>
+<p>ZT supports most editing other than 'community' settings, but with <a href="https://github.com/zulip/zulip-terminal/pull/1235">#T1235</a> <span class="user-mention" data-user-id="22454">@Shivam Deotarse</span> is looking at topic renaming and resolution. In ensuring I was understanding the logic I was relying on <a href="https://zulip.com/help/configure-message-editing-and-deletion">https://zulip.com/help/configure-message-editing-and-deletion</a>. As per the above discussion, there are nuances on 'your' vs 'others' topics when renaming all messages in a topic, which are confusing from that page alone. That page also doesn't mention the community time limit (for topics), which I understand to be distinct from the editing time limit, and then there's the 3-day factor too - which is apparently on another page entirely! (<a href="https://zulip.com/help/configure-who-can-edit-topics">https://zulip.com/help/configure-who-can-edit-topics</a>)</p>
+<p>Is there any unified (draft/developer/API) documentation(/code?) for the existing/past and any future topic editing constraints?<br>
+In a worst case UI we can assume the user has no messages in the topic, to avoid the user id issue, but beyond that...</p>
+
+
+
+<a name="1427542"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1427542" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1427542">(Aug 30 2022 at 05:43)</a>:</h4>
+<p>Others may be more aware than me of API or developer documentation... In general, I'm hoping folks don't spend significant time improving how clients handle topic editing permissions until we can resolve <a href="https://github.com/zulip/zulip/pull/21739">#21739</a>, which <span class="user-mention" data-user-id="10242">@Sahil Batra</span> is working on.</p>
+
+
+
+<a name="1427574"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1427574" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Neil Pilgrim (neiljp) <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1427574">(Aug 30 2022 at 06:27)</a>:</h4>
+<p>I'm looking forward to future clarity too, but there will be older server versions out there to support for a while, so it needs to be handled somehow.</p>
+
+
+
+<a name="1448541"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1448541" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1448541">(Oct 12 2022 at 17:42)</a>:</h4>
+<p>I am working on adding a setting for configuring time limit for moving messages (both within and across streams). We intended to revamp the topic edit permissions such that we could show/hide the options in left sidebar popover correctly for all cases (<a href="#narrow/stream/9-issues/topic/topic.20resolution.20error/near/1261658">some previous discussion</a>).</p>
+<p>But now after considering the messages as same irrespective of sender, we would still need a message object to find whether a user has permission to move message because we would check whether the time limit has passed or not. Till now moving messages across streams was independent of the message since there was no time limit, but now as per <a href="https://github.com/zulip/zulip/pull/21739">#21739</a> the new setting would be applicable for both moving messages within and across streams, and there would be same issue for showing <code>Move topic</code> option as well.</p>
+
+
+
+<a name="1448750"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1448750" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1448750">(Oct 12 2022 at 21:51)</a>:</h4>
+<p>Hmm, yeah, so for users to whom the time limit applies (non-admins/non-moderators), I think ideally:</p>
+<ol>
+<li>
+<p>In the left sidebar, we would show the "Move topic" option if <em>all</em> messages in the topic are recent enough to move. <br>
+Though ideally we'd do something fancier for <a href="https://github.com/zulip/zulip/pull/20502">#20502</a> down the line.</p>
+</li>
+<li>
+<p>In the message three-dot menu, we would only show the "Move message" option if the message is recent enough to move.</p>
+</li>
+<li>In the "Move messages" UI, we'd remove or disable the "Move all messages in this topic" option if the user is not allowed to move some of the messages.</li>
+</ol>
+<p>How difficult would this be?</p>
+
+
+
+<a name="1449045"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1449045" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1449045">(Oct 13 2022 at 06:09)</a>:</h4>
+<p>(2) is the current behavior and will remain as it is.</p>
+<p>For (1), we would need the first message of topic and in many cases we would not have that data in the client and would need to fetch it from server, which means a request to server everytime the popover is opened and would be quite inefficient I think. Not sure if there is any other way by which we can avoid this request to the server.</p>
+<p>Similarly for (3) we would need to get the first message of topic from server every time the modal is opened. Less inefficient than (1) but still.</p>
+
+
+
+<a name="1449227"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1449227" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1449227">(Oct 13 2022 at 15:15)</a>:</h4>
+<p>Hmm, if we offer the options, and the user tries to move messages they are not allowed to move, could we give a confirmation prompt? Something that says, roughly, "You can't move all the messages in this topic, but you can move the latest X messages. Do you want to go ahead and do that? Y messages will remain in the current topic."</p>
+
+
+
+<a name="1449228"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1449228" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1449228">(Oct 13 2022 at 15:16)</a>:</h4>
+<p>For the left sidebar, do we know when the user isn't allowed to move <em>any</em> of the messages in the topic, i.e. they are all too old?</p>
+
+
+
+<a name="1449300"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1449300" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1449300">(Oct 13 2022 at 17:53)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="19257">Alya Abbott</span> <a href="#narrow/stream/101-design/topic/time.20restrictions.20on.20topic.20editing/near/1449227">said</a>:</p>
+<blockquote>
+<p>Hmm, if we offer the options, and the user tries to move messages they are not allowed to move, could we give a confirmation prompt? Something that says, roughly, "You can't move all the messages in this topic, but you can move the latest X messages. Do you want to go ahead and do that? Y messages will remain in the current topic."</p>
+</blockquote>
+<p>I think this should be possible.</p>
+
+
+
+<a name="1449301"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1449301" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1449301">(Oct 13 2022 at 17:54)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="19257">Alya Abbott</span> <a href="#narrow/stream/101-design/topic/time.20restrictions.20on.20topic.20editing/near/1449228">said</a>:</p>
+<blockquote>
+<p>For the left sidebar, do we know when the user isn't allowed to move <em>any</em> of the messages in the topic, i.e. they are all too old?</p>
+</blockquote>
+<p>Not always. For this we need to check the first message of the topic, and the client may not have that and would need to fetch it from server.</p>
+
+
+
+<a name="1449307"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1449307" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1449307">(Oct 13 2022 at 18:16)</a>:</h4>
+<p>Sigh, do we really  need time-based editing options? ;)</p>
+
+
+
+<a name="1449308"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1449308" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1449308">(Oct 13 2022 at 18:17)</a>:</h4>
+<p>Anyway, it sounds like the confirmation prompt is our best path forward, then. Would it help to write out the details in an issue, or is this discussion enough to start with?</p>
+
+
+
+<a name="1449628"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1449628" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1449628">(Oct 14 2022 at 06:33)</a>:</h4>
+<p>This discussion is enough. I can start with it and will ask here only if I will need any clarifications.</p>
+
+
+
+<a name="1449655"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1449655" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1449655">(Oct 14 2022 at 07:17)</a>:</h4>
+<p>On thinking more, if we not allow moving messages whose limit has been passed, then user would have to break the topic if they really want to edit the topic. Not sure how much problem that would be.</p>
+
+
+
+<a name="1449661"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1449661" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1449661">(Oct 14 2022 at 07:21)</a>:</h4>
+<p>Do you mean that might be a problem when editing from the topic bar, or in general?</p>
+
+
+
+<a name="1449669"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1449669" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1449669">(Oct 14 2022 at 07:30)</a>:</h4>
+<p>I meant in general, user would be allowed to only move some part of the topic.</p>
+
+
+
+<a name="1449675"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1449675" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1449675">(Oct 14 2022 at 07:37)</a>:</h4>
+<p>Yeah, that's the situation where I think we should give a confirmation/warning dialog.</p>
+
+
+
+<a name="1449886"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/time%20restrictions%20on%20topic%20editing/near/1449886" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/101-design/topic/time.20restrictions.20on.20topic.20editing.html#1449886">(Oct 14 2022 at 17:18)</a>:</h4>
+<p>This will need some thinking about how to implement. I have started a discussion at <a class="stream-topic" data-stream-id="3" href="/#narrow/stream/3-backend/topic/restrict.20topic.20editing.20for.20old.20messages">#backend &gt; restrict topic editing for old messages</a>. <span class="user-mention" data-user-id="7">@Tim Abbott</span> FYI.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

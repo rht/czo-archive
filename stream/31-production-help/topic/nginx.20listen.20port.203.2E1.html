@@ -1,0 +1,83 @@
+<html>
+<head><meta charset="utf-8"><title>nginx listen port 3.1 · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nginx.20listen.20port.203.2E1.html">nginx listen port 3.1</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="967137"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nginx%20listen%20port%203.1/near/967137" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Casper Kvan Clausen <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nginx.20listen.20port.203.2E1.html#967137">(Jul 31 2020 at 14:45)</a>:</h4>
+<p>I customized the listen port for nginx because I need to run behind an Apache reverse proxy, but on upgrade to 3.1 it tries to revert to port 80 and fails because it can't bind. It's not clear to me from the docs how to persist a change to the nginx site configuration across upgrades — I saw <code>master</code> has an <code>nginx_listen_port</code> setting so I guess it's fixed in the future, but what do now?</p>
+<p>Will I have to shut down Apache to run the upgrade, as I ended up doing when I first installed, or is there a better way?</p>
+
+
+
+<a name="967377"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nginx%20listen%20port%203.1/near/967377" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nginx.20listen.20port.203.2E1.html#967377">(Jul 31 2020 at 18:29)</a>:</h4>
+<p><span class="user-mention" data-user-id="16856">@Casper Kvan Clausen</span> I expect you just need to update your <code>/etc/zulip/zulip.conf</code> to configure <code>nginx_listen_port</code>, and then it'll use that porton the upgrade (no need to shut down apache)</p>
+
+
+
+<a name="967408"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nginx%20listen%20port%203.1/near/967408" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Casper Kvan Clausen <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nginx.20listen.20port.203.2E1.html#967408">(Jul 31 2020 at 18:48)</a>:</h4>
+<p>Ah, I took another look at the template. My issue is specifically that I'm using <code>http_only</code> since it's behind a reverse proxy that handles the SSL, and the puppet template for nginx only uses <code>nginx_listen_port</code> if you don't set <code>http_only</code>.</p>
+
+
+
+<a name="967409"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nginx%20listen%20port%203.1/near/967409" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Casper Kvan Clausen <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nginx.20listen.20port.203.2E1.html#967409">(Jul 31 2020 at 18:49)</a>:</h4>
+<p>It's not a huge deal to temporarily stop apache while the upgrade script runs and fix the template after, but it would be neat if there was a cleaner way.</p>
+
+
+
+<a name="967458"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nginx%20listen%20port%203.1/near/967458" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Casper Kvan Clausen <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nginx.20listen.20port.203.2E1.html#967458">(Jul 31 2020 at 19:17)</a>:</h4>
+<p>I think something like this would make sense:</p>
+<div class="codehilite"><pre><span></span><code>--- zulip-enterprise.template.erb       2020-07-31 14:06:39.000000000 -0500
++++ zulip-enterprise.template.erb2      2020-07-31 14:09:35.000000000 -0500
+@@ -15,7 +15,10 @@
+ include /etc/nginx/zulip-include/upstreams;
+
+ server {
+-&lt;% if @nginx_http_only != &#39;&#39; -%&gt;
++&lt;% if @nginx_http_only != &#39;&#39; &amp;&amp; @nginx_listen_port != &#39;&#39; -%&gt;
++    listen &lt;%= @nginx_listen_port %&gt;;
++    listen [::]:&lt;%= @nginx_listen_port %&gt;;
++&lt;% elsif @nginx_http_only != &#39;&#39; -%&gt;
+     listen 80;
+     listen [::]:80;
+ &lt;% else -%&gt;
+</code></pre></div>
+
+
+
+<a name="967611"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nginx%20listen%20port%203.1/near/967611" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nginx.20listen.20port.203.2E1.html#967611">(Jul 31 2020 at 20:06)</a>:</h4>
+<p><span class="user-mention" data-user-id="16856">@Casper Kvan Clausen</span> yeah, that patch lgtm; can you test it and then submit it as a PR if it works for you?</p>
+
+
+
+<a name="967612"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nginx%20listen%20port%203.1/near/967612" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nginx.20listen.20port.203.2E1.html#967612">(Jul 31 2020 at 20:06)</a>:</h4>
+<p>We can backport it to the 3.x branch so you'll not need to maintain it when you do the 3.2 upgrade.</p>
+
+
+
+<a name="967732"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nginx%20listen%20port%203.1/near/967732" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Casper Kvan Clausen <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nginx.20listen.20port.203.2E1.html#967732">(Jul 31 2020 at 22:58)</a>:</h4>
+<p>Sure thing, will do!</p>
+
+
+
+<a name="967835"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/nginx%20listen%20port%203.1/near/967835" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Casper Kvan Clausen <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/nginx.20listen.20port.203.2E1.html#967835">(Aug 01 2020 at 00:09)</a>:</h4>
+<p>Actually it turned out to be a bad patch as it was overridden by the manifest, but I've submitted a PR for that.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

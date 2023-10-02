@@ -1,0 +1,68 @@
+[
+    {
+        "content": "<p>I'm running a self-hosted instance of Zulip with around 20 memebers, maybe 4-8 being active simultaneously. The instance is running on a DigitalOcean droplet with 4GB RAM and 2 vCPUs. Around a month ago, I started noticing delays in sending messages. On clicking send message, the spinner starts spinning and the message doesn't get sent. After noticing this for a while, I updated my OS and upgraded Zulip to v7.2. For a while the problem stopped, but now I started noticing it again. </p>\n<p>Here are some stats from my machine:</p>\n<p><a href=\"/user_uploads/2/1b/5U_iVE-fypz88Y_dfdUqF0os/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/1b/5U_iVE-fypz88Y_dfdUqF0os/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/1b/5U_iVE-fypz88Y_dfdUqF0os/image.png\"></a></div><p>I noticed the slowdown around the time the CPU seems to have skipped a beat around 14:22. I also noticed that the RAM is full. Does someone know how to get to the root of this problem? I found too many logs in the <code>/var/log/zulip</code> folder and don't know what to look at. Also, is 4GB of RAM too less for my requirement of 20 users? The docs didn't give me that impression, but the monitoring says that RAM usage is at 100%.</p>",
+        "id": 1641807,
+        "sender_full_name": "Pranav Ashok",
+        "timestamp": 1694896348
+    },
+    {
+        "content": "<p>That's certainly not expected!</p>\n<p>I'd start by looking at <code>/var/log/zulip/errors.log</code> and see if there's anything recent there.</p>",
+        "id": 1642137,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695042724
+    },
+    {
+        "content": "<p>4GB of RAM should be fine for that scale.  Zulip tries to make use of all of your memory, because memory that is unused is going to waste -- memory is so much faster than disk!  But if you see out of memory exceptions from linux (check via <code>grep \"Killed process\" /var/log/syslog</code>) then it means something is going wrong an pushing past that into causing errors from trying to grab too much.</p>",
+        "id": 1642139,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695042830
+    },
+    {
+        "content": "<p>There are very frequent errors like this in errors.log</p>\n<div class=\"codehilite\"><pre><span></span><code>zerver.worker.queue_processors.WorkerTimeoutError: Timed out in user_activity after 30 seconds processing 1 events\nStack (most recent call last):\n  File &quot;/home/zulip/deployments/current/manage.py&quot;, line 150, in &lt;module&gt;\n    execute_from_command_line(sys.argv)\n  File &quot;/home/zulip/deployments/current/manage.py&quot;, line 115, in execute_from_command_line\n    utility.execute()\n  File &quot;/srv/zulip-venv-cache/8754575f2f64594c058e44afbfe51f77b03ef8f4/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/__init__.py&quot;, line 436, in execute\n    self.fetch_command(subcommand).run_from_argv(self.argv)\n  File &quot;/srv/zulip-venv-cache/8754575f2f64594c058e44afbfe51f77b03ef8f4/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 412, in run_from_argv\n    self.execute(*args, **cmd_options)\n  File &quot;/srv/zulip-venv-cache/8754575f2f64594c058e44afbfe51f77b03ef8f4/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 458, in execute\n    output = self.handle(*args, **options)\n  File &quot;/home/zulip/deployments/2023-08-01-19-11-08/zerver/management/commands/process_queue.py&quot;, line 110, in handle\n    worker.start()\n  File &quot;/home/zulip/deployments/2023-08-01-19-11-08/zerver/worker/queue_processors.py&quot;, line 516, in start\n    super().start()\n  File &quot;/home/zulip/deployments/2023-08-01-19-11-08/zerver/worker/queue_processors.py&quot;, line 422, in start\n    self.q.start_json_consumer(\n  File &quot;/home/zulip/deployments/2023-08-01-19-11-08/zerver/lib/queue.py&quot;, line 222, in start_json_consumer\n    self.ensure_queue(queue_name, do_consume)\n  File &quot;/home/zulip/deployments/2023-08-01-19-11-08/zerver/lib/queue.py&quot;, line 178, in ensure_queue\n    callback(self.channel)\n  File &quot;/home/zulip/deployments/2023-08-01-19-11-08/zerver/lib/queue.py&quot;, line 212, in do_consume\n    callback(events)\n  File &quot;/home/zulip/deployments/2023-08-01-19-11-08/zerver/worker/queue_processors.py&quot;, line 424, in &lt;lambda&gt;\n    lambda events: self.do_consume(self.consume_batch, events),\n  File &quot;/home/zulip/deployments/2023-08-01-19-11-08/zerver/worker/queue_processors.py&quot;, line 323, in do_consume\n    self._handle_consume_exception(events, e)\n  File &quot;/home/zulip/deployments/2023-08-01-19-11-08/zerver/worker/queue_processors.py&quot;, line 378, in _handle_consume_exception\n    logging.exception(exception, stack_info=True)\n</code></pre></div>",
+        "id": 1642141,
+        "sender_full_name": "Pranav Ashok",
+        "timestamp": 1695043105
+    },
+    {
+        "content": "<p>This is the result of grepping the syslog</p>\n<div class=\"codehilite\"><pre><span></span><code>Sep 18 03:06:24 zulip kernel: [1053531.892142] Out of memory: Killed process 859513 (uwsgi) total-vm:426088kB, anon-rss:152440kB, file-rss:1684kB, shmem-rss:184kB, UID:1000 pgtables:520kB oom_score_adj:0\nSep 18 05:00:28 zulip kernel: [1060376.249754] Out of memory: Killed process 859512 (uwsgi) total-vm:347020kB, anon-rss:146404kB, file-rss:2412kB, shmem-rss:152kB, UID:1000 pgtables:496kB oom_score_adj:0\nSep 18 05:00:29 zulip kernel: [1060377.011215] Out of memory: Killed process 935795 (uwsgi) total-vm:499784kB, anon-rss:221188kB, file-rss:2492kB, shmem-rss:120kB, UID:1000 pgtables:704kB oom_score_adj:0\nSep 18 07:07:01 zulip kernel: [1067968.694843] Out of memory: Killed process 859511 (uwsgi) total-vm:345004kB, anon-rss:145096kB, file-rss:2432kB, shmem-rss:184kB, UID:1000 pgtables:496kB oom_score_adj:0\nSep 18 10:05:54 zulip kernel: [1078701.127893] Out of memory: Killed process 939833 (uwsgi) total-vm:370316kB, anon-rss:145332kB, file-rss:2248kB, shmem-rss:132kB, UID:1000 pgtables:512kB oom_score_adj:0\nSep 18 10:18:26 zulip kernel: [1079453.258719] Out of memory: Killed process 859509 (uwsgi) total-vm:348676kB, anon-rss:145048kB, file-rss:1936kB, shmem-rss:144kB, UID:1000 pgtables:504kB oom_score_adj:0\nSep 18 10:30:44 zulip kernel: [1080191.867922] Out of memory: Killed process 939765 (uwsgi) total-vm:370036kB, anon-rss:144868kB, file-rss:2188kB, shmem-rss:132kB, UID:1000 pgtables:512kB oom_score_adj:0\nSep 18 11:08:04 zulip kernel: [1082431.394316] Out of memory: Killed process 859510 (uwsgi) total-vm:345024kB, anon-rss:144448kB, file-rss:1744kB, shmem-rss:184kB, UID:1000 pgtables:496kB oom_score_adj:0\nSep 18 11:32:34 zulip kernel: [1083900.941365] Out of memory: Killed process 948200 (uwsgi) total-vm:343960kB, anon-rss:144040kB, file-rss:2172kB, shmem-rss:160kB, UID:1000 pgtables:500kB oom_score_adj:0\n</code></pre></div>\n<p>So many OOMs today!</p>",
+        "id": 1642142,
+        "sender_full_name": "Pranav Ashok",
+        "timestamp": 1695043215
+    },
+    {
+        "content": "<p>OK, so this is running out of memory!  The quick fix is to give it more, but 4GB also <em>should</em> be enough, so we'd also like to figure out where things are getting heftier than expected.</p>",
+        "id": 1642147,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695044305
+    },
+    {
+        "content": "<p>I'd first suggest that you upgrade to Zulip 7.4, which came out on Friday.  Both Zulip 7.3 and 7.4 are security releases.  7.3 has a couple small tweaks which may help with memory consumption, but also has a fix for ab d bug which can cause data loss for file uploads in some cases.</p>",
+        "id": 1642148,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695044442
+    },
+    {
+        "content": "<p>Thanks, I'll make these changes and report back on the status of the problem.</p>",
+        "id": 1647958,
+        "sender_full_name": "Pranav Ashok",
+        "timestamp": 1695800703
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/2f/Y0ahZRGzEJth2PTqcWjBqrRV/do.png\">do.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/2f/Y0ahZRGzEJth2PTqcWjBqrRV/do.png\" title=\"do.png\"><img src=\"/user_uploads/2/2f/Y0ahZRGzEJth2PTqcWjBqrRV/do.png\"></a></div><p>Here are some charts that show the impact of the upgrade (v7.2 to v7.4). I believe the problem might be solved. Memory usage is now stable at 95%.</p>\n<p>Thanks <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span>! I'll post again in a few days if there is a deterioration in the performance.</p>",
+        "id": 1648890,
+        "sender_full_name": "Pranav Ashok",
+        "timestamp": 1695911735
+    },
+    {
+        "content": "<p>Sounds good!</p>",
+        "id": 1648891,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695911854
+    },
+    {
+        "content": "<p>Great, glad we backported that memory savings change.</p>",
+        "id": 1648923,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1695913121
+    }
+]

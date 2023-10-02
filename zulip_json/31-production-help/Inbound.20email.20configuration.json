@@ -1,0 +1,182 @@
+[
+    {
+        "content": "<p>Hey all, I've been following the documentation for getting inbound email set up so that users can respond to missed message notifications by replying to the email, however I can't seem to get postfix to work quite right. </p>\n<p>I've done this process a few times, so I'm pretty sure I have everything set up correctly as per the documentation, but in my /var/log/mail.log I keep getting the following error: <code>postfix/smtpd[10125]: fatal: in parameter smtpd_relay_restrictions or smtpd_recipient_restrictions, specify at least one working instance of: reject_unauth_destination, defer_unauth_destination, reject, defer, defer_if_permit or check_relay_domains</code></p>\n<p>This is on Ubuntu 18.04 with postfix version 3.3.0.</p>\n<p>I've tried modifying the zulip puppet postfix <a href=\"http://master.cf\" target=\"_blank\" title=\"http://master.cf\">master.cf</a> file to add the parameters mentioned in the error, but that just causes postfix to start rejecting the emails that I'm sending in reply to the missed message email.</p>",
+        "id": 778014,
+        "sender_full_name": "8BitSaint",
+        "timestamp": 1565385292
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13103\">@8BitSaint</span> sorry, this is fixed in master but hasn't made it into a release yet.  It's a configuration issue with incoming email + Ubuntu 18.04.  You can upgrade to master to fix it, but I'll see if I can get a quick 2.0.5 release out with this fix.</p>",
+        "id": 778065,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1565391641
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> I'm upgrading Zulip to the master branch now, thanks for the tip and quick reply!</p>",
+        "id": 778582,
+        "sender_full_name": "8BitSaint",
+        "timestamp": 1565628691
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Got this working, but had a question. When replying to an email about a missed private message, the reply shows up under the correct user, but when emailing to a stream the user shows up as \"Email Gateway\". Is this intended behavior?</p>",
+        "id": 778592,
+        "sender_full_name": "8BitSaint",
+        "timestamp": 1565633638
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13103\">@8BitSaint</span> Yes. Email senders can be spoofed, so it wouldn't be a good idea to let people post as an account via a fresh email to a stream. I expect what's happening with the missed messages emails is that there's a header that's being checked to confirm that you are responding to an actual missed message email sent to the email address in question from the Zulip instance in question.</p>",
+        "id": 778595,
+        "sender_full_name": "Cyphase",
+        "timestamp": 1565633804
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"4976\">@Cyphase</span> Cool, thanks, that makes sense! I'll just let people know that if they intend to send in messages via the stream email to just include who is sending it</p>",
+        "id": 778596,
+        "sender_full_name": "8BitSaint",
+        "timestamp": 1565633871
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13103\">@8BitSaint</span> they can just include <code> .show-sender </code>(or <code> +show-sender</code> if they use the address format with <code>+</code> as the separator) to have <code> From: &lt;Their address&gt; </code> added at the top of the message automatically.<br>\nAs an example, this would be the address for this stream: <code>production-help.59824b70728044b9eab8864901d13677.show-sender@chat.zulip.org  </code></p>",
+        "id": 778598,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1565634125
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> That's very useful. Is there any way I could force the stream email addresses to include this by default, or edit the email addresses manually to include it?</p>",
+        "id": 778599,
+        "sender_full_name": "8BitSaint",
+        "timestamp": 1565634479
+    },
+    {
+        "content": "<p>Oh, as a note - I'm just seeing that emails with the <code>.</code> as the separator are getting rejected here - so I recommend sticking with <code>+</code> instead until this gets figured out <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span> Actually, since you got this working - are you using the <code>+</code> or <code>.</code> style currently?</p>\n<p>For your question, no such option right now. We wanted to make the version with <code>show-sender</code>  the default address that's displayed in the stream settings - I had an open PR for that, I just need to update it and hopefully it can get merged. <span class=\"user-mention\" data-user-id=\"13103\">@8BitSaint</span></p>",
+        "id": 778601,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1565634939
+    },
+    {
+        "content": "<p>From: Mateusz Mandera &lt;<a href=\"mailto:mateusz.mandera@protonmail.com\" title=\"mailto:mateusz.mandera@protonmail.com\">mateusz.mandera@protonmail.com</a>&gt;<br>\nHere's how it looks by the way.</p>",
+        "id": 778603,
+        "sender_full_name": "Email Gateway",
+        "timestamp": 1565635008
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> I'm getting the <code>.</code> style emails rejected when trying to send, with this in the return email:</p>\n<div class=\"codehilite\"><pre><span></span>Diagnostic-Code: smtp; 550 5.1.1\n    &lt;testing.dbdde0f00e77980ec58aebe2c6bc8936@chat.zulip.org&gt;: Recipient\n    address rejected: User unknown in local recipient table\n</pre></div>\n\n\n<p>this must be an issue with the postfix configuration I believe <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>",
+        "id": 778605,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1565635166
+    },
+    {
+        "content": "<p>I was just able to test with the .show-sender added and it worked perfectly, no return email and no errors in /var/log/mail.log</p>",
+        "id": 778608,
+        "sender_full_name": "8BitSaint",
+        "timestamp": 1565635410
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> Are you running master (commit <a href=\"https://github.com/zulip/zulip/commit/2eb855b302e37b52e6b8f1685391e90b7f0398db\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/2eb855b302e37b52e6b8f1685391e90b7f0398db\">2eb855b302e37b52e6b8f1685391e90b7f0398db</a> or later)?</p>",
+        "id": 778609,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1565637689
+    },
+    {
+        "content": "<p>I was trying it on this server. Oh, apparently, we don't have that commit merged into <a href=\"http://chat.zulip.org\" target=\"_blank\" title=\"http://chat.zulip.org\">chat.zulip.org</a>? Once it's merged it should be fixed then, great!</p>",
+        "id": 778610,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1565638233
+    },
+    {
+        "content": "<p>It’s in the <a href=\"http://chat.zulip.org\" target=\"_blank\" title=\"http://chat.zulip.org\">chat.zulip.org</a> Git branch but Tim may not have done a deploy in a while.</p>",
+        "id": 778611,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1565638347
+    },
+    {
+        "content": "<p>Oh, no, there have been deploys since then. I bet the problem is that Postfix wasn’t reloaded because the <code>/etc/postfix/virtual</code> block in <code>puppet/zulip/manifests/postfix_localmail.pp</code> is missing a <code>notify</code>.</p>",
+        "id": 778612,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1565638684
+    },
+    {
+        "content": "<p>There’s this weird block that runs <code>postmap /etc/postfix/virtual</code> on changes, but that has no effect because <code>virtual</code> is of <code>regexp</code> type, not <code>hash</code> type.</p>",
+        "id": 778613,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1565638795
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/12990\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/12990\">#12990</a>.</p>",
+        "id": 778615,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1565639614
+    },
+    {
+        "content": "<p>After upgrading my zulip install to master, I had to run the <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code> command again to get postfix working. I would have thought that the upgrade process would do this, but apparently not</p>",
+        "id": 778616,
+        "sender_full_name": "8BitSaint",
+        "timestamp": 1565640317
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> <span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> I just did a puppet apply on <a href=\"http://chat.zulip.org\" target=\"_blank\" title=\"http://chat.zulip.org\">chat.zulip.org</a>; we'd set the configuration to have it run manually and hadn't rerun it since fixing that issue.</p>",
+        "id": 778641,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1565645227
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13103\">@8BitSaint</span> the upgrade process definitely running <code>zulip-puppet-apply</code>, unless you've configured it not to via <code>/etc/zulip/zulip.conf</code> (as we had on <a href=\"http://chat.zulip.org\" target=\"_blank\" title=\"http://chat.zulip.org\">chat.zulip.org</a>).</p>",
+        "id": 778643,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1565645282
+    },
+    {
+        "content": "<p>Without <a href=\"https://github.com/zulip/zulip/pull/12990\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/12990\">#12990</a> I don’t think <code>zulip-puppet-apply</code> will done the necessary reload of Postgres unless it did so for some other reason.</p>",
+        "id": 778644,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1565645352
+    },
+    {
+        "content": "<p>I guess this is a good opportunity to test that; we can try sending an email and see if it works.</p>",
+        "id": 778645,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1565645393
+    },
+    {
+        "content": "<p>Email test!</p>",
+        "id": 778646,
+        "sender_full_name": "Email Gateway",
+        "timestamp": 1565645442
+    },
+    {
+        "content": "<p>Looks like it was sufficient.</p>",
+        "id": 778647,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1565645452
+    },
+    {
+        "content": "<p>From: Mateusz Mandera &lt;<a href=\"mailto:mateusz.mandera@protonmail.com\" title=\"mailto:mateusz.mandera@protonmail.com\">mateusz.mandera@protonmail.com</a>&gt;<br>\nTest</p>",
+        "id": 778648,
+        "sender_full_name": "Email Gateway",
+        "timestamp": 1565645468
+    },
+    {
+        "content": "<p>That said, I don't see a ton of benefit to having that extra <code>puppet</code> config complexity of for rerunning <code>postmap</code>, given that we essentially never change that configuration.</p>",
+        "id": 778649,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1565645544
+    },
+    {
+        "content": "<p>My claim is not that <code>postmap</code> is extra complexity, my claim is that <code>postmap</code> makes no sense for a table of <code>regexp:</code> type.</p>",
+        "id": 778650,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1565645587
+    },
+    {
+        "content": "<p>I suspect your Postgres got reloaded for some other reason, and if you were to edit the <code>virtual</code> file in isolation, the existing Puppet configuration would not cause the change to take effect.</p>",
+        "id": 778655,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1565645780
+    },
+    {
+        "content": "<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"13103\">8BitSaint</span> the upgrade process definitely running <code>zulip-puppet-apply</code>, unless you've configured it not to via <code>/etc/zulip/zulip.conf</code> (as we had on <a href=\"http://chat.zulip.org\" target=\"_blank\" title=\"http://chat.zulip.org\">chat.zulip.org</a>).</p>\n</blockquote>\n<p>I definitely haven't made a change to that in <code>/etc/zulip/zulip.conf</code>, but after running the upgrade I tested sending an email and still received a <code>relay access denied</code> error (this may have been because I had modified <code>/etc/postfix/master.cf</code> to add the <code>smtp_relay_restrictions</code> setting manually). I then ran the <code>zulip-puppet-apply</code> again and tested another email that went through fine (I may have also restarted the server, but I can't quite remember).</p>",
+        "id": 778658,
+        "sender_full_name": "8BitSaint",
+        "timestamp": 1565646312
+    }
+]

@@ -1,0 +1,206 @@
+[
+    {
+        "content": "<p>OK, I've now test-deployed on this server the critical change that removes the \"pointer\" as a concept in Zulip (there's a bunch of other other fixes for anomalies with loading indicators etc. that have been merged over the last few days as part of this effort).</p>\n<p>What this means is that I'd really really appreciate folks, especially those of your with thousands of unreads right now, doing QA specifically around what messages are shown when you start a Zulip new browser window in the \"All messages\" view, which should now always take you to the first unread.  And making sure that you don't see any weird anomalies with where loading indicators appear (etc.).</p>",
+        "id": 907654,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1592437046
+    },
+    {
+        "content": "<p>One bug I notice is that after visiting a <code>near:1</code> narrow and then hit <code>end</code> repeatedly to see the boating loading indicator, the loading indicator that appears don't have the spinner component.  <span class=\"user-mention\" data-user-id=\"13033\">@Ryan Rehman</span> FYI, can you investigate?</p>",
+        "id": 907656,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1592437116
+    },
+    {
+        "content": "<p>I'm noticing an issue with ~1600 unreads, sometimes I'm left \"spinning\" on the <code>Loading...</code> page, and I'm forced to manually reload.  However, this doesn't happen consistently.  But it definitely happens.</p>",
+        "id": 911029,
+        "sender_full_name": "Wyatt Hoodes",
+        "timestamp": 1592782547
+    },
+    {
+        "content": "<p>But besides that, things look good on my end.</p>",
+        "id": 911031,
+        "sender_full_name": "Wyatt Hoodes",
+        "timestamp": 1592788336
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11072\">@Wyatt Hoodes</span> that sounds like something we should investigate carefully</p>",
+        "id": 911047,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1592801153
+    },
+    {
+        "content": "<p>Please let me know the next time you see a tab in that state</p>",
+        "id": 911049,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1592801168
+    },
+    {
+        "content": "<p>If it happens to anyone here it's likely important to debug</p>",
+        "id": 911050,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1592801185
+    },
+    {
+        "content": "<p>Will do, I didn’t think anything of it until I saw this thread. But next time I see it I’ll certainly let you know and try to gather some more data on it.</p>",
+        "id": 911169,
+        "sender_full_name": "Wyatt Hoodes",
+        "timestamp": 1592826653
+    },
+    {
+        "content": "<p>I haven't been able to reproduce the above.  But I did notice if I scroll moderately fast to the bottom of a topic with a lot of unreads (80+), I see the little \"Z\" loader flash at the bottom of the message list.  Is this normal?</p>",
+        "id": 917961,
+        "sender_full_name": "Wyatt Hoodes",
+        "timestamp": 1593357442
+    },
+    {
+        "content": "<p>(I have half a mind that the page loading issue was a result of poor signal strength from my router.)</p>",
+        "id": 917962,
+        "sender_full_name": "Wyatt Hoodes",
+        "timestamp": 1593357715
+    },
+    {
+        "content": "<p>I've seen that too!</p>",
+        "id": 917993,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1593366043
+    },
+    {
+        "content": "<p>I thought it was intended?</p>",
+        "id": 917994,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1593366064
+    },
+    {
+        "content": "<p>This is intentional, the message fetch previously happened, we just added a new bottom loading indicator for the newest messages to display it. <a href=\"https://github.com/zulip/zulip/pull/15060\">#15060</a></p>\n<p>From what I understand, the last loading indicator is displayed even though there are no new messages fetched because:<br>\nWe don't fetch anymore if that message list's <code>found_newest</code> = True.<br>\nBut we set this to True, only if we receive 0 messages from the backend. <a href=\"https://github.com/zulip/zulip/blob/master/zerver/views/message_fetch.py#L1093\">views/message_fetch.py#L1093</a><br>\nSo we need to fetch one more time to update it and prevent fetching newer messages.</p>",
+        "id": 918027,
+        "sender_full_name": "Ryan Rehman",
+        "timestamp": 1593373595
+    },
+    {
+        "content": "<p>Interesting. Though showing a loading indicator to no longer load seems funny.</p>",
+        "id": 918054,
+        "sender_full_name": "Wyatt Hoodes",
+        "timestamp": 1593375666
+    },
+    {
+        "content": "<p>It's intentional that we show a loading indicator at the bottom when there are more messages to fetch.</p>",
+        "id": 918055,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593375682
+    },
+    {
+        "content": "<p>This happens when there are no more messages to fetch as well.</p>",
+        "id": 918056,
+        "sender_full_name": "Wyatt Hoodes",
+        "timestamp": 1593375736
+    },
+    {
+        "content": "<p>I'm not sure I understand the precise case that <span class=\"user-mention\" data-user-id=\"13033\">@Ryan Rehman</span> is referring to with <code>found_newest</code> not being set to true when getting to the bottom; I would that to only happen in rare cases (E.g. where we fetched the exactly 100 messages that were there to fetch in the previous fetch, and it happened there were 0 more to fetch).</p>",
+        "id": 918057,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593375752
+    },
+    {
+        "content": "<p>(I'm not sure the loading indicator spinning around the Z is the right design, BTW; but it is the same loading indicator we've always had at the top)</p>",
+        "id": 918059,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593375850
+    },
+    {
+        "content": "<p>Yeah, so what I just saw in a topic with 60 unread messages:</p>\n<ul>\n<li>I scroll fast all the way to the bottom without stopping.</li>\n<li>The \"Z\" circle quickly flashes at the bottom.</li>\n</ul>\n<p>This quick flash of an icon that is supposed to be \"making sure there are no more messages\" seems like a confusing way to communicate that.</p>",
+        "id": 918065,
+        "sender_full_name": "Wyatt Hoodes",
+        "timestamp": 1593376171
+    },
+    {
+        "content": "<p>I've also noticed some weird mouse scrolling behavior in topics with only a handful of messages.</p>",
+        "id": 918079,
+        "sender_full_name": "Wyatt Hoodes",
+        "timestamp": 1593376872
+    },
+    {
+        "content": "<p>Sorry the previous comment was incorrect, I think this is why the bug is happening:</p>\n<ul>\n<li>On narrowing we load the messages locally <a href=\"https://github.com/zulip/zulip/blob/master/static/js/narrow.js#L217\">narrow.js#L217</a>. </li>\n<li>Then we fetch 50 new messages first time we activate narrow, starting from the first unread (not too sure which message is the anchor paramater ?). This updates <code>found_newest</code> to false. <a href=\"https://github.com/zulip/zulip/blob/master/static/js/message_fetch.js#L8\">message_fetch.js#L8</a> (Thus this bug would only occur for 50+unreads)</li>\n<li>Then on scrolling we fetch again as <code>found_newest</code> is False, but since we fetch from the last message (the anchor parameter is the last message. <a href=\"https://github.com/zulip/zulip/blob/master/static/js/message_fetch.js#L282\">message_fetch.js#L282</a>), we always receive just that 1 last message and <code>found_newest</code> gets updated to True.</li>\n</ul>\n<p>I tested this by commenting out <a href=\"https://github.com/zulip/zulip/blob/master/static/js/narrow.js#L217\">narrow.js#L217</a> and no loading indicator is displayed for fetching new messages.</p>",
+        "id": 918103,
+        "sender_full_name": "Ryan Rehman",
+        "timestamp": 1593378351
+    },
+    {
+        "content": "<p>We use likely use <code>anchor=\"first_unread\"</code> in that query, or something very close to it.</p>",
+        "id": 918110,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593379086
+    },
+    {
+        "content": "<p>Where's the code that sets <code>found_newest</code> to false?</p>",
+        "id": 918111,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593379134
+    },
+    {
+        "content": "<p>Oh, is the problem something like this: Even when we locally render 100 messages including 80 unreads, and we query the server to confirm our understanding of the history, we send an anchor that's 80/100 from the bottom, and only grab 50 messages?</p>",
+        "id": 918112,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593379222
+    },
+    {
+        "content": "<p>Yeah, OK, I see how we'd have that bug.</p>",
+        "id": 918114,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593379233
+    },
+    {
+        "content": "<p>Interesting.</p>",
+        "id": 918115,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593379325
+    },
+    {
+        "content": "<p>Well, one solution would look like fetching <code>max(50, number_locally_rendered_past_pointer + 5)</code>, but that could be an unbounded fetch, which we don't want to be possible.</p>",
+        "id": 918116,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593379392
+    },
+    {
+        "content": "<p>Another would be to only locally render a limited number of messages past the anchor, even though we have more in cache; that feels weird too.</p>",
+        "id": 918117,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593379430
+    },
+    {
+        "content": "<p>For context, the only reason we need to do that query to the server at all in this case is weird corner cases involving the user having subscribed/unsubscribed from the stream in the past that can result in there being holes in the <code>all_msg_list</code> history.</p>",
+        "id": 918118,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593379480
+    },
+    {
+        "content": "<p>So regardless of how we resolve this detail, we might want to look at providing a bit of extra data on <code>Subscription</code> that could tell us whether that sort of holes in the history are possible; in the common case (&gt;99% of the time), they won't be, and we could skip the fetch entirely.</p>",
+        "id": 918119,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593379560
+    },
+    {
+        "content": "<p>Which would partially resolve the bug, in that we'd only see that loading indicator for cases where it's an issue (and we could probably just avoid using any locally cached data when such holes are possible in user's history of the stream, to avoid the correctness issue that presently we'll only find such unlikely holes that are within 50 messages of the anchor if the anchor is more than 50 messages back)</p>",
+        "id": 918120,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593379636
+    },
+    {
+        "content": "<p>I see, so we do not need to fetch both sides messages every time we activate narrow.</p>\n<p>And for the stream subscribing / unsubscribing case, we would just not render any local messages,<br>\nand then fetch on both sides from the first unread. <span aria-label=\"+1\" class=\"emoji emoji-1f44d\" role=\"img\" title=\"+1\">:+1:</span></p>",
+        "id": 918122,
+        "sender_full_name": "Ryan Rehman",
+        "timestamp": 1593380068
+    },
+    {
+        "content": "<p>I guess we could solve this by making the <code>active</code> field in <code>Subscription</code> to an enum having values something like:<br>\nactive<br>\ninactive<br>\npreviously_disabled</p>",
+        "id": 918124,
+        "sender_full_name": "Ryan Rehman",
+        "timestamp": 1593380289
+    },
+    {
+        "content": "<p>Yeah, better might be <code>last_subscribe_message_id</code>, that would be the latest <code>message_id</code> on the server for the time the user last subscribed to the stream.  We know any messages since that point can be assumed clear of such issues.</p>",
+        "id": 918125,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1593380384
+    }
+]

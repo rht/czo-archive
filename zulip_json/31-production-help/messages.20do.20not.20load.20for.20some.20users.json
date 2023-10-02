@@ -1,0 +1,320 @@
+[
+    {
+        "content": "<p>Some users were inactive for a while on my server. And now when they try to open Zulip, it will login, and the page will load, but no messages are loaded and the page looks like <a href=\"/user_uploads/2/25/jRuNK783aiq61vPE2jT4VGVe/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">this</a>.</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/25/jRuNK783aiq61vPE2jT4VGVe/pasted_image.png\" target=\"_blank\" title=\"this\"><img src=\"/user_uploads/2/25/jRuNK783aiq61vPE2jT4VGVe/pasted_image.png\"></a></div>",
+        "id": 256137,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500881236
+    },
+    {
+        "content": "<p>No errors were logged at <code>/var/log/zulip/errors.log</code>.</p>",
+        "id": 256138,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500881238
+    },
+    {
+        "content": "<p>And this was on Chrome's developer console:</p>\n<div class=\"codehilite\"><pre><span></span>common.660b50449286.js:228 Uncaught TypeError: Cannot read property &#39;name&#39; of undefined\n    at Object.g.initialize_from_page_params (app.ce15f184e2e6.js:1469)\n    at HTMLDocument.&lt;anonymous&gt; (app.ce15f184e2e6.js:1524)\n    at HTMLDocument.h (common.660b50449286.js:228)\n    at u (common.660b50449286.js:96)\n    at Object.fireWith [as resolveWith] (common.660b50449286.js:98)\n    at Function.ready (common.660b50449286.js:101)\n    at HTMLDocument.z (common.660b50449286.js:25)\ng.initialize_from_page_params @ app.ce15f184e2e6.js:1469\n(anonymous) @ app.ce15f184e2e6.js:1524\nh @ common.660b50449286.js:228\nu @ common.660b50449286.js:96\nfireWith @ common.660b50449286.js:98\nready @ common.660b50449286.js:101\nz @ common.660b50449286.js:25\ncommon.660b50449286.js:226 Socket connected [transport=websocket]\ncommon.660b50449286.js:226 SockJS connection lost.  Attempting to reconnect soon. (3000, Go away!)\ncommon.660b50449286.js:226 Attempting socket reconnect.\ncommon.660b50449286.js:226 Socket connected [transport=websocket]\n</pre></div>",
+        "id": 256139,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500881325
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span></p>",
+        "id": 256159,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500883689
+    },
+    {
+        "content": "<p>Can you look at these vars in the console and see if anything seems unusual:</p>\n<ul>\n<li><code>page_params.realm_default_streams</code></li>\n<li><code>page_params.realm_notifications_stream_id</code></li>\n</ul>\n<p>Did you install off of master?</p>",
+        "id": 256213,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1500895749
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"showell@zulipchat.com\" data-user-id=\"58\">@Steve Howell</span> <code>page_params.realm_notifications_stream_id</code> is <code>1</code>. The other one was as expected.<br>\nAnd I have installed 1.6.</p>",
+        "id": 256233,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500906369
+    },
+    {
+        "content": "<p>Another thing to check:</p>\n<div class=\"codehilite\"><pre><span></span>$ ./manage.py dbshell\npsql (9.3.15)\nSSL connection (cipher: DHE-RSA-AES256-GCM-SHA384, bits: 256)\nType &quot;help&quot; for help.\n\nzulip=&gt; select * from zerver_stream where id = 1;\n</pre></div>",
+        "id": 256244,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1500910772
+    },
+    {
+        "content": "<p>I am thinking we have a bug here that gets triggered by some stream deactivation scenario.  My guess is that the notifications stream no longer exists, but that's just a guess.</p>",
+        "id": 256245,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1500910859
+    },
+    {
+        "content": "<p>Here is the result:</p>\n<div class=\"codehilite\"><pre><span></span>zulip@S1:~/deployments/2017-06-15-15-54-15$ ./manage.py dbshell\npsql (9.5.7)\nType &quot;help&quot; for help.\n\nzulip=&gt; select * from zerver_stream where id = 1;\n id |   name   | invite_only |           email_token            | description |         date_created          | deactivated | realm_id\n----+----------+-------------+----------------------------------+-------------+-------------------------------+-------------+----------\n  1 | announce | t           | 5d407f02eaa8e5b9179fdccfe8df7eac |             | 2017-01-05 00:03:56.679142+00 | f           |        2\n(1 row)\n\nzulip=&gt;\n</pre></div>\n\n\n<p><span class=\"user-mention\" data-user-email=\"showell@zulipchat.com\" data-user-id=\"58\">@Steve Howell</span></p>",
+        "id": 256428,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500925919
+    },
+    {
+        "content": "<p>What's in <code>page_params.realm_default_streams</code>?</p>",
+        "id": 256463,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500929741
+    },
+    {
+        "content": "<p>It's not clear to me which of the sections of <code>exports.initialize_from_page_params</code> is the source of the issue; <span class=\"user-mention\" data-user-email=\"showell@zulipchat.com\" data-user-id=\"58\">@Steve Howell</span> did you check the source map?</p>",
+        "id": 256464,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500929777
+    },
+    {
+        "content": "<p>I didn't.</p>",
+        "id": 256466,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1500929919
+    },
+    {
+        "content": "<p>Regardless of what this bug turns out to be, I think we need to have a debug protocol for this that involves getting a real exception using the source maps.</p>",
+        "id": 256473,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500930221
+    },
+    {
+        "content": "<p>One idea would be to have <code>blueslip.report_error</code> and friends end up logging all the frontend tracebacks to a file on systems that aren't having them emailed, so we can tell the user to get the full, sourcemap-powered traceback from the file.</p>",
+        "id": 256474,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500930254
+    },
+    {
+        "content": "<p>That would be pretty quick to do, I think</p>",
+        "id": 256475,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500930261
+    },
+    {
+        "content": "<p>Okay, what should I do now?</p>",
+        "id": 256476,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500930408
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"Shayan.To@hotmail.com\" data-user-id=\"1073\">@Shayan Toqraee</span> can you post <code>page_params.realm_default_streams</code>?  That's one of the 3 possibilities.</p>",
+        "id": 256477,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500930438
+    },
+    {
+        "content": "<p>You can also try running <code>exports.get_sub_by_id(page_params.realm_notifications_stream_id).name</code> in the JS console and see what that returns.</p>",
+        "id": 256478,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500930492
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>page_params.realm_default_streams\n(4) [Object, Object, Object, Object]\n    0: Object\n        description:&quot;&quot;\n        invite_only:false\n        name:&quot;اعلام‌ها&quot;\n        stream_id:14\n        __proto__:Object\n    1:Object\n        description:&quot;&quot;\n        invite_only:false\n        name:&quot;امتحانی&quot;\n        stream_id:6\n        __proto__:Object\n    2:Object\n        description:&quot;&quot;\n        invite_only:false\n        name:&quot;متفرقه&quot;\n        stream_id:17\n        __proto__:Object\n    3:Object\n        description:&quot;&quot;\n        invite_only:false\n        name:&quot;کار با زولیپ&quot;\n        stream_id:8\n        __proto__:Object\n    length:4\n    __proto__:Array(0)\n</pre></div>",
+        "id": 256483,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500930869
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>exports.get_sub_by_id(page_params.realm_notifications_stream_id).name\nVM77:1 Uncaught ReferenceError: exports is not defined\n    at &lt;anonymous&gt;:1:1\n(anonymous) @ VM77:1\n</pre></div>",
+        "id": 256484,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500930892
+    },
+    {
+        "content": "<p>I think that I have deleted or done something similar to the initial default streams.</p>",
+        "id": 256486,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500930982
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span></p>",
+        "id": 256487,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500930988
+    },
+    {
+        "content": "<p>try replacing <code>exports.</code> with <code>stream_data.</code></p>",
+        "id": 256488,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1500931291
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>stream_data.get_sub_by_id(page_params.realm_notifications_stream_id).name\nVM78:1 Uncaught TypeError: Cannot read property &#39;name&#39; of undefined\n    at &lt;anonymous&gt;:1:69\n(anonymous) @ VM78:1\n</pre></div>",
+        "id": 256490,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500931341
+    },
+    {
+        "content": "<p>OK, so it is indeed an issue with <code>get_sub_by_id</code> not working on the notifications stream.  Hmm.</p>",
+        "id": 256495,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500931721
+    },
+    {
+        "content": "<p>So, what should I do?? <span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span></p>",
+        "id": 256499,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500932532
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"Shayan.To@hotmail.com\" data-user-id=\"1073\">@Shayan Toqraee</span> sorry for the slow reply; was AFK</p>",
+        "id": 256557,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500937854
+    },
+    {
+        "content": "<p>Oh, I bet I know what happened</p>",
+        "id": 256559,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500937928
+    },
+    {
+        "content": "<p>Your \"notifications stream\" is marked as invite-only</p>",
+        "id": 256560,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500937938
+    },
+    {
+        "content": "<p>And probably the user having the problem isn't subscribed.</p>",
+        "id": 256562,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500937947
+    },
+    {
+        "content": "<p>You should use the streams management UI to make that stream not invite-only</p>",
+        "id": 256563,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500937959
+    },
+    {
+        "content": "<p>Making the \"notifications stream\" invite-only isn't supported.  We should think about changing that, though; <span class=\"user-mention\" data-user-email=\"showell@zulipchat.com\" data-user-id=\"58\">@Steve Howell</span> what do you think about making this block just set <code>page_params.notifications_stream = \"\"</code> if it can't find the stream?</p>\n<div class=\"codehilite\"><pre><span></span>    if (page_params.realm_notifications_stream_id !== -1) {\n        page_params.notifications_stream =\n            exports.get_sub_by_id(page_params.realm_notifications_stream_id).name;\n    } else {\n        page_params.notifications_stream = &quot;&quot;;\n</pre></div>",
+        "id": 256564,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500938031
+    },
+    {
+        "content": "<p>I wonder if we even use that client-side for non-admins in any significant way.  I'd be up for a quick fix here, and it's possible that for the invite-only cases, it should actually be the backend that just doesn't even set the <code>realm_notifications_stream_id</code> for folks that can't access the stream.</p>",
+        "id": 256566,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1500938203
+    },
+    {
+        "content": "<p>I think we display it only.</p>",
+        "id": 256571,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500938615
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span> <span class=\"o\">~</span><span class=\"err\">/zulip (showell-unread-msg-ids) $ git grep page_params.notifications_stream</span>\n<span class=\"kr\">static</span><span class=\"o\">/</span><span class=\"nx\">js</span><span class=\"o\">/</span><span class=\"nx\">invite</span><span class=\"p\">.</span><span class=\"nx\">js</span><span class=\"o\">:</span>        <span class=\"kd\">var</span> <span class=\"nx\">is_notifications_stream</span> <span class=\"o\">=</span> <span class=\"nx\">value</span> <span class=\"o\">===</span> <span class=\"nx\">page_params</span><span class=\"p\">.</span><span class=\"nx\">notifications_stream</span><span class=\"p\">;</span>\n<span class=\"kr\">static</span><span class=\"o\">/</span><span class=\"nx\">js</span><span class=\"o\">/</span><span class=\"nx\">stream_create</span><span class=\"p\">.</span><span class=\"nx\">js</span><span class=\"o\">:</span>    <span class=\"k\">if</span> <span class=\"p\">(</span><span class=\"o\">!</span><span class=\"nx\">page_params</span><span class=\"p\">.</span><span class=\"nx\">notifications_stream</span><span class=\"p\">)</span> <span class=\"p\">{</span>\n<span class=\"kr\">static</span><span class=\"o\">/</span><span class=\"nx\">js</span><span class=\"o\">/</span><span class=\"nx\">stream_create</span><span class=\"p\">.</span><span class=\"nx\">js</span><span class=\"o\">:</span>    <span class=\"kd\">var</span> <span class=\"nx\">announce</span> <span class=\"o\">=</span> <span class=\"p\">(</span><span class=\"o\">!!</span><span class=\"nx\">page_params</span><span class=\"p\">.</span><span class=\"nx\">notifications_stream</span> <span class=\"o\">&amp;&amp;</span>\n<span class=\"kr\">static</span><span class=\"o\">/</span><span class=\"nx\">js</span><span class=\"o\">/</span><span class=\"nx\">stream_create</span><span class=\"p\">.</span><span class=\"nx\">js</span><span class=\"o\">:</span>    <span class=\"k\">if</span> <span class=\"p\">(</span><span class=\"nx\">page_params</span><span class=\"p\">.</span><span class=\"nx\">notifications_stream</span><span class=\"p\">)</span> <span class=\"p\">{</span>\n<span class=\"kr\">static</span><span class=\"o\">/</span><span class=\"nx\">js</span><span class=\"o\">/</span><span class=\"nx\">stream_data</span><span class=\"p\">.</span><span class=\"nx\">js</span><span class=\"o\">:</span>    <span class=\"c1\">// TODO: add page_params.notifications_stream_id</span>\n<span class=\"kr\">static</span><span class=\"o\">/</span><span class=\"nx\">js</span><span class=\"o\">/</span><span class=\"nx\">stream_data</span><span class=\"p\">.</span><span class=\"nx\">js</span><span class=\"o\">:</span>    <span class=\"k\">return</span> <span class=\"nx\">exports</span><span class=\"p\">.</span><span class=\"nx\">name_in_home_view</span><span class=\"p\">(</span><span class=\"nx\">page_params</span><span class=\"p\">.</span><span class=\"nx\">notifications_stream</span><span class=\"p\">);</span>\n<span class=\"kr\">static</span><span class=\"o\">/</span><span class=\"nx\">js</span><span class=\"o\">/</span><span class=\"nx\">stream_data</span><span class=\"p\">.</span><span class=\"nx\">js</span><span class=\"o\">:</span>        <span class=\"nx\">page_params</span><span class=\"p\">.</span><span class=\"nx\">notifications_stream</span> <span class=\"o\">=</span>\n<span class=\"kr\">static</span><span class=\"o\">/</span><span class=\"nx\">js</span><span class=\"o\">/</span><span class=\"nx\">stream_data</span><span class=\"p\">.</span><span class=\"nx\">js</span><span class=\"o\">:</span>        <span class=\"nx\">page_params</span><span class=\"p\">.</span><span class=\"nx\">notifications_stream</span> <span class=\"o\">=</span> <span class=\"s2\">&quot;&quot;</span><span class=\"p\">;</span>\n<span class=\"kr\">static</span><span class=\"o\">/</span><span class=\"nx\">js</span><span class=\"o\">/</span><span class=\"nx\">stream_data</span><span class=\"p\">.</span><span class=\"nx\">js</span><span class=\"o\">:</span>        <span class=\"k\">return</span> <span class=\"nx\">page_params</span><span class=\"p\">.</span><span class=\"nx\">notifications_stream</span><span class=\"p\">;</span>\n<span class=\"kr\">static</span><span class=\"o\">/</span><span class=\"nx\">js</span><span class=\"o\">/</span><span class=\"nx\">tutorial</span><span class=\"p\">.</span><span class=\"nx\">js</span><span class=\"o\">:</span>                <span class=\"k\">return</span> <span class=\"p\">(</span><span class=\"nx\">stream_name</span> <span class=\"o\">!==</span> <span class=\"s2\">&quot;social&quot;</span><span class=\"p\">)</span> <span class=\"o\">&amp;&amp;</span> <span class=\"p\">(</span><span class=\"nx\">stream_name</span> <span class=\"o\">!==</span> <span class=\"nx\">page_params</span><span class=\"p\">.</span><span class=\"nx\">notifications_stream</span><span class=\"p\">);</span>\n<span class=\"kr\">static</span><span class=\"o\">/</span><span class=\"nx\">js</span><span class=\"o\">/</span><span class=\"nx\">tutorial</span><span class=\"p\">.</span><span class=\"nx\">js</span><span class=\"o\">:</span>            <span class=\"nx\">send_delayed_stream_message</span><span class=\"p\">(</span><span class=\"nx\">page_params</span><span class=\"p\">.</span><span class=\"nx\">notifications_stream</span><span class=\"p\">,</span> <span class=\"s2\">&quot;welcome&quot;</span><span class=\"p\">,</span> <span class=\"s2\">&quot;Practice sending sending some messages here, or starting a new topic.&quot;</span><span class=\"p\">,</span> <span class=\"mi\">15</span><span class=\"p\">);</span>\n<span class=\"kr\">static</span><span class=\"o\">/</span><span class=\"nx\">js</span><span class=\"o\">/</span><span class=\"nx\">tutorial</span><span class=\"p\">.</span><span class=\"nx\">js</span><span class=\"o\">:</span>            <span class=\"nx\">send_delayed_stream_message</span><span class=\"p\">(</span><span class=\"nx\">page_params</span><span class=\"p\">.</span><span class=\"nx\">notifications_stream</span><span class=\"p\">,</span> <span class=\"s2\">&quot;Zulip tips&quot;</span><span class=\"p\">,</span> <span class=\"s2\">&quot;Here&#39;s a message on a new topic: `Zulip tips`.\\n\\nAs you settle into Zulip, customize your account and notifications on your [Settings page](#settings).&quot;</span><span class=\"p\">,</span> <span class=\"mi\">30</span><span class=\"p\">);</span>\n<span class=\"kr\">static</span><span class=\"o\">/</span><span class=\"nx\">js</span><span class=\"o\">/</span><span class=\"nx\">tutorial</span><span class=\"p\">.</span><span class=\"nx\">js</span><span class=\"o\">:</span>            <span class=\"nx\">send_delayed_stream_message</span><span class=\"p\">(</span><span class=\"nx\">page_params</span><span class=\"p\">.</span><span class=\"nx\">notifications_stream</span><span class=\"p\">,</span> <span class=\"s2\">&quot;Zulip tips&quot;</span><span class=\"p\">,</span> <span class=\"s2\">&quot;You might also enjoy:\\n\\n* Our lightweight !modal_link(#markdown-help, message formatting) (including emoji! :thumbsup:)\\n* !modal_link(#keyboard-shortcuts, Keyboard shortcuts)\\n* [Desktop and mobile apps](/apps)&quot;</span><span class=\"p\">,</span> <span class=\"mi\">40</span><span class=\"p\">);</span>\n</pre></div>",
+        "id": 256572,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1500938692
+    },
+    {
+        "content": "<p>Ahh, I guess the settings code uses <code>page_params.realm_notifications_stream_id</code></p>",
+        "id": 256574,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500938736
+    },
+    {
+        "content": "<p>In <code>static/js/settings_org.js</code></p>",
+        "id": 256575,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500938743
+    },
+    {
+        "content": "<p>Probably the best thing to do here is just sweep all the code that uses name instead of id, and make all the code use ids instead and be defensive about the stream not being there.</p>",
+        "id": 256576,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1500938775
+    },
+    {
+        "content": "<p>And then any glitches are local to something like the tutorial, rather than happening at startup time.</p>",
+        "id": 256578,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1500938802
+    },
+    {
+        "content": "<p>tutorial is at startup :)</p>",
+        "id": 256579,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500938820
+    },
+    {
+        "content": "<p>But I bet that tutorial code is for the first user in the realm, and thus not subject to issues here.</p>",
+        "id": 256580,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500938836
+    },
+    {
+        "content": "<p>And is probably being deleted anyway.</p>",
+        "id": 256581,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500938843
+    },
+    {
+        "content": "<p>I mean not screw up page load.</p>",
+        "id": 256582,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1500938846
+    },
+    {
+        "content": "<p>but, yeah, tutorial.js hopefully just goes away soon</p>",
+        "id": 256583,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1500938865
+    },
+    {
+        "content": "<p>Yeah, I think sweeping those to access the ID where possible makes sense to me.</p>",
+        "id": 256584,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500938869
+    },
+    {
+        "content": "<p>I was thinking... Can I change <code>realm_notifications_stream_id</code>?</p>",
+        "id": 256708,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500954007
+    },
+    {
+        "content": "<p>Or I think I can say, can I change the notification stream of my realm?</p>",
+        "id": 256710,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500956501
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"Shayan.To@hotmail.com\" data-user-id=\"1073\">@Shayan Toqraee</span> yep, you can change it in the organization settings page.</p>",
+        "id": 256719,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1500960597
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> I went through the organization settings, and cannot find something similar. Where is it?</p>",
+        "id": 256739,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500963344
+    },
+    {
+        "content": "<p>Okay, I did that by hand from <code>manage.py shell</code>. But was there any better way?</p>",
+        "id": 256769,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1500975950
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"Shayan.To@hotmail.com\" data-user-id=\"1073\">@Shayan Toqraee</span> I bet it's a new feature since 1.6</p>",
+        "id": 257103,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1501014779
+    },
+    {
+        "content": "<p>Thanks.<br>\nAnd BTW, that solved the problem as well, thanks for the help.</p>",
+        "id": 257462,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1501071437
+    },
+    {
+        "content": "<p>Great!  We'll fix that bug in the next release.</p>",
+        "id": 257553,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1501086099
+    }
+]

@@ -1,0 +1,710 @@
+[
+    {
+        "content": "<p>Hello and good day!   We run a self hosted zulip server and love it!   It has been running very well and we upgrade regularly.    Around the time of the latest release (zulip-server-4.9) something happened to our mobile push notifications and now they no longer work.   There are errors in /var/log/zulip/smokescreen.log that appear suspicious.   Any help you can provide would be much appreciated.  Thanks!</p>\n<div class=\"codehilite\"><pre><span></span><code>{&quot;id&quot;:&quot;xxxxxxxx redacted xxxxxxxxxxx&quot;,&quot;inbound_remote_addr&quot;:&quot;127.0.0.1:40444&quot;,&quot;level&quot;:&quot;error&quot;,&quot;msg&quot;:&quot;Timed out connecting to remote host: dial tcp [2600:1f18:414:db32:c9cb:cd72:b645:e647]:443: connect: connection timed out&quot;,&quot;project&quot;:&quot;&quot;,&quot;proxy_type&quot;:&quot;connect&quot;,&quot;requested_host&quot;:&quot;push.zulipchat.com:443&quot;,&quot;role&quot;:&quot;&quot;,&quot;start_time&quot;:&quot;2022-02-15T22:42:31.801377436Z&quot;,&quot;time&quot;:&quot;2022-02-15T17:44:41-05:00&quot;,&quot;trace_id&quot;:&quot;&quot;}\n</code></pre></div>",
+        "id": 1329414,
+        "sender_full_name": "Bob Grabowsky",
+        "timestamp": 1644966125
+    },
+    {
+        "content": "<p>A message was moved here from <a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/push.20notifications\">#issues &gt; push notifications</a> by <span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span>.</p>",
+        "id": 1329431,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1644966392
+    },
+    {
+        "content": "<p>Does your host have a valid IPv6 address?</p>",
+        "id": 1329434,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1644966412
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"23198\">@Bob Grabowsky</span>: Can you show the output of the following?</p>\n<div class=\"codehilite\"><pre><span></span><code>curl -v -6 https://push.zulipchat.com/compatibility\n</code></pre></div>",
+        "id": 1329439,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1644966584
+    },
+    {
+        "content": "<p>Here's the output, the command seems to have stalled</p>\n<div class=\"codehilite\"><pre><span></span><code># curl -v -6 https://push.zulipchat.com/compatibility\n*   Trying 2600:1f18:414:db48:b25:16a9:4e0c:700a...\n* TCP_NODELAY set\n* connect to 2600:1f18:414:db48:b25:16a9:4e0c:700a port 443 failed: Connection timed out\n*   Trying 2600:1f18:414:db16:8d4f:7e90:dcf0:4fd7...\n* TCP_NODELAY set\n* After 84746ms connect time, move on!\n* connect to 2600:1f18:414:db16:8d4f:7e90:dcf0:4fd7 port 443 failed: Connection timed out\n*   Trying 2600:1f18:414:db32:c9cb:cd72:b645:e647...\n* TCP_NODELAY set\n</code></pre></div>",
+        "id": 1329447,
+        "sender_full_name": "Bob Grabowsky",
+        "timestamp": 1644967092
+    },
+    {
+        "content": "<p>So it looks like your server can't talk to IPv6 hosts, or there's a firewall in place.</p>\n<p>Does Google work?</p>\n<div class=\"codehilite\"><pre><span></span><code>curl -v -6 https://google.com/\n</code></pre></div>",
+        "id": 1329450,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1644967253
+    },
+    {
+        "content": "<p>And do you have an IPv6 address?</p>\n<div class=\"codehilite\"><pre><span></span><code>ip address | grep &#39;inet6.*global&#39;\n</code></pre></div>",
+        "id": 1329451,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1644967300
+    },
+    {
+        "content": "<p>(that may show an IP, so you can PM me the result if you're not sure how to interpret it)</p>",
+        "id": 1329452,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1644967324
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code># curl -v -6 https://google.com/\n*   Trying 2607:f8b0:4006:80b::200e...\n* TCP_NODELAY set\n* Immediate connect fail for 2607:f8b0:4006:80b::200e: Network is unreachable\n* Closing connection 0\ncurl: (7) Couldn&#39;t connect to server\n</code></pre></div>\n<div class=\"codehilite\"><pre><span></span><code># ip address | grep &#39;inet6.*global&#39;\n    inet6 2604:a00:5:3383:216:3eff:fe03:64a4/64 scope global dynamic mngtmpaddr\n</code></pre></div>",
+        "id": 1329456,
+        "sender_full_name": "Bob Grabowsky",
+        "timestamp": 1644967828
+    },
+    {
+        "content": "<p>Yeah, that's a temporary IPv6 address, which I don't think is actually routable.</p>\n<p>It's notable that smokescreen isn't using happy-eyeballs to work around the lack of ipv6.</p>",
+        "id": 1329460,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1644968126
+    },
+    {
+        "content": "<p>You're going to have to either disable IPv6, or get the host to have a real IPv6 address.</p>",
+        "id": 1329461,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1644968165
+    },
+    {
+        "content": "<p>Alternately, I think you can write out a Smokescreen config file, adjust the supervisorctl file to pass that as <code>--config</code>, and in that say:</p>\n<div class=\"codehilite\" data-code-language=\"YAML\"><pre><span></span><code><span class=\"nt\">network</span><span class=\"p\">:</span><span class=\"w\"> </span><span class=\"l l-Scalar l-Scalar-Plain\">ip4</span><span class=\"w\"></span>\n</code></pre></div>\n<p>That's just from squinting at:<br>\n<a href=\"https://github.com/stripe/smokescreen/blob/dc403015f563eadc556a61870c6ad327688abe88/pkg/smokescreen/config_loader.go#L34\">https://github.com/stripe/smokescreen/blob/dc403015f563eadc556a61870c6ad327688abe88/pkg/smokescreen/config_loader.go#L34</a><br>\n<a href=\"https://github.com/stripe/smokescreen/blob/dc403015f563eadc556a61870c6ad327688abe88/pkg/smokescreen/config_loader.go#L142\">https://github.com/stripe/smokescreen/blob/dc403015f563eadc556a61870c6ad327688abe88/pkg/smokescreen/config_loader.go#L142</a></p>",
+        "id": 1329463,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1644968533
+    },
+    {
+        "content": "<p><code>mngtmpaddr</code> doesn’t mean this address is temporary. It means that the kernel manages other temporary addresses created from this one as a template (<a href=\"https://man7.org/linux/man-pages/man8/ip-address.8.html\">ip-address(8)</a>).</p>",
+        "id": 1329464,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1644968547
+    },
+    {
+        "content": "<p>I have several such addresses here and my IPv6 works fine.</p>",
+        "id": 1329465,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1644968616
+    },
+    {
+        "content": "<p>Huh.  Are they also <code>dynamic</code>?  Is that just a marker of SLAAC?</p>",
+        "id": 1329466,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1644968645
+    },
+    {
+        "content": "<p>I think <code>dynamic</code> is either SLAAC or DHCPv6. I have</p>\n<div class=\"codehilite\"><pre><span></span><code>3: wlp0s20f3: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 state UP qlen 1000\n    inet6 2602:…/128 scope global dynamic noprefixroute\n       valid_lft 29852sec preferred_lft 29852sec\n    inet6 fdbb:…/128 scope global dynamic noprefixroute\n       valid_lft 29852sec preferred_lft 29852sec\n    inet6 fdbb:…/64 scope global temporary dynamic\n       valid_lft 591451sec preferred_lft 72888sec\n    inet6 fdbb:…/64 scope global mngtmpaddr noprefixroute\n       valid_lft forever preferred_lft forever\n    inet6 2602:…/64 scope global temporary dynamic\n       valid_lft 591451sec preferred_lft 72888sec\n    inet6 2602:…/64 scope global mngtmpaddr noprefixroute\n       valid_lft forever preferred_lft forever\n    inet6 fe80:…/64 scope link noprefixroute\n       valid_lft forever preferred_lft forever\n</code></pre></div>",
+        "id": 1329473,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1644968854
+    },
+    {
+        "content": "<p>If debugging your network sounds fun, my next debugging step would be <code>mtr -6 google.com</code>.</p>",
+        "id": 1329476,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1644968971
+    },
+    {
+        "content": "<p>If I try to trace the address you posted from here, my trace ends at <code>2604:a00:21::202:3</code>. I assume that’s a firewall blocking inbound connections, which isn’t necessarily unusual, but if it’s also blocking outbound connections, that might give you an idea of who to complain to.</p>",
+        "id": 1329480,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1644969159
+    },
+    {
+        "content": "<p>Thank you for all of your suggestions and help!    I have contacted my provider about this IPv6 issue.   Is there any way that I can make this work with IPv4 only?  Again, thanks!</p>",
+        "id": 1329552,
+        "sender_full_name": "Bob Grabowsky",
+        "timestamp": 1644972718
+    },
+    {
+        "content": "<p>The following is only lightly tested and will get overwritten on next <code>zulip-puppet-apply</code> (generally during upgrades):</p>\n<ol>\n<li>Create <code>/etc/zulip/smokescreen.yaml</code> containing:</li>\n</ol>\n<div class=\"codehilite\" data-code-language=\"YAML\"><pre><span></span><code><span class=\"nn\">---</span><span class=\"w\"></span>\n<span class=\"nt\">network</span><span class=\"p\">:</span><span class=\"w\"> </span><span class=\"l l-Scalar l-Scalar-Plain\">ip4</span><span class=\"w\"></span>\n</code></pre></div>\n<ol start=\"2\">\n<li>Edit <code>/etc/supervisor/conf.d/zulip/smokescreen.conf</code> and add <code>--config-file /etc/zulip/smokescreen.yaml</code> to the second line.</li>\n<li>Run <code>supervisorctl reread &amp;&amp; supervisorctl update</code></li>\n</ol>",
+        "id": 1329559,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1644973173
+    },
+    {
+        "content": "<p>Hello!  Apologies for resurrecting an old thread but having a similar issue and hoped sharing some debugging efforts might garner some advice</p>\n<p>I am a fairly amateur user and have just started up a VPS exposed directly to the internet and with static IPv4 and IPv6 addresses, and installed Zulip 5.0 according to the docs, including <a href=\"https://zulip.readthedocs.io/en/latest/production/mobile-push-notifications.html\">https://zulip.readthedocs.io/en/latest/production/mobile-push-notifications.html</a>.  It went very smoothly, the messaging works amazingly, and I'm really grateful for all the work that went into making Zulip!</p>\n<p>One issue at the moment is that notifications of new messages to an account logged in on the Android app (installed from the Github apk download) from an account logged in on the desktop do not seem to go through.</p>\n<p>The output of su zulip -c '/home/zulip/deployments/current/manage.py register_server' was (with specific info replaced with ***)</p>\n<div class=\"codehilite\"><pre><span></span><code>The following data will be submitted to the push notification service:\n  contact_email: ***\n  hostname: ***\n  zulip_org_id: ***\n  zulip_org_key: ***\n\nTo register, you must agree to the Zulipchat Terms of Service: https://zulip.com/terms/\nDo you agree to the Terms of Service? [Y/n] Y\n\nYou&#39;ve successfully registered for the Mobile Push Notification Service!\nTo finish setup for sending push notifications:\n- Restart the server, using /home/zulip/deployments/current/scripts/restart-server\n- Return to the documentation to learn how to test push notifications\n</code></pre></div>\n<p>Restarted the server, then sent a message from an account logged in on the desktop to one logged in on the Android phone, and did not receive any notification.  On pulling up the app the message is immediately there to see.</p>\n<p>The contents of /var/log/zulip/smokescreen.log include</p>\n<div class=\"codehilite\"><pre><span></span><code>{&quot;allow&quot;:true,&quot;decision_reason&quot;:&quot;Egress ACL is not configured&quot;,&quot;dns_lookup_time_\nms&quot;:0,&quot;enforce_would_deny&quot;:false,&quot;id&quot;:&quot;***&quot;,&quot;inbound_remote_add\nr&quot;:&quot;127.0.0.1:49104&quot;,&quot;level&quot;:&quot;info&quot;,&quot;msg&quot;:&quot;CANONICAL-PROXY-DECISION&quot;,&quot;project&quot;:&quot;\n&quot;,&quot;proxy_type&quot;:&quot;connect&quot;,&quot;requested_host&quot;:&quot;push.zulipchat.com:443&quot;,&quot;role&quot;:&quot;&quot;,&quot;st\nart_time&quot;:&quot;2022-03-30T04:41:27.714549031Z&quot;,&quot;time&quot;:&quot;2022-03-30T04:41:27Z&quot;,&quot;trace_\nid&quot;:&quot;&quot;}\n{&quot;bytes_in&quot;:6352,&quot;bytes_out&quot;:2154,&quot;conn_establish_time_ms&quot;:7,&quot;duration&quot;:4.980871\n424,&quot;end_time&quot;:&quot;2022-03-30T04:41:32.07300846Z&quot;,&quot;error&quot;:&quot;&quot;,&quot;id&quot;:&quot;***\nknng&quot;,&quot;inbound_remote_addr&quot;:&quot;127.0.0.1:49098&quot;,&quot;last_activity&quot;:&quot;2022-03-30T04:41:\n27.180009012Z&quot;,&quot;level&quot;:&quot;info&quot;,&quot;msg&quot;:&quot;CANONICAL-PROXY-CN-CLOSE&quot;,&quot;project&quot;:&quot;&quot;,&quot;pro\nxy_type&quot;:&quot;connect&quot;,&quot;requested_host&quot;:&quot;push.zulipchat.com:443&quot;,&quot;role&quot;:&quot;&quot;,&quot;start_ti\nme&quot;:&quot;2022-03-30T04:41:27.083724656Z&quot;,&quot;time&quot;:&quot;2022-03-30T04:41:32Z&quot;,&quot;trace_id&quot;:&quot;&quot;\n}\n</code></pre></div>\n<p>Looking at that I wondered about those ports in the 127.0.0.1:49xxx range so I explicitly allowed them in the firewall (using ufw), but am still seeing the same errors and no notification on Android.  Also searched the smokescreen Github for \"Egress ACL is not configured\" and found where the error of that type is defined, but could not quite sort out how to back out where/why it is coming up in this case (sorry, like I said, fairly amateur here)</p>\n<p>Although the precise nature of the error is different from Bob's thought I would check the advice he had been given to try curl -v -6 <a href=\"https://push.zulipchat.com/compatibility\">https://push.zulipchat.com/compatibility</a> and that worked fine.</p>\n<p>Any thoughts what part of my configuration may be askew, or any other logging information I can dig up to help with that?</p>\n<p>Thank you!</p>",
+        "id": 1355822,
+        "sender_full_name": "Amit",
+        "timestamp": 1648617394
+    },
+    {
+        "content": "<p>Those are normal smokescreen logs.  We're not explicitly configuring an egress ACL on smokescreen -- we're using it for its default configuration of denying private IP addresses, so those logs are normal for Smokescreen.</p>",
+        "id": 1355834,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648618487
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"23744\">@Amit</span>: Is there anything relevant in the end of <code>/var/log/zulip/events_missedmessage_mobile_notifications.log</code> ?</p>",
+        "id": 1355835,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648618543
+    },
+    {
+        "content": "<p>And the port 49104 is he <em>outgoing</em> TCP port (well, outbound from zulip, inbound to Smokescreen).  So there's no need to open it up in firewalls -- there's nothing listening there, nor does it need to be available.</p>",
+        "id": 1355836,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648618618
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"23744\">@Amit</span>: And if you can DM me the IP address of your host, I can check the logs from the push bouncer.</p>",
+        "id": 1355838,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648618693
+    },
+    {
+        "content": "<p>Thanks!  That log file does not seem to be there in /var/log/zulip, maybe that's a relevant symptom?<br>\nI'll DM the IP address too</p>",
+        "id": 1355843,
+        "sender_full_name": "Amit",
+        "timestamp": 1648618817
+    },
+    {
+        "content": "<p>If it's not there, can you show <code>supervisorctl status</code>?</p>",
+        "id": 1355844,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648618832
+    },
+    {
+        "content": "<p>supervisorctl status gives</p>\n<div class=\"codehilite\"><pre><span></span><code>go-camo                            RUNNING   pid 26259, uptime 1:16:51\nprocess-fts-updates                RUNNING   pid 28489, uptime 1:02:32\nsmokescreen                        RUNNING   pid 26260, uptime 1:16:51\nzulip-django                       RUNNING   pid 28498, uptime 1:02:25\nzulip-tornado                      RUNNING   pid 27240, uptime 1:15:33\nzulip-workers:zulip_events         RUNNING   pid 28473, uptime 1:02:37\nzulip_deliver_scheduled_emails     RUNNING   pid 28480, uptime 1:02:35\nzulip_deliver_scheduled_messages   RUNNING   pid 28483, uptime 1:02:34\n</code></pre></div>",
+        "id": 1355846,
+        "sender_full_name": "Amit",
+        "timestamp": 1648618891
+    },
+    {
+        "content": "<p>OK, that's fine.</p>",
+        "id": 1355847,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648618921
+    },
+    {
+        "content": "<p>Does the server have an IPv6 address?</p>",
+        "id": 1355848,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648618979
+    },
+    {
+        "content": "<p>Check the logs in <code>/var/log/zulip/events.log</code> instead, since you're in the low-memory configuration where only a single worker handles all of the events</p>",
+        "id": 1355849,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648619133
+    },
+    {
+        "content": "<p>It does have an IPv6 address, I'll DM that too<br>\n/var/log/zulip/events.log has a lot of this over and over:</p>\n<div class=\"codehilite\"><pre><span></span><code>2022-03-30 04:41:03.635 INFO [zerver.lib.push_notifications] Sending push notifi\ncations to mobile clients for user 9\n2022-03-30 05:02:51.398 INFO [zerver.lib.push_notifications] Sent mobile push no\ntifications for user 8 through bouncer: 0 via FCM devices, 0 via APNs devices\n</code></pre></div>\n<p>To be precise the second entry there is repeated a few times</p>",
+        "id": 1355851,
+        "sender_full_name": "Amit",
+        "timestamp": 1648619270
+    },
+    {
+        "content": "<p>The ids on those rows should match.  Are you mixing and matching rows in that copy/paste?</p>",
+        "id": 1355853,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648619441
+    },
+    {
+        "content": "<p>Ah.  Have you logged back in on your device, after signing up for push notifications?</p>",
+        "id": 1355854,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648619570
+    },
+    {
+        "content": "<p>Not sure how I muddled it but now that you say it, I think I did.  Here's the full block without trying to be fancy about it:</p>\n<div class=\"codehilite\"><pre><span></span><code>2022-03-30 04:41:03.635 INFO [zerver.lib.push_notifications] Sending push notifi\ncations to mobile clients for user 9\n2022-03-30 04:41:03.713 INFO [zerver.lib.push_notifications] Sent mobile push no\ntifications for user 9 through bouncer: 0 via FCM devices, 0 via APNs devices\n2022-03-30 04:41:27.079 INFO [zerver.lib.push_notifications] Sending push notifi\ncations to mobile clients for user 8\n2022-03-30 04:41:27.181 INFO [zerver.lib.push_notifications] Sent mobile push no\ntifications for user 8 through bouncer: 0 via FCM devices, 0 via APNs devices\n2022-03-30 04:53:12.870 INFO [zerver.lib.push_notifications] Sending push notifi\ncations to mobile clients for user 8\n2022-03-30 04:53:12.959 INFO [zerver.lib.push_notifications] Sent mobile push no\ntifications for user 8 through bouncer: 0 via FCM devices, 0 via APNs devices\n2022-03-30 04:53:38.575 INFO [zerver.lib.push_notifications] Sending push notifi\ncations to mobile clients for user 9\n2022-03-30 04:53:38.684 INFO [zerver.lib.push_notifications] Sent mobile push no\ntifications for user 9 through bouncer: 0 via FCM devices, 0 via APNs devices\n2022-03-30 04:58:35.048 INFO [zerver.lib.push_notifications] Sending push notifi\ncations to mobile clients for user 8\n2022-03-30 04:58:35.114 INFO [zerver.lib.push_notifications] Sent mobile push no\ntifications for user 8 through bouncer: 0 via FCM devices, 0 via APNs devices\n2022-03-30 05:02:51.189 INFO [zerver.lib.push_notifications] Sending push notifi\ncations to mobile clients for user 8\n2022-03-30 05:02:51.398 INFO [zerver.lib.push_notifications] Sent mobile push no\ntifications for user 8 through bouncer: 0 via FCM devices, 0 via APNs devices\n2022-03-30 05:05:50.713 INFO [zerver.lib.push_notifications] Sending push notifi\ncations to mobile clients for user 8\n2022-03-30 05:05:50.805 INFO [zerver.lib.push_notifications] Sent mobile push no\ntifications for user 8 through bouncer: 0 via FCM devices, 0 via APNs devices\n2022-03-30 05:18:34.738 INFO [zerver.lib.push_notifications] Sending push notifi\ncations to mobile clients for user 8\n2022-03-30 05:18:34.845 INFO [zerver.lib.push_notifications] Sent mobile push no\ntifications for user 8 through bouncer: 0 via FCM devices, 0 via APNs devices\n</code></pre></div>",
+        "id": 1355855,
+        "sender_full_name": "Amit",
+        "timestamp": 1648619593
+    },
+    {
+        "content": "<p>From <a href=\"https://zulip.readthedocs.io/en/latest/production/mobile-push-notifications.html\">https://zulip.readthedocs.io/en/latest/production/mobile-push-notifications.html</a> :</p>\n<blockquote>\n<p>If you or your users have already set up the Zulip mobile app, you’ll each need to log out and log back in again in order to start getting push notifications.</p>\n</blockquote>\n<p>Did you log out and back in again?</p>",
+        "id": 1355857,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648619620
+    },
+    {
+        "content": "<p>Maybe another symptom that could help, in the \"Manage Organization\" menu from the gear icon, under \"Default User Settings\", the tooltip above the Mobile column of the Notification Triggers settings tells me that \"Mobile push notifications are not configured on the server\" - somehow it knows I've not set it up properly?</p>",
+        "id": 1355858,
+        "sender_full_name": "Amit",
+        "timestamp": 1648619737
+    },
+    {
+        "content": "<p>Logged out and in a few times, I'll do it again to make doubly sure.</p>",
+        "id": 1355859,
+        "sender_full_name": "Amit",
+        "timestamp": 1648619767
+    },
+    {
+        "content": "<p>Yeh, there's still no device registration happening.  But that message is ... notable.</p>",
+        "id": 1355860,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648619907
+    },
+    {
+        "content": "<p>Just logged out on the desktop and for good measure closed out the browser (running incognito so hopefully no state leakage), and for good measure both logged out from and uninstalled/reinstalled the app on the Android before logging in again, same situation unfortunately<br>\nNew entry in the events.log similar to before:</p>\n<div class=\"codehilite\"><pre><span></span><code>2022-03-30 05:58:02.409 INFO [zerver.lib.push_notifications] Sending push notifi\ncations to mobile clients for user 8\n2022-03-30 05:58:02.477 INFO [zerver.lib.push_notifications] Sent mobile push no\ntifications for user 8 through bouncer: 0 via FCM devices, 0 via APNs devices\n2022-03-30 05:58:10.841 INFO [zerver.lib.push_notifications] Sending push notifi\ncations to mobile clients for user 8\n2022-03-30 05:58:10.913 INFO [zerver.lib.push_notifications] Sent mobile push no\ntifications for user 8 through bouncer: 0 via FCM devices, 0 via APNs devices\n</code></pre></div>\n<p>(did send two messages which I'm assuming correspond to the two pairs there)</p>",
+        "id": 1355861,
+        "sender_full_name": "Amit",
+        "timestamp": 1648620027
+    },
+    {
+        "content": "<p>I've just come across <a href=\"https://github.com/zulip/zulip-mobile/issues/3838\">https://github.com/zulip/zulip-mobile/issues/3838</a> and am slightly kicking myself for not realizing not having GCM on my phone (have ?upgraded it to GrapheneOS which was probably out of my depth) might well be the issue</p>",
+        "id": 1355864,
+        "sender_full_name": "Amit",
+        "timestamp": 1648620446
+    },
+    {
+        "content": "<p>You seem to have gotten it to go through now.</p>",
+        "id": 1355865,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648620590
+    },
+    {
+        "content": "<p>Though I'm a little confused why you're seeing a banner saying it's not enabled, if it's sending the push bouncer messages successfully.</p>",
+        "id": 1355868,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648620646
+    },
+    {
+        "content": "<p>For the sake of anybody who might come across this later, on the Android/Graphene device I've installed the Android apk in a user account that has Google Play Services enabled, and in that setting the events.log gives</p>\n<div class=\"codehilite\"><pre><span></span><code>2022-03-30 06:10:22.905 INFO [zerver.lib.push_notifications] Sending push notifi\ncations to mobile clients for user 8\n2022-03-30 06:10:23.031 INFO [zerver.lib.push_notifications] Sent mobile push no\ntifications for user 8 through bouncer: 1 via FCM devices, 0 via APNs devices\n</code></pre></div>\n<p>which seems more successful :)</p>\n<p>On the other hand for some reason the phone still doesn't pop up a notification, and re-verified that the tooltip/banner still thinks the server isn't set up to push notifications</p>",
+        "id": 1355875,
+        "sender_full_name": "Amit",
+        "timestamp": 1648620924
+    },
+    {
+        "content": "<p>I think you're a little in uncharted territory here.  The server is sending a FCM/GCM push notification to the device-id.</p>",
+        "id": 1355876,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648620980
+    },
+    {
+        "content": "<p>I guess we can check something on the server.  Can you screenshot the tooltip/banner you're seeing, to make sure it's what I think it is?</p>",
+        "id": 1355878,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648621020
+    },
+    {
+        "content": "<p>Seems like, totally understand the issue seems to essentially be a very narrow edge case with Graphene.  Screenshot coming right up</p>",
+        "id": 1355879,
+        "sender_full_name": "Amit",
+        "timestamp": 1648621039
+    },
+    {
+        "content": "<p>Oh, hm, I have a guess.  Since you uncommented <code>PUSH_NOTIFICATION_BOUNCER_URL</code>, did you restart the server?</p>",
+        "id": 1355884,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648621160
+    },
+    {
+        "content": "<p>I believe I did restart the server, but will do now to be sure <a href=\"/user_uploads/2/e7/4SmbloYr1uDdNozTxcXKSQLK/zulip_banner_screenshot.png\">zulip_banner_screenshot.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/e7/4SmbloYr1uDdNozTxcXKSQLK/zulip_banner_screenshot.png\" title=\"zulip_banner_screenshot.png\"><img src=\"/user_uploads/2/e7/4SmbloYr1uDdNozTxcXKSQLK/zulip_banner_screenshot.png\"></a></div>",
+        "id": 1355886,
+        "sender_full_name": "Amit",
+        "timestamp": 1648621190
+    },
+    {
+        "content": "<p>OK, that tooltip is just a straight-up bug.  You should ignore it.</p>",
+        "id": 1355887,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648621227
+    },
+    {
+        "content": "<p>Let me file something for it.</p>",
+        "id": 1355888,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648621235
+    },
+    {
+        "content": "<p>Filed <a href=\"https://github.com/zulip/zulip/pull/21602\">#21602</a>.  I see the same here, which definitely has push notifications on.</p>",
+        "id": 1355894,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648621411
+    },
+    {
+        "content": "<p>So I think this is down to the unique phone configuration you're running.</p>",
+        "id": 1355896,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648621425
+    },
+    {
+        "content": "<p>Restarted, same tooltip.  Happy to have helped uncover something semi-real at least, and thank you for all the help!  I'll see if I can dig enough to find something on the Graphene side, and maybe someday the UnifiedPush method will make it into the main branch</p>",
+        "id": 1355898,
+        "sender_full_name": "Amit",
+        "timestamp": 1648621443
+    },
+    {
+        "content": "<p>Sorry I can't help more!</p>",
+        "id": 1355899,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648621501
+    },
+    {
+        "content": "<p>I'd suggest leaving a comment on the UnifiedPush issue you found, just for visibility.</p>",
+        "id": 1355900,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648621514
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span> may have more insight into if there's a chance of getting it to work without UnifiedPush, but I'm outside my area of knowledge there.</p>",
+        "id": 1355901,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648621606
+    },
+    {
+        "content": "<p>Again for future folk who may find this, just upgraded the mobile to the now-current version of GrapheneOS, and notifications work!</p>",
+        "id": 1355930,
+        "sender_full_name": "Amit",
+        "timestamp": 1648623504
+    },
+    {
+        "content": "<p>It does feel like it would be useful for the mobile app to do some soft of end-to-end test when it logs in, which would let it know if push notifications are working as the server claims.</p>",
+        "id": 1356361,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648666320
+    },
+    {
+        "content": "<p>Hello, we are self hosting zulip. Push notification used to work, but I haven't been getting any notification for several months. <br>\nZulip has been running great besides push notification.  We haven't upgraded since going live in Oct 2021.  I added PGroonga in Nov 2021, admin email password changed in Apr 2022.  That's about all we did to zulip server.</p>\n<p>I have re-registered for push notification twice today (I hope that doesn't cause any problems.)  I logged out and in of iOS app several times, restarted zulip, but I don't receive any push notifications.  I did check mobile app settings to receive notifications.</p>\n<p>Should I look into anywhere else?  Thank you!</p>\n<p><code>curl -v -6 https://push.zulipchat.com/compatibility</code></p>\n<div class=\"codehilite\"><pre><span></span><code>*   Trying 2600:1f18:414:db00:cca8:6126:d621:5d7f:443...\n* TCP_NODELAY set\n* Connected to push.zulipchat.com (2600:1f18:414:db00:cca8:6126:d621:5d7f) port 443 (#0)\n* ALPN, offering h2\n* ALPN, offering http/1.1\n* successfully set certificate verify locations:\n*   CAfile: /etc/ssl/certs/ca-certificates.crt\n  CApath: /etc/ssl/certs\n* TLSv1.3 (OUT), TLS handshake, Client hello (1):\n* TLSv1.3 (IN), TLS handshake, Server hello (2):\n* TLSv1.2 (IN), TLS handshake, Certificate (11):\n* TLSv1.2 (IN), TLS handshake, Server key exchange (12):\n* TLSv1.2 (IN), TLS handshake, Server finished (14):\n* TLSv1.2 (OUT), TLS handshake, Client key exchange (16):\n* TLSv1.2 (OUT), TLS change cipher, Change cipher spec (1):\n* TLSv1.2 (OUT), TLS handshake, Finished (20):\n* TLSv1.2 (IN), TLS handshake, Finished (20):\n* SSL connection using TLSv1.2 / ECDHE-RSA-AES128-GCM-SHA256\n* ALPN, server accepted to use h2\n* Server certificate:\n*  subject: CN=zulipchat.com\n*  start date: Jan 12 00:00:00 2022 GMT\n*  expire date: Feb 10 23:59:59 2023 GMT\n*  subjectAltName: host &quot;push.zulipchat.com&quot; matched cert&#39;s &quot;*.zulipchat.com&quot;\n*  issuer: C=US; O=Amazon; OU=Server CA 1B; CN=Amazon\n*  SSL certificate verify ok.\n* Using HTTP2, server supports multi-use\n* Connection state changed (HTTP/2 confirmed)\n* Copying HTTP/2 data in stream buffer to connection buffer after upgrade: len=0\n* Using Stream ID: 1 (easy handle 0x555d8a8bc8c0)\n&gt; GET /compatibility HTTP/2\n&gt; Host: push.zulipchat.com\n&gt; user-agent: curl/7.68.0\n&gt; accept: */*\n&gt;\n* Connection state changed (MAX_CONCURRENT_STREAMS == 128)!\n&lt; HTTP/2 200\n&lt; date: Tue, 30 Aug 2022 09:02:03 GMT\n&lt; content-type: application/json\n&lt; content-length: 30\n&lt; server: nginx/1.18.0 (Ubuntu)\n&lt; vary: Accept-Encoding\n&lt; vary: Accept-Language, Cookie\n&lt; content-language: en\n&lt; strict-transport-security: max-age=15768000\n&lt; x-frame-options: DENY\n&lt; x-content-type-options: nosniff\n&lt;\n{&quot;result&quot;:&quot;success&quot;,&quot;msg&quot;:&quot;&quot;}\n* Connection #0 to host push.zulipchat.com left intact\n</code></pre></div>\n<p><code>curl -v -6 https://google.com/</code></p>\n<div class=\"codehilite\"><pre><span></span><code>*   Trying 2404:6800:4003:c11::65:443...\n* TCP_NODELAY set\n* Connected to google.com (2404:6800:4003:c11::65) port 443 (#0)\n* ALPN, offering h2\n* ALPN, offering http/1.1\n* successfully set certificate verify locations:\n*   CAfile: /etc/ssl/certs/ca-certificates.crt\n  CApath: /etc/ssl/certs\n* TLSv1.3 (OUT), TLS handshake, Client hello (1):\n* TLSv1.3 (IN), TLS handshake, Server hello (2):\n* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):\n* TLSv1.3 (IN), TLS handshake, Certificate (11):\n* TLSv1.3 (IN), TLS handshake, CERT verify (15):\n* TLSv1.3 (IN), TLS handshake, Finished (20):\n* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):\n* TLSv1.3 (OUT), TLS handshake, Finished (20):\n* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384\n* ALPN, server accepted to use h2\n* Server certificate:\n*  subject: CN=*.google.com\n*  start date: Aug  8 08:17:43 2022 GMT\n*  expire date: Oct 31 08:17:42 2022 GMT\n*  subjectAltName: host &quot;google.com&quot; matched cert&#39;s &quot;google.com&quot;\n*  issuer: C=US; O=Google Trust Services LLC; CN=GTS CA 1C3\n*  SSL certificate verify ok.\n* Using HTTP2, server supports multi-use\n* Connection state changed (HTTP/2 confirmed)\n* Copying HTTP/2 data in stream buffer to connection buffer after upgrade: len=0\n* Using Stream ID: 1 (easy handle 0x564de0ea98c0)\n&gt; GET / HTTP/2\n&gt; Host: google.com\n&gt; user-agent: curl/7.68.0\n&gt; accept: */*\n&gt;\n* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):\n* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):\n* old SSL session ID is stale, removing\n* Connection state changed (MAX_CONCURRENT_STREAMS == 100)!\n&lt; HTTP/2 302\n&lt; location: https://www.google.com/sorry/index?continue=https://google.com/&amp;q=EhAkAGGAAAAA0AAAAAASvmABGPakt5gGIhCiQ48E0Jf7YiDqmu71-09lMgFy\n&lt; date: Tue, 30 Aug 2022 09:03:50 GMT\n&lt; pragma: no-cache\n&lt; expires: Fri, 01 Jan 1990 00:00:00 GMT\n&lt; cache-control: no-store, no-cache, must-revalidate\n&lt; content-type: text/html; charset=UTF-8\n&lt; server: HTTP server (unknown)\n&lt; content-length: 327\n&lt; x-xss-protection: 0\n&lt; alt-svc: h3=&quot;:443&quot;; ma=2592000,h3-29=&quot;:443&quot;; ma=2592000,h3-Q050=&quot;:443&quot;; ma=2592000,h3-Q046=&quot;:443&quot;; ma=2592000,h3-Q043=&quot;:443&quot;; ma=2592000,quic=&quot;:443&quot;; ma=2592000; v=&quot;46,43&quot;\n&lt;\n&lt;HTML&gt;&lt;HEAD&gt;&lt;meta http-equiv=&quot;content-type&quot; content=&quot;text/html;charset=utf-8&quot;&gt;\n&lt;TITLE&gt;302 Moved&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt;\n&lt;H1&gt;302 Moved&lt;/H1&gt;\nThe document has moved\n&lt;A HREF=&quot;https://www.google.com/sorry/index?continue=https://google.com/&amp;amp;q=EhAkAGGAAAAA0AAAAAASvmABGPakt5gGIhCiQ48E0Jf7YiDqmu71-09lMgFy&quot;&gt;here&lt;/A&gt;.\n&lt;/BODY&gt;&lt;/HTML&gt;\n* Connection #0 to host google.com left intact\n</code></pre></div>\n<p><code>ip address | grep 'inet6.*global'</code></p>\n<div class=\"codehilite\"><pre><span></span><code>    inet6 2400:6180:0:d0::12be:6001/64 scope global\n</code></pre></div>\n<p><code> supervisorctl status</code></p>\n<div class=\"codehilite\"><pre><span></span><code>process-fts-updates                RUNNING   pid 61813, uptime 1:13:52\nzulip-django                       RUNNING   pid 61809, uptime 1:13:52\nzulip-tornado                      RUNNING   pid 61810, uptime 1:13:52\nzulip-workers:zulip_events         RUNNING   pid 61814, uptime 1:13:52\nzulip_deliver_scheduled_emails     RUNNING   pid 61811, uptime 1:13:52\nzulip_deliver_scheduled_messages   RUNNING   pid 61812, uptime 1:13:52\n</code></pre></div>",
+        "id": 1427666,
+        "sender_full_name": "Naomi",
+        "timestamp": 1661859851
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21024\">@Naomi</span> strange. Can you look at <code>/var/log/zulip/events_missedmessage_mobile_notifications.log</code>? That should have a line of log output every time push notifications are sent.</p>",
+        "id": 1427830,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1661881948
+    },
+    {
+        "content": "<p>Also, does the issue only affect you? One possibility is that you configured your mobile device to suppress mobile notifications from Zulip in the OS settings.</p>",
+        "id": 1427832,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1661881977
+    },
+    {
+        "content": "<p>Thank you, Tim!<br>\nI don't see <code>/var/log/zulip/events_missedmessage_mobile_notifications.log</code> in the dir.  </p>\n<p>Our Zulip Server</p>\n<div class=\"codehilite\"><pre><span></span><code>Version 5.0-dev-2285-g0cd68b895c\nForked from upstream at 5.0-dev-2232-g0ef5cb4813\n</code></pre></div>\n<p>Another user of our org is not getting mobile notification.  He used to get them, too, so I assume his mobile is configured to receive notifications.  I did check my mobile OS, zulip app, and zulip settings are configured to receive notifications.</p>\n<p>I looked <code>/var/log/zulip/events.log</code></p>\n<div class=\"codehilite\"><pre><span></span><code>2022-05-13 03:55:56.345 INFO [zerver.lib.push_notifications] Sending push notifications to mobile clients for user 58\n2022-05-13 03:55:57.447 INFO [zerver.lib.push_notifications] Sent mobile push notifications for user 58 through bouncer: 1 via FCM devices, 1 via APNs devices\n2022-05-13 03:58:43.298 INFO [zerver.lib.push_notifications] Sending push notifications to mobile clients for user 58\n2022-05-13 03:58:44.597 INFO [zerver.lib.push_notifications] Sent mobile push notifications for user 58 through bouncer: 1 via FCM devices, 1 via APNs devices\n2022-05-13 04:04:20.416 INFO [zerver.lib.push_notifications] Sending push notifications to mobile clients for user 11\n2022-05-13 04:04:21.632 INFO [zerver.lib.push_notifications] Sent mobile push notifications for user 11 through bouncer: 0 via FCM devices, 2 via APNs devices\n</code></pre></div>\n<p>These are the last lines mentioning push notifications which are from 3 months ago.</p>",
+        "id": 1428342,
+        "sender_full_name": "Naomi",
+        "timestamp": 1661906220
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21024\">@Naomi</span> fascinating! So it sounds like your server is not trying to send push notifications at all.</p>",
+        "id": 1428401,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1661921361
+    },
+    {
+        "content": "<p>One thing to check is this: <code>./scripts/get-django-setting PUSH_NOTIFICATION_BOUNCER_URL</code>.</p>",
+        "id": 1428402,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1661921392
+    },
+    {
+        "content": "<p>The other thing I'd recommend from reading that output is that you should upgrade to the latest 5.x release; you're missing some important security updates.</p>",
+        "id": 1428403,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1661921433
+    },
+    {
+        "content": "<p>(And that'll make it easier for us to provide further debugging advice, since you'd be on an official version)</p>",
+        "id": 1428404,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1661921479
+    },
+    {
+        "content": "<p>OK, I'll try to upgrade soon.  <br>\n<del>But for now, <code>./scripts/get-django-setting PUSH_NOTIFICATION_BOUNCER_URL</code> is this a file?  Where can I find it?</del></p>",
+        "id": 1428407,
+        "sender_full_name": "Naomi",
+        "timestamp": 1661921670
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>zulip@chat:~/deployments/current$ ./scripts/get-django-setting PUSH_NOTIFICATION_BOUNCER_URL\nhttps://push.zulipchat.com\n</code></pre></div>",
+        "id": 1428415,
+        "sender_full_name": "Naomi",
+        "timestamp": 1661922955
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21024\">@Naomi</span> just to confirm, have you by any chance turned off mobile notifications in the settings UI? <a href=\"https://zulip.com/help/mobile-notifications\">https://zulip.com/help/mobile-notifications</a></p>",
+        "id": 1428638,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1661965759
+    },
+    {
+        "content": "<p>All mobile notifications settings are turned on,  including <code>Send mobile notifications even if I'm online (useful for testing)</code>.</p>\n<p>I just noticed our  outgoing email is not working somehow.  I have to look into that.  I assume email and push notification doesn't interfere.</p>",
+        "id": 1428961,
+        "sender_full_name": "Naomi",
+        "timestamp": 1661994624
+    },
+    {
+        "content": "<p>I'm getting ready to upgrade to 5.6.</p>",
+        "id": 1428962,
+        "sender_full_name": "Naomi",
+        "timestamp": 1661994744
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21024\">@Naomi</span> can you run <code>rabbitmqctl list_queues</code> and <code>supervisorctl status</code> as root and post the output?</p>",
+        "id": 1429408,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662069393
+    },
+    {
+        "content": "<p>I think the most likely explanation is that your <code>zulip_events</code> queue processor is not processing enqueued work.</p>",
+        "id": 1429409,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662069413
+    },
+    {
+        "content": "<p>Restarting the zulip server with <code>restart-server</code> may fix the issue if so, depending on why that worker isn't running; otherwise I'd look at whatever the last things are in <code>events.log</code>, as it likely includes an exception that explains what went wrong.</p>",
+        "id": 1429410,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662069454
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>zone@chat:~$ sudo rabbitmqctl list_queues\n[sudo] password for zone:\nTimeout: 60.0 seconds ...\nListing queues for vhost / ...\nname    messages\nuser_presence   371470\nembedded_bots   0\ndeferred_work   0\noutgoing_webhooks   0\nemail_mirror    0\nemail_senders   101\nuser_activity_interval  7212\ninvites 0\ndigest_emails   0\nerror_reports   0\nmissedmessage_mobile_notifications  2818\nmissedmessage_emails    2239\nuser_activity   1002360\nnotify_tornado  0\nembed_links 0\n</code></pre></div>\n<div class=\"codehilite\"><pre><span></span><code>zone@chat:~$ sudo supervisorctl status\nprocess-fts-updates                RUNNING   pid 8864, uptime 12:59:42\nzulip-django                       RUNNING   pid 8878, uptime 12:59:31\nzulip-tornado                      RUNNING   pid 8870, uptime 12:59:39\nzulip-workers:zulip_events         RUNNING   pid 8817, uptime 12:59:50\nzulip_deliver_scheduled_emails     RUNNING   pid 8823, uptime 12:59:47\nzulip_deliver_scheduled_messages   RUNNING   pid 8856, uptime 12:59:45\n</code></pre></div>",
+        "id": 1429489,
+        "sender_full_name": "Naomi",
+        "timestamp": 1662078041
+    },
+    {
+        "content": "<p>I have restarted zulip twice or so in the last 2 days.</p>",
+        "id": 1429491,
+        "sender_full_name": "Naomi",
+        "timestamp": 1662078210
+    },
+    {
+        "content": "<p>I just fixed outgoing email by changing email password, and then restarting zulip.  Bunch of missed emails got sent.<br>\nAfter this, looking at events.log, push notifications were sent to some of our users.  But I didn't receive push notifications.  </p>\n<p>Is there easy way to look up user id number (not email or display name)?  I found out I'm user 58 in our org.  I want to know few other people's user id, so I can ask questions.</p>",
+        "id": 1429520,
+        "sender_full_name": "Naomi",
+        "timestamp": 1662090642
+    },
+    {
+        "content": "<p>Partial events.log after outgoing email started working.  I can DM you other part with our users emails, if you think it might help.  It's about 1500 lines.</p>\n<div class=\"codehilite\"><pre><span></span><code>2022-09-02 01:07:38.516 INFO [zerver.lib.push_notifications] Sent mobile push notifications for user 106 through bouncer: 1 via FCM devices, 0 via APNs devices\n2022-09-02 01:07:38.644 INFO [zerver.lib.push_notifications] Sending push notifications to mobile clients for user 114\n2022-09-02 01:07:39.765 INFO [zerver.lib.push_notifications] Sent mobile push notifications for user 114 through bouncer: 0 via FCM devices, 2 via APNs devices\n2022-09-02 01:07:39.864 INFO [zerver.lib.push_notifications] Sending push notifications to mobile clients for user 117\n2022-09-02 01:07:41.094 INFO [zerver.lib.push_notifications] Sent mobile push notifications for user 117 through bouncer: 0 via FCM devices, 0 via APNs devices\n2022-09-02 01:07:41.426 INFO [zerver.lib.push_notifications] Sending push notifications to mobile clients for user 121\n2022-09-02 01:07:42.164 INFO [] Batch-processing 9 missedmessage_emails events for user 131\n2022-09-02 01:07:42.529 INFO [zerver.lib.push_notifications] Sent mobile push notifications for user 121 through bouncer: 0 via FCM devices, 0 via APNs devices\n2022-09-02 01:07:42.549 INFO [] Batch-processing 57 missedmessage_emails events for user 8\n2022-09-02 01:07:43.145 INFO [] Batch-processing 8 missedmessage_emails events for user 12\n2022-09-02 01:07:43.732 INFO [] Unexpected message access failure handling push notifications: 36 2775\n2022-09-02 01:07:43.867 INFO [] Unexpected message access failure handling push notifications: 39 2775\n</code></pre></div>",
+        "id": 1429523,
+        "sender_full_name": "Naomi",
+        "timestamp": 1662092676
+    },
+    {
+        "content": "<p>Last part of events.log.</p>\n<div class=\"codehilite\"><pre><span></span><code>2022-09-02 01:10:06.258 ERR  [pika.adapters.utils.io_services_utils] _AsyncBaseTransport._produce() failed, aborting connection: error=ConnectionResetError(104, &#39;Connection reset by peer&#39;); sock=&lt;socket.socket fd=47, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=(&#39;127.0.0.1&#39;, 46068)&gt;; Caller&#39;s stack:\nTraceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/c3a4ec5672d9d2ec2fd8932c1bee310def9e4606/zulip-py3-venv/lib/python3.8/site-packages/pika/adapters/utils/io_services_utils.py&quot;, line 1103, in _on_socket_writable\n    self._produce()\n  File &quot;/srv/zulip-venv-cache/c3a4ec5672d9d2ec2fd8932c1bee310def9e4606/zulip-py3-venv/lib/python3.8/site-packages/pika/adapters/utils/io_services_utils.py&quot;, line 819, in _produce\n    num_bytes_sent = self._sigint_safe_send(self._sock,\n  File &quot;/srv/zulip-venv-cache/c3a4ec5672d9d2ec2fd8932c1bee310def9e4606/zulip-py3-venv/lib/python3.8/site-packages/pika/adapters/utils/io_services_utils.py&quot;, line 79, in retry_sigint_wrap\n    return func(*args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/c3a4ec5672d9d2ec2fd8932c1bee310def9e4606/zulip-py3-venv/lib/python3.8/site-packages/pika/adapters/utils/io_services_utils.py&quot;, line 861, in _sigint_safe_send\n    return sock.send(data)\nConnectionResetError: [Errno 104] Connection reset by peer\nTraceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/c3a4ec5672d9d2ec2fd8932c1bee310def9e4606/zulip-py3-venv/lib/python3.8/site-packages/pika/adapters/utils/io_services_utils.py&quot;, line 1103, in _on_socket_writable\n    self._produce()\n  File &quot;/srv/zulip-venv-cache/c3a4ec5672d9d2ec2fd8932c1bee310def9e4606/zulip-py3-venv/lib/python3.8/site-packages/pika/adapters/utils/io_services_utils.py&quot;, line 819, in _produce\n    num_bytes_sent = self._sigint_safe_send(self._sock,\n  File &quot;/srv/zulip-venv-cache/c3a4ec5672d9d2ec2fd8932c1bee310def9e4606/zulip-py3-venv/lib/python3.8/site-packages/pika/adapters/utils/io_services_utils.py&quot;, line 79, in retry_sigint_wrap\n    return func(*args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/c3a4ec5672d9d2ec2fd8932c1bee310def9e4606/zulip-py3-venv/lib/python3.8/site-packages/pika/adapters/utils/io_services_utils.py&quot;, line 861, in _sigint_safe_send\n    return sock.send(data)\nConnectionResetError: [Errno 104] Connection reset by peer\n2022-09-02 01:10:06.260 ERR  [pika.adapters.base_connection] connection_lost: StreamLostError: (&quot;Stream connection lost: ConnectionResetError(104, &#39;Connection reset by peer&#39;)&quot;,)\n2022-09-02 01:10:06.264 ERR  [pika.adapters.blocking_connection] Unexpected connection close detected: StreamLostError: (&quot;Stream connection lost: ConnectionResetError(104, &#39;Connection reset by peer&#39;)&quot;,)\nException in thread Thread-15:\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2021-10-02-12-56-04/zerver/lib/queue.py&quot;, line 199, in do_consume\n    channel.basic_ack(max_processed, multiple=True)\n  File &quot;/srv/zulip-venv-cache/c3a4ec5672d9d2ec2fd8932c1bee310def9e4606/zulip-py3-venv/lib/python3.8/site-packages/pika/adapters/blocking_connection.py&quot;, line 2112, in basic_ack\n    self._flush_output()\n  File &quot;/srv/zulip-venv-cache/c3a4ec5672d9d2ec2fd8932c1bee310def9e4606/zulip-py3-venv/lib/python3.8/site-packages/pika/adapters/blocking_connection.py&quot;, line 1335, in _flush_output\n    self._connection._flush_output(lambda: self.is_closed, *waiters)\n  File &quot;/srv/zulip-venv-cache/c3a4ec5672d9d2ec2fd8932c1bee310def9e4606/zulip-py3-venv/lib/python3.8/site-packages/pika/adapters/blocking_connection.py&quot;, line 523, in _flush_output\n    raise self._closed_result.value.error\npika.exceptions.StreamLostError: Stream connection lost: ConnectionResetError(104, &#39;Connection reset by peer&#39;)\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File &quot;/usr/lib/python3.8/threading.py&quot;, line 932, in _bootstrap_inner\n    self.run()\n  File &quot;/home/zulip/deployments/2021-10-02-12-56-04/zerver/management/commands/process_queue.py&quot;, line 105, in run\n    self.worker.start()\n  File &quot;/home/zulip/deployments/2021-10-02-12-56-04/zerver/worker/queue_processors.py&quot;, line 414, in start\n    self.q.start_json_consumer(\n  File &quot;/home/zulip/deployments/2021-10-02-12-56-04/zerver/lib/queue.py&quot;, line 208, in start_json_consumer\n    self.ensure_queue(queue_name, do_consume)\n  File &quot;/home/zulip/deployments/2021-10-02-12-56-04/zerver/lib/queue.py&quot;, line 164, in ensure_queue\n    callback(self.channel)\n  File &quot;/home/zulip/deployments/2021-10-02-12-56-04/zerver/lib/queue.py&quot;, line 201, in do_consume\n    channel.basic_nack(max_processed, multiple=True)\n  File &quot;/srv/zulip-venv-cache/c3a4ec5672d9d2ec2fd8932c1bee310def9e4606/zulip-py3-venv/lib/python3.8/site-packages/pika/adapters/blocking_connection.py&quot;, line 2133, in basic_nack\n    self._impl.basic_nack(\n  File &quot;/srv/zulip-venv-cache/c3a4ec5672d9d2ec2fd8932c1bee310def9e4606/zulip-py3-venv/lib/python3.8/site-packages/pika/channel.py&quot;, line 401, in basic_nack\n    self._raise_if_not_open()\n  File &quot;/srv/zulip-venv-cache/c3a4ec5672d9d2ec2fd8932c1bee310def9e4606/zulip-py3-venv/lib/python3.8/site-packages/pika/channel.py&quot;, line 1393, in _raise_if_not_open\n    raise exceptions.ChannelWrongStateError(&#39;Channel is closed.&#39;)\npika.exceptions.ChannelWrongStateError: Channel is closed.\n</code></pre></div>",
+        "id": 1429524,
+        "sender_full_name": "Naomi",
+        "timestamp": 1662093039
+    },
+    {
+        "content": "<p>User IDs are displayed in the UI in 5.0 and above, I think.</p>",
+        "id": 1429870,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662157706
+    },
+    {
+        "content": "<p>Can you check how many items remain in your RabbitMQ queues?</p>",
+        "id": 1429873,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662157738
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>zone@chat:~$ sudo rabbitmqctl list_queues\n[sudo] password for zone:\nTimeout: 60.0 seconds ...\nListing queues for vhost / ...\nname    messages\nuser_presence   372311\nembedded_bots   0\ndeferred_work   0\noutgoing_webhooks   0\nemail_mirror    0\nemail_senders   213\nuser_activity_interval  131\ninvites 0\ndigest_emails   0\nerror_reports   1\nmissedmessage_mobile_notifications  2331\nmissedmessage_emails    32\nuser_activity   874747\nnotify_tornado  0\nembed_links 0\n</code></pre></div>",
+        "id": 1429954,
+        "sender_full_name": "Naomi",
+        "timestamp": 1662165565
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21024\">@Naomi</span> sorry for the delayed follow-up, I was travelling over the weekend. Those numbers should all be 0 in a healthy server.</p>",
+        "id": 1430888,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662491950
+    },
+    {
+        "content": "<p>I think it's reasonably likely your actual problem is that your server has insufficient RAM for the usage level; I'd consider upgrading the RAM on the system to 8GB or more and then running <code>zulip-puppet-apply</code> doing so will configure Zulip to use a better mechanism for queue processors that requires &gt;4GB of RAM.</p>",
+        "id": 1430889,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662492022
+    },
+    {
+        "content": "<p>Oh... we are on 2GB RAM server.  <br>\nDo we really have to upgrade to 8GB RAM?<br>\nOur  zulip is not so busy and currently we have 52 users only.  </p>\n<p>Here's our memory usage graph from DigitalOcean over 14 days.<br>\n<a href=\"/user_uploads/2/f0/W1s2UPADaQfZsgX-_GvS0bOh/Screen-Shot-2022-09-07-at-10.38.38.png\">Screen-Shot-2022-09-07-at-10.38.38.png</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/f0/W1s2UPADaQfZsgX-_GvS0bOh/Screen-Shot-2022-09-07-at-10.38.38.png\" title=\"Screen-Shot-2022-09-07-at-10.38.38.png\"><img src=\"/user_uploads/2/f0/W1s2UPADaQfZsgX-_GvS0bOh/Screen-Shot-2022-09-07-at-10.38.38.png\"></a></div><p>I have swap enabled.</p>\n<div class=\"codehilite\"><pre><span></span><code>zone@chat:~$ free -h\n              total        used        free      shared  buff/cache   available\nMem:          1.9Gi       1.0Gi       182Mi        46Mi       758Mi       731Mi\nSwap:         2.0Gi       1.4Gi       662Mi\n</code></pre></div>",
+        "id": 1431222,
+        "sender_full_name": "Naomi",
+        "timestamp": 1662518424
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21024\">@Naomi</span> it's likely 4GB is sufficient. Zulip runs its queue workers in a different way with 2GB of RAM than 4GB+, and I think given the issues you're seeing, it'll be far easier to debug with 4GB+, and will also mean whatever problem you're having only affects the one queue with the issue, not potentially all of them.</p>",
+        "id": 1431457,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662571398
+    },
+    {
+        "content": "<p>If RAM requirement is indeed the issue, then <a href=\"https://zulip.readthedocs.io/en/latest/production/requirements.html\">https://zulip.readthedocs.io/en/latest/production/requirements.html</a> needs to be updated to elaborate the issue for push notifications.</p>",
+        "id": 1431956,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1662608071
+    },
+    {
+        "content": "<p>Should I upgrade zulip first or RAM first?  <br>\nCan I  output anything useful along the steps?  I can follow instruction if it helps.</p>\n<p>Hi, Rein!</p>",
+        "id": 1431969,
+        "sender_full_name": "Naomi",
+        "timestamp": 1662614794
+    },
+    {
+        "content": "<p>I think it is faster to upgrade the RAM first, and so we can immediately see if it fixes the issue.</p>",
+        "id": 1431986,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1662618517
+    },
+    {
+        "content": "<p>OK.  It'll be a little while.</p>",
+        "id": 1431998,
+        "sender_full_name": "Naomi",
+        "timestamp": 1662619138
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"2328\">Rein Zustand</span> <a href=\"#narrow/stream/31-production-help/topic/push.20notifications/near/1431956\">said</a>:</p>\n<blockquote>\n<p>If RAM requirement is indeed the issue, then <a href=\"https://zulip.readthedocs.io/en/latest/production/requirements.html\">https://zulip.readthedocs.io/en/latest/production/requirements.html</a> needs to be updated to elaborate the issue for push notifications.</p>\n</blockquote>\n<p>It's definitely not the case that more RAM is required for push notifications. More RAM is already recommended for the size of the userbase on this particular system. I think it's likely that, as with the first issue that <span class=\"user-mention silent\" data-user-id=\"21024\">Naomi</span> tracked down (broken email sending configuration), there's some other problem here, but increasing RAM as we recommend will greatly simplify debugging anyway, so might as well do that first.</p>",
+        "id": 1432543,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662669884
+    },
+    {
+        "content": "<p>I just upgraded to 4GB RAM.  Still zulip 5.0.</p>\n<div class=\"codehilite\"><pre><span></span><code>zone@chat:~$ sudo rabbitmqctl list_queues\nTimeout: 60.0 seconds ...\nListing queues for vhost / ...\nname    messages\nuser_presence   382982\nembedded_bots   0\ndeferred_work   0\noutgoing_webhooks   0\nemail_mirror    0\nemail_senders   0\nuser_activity_interval  0\ninvites 0\ndigest_emails   0\nerror_reports   0\nmissedmessage_mobile_notifications  1839\nmissedmessage_emails    0\nuser_activity   734995\nnotify_tornado  0\nembed_links 0\n</code></pre></div>",
+        "id": 1432721,
+        "sender_full_name": "Naomi",
+        "timestamp": 1662695134
+    },
+    {
+        "content": "<p>I just received push notification after 4 month!</p>\n<div class=\"codehilite\"><pre><span></span><code>zone@chat:~$ sudo rabbitmqctl list_queues\n[sudo] password for zone:\nTimeout: 60.0 seconds ...\nListing queues for vhost / ...\nname    messages\nuser_presence   262410\nembedded_bots   0\ndeferred_work   0\noutgoing_webhooks   0\nemail_mirror    0\nemail_senders   0\nuser_activity_interval  0\ninvites 0\ndigest_emails   0\nerror_reports   0\nmissedmessage_mobile_notifications  0\nmissedmessage_emails    0\nuser_activity   1\nnotify_tornado  0\nembed_links 0\n</code></pre></div>",
+        "id": 1432723,
+        "sender_full_name": "Naomi",
+        "timestamp": 1662696047
+    },
+    {
+        "content": "<p>Anything to check before I upgrade to zulip 5.6?</p>",
+        "id": 1432728,
+        "sender_full_name": "Naomi",
+        "timestamp": 1662696384
+    },
+    {
+        "content": "<p>Maybe we should wait for a day and see how the server goes during the time? Also, <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> might want some logging details before the version upgrade (so that we don't have changes piled on top of changes, that it is harder to keep track of the causes).</p>",
+        "id": 1432730,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1662697216
+    },
+    {
+        "content": "<p>It looks like the queues are all clearing. I don't see any reason not to upgrade at this point.</p>",
+        "id": 1432733,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662698008
+    },
+    {
+        "content": "<p>I noticed another thing.  Users active state had been unchanged from <code>not active</code> until the RAM upgrade.  I'd been thinking everyone turned privacy setting to not to show, but I see some of them being active, idle and last active time.</p>",
+        "id": 1432742,
+        "sender_full_name": "Naomi",
+        "timestamp": 1662698495
+    },
+    {
+        "content": "<p>Yeah there are a lot of things that are broken if queue processors are not running properly.</p>",
+        "id": 1432743,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662698658
+    },
+    {
+        "content": "<p>Since upgrading the RAM is the solution here, maybe the symptoms described in this thread should be put in <a href=\"https://zulip.readthedocs.io/en/latest/production/requirements.html\">https://zulip.readthedocs.io/en/latest/production/requirements.html</a> for easier troubleshooting?</p>",
+        "id": 1438832,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1663771795
+    },
+    {
+        "content": "<p>I don't think so. What we should do is add some guidance on <code>rabbitmqctl status</code> here: <a href=\"https://zulip.readthedocs.io/en/latest/production/troubleshooting.html\">https://zulip.readthedocs.io/en/latest/production/troubleshooting.html</a></p>",
+        "id": 1438917,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663784305
+    },
+    {
+        "content": "<p>I don't think someone who's having issues should be expected to go reread the system requirements page; the troubleshooting page is the place to go.</p>",
+        "id": 1438920,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663784337
+    },
+    {
+        "content": "<p>As a sidenote, does our 500 page for self-hosted servers have a link to that page?</p>",
+        "id": 1438921,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663784348
+    },
+    {
+        "content": "<p>I feel like that could be a fairly meaningful self-documentation feature.</p>",
+        "id": 1438922,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663784368
+    },
+    {
+        "content": "<p>The requirements doc actually says this</p>\n<blockquote>\n<p>RAM: We recommended more RAM for larger installations:<br>\n- With 25+ daily active users, 4 GB of RAM.<br>\n- With 100+ daily active users, 8 GB of RAM.</p>\n</blockquote>\n<p>Also, I don't know how common it is for an organization to have enough RAM in the beginning, only for the active users to grow beyond the limit. What if there is a script that can be used to diagnose the health of the RAM load of the server? There is already a monitoring process for storage it seems.</p>",
+        "id": 1439166,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1663811166
+    },
+    {
+        "content": "<p>We have 52 users in our org, and daily active users are less than 20 for most of days.  Since the upgrade of zulip to 6.0, memory usage stays around 80 to 95% on a 4GB RAM server.  If we require 4GB RAM in our org, shouldn't minimum requirement for a zulip server 4GB RAM instead of 2GB?</p>",
+        "id": 1439248,
+        "sender_full_name": "Naomi",
+        "timestamp": 1663832721
+    },
+    {
+        "content": "<p>Almost every system will use more memory if it’s available, to improve performance with larger caches, for example. The way to check whether it will run with 2 GB is to try running it with 2 GB.</p>",
+        "id": 1439249,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1663833112
+    },
+    {
+        "content": "<p>Exactly. To be clear about the specific patterns for Zulip here:</p>\n<ul>\n<li>Zulip allocates more memory to <code>memcached</code> and the database on systems that have more total memory; this improves performance.</li>\n<li>Zulip runs its queue processors in multithreaded mode, which requires less memory but is also much lower throughput, and has less isolation between different queues, on systems with less than 4GB or so of RAM.</li>\n<li>This specific system had a set of problems, such as having broken outgoing email configuration, that caused some queues to backlog; this resulted in a problem for other queues, like the one that sends push notifications because of the isolation limitations of the multithreaded mode.</li>\n</ul>",
+        "id": 1439346,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663861854
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/push.20notifications/near/1438921\">said</a>:</p>\n<blockquote>\n<p>As a sidenote, does our 500 page for self-hosted servers have a link to that page?</p>\n</blockquote>\n<p>I'd like to return to the 500 page as a place we could improve things here; currently it's the same for Zulip Cloud and self-hosted servers:</p>\n<p><a href=\"/user_uploads/2/94/Pi0xyn9f4Ps1jnwBAvWL3j-N/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/94/Pi0xyn9f4Ps1jnwBAvWL3j-N/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/94/Pi0xyn9f4Ps1jnwBAvWL3j-N/image.png\"></a></div>",
+        "id": 1439348,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663862084
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span> let's do a project on tweaking that page's content; we should have its text be conditional on whether the server is self-hosted, and for that case, make sure it links to <a href=\"https://zulip.readthedocs.io/en/stable/production/troubleshooting.html\">https://zulip.readthedocs.io/en/stable/production/troubleshooting.html</a>.</p>",
+        "id": 1439349,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663862135
+    },
+    {
+        "content": "<p>Maybe something like this?</p>\n<blockquote>\n<p>Your Zulip chat cannot be loaded because the server is experiencing technical difficulties. This page will reload automatically when service is restored.</p>\n<p>In the meantime, you can <a href=\"mailto:desdemona+admin@zulip.com\">contact your server administrator</a> for support. If you administer this server, you may want to check out <a href=\"https://zulip.readthedocs.io/en/latest/production/troubleshooting.html\">Zulip’s troubleshooting guide</a>. </p>\n</blockquote>",
+        "id": 1439350,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1663862738
+    },
+    {
+        "content": "<p>Yeah that sounds pretty good for the self-hosted case. I think we probably want different text for Zulip Cloud.</p>",
+        "id": 1439351,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663862845
+    },
+    {
+        "content": "<p>Ah, yeah, I didn't realize Zulip Cloud users see the same page. Let me take a pass at that.</p>",
+        "id": 1439381,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1663865420
+    },
+    {
+        "content": "<p>I think the first paragraph can be the same.</p>\n<p>Ideally, we'd direct users to a status page, but we would need to implement that first. Is it useful for folks to contact support, or would we already know what's going on?</p>",
+        "id": 1439384,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1663865642
+    },
+    {
+        "content": "<p>It's useful to contact support. Obviously in a major outage, we'll be immediately aware, but sometimes there's an issue that affects just one user, and we're aware via exception monitoring but might not know what the user's doing to trigger the issue. In those cases, it can helpful to talk to that user if they're willing to understand what they're doing and reproduce. And in any case, I think it gives comfort to have a clear path forward.</p>",
+        "id": 1439392,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663866255
+    },
+    {
+        "content": "<p>Here's a neutral formulation:</p>\n<blockquote>\n<p>In the meantime, you can contact Zulip support .</p>\n</blockquote>",
+        "id": 1439579,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1663874675
+    },
+    {
+        "content": "<p>Putting the troubleshooting page upfront in the 500 page still doesn't address the fact that the piled up RabbitMQ queues symptom and its possible causes is not documented in the troubleshooting page.</p>",
+        "id": 1439689,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1663884345
+    },
+    {
+        "content": "<p>I filed <strong>Update text on 500 error page</strong> <a href=\"https://github.com/zulip/zulip/pull/23063\">#23063</a>. (Someone else will need to address <span class=\"user-mention silent\" data-user-id=\"2328\">Rein Zustand</span> 's last point.)</p>",
+        "id": 1441315,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1664225709
+    }
+]

@@ -1,0 +1,212 @@
+[
+    {
+        "content": "<p>We have a need to allow a 3rd party access to our Zulip - however we want to keep them in a separate area on Zulip, while still allowing existing internal Zulip users access to everything on the server. I'm looking at <a href=\"https://zulip.readthedocs.io/en/latest/production/multiple-organizations.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/multiple-organizations.html\">https://zulip.readthedocs.io/en/latest/production/multiple-organizations.html</a> but am unsure which approach I should be looking at. The 3rd party is just a handful of users so if we had to manually create their accounts that would be perfectly fine.</p>",
+        "id": 806185,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578060980
+    },
+    {
+        "content": "<p>If you want them to be in the same Zulip organization as you and able to interact there, you may want to add them as Guest users. That way they can only see streams they're added to, although for now it will also let them see all the members in your Zulip organization.</p>",
+        "id": 806187,
+        "sender_full_name": "Cyphase",
+        "timestamp": 1578064089
+    },
+    {
+        "content": "<p>Will this work even though we are using LDAP for our internal users? We are self-hosted.</p>",
+        "id": 806190,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578069965
+    },
+    {
+        "content": "<p>Is there something we need to do to allow Zulip to send mail to other domains? Our Exchange is rejecting anything coming from Zulip going to an outside domain.</p>",
+        "id": 806197,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578074019
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"3275\">@hb-it</span> on the email front, that's likely a configuration issue on your Exchange server's side.</p>",
+        "id": 806212,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1578081288
+    },
+    {
+        "content": "<p>Fixed that part I think by adding an Exchange Connector, so the signup emails are now flowing to my Gmail test accounts. However when I try to follow through and provide a new password as prompted, Zulip logins fail on the new account \"Please enter a correct email and password. Note that both fields may be case-sensitive.\" even though I have tried several times with a correct password.</p>",
+        "id": 806218,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578081601
+    },
+    {
+        "content": "<p>What Zulip version are you using?</p>",
+        "id": 806220,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1578081638
+    },
+    {
+        "content": "<p>And which LDAP configuration mode?</p>",
+        "id": 806221,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1578081650
+    },
+    {
+        "content": "<p>You can use <code>EmailAuthBackend</code> and LDAP on the same system, but only for email addresses that Zulip can prove are not  in the LDAP database; the LDAP changes in 2.1.0 make it possible to do that proof via an LDAP query (rather than just <code>LDAP_APPEND_DOMAIN</code>)</p>",
+        "id": 806223,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1578081715
+    },
+    {
+        "content": "<p>Zulip Server 2.1.1. Not sure what you mean by which LDAP mode, where do I check that?</p>",
+        "id": 806225,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578081830
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"3275\">@hb-it</span> This is referring to the (A), (B) and (C) configuration types from <a href=\"https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#ldap-including-active-directory\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#ldap-including-active-directory\">https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#ldap-including-active-directory</a></p>",
+        "id": 806232,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1578083244
+    },
+    {
+        "content": "<p>AUTH_LDAP_USER_SEARCH = LDAPSearch(\"CN=Users,DC=ourdomain,DC=com\",<br>\n    ldap.SCOPE_SUBTREE, \"(sAMAccountName=%(user)s)\")     is what we have setup in settings.py</p>",
+        "id": 806233,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578083685
+    },
+    {
+        "content": "<p>No <code>LDAP_APPEND_DOMAIN</code> or <code>LDAP_EMAIL_ATTR</code>?</p>",
+        "id": 806234,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1578083820
+    },
+    {
+        "content": "<p>LDAP_APPEND_DOMAIN = ADMIN_DOMAIN,     LDAP_EMAIL_ATTR is not configured</p>",
+        "id": 806236,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578084739
+    },
+    {
+        "content": "<p>That's configuration (B). In this case, you should be good to go if you enable EmailAuthBackend, with the restriction being that the 3rd party guest users must have emails outside the <code>ADMIN_DOMAIN</code>(since  <code>LDAP_APPEND_DOMAIN</code> emails are only allowed to be administered by ldap, not by the email backend).</p>",
+        "id": 806237,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1578085455
+    },
+    {
+        "content": "<p>I've uncommented EmailAuthBackend, all new users are still being rejected for an invalid password. The Notification bot is reporting the new user signups though.</p>",
+        "id": 806239,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578086587
+    },
+    {
+        "content": "<p>Are their email addresses different from the <code>ADMIN_DOMAIN</code>? Can you run <code>manage.py shell</code> and in there check what <code>email_belongs_to_ldap</code> returns for their emails?</p>\n<div class=\"codehilite\"><pre><span></span>from zproject.backends import email_belongs_to_ldap\n email_belongs_to_ldap(get_realm(&quot;&quot;), &quot;address@example.com&quot;)\n</pre></div>",
+        "id": 806240,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1578086880
+    },
+    {
+        "content": "<p>They are different, they are test gmail accounts.</p>",
+        "id": 806241,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578086949
+    },
+    {
+        "content": "<p>I have to run atm, I will try the manage.py next. Thanks.</p>",
+        "id": 806242,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578087045
+    },
+    {
+        "content": "<p>How do the generated logs in <code>/var/log/zulip/server.log</code> and  <code>/var/log/zulip/django.log</code> look when they try to log in?</p>",
+        "id": 806243,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1578087082
+    },
+    {
+        "content": "<p>No entries in either of those logs after failed logins.</p>",
+        "id": 806426,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578224842
+    },
+    {
+        "content": "<p>When running the manage.py command above I am getting:</p>",
+        "id": 806427,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578226347
+    },
+    {
+        "content": "<p>In [2]: from zproject.backends import email_belongs_to_ldap<br>\n   ...:  email_belongs_to_ldap(get_realm(\"\"), \"<a href=\"mailto:address@example.com\" title=\"mailto:address@example.com\">address@example.com</a>\")<br>\n  File \"&lt;ipython-input-2-8415901a2051&gt;\", line 2<br>\n    email_belongs_to_ldap(get_realm(\"\"), \"<a href=\"mailto:address@example.com\" title=\"mailto:address@example.com\">address@example.com</a>\")<br>\n    ^<br>\nIndentationError: unexpected indent</p>",
+        "id": 806428,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578226350
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"3275\">@hb-it</span> that error is just that the leading space in the second line of code Mateusz suggested was a typo.</p>",
+        "id": 806578,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1578256743
+    },
+    {
+        "content": "<p>Yeah, that leading space was a typo.<br>\nAlso, can you check if the user accounts are actually active? (Organization settings -&gt; Users)</p>",
+        "id": 806648,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1578266764
+    },
+    {
+        "content": "<p>In [6]: from zproject.backends import email_belongs_to_ldap<br>\n   ...: email_belongs_to_ldap(get_realm(\"\"), \"<a href=\"mailto:my.tester@gmail.com\" title=\"mailto:my.tester@gmail.com\">my.tester@gmail.com</a>\")<br>\nOut[6]: False</p>\n<p>The test accounts are showing up as active. On a related note, how do we change passwords for guest users?</p>",
+        "id": 806778,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578315331
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"3275\">@hb-it</span> you can change a user's Zulip-side password on the command line using <code>manag.epy changepassword</code>.</p>",
+        "id": 806831,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1578335693
+    },
+    {
+        "content": "<p>Still rejecting passwords after trying that.</p>",
+        "id": 806844,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578336184
+    },
+    {
+        "content": "<p>Hmm, I'm not able to reproduce this, email backend + ldap backend with LDAP_APPEND_DOMAIN seems to be working fine for me.<br>\nBut some logs must be getting generated on these login attempts,  in <code>django.log</code> and <code>server.log</code>, even if only rather uninformative stuff like:</p>\n<div class=\"codehilite\"><pre><span></span>2020-01-07 02:24:05.177 INFO [zr] 172.17.0.1      GET     200 108ms (db: 4ms/3q) /login/ (unauth via ?)\n2020-01-07 02:24:07.600 INFO [zr] 172.17.0.1      SOCKET  408   0ms /socket/close [transport=websocket] (unknown via ?)\n2020-01-07 02:24:07.601 INFO [zr] status=408, data=Timeout while waiting for authentication, uid=unknown\n2020-01-07 02:24:13.140 INFO [zr] 172.17.0.1      POST    200  79ms (db: 12ms/6q) /accounts/login/ (unauth via ?)\n2020-01-07 02:24:14.502 INFO [zr] 172.17.0.1      SOCKET  408   0ms /socket/close [transport=websocket] (unknown via ?)\n2020-01-07 02:24:14.503 INFO [zr] status=408, data=Timeout while waiting for authentication, uid=unknown\n2020-01-07 02:24:31.983 INFO [] Slow query: 172.17.0.1      GET     200 19.1s (mem: 9ms/17) (db: 103ms/38q) (+start: 21ms) / [1578363806:0] (jack@gmail.com via website) (jack@gmail.com)\n2020-01-07 02:24:31.984 INFO [] Slow query: 172.17.0.1      GET     200  9.4s (db: 89ms/33q) / [1578363806:1] (jack@gmail.com via website) (jack@gmail.com)\n2020-01-07 02:24:33.756 INFO [zr] 172.17.0.1      POST    200  74ms (db: 8ms/5q) /accounts/login/ (unauth via ?)\n</pre></div>",
+        "id": 806990,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1578364214
+    },
+    {
+        "content": "<p>Also, can you try running this in <code>manage.py shell</code> (set the email and password values correctly and you can just copypaste the code into the shell)</p>\n<div class=\"codehilite\"><pre><span></span>from typing import Any\n\nfrom django.conf import settings\nfrom django.contrib.auth import authenticate\n\nfrom zerver.models import get_user_by_delivery_email, get_realm\nfrom zproject.backends import ZulipLDAPAuthBackend, EmailAuthBackend\n\nrealm = get_realm(&quot;&quot;)\nemail = &quot;jack@gmail.com&quot;  # set this\npassword = &quot;jack&quot;  # set this\n\nuser = get_user_by_delivery_email(email, realm)\nprint(&quot;User email: {} is_active: {}&quot;.format(user.email, user.is_active))\n\nreturn_data = {}\nresult = authenticate(username=email, password=password,\n                                             realm=realm, return_data=return_data)\nprint(&quot;Django authenticate() result: {}\\nreturn_data:{}&quot;.format(result, return_data))\n\nreturn_data = {}\nresult = EmailAuthBackend().authenticate(username=email, password=password,\n                                         realm=realm, return_data=return_data)\nprint(&quot;EmailAuthBackend.authenticate() result: {}\\nreturn_data:{}&quot;.format(result, return_data))\n</pre></div>",
+        "id": 806991,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1578364718
+    },
+    {
+        "content": "<p>User email: <a href=\"mailto:jack@gmail.com\" title=\"mailto:jack@gmail.com\">jack@gmail.com</a> is_active: True<br>\nDjango authenticate() result: None<br>\nreturn_data:{'no_matching_ldap_user': True}<br>\nEmailAuthBackend.authenticate() result: None<br>\nreturn_data:{}</p>",
+        "id": 807050,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578401864
+    },
+    {
+        "content": "<p>Nothing is added to either of those logs when I log in with a test user.</p>",
+        "id": 807051,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578402004
+    },
+    {
+        "content": "<p>Huh, getting <code>None</code> from the <code>EmailAuthBackend.authenticate()</code> call is weird. If there was some configuration issue, or in general anything to do with a bad interaction with ldap, then this authenticate call should succeed anyway. Can you try this in the shell? (appended a bit extra debugging lines to the code) <span class=\"user-mention\" data-user-id=\"3275\">@hb-it</span> </p>\n<div class=\"codehilite\"><pre><span></span>from typing import Any\n\nfrom django.conf import settings\nfrom django.contrib.auth import authenticate\n\nfrom zerver.models import get_user_by_delivery_email, get_realm\nfrom zproject.backends import ZulipLDAPAuthBackend, EmailAuthBackend, common_get_active_user\n\nrealm = get_realm(&quot;&quot;)\nemail = &quot;jack@gmail.com&quot;  # set this\npassword = &quot;jack&quot;  # set this\n\nuser = get_user_by_delivery_email(email, realm)\nprint(&quot;User email: {} is_active: {}&quot;.format(user.email, user.is_active))\n\nreturn_data = {}\nresult = authenticate(username=email, password=password,\n                                             realm=realm, return_data=return_data)\nprint(&quot;Django authenticate() result: {}\\nreturn_data:{}&quot;.format(result, return_data))\n\nreturn_data = {}\nresult = EmailAuthBackend().authenticate(username=email, password=password,\n                                         realm=realm, return_data=return_data)\nprint(&quot;EmailAuthBackend.authenticate() result: {}\\nreturn_data:{}&quot;.format(result, return_data))\n\nprint(&quot;common_get_active_user: {}&quot;.format(common_get_active_user(email, realm)))\nprint(&quot;Check_password: {}&quot;.format(user.check_password(password)))\n</pre></div>\n\n\n<p>(Remember to set the <code>email</code> and <code>password</code>)</p>",
+        "id": 807053,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1578403393
+    },
+    {
+        "content": "<p>User email: <a href=\"mailto:jack@gmail.com\" title=\"mailto:jack@gmail.com\">jack@gmail.com</a> is_active: True<br>\nDjango authenticate() result: &lt;UserProfile: <a href=\"mailto:jack@gmail.com\" title=\"mailto:jack@gmail.com\">jack@gmail.com</a> &lt;Realm:  2&gt;&gt;<br>\nreturn_data:{}<br>\nEmailAuthBackend.authenticate() result: &lt;UserProfile: <a href=\"mailto:jack@gmail.com\" title=\"mailto:jack@gmail.com\">jack@gmail.com</a> &lt;Realm:  2&gt;&gt;<br>\nreturn_data:{}<br>\ncommon_get_active_user: &lt;UserProfile: <a href=\"mailto:jack@gmail.com\" title=\"mailto:jack@gmail.com\">jack@gmail.com</a> &lt;Realm:  2&gt;&gt;<br>\nCheck_password: True</p>",
+        "id": 807055,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578403838
+    },
+    {
+        "content": "<p>Changed the password again just to be sure, and now it's working. I'm not sure why, but I'll take it. Thanks very much again for the help. :-)</p>",
+        "id": 807056,
+        "sender_full_name": "hb-it",
+        "timestamp": 1578404142
+    }
+]

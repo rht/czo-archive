@@ -1,0 +1,164 @@
+[
+    {
+        "content": "<p>Within docker-zulip's readme, we see <code>Since you won't use this directly, you just want a long, randomly generated string. You can rotate these by just restarting the container.</code> When I try changing the passphrases and restarting the containers, I just get a bunch of unhappy errors saying my passphrases don't match. Should this really mean that all of my images need to be rebuilt?</p>",
+        "id": 616721,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1532377593
+    },
+    {
+        "content": "<p>The passphrases are definitely not in the images; they're in the <code>data</code> state.</p>",
+        "id": 616722,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532377646
+    },
+    {
+        "content": "<p>My guess is just the <code>entrypoint.sh</code> code for one of these passphrases is only running on first start, and we need to tweak that.</p>",
+        "id": 616723,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532377679
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/docker-zulip/blob/master/entrypoint.sh#L205\" target=\"_blank\" title=\"https://github.com/zulip/docker-zulip/blob/master/entrypoint.sh#L205\">https://github.com/zulip/docker-zulip/blob/master/entrypoint.sh#L205</a></p>",
+        "id": 616726,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1532378027
+    },
+    {
+        "content": "<p>I guess, you can just delete the zulip-secrets in data/ and it should regenerate.</p>",
+        "id": 616729,
+        "sender_full_name": "Sampriti Panda",
+        "timestamp": 1532378149
+    },
+    {
+        "content": "<p>but that's probably not optimal</p>",
+        "id": 616730,
+        "sender_full_name": "Sampriti Panda",
+        "timestamp": 1532378154
+    },
+    {
+        "content": "<p>Makes sense to just generate it every time. Is there any reason not to?</p>",
+        "id": 616732,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1532378978
+    },
+    {
+        "content": "<p>If the secret_key changes, old sessions get invalidated, so everyone will have to log in again, that's the only negative I can think of.</p>",
+        "id": 616734,
+        "sender_full_name": "Sampriti Panda",
+        "timestamp": 1532379112
+    },
+    {
+        "content": "<p>Also, if you have some custom secrets, like S3_KEY, you will have to write those again.</p>",
+        "id": 616735,
+        "sender_full_name": "Sampriti Panda",
+        "timestamp": 1532379132
+    },
+    {
+        "content": "<p>Custom secrets should be specified in the docker compose yaml, so they're all written.</p>",
+        "id": 616738,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1532379165
+    },
+    {
+        "content": "<p>Ahh right, nvm. <span class=\"emoji emoji-1f44d\" title=\"+1\">:+1:</span></p>",
+        "id": 616739,
+        "sender_full_name": "Sampriti Panda",
+        "timestamp": 1532379194
+    },
+    {
+        "content": "<p>So, making this generate a new config each load isn't helping. I don't quite see where this generated settings conf gets converted into, for example, an <code>ALTER USER</code> within Postgres.</p>",
+        "id": 616754,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1532383912
+    },
+    {
+        "content": "<p>Even if I remote zulip-secrets.conf within the data dir (and the link in /etc) to force a re-generation, passphrases are still out of sync. This leads me to believe nobody is actually using different passphrases in production for their docker-zulip setups.</p>",
+        "id": 616755,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1532384032
+    },
+    {
+        "content": "<p>So, I'd debug this one passphrase at a time.</p>",
+        "id": 616757,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532384112
+    },
+    {
+        "content": "<p>(E.g. first do the rabbitmq secret, then postgres, etc.)</p>",
+        "id": 616758,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532384137
+    },
+    {
+        "content": "<p>It's a lot easier for me to provide advice on debugging with a clear answer for which passphrase it is.</p>",
+        "id": 616759,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532384151
+    },
+    {
+        "content": "<p>I started with Postgres, with my example above. Clear advice on that would be superb.</p>",
+        "id": 616760,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1532384180
+    },
+    {
+        "content": "<p>For postgres, in Zulip not on Docker we use peer authentication (passwordless), but the Zulip server should use the <code>postgres_password</code> value from zulip-secrets.conf, and I assume the postgres image sets the configured password on boot.</p>",
+        "id": 616761,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532384273
+    },
+    {
+        "content": "<p>So what I'd try is using <code>psql</code> to try to connect directly and see which one of the two is not working correctly.</p>",
+        "id": 616762,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532384292
+    },
+    {
+        "content": "<p>(Either the wrong password is being sent or the wrong password is being checked)</p>",
+        "id": 616763,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532384306
+    },
+    {
+        "content": "<p>The issue is that the postgres container isn't updating the pass for the <code>zulip</code> user. I have set <code>POSTGRES_PASSWORD</code> and <code>SECRETS_postgres_password</code> in my <code>docker-compose.yaml</code>. Still, I can <code>psql</code> into postgres using the pass <code>zulip</code>.</p>",
+        "id": 616768,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1532384831
+    },
+    {
+        "content": "<p>It does seem like the generated <code>zulip-secrets.conf</code> needs to some how result in an <code>ALTER USER</code>, since the DB is persisted between container restarts.</p>",
+        "id": 616769,
+        "sender_full_name": "Jeaye",
+        "timestamp": 1532384908
+    },
+    {
+        "content": "<p>Oh, does it write to e.g. <code>~/.pgpass</code>?</p>",
+        "id": 616770,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532384909
+    },
+    {
+        "content": "<p>Oh, I see, the issue is the other side.</p>",
+        "id": 616772,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532384939
+    },
+    {
+        "content": "<p>We should look at the <code>entrypoint.sh</code> for the postgres image; that's the code that should be doing this (based on <code>POSTGRES_PASSWORD</code>.</p>",
+        "id": 616773,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1532384955
+    },
+    {
+        "content": "<p>(deleted)</p>",
+        "id": 616994,
+        "sender_full_name": "Sampriti Panda",
+        "timestamp": 1532436838
+    },
+    {
+        "content": "<p>(deleted)</p>",
+        "id": 616995,
+        "sender_full_name": "Sampriti Panda",
+        "timestamp": 1532436850
+    }
+]

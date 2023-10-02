@@ -1,0 +1,206 @@
+[
+    {
+        "content": "<p>Hi, I'm trying to install ZULIP behind reverse proxy with --certbot option, but it tries to get certificate by using local IP address instead of the public one (the local IP address of LXC container instead of the address of --hostname I provided which points to reverse proxy and is public obviously) - what do I need to do in order to change the behavior of --certbot option so that it uses public IP? Thanks</p>",
+        "id": 564653,
+        "sender_full_name": "Predrag Mijatovic",
+        "timestamp": 1524075059
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7115\">@Predrag Mijatovic</span> hmm, I don't know the answer to that off the top of my head, but I'd try googling around for certbot's instructions for using a proxy; we have a pretty thin wrapper for it (<code>scripts/setup/setup-certbot</code>).  Or just try using cerbot directly to get a cert on the reverse proxy machine, and use a self-signed cert behind the proxy.</p>",
+        "id": 564668,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524075356
+    },
+    {
+        "content": "<p>(<code>nginx</code> doesn't check certificates behind reverse proxies anyway)</p>",
+        "id": 564670,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524075368
+    },
+    {
+        "content": "<p>BTW, if you're using that model, you'll want to make sure you've configured the reverse proxy properly; did you find our <code>nginx</code> config for that?</p>",
+        "id": 564673,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524075403
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  Errm no :) I actually have a proper wildcard certificate on that NGINX, but I was not able to run ZULIP installation script without specifying --certbot option...is there a way to do it? I'm perfectly fine with running ZULIP on port 80 because it's in safe env (LXC) and the only way to access it would be through that reverse proxy (which is listening only on 443, and then proxy_pass to local_ip:80)</p>",
+        "id": 564685,
+        "sender_full_name": "Predrag Mijatovic",
+        "timestamp": 1524075527
+    },
+    {
+        "content": "<p>Oh, I see.  You should be able to just leave off the <code>--certbot</code> option -- that definitely isn't intended to be required.</p>",
+        "id": 564695,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524075661
+    },
+    {
+        "content": "<p>Try using <code>--self-signed-cert</code> instead?</p>",
+        "id": 564699,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524075690
+    },
+    {
+        "content": "<p>It fails if you don't provide either --certbot or --self-signed-cert. Running script with --self-signed-cert now, moved past the first step, will report with final results</p>",
+        "id": 564707,
+        "sender_full_name": "Predrag Mijatovic",
+        "timestamp": 1524075823
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span> is this the intended model, that you need to pass one of those options?  I suspect maybe we need to improve the error message for not including <code>--certbot</code> to suggest <code>--self-signed-cert</code>?</p>",
+        "id": 564724,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524076004
+    },
+    {
+        "content": "<p>It actually suggests that :) but there's nothing about running without it (which would be perfectly fine in my case)</p>",
+        "id": 564729,
+        "sender_full_name": "Predrag Mijatovic",
+        "timestamp": 1524076089
+    },
+    {
+        "content": "<p>Hmm, we can probably improve the error message.</p>\n<p>The current model is based on what it was before -- we'd give an error if you didn't seem to have SSL certs in place. Now, we (intend to) give an error if you don't have SSL certs in place, and also haven't passed one of the options to ask the installer to obtain them for you.</p>",
+        "id": 564731,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1524076107
+    },
+    {
+        "content": "<p>Got few errors during installation...failed to install Redis (and laster start the service), and then</p>\n<div class=\"codehilite\"><pre><span></span>Errors were encountered while processing:\n redis-server\nE: Sub-process /usr/bin/dpkg returned an error code (1)\nNotice: /Stage[main]/Zulip::Supervisor/File[/etc/supervisor/supervisord.conf]: Dependency Package[supervisor] has failures: true\nWarning: /Stage[main]/Zulip::Supervisor/File[/etc/supervisor/supervisord.conf]: Skipping because of failed dependencies\nNotice: /Stage[main]/Zulip::App_frontend_base/File[/etc/zulip/uwsgi.ini]: Dependency Package[supervisor] has failures: true\nWarning: /Stage[main]/Zulip::App_frontend_base/File[/etc/zulip/uwsgi.ini]: Skipping because of failed dependencies\nNotice: /Stage[main]/Zulip::Supervisor/Exec[enable supervisor]: Dependency Package[supervisor] has failures: true\nWarning: /Stage[main]/Zulip::Supervisor/Exec[enable supervisor]: Skipping because of failed dependencies\nNotice: /Stage[main]/Zulip::Postgres_appdb_base/File[/etc/supervisor/conf.d/zulip_db.conf]: Dependency Package[supervisor] has failures: true\nWarning: /Stage[main]/Zulip::Postgres_appdb_base/File[/etc/supervisor/conf.d/zulip_db.conf]: Skipping because of failed dependencies\nNotice: /Stage[main]/Zulip::App_frontend_base/File[/etc/supervisor/conf.d/zulip.conf]: Dependency Package[supervisor] has failures: true\nWarning: /Stage[main]/Zulip::App_frontend_base/File[/etc/supervisor/conf.d/zulip.conf]: Skipping because of failed dependencies\nNotice: /Stage[main]/Zulip::Supervisor/Service[supervisor]: Dependency Package[supervisor] has failures: true\nWarning: /Stage[main]/Zulip::Supervisor/Service[supervisor]: Skipping because of failed dependencies\n</pre></div>",
+        "id": 564785,
+        "sender_full_name": "Predrag Mijatovic",
+        "timestamp": 1524077112
+    },
+    {
+        "content": "<p>I know this diverges from subject, but I said I'll report back :)</p>",
+        "id": 564801,
+        "sender_full_name": "Predrag Mijatovic",
+        "timestamp": 1524077272
+    },
+    {
+        "content": "<p>OK -- we can debug why <code>redis-server</code> didn't start and then you just rerun the installer (it's idempotent, so rerunning is safe -- it'll pick up where it left off)</p>",
+        "id": 564809,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524077334
+    },
+    {
+        "content": "<p>I'll try to figure it out</p>",
+        "id": 564845,
+        "sender_full_name": "Predrag Mijatovic",
+        "timestamp": 1524077650
+    },
+    {
+        "content": "<p>It has something to do with systemd and LXC, particularly \"PrivateDevice\" line in redis' .service file</p>",
+        "id": 564881,
+        "sender_full_name": "Predrag Mijatovic",
+        "timestamp": 1524077938
+    },
+    {
+        "content": "<p>Can't get it to work...found this - <a href=\"https://github.com/lxc/lxd/issues/3799#issuecomment-337248682\" target=\"_blank\" title=\"https://github.com/lxc/lxd/issues/3799#issuecomment-337248682\">https://github.com/lxc/lxd/issues/3799#issuecomment-337248682</a> - but it still fails...</p>",
+        "id": 564910,
+        "sender_full_name": "Predrag Mijatovic",
+        "timestamp": 1524078856
+    },
+    {
+        "content": "<p>Yeah I think I'll move away from LXC :)</p>",
+        "id": 564917,
+        "sender_full_name": "Predrag Mijatovic",
+        "timestamp": 1524079036
+    },
+    {
+        "content": "<p>I'm revising that error message. <span class=\"user-mention\" data-user-id=\"7115\">@Predrag Mijatovic</span>, if you'd gotten the message below instead, do you think this would have told you what you needed to know?</p>\n<div class=\"codehilite\"><pre><span></span>No SSL certificate found.  One or both required files is missing:\n    /etc/ssl/private/zulip.key\n    /etc/ssl/certs/zulip.combined-chain.crt\n\nSuggested solutions:\n * For most sites, the --certbot option is recommended.\n * If you have your own key and cert, see docs linked below\n   for how to install them.\n * For non-production testing, try the --self-signed-cert option.\n\nFor help and more details, see our SSL documentation:\n  https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html\n\nOnce fixed, just rerun scripts/setup/install; it&#39;ll pick up from here!\n</pre></div>",
+        "id": 565247,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1524093493
+    },
+    {
+        "content": "<p>One thing that I realize on re-reading this thread you might not have seen yet: given that you have your own cert already, Zulip definitely supports using that and you don't need to use a self-signed cert (nor Certbot) <span class=\"emoji emoji-1f603\" title=\"smiley\">:smiley:</span> -- you just need to stick the cert and key (or symlinks to them) at the paths that Zulip expects. (Our nginx config expects to find them there.)</p>\n<p>Details in <a href=\"https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html\">our SSL doc</a>, linked from the error message.</p>",
+        "id": 565259,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1524093654
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span> Yes, thank you for the details :) I will probably test it on another server without NGINX reverse proxy, due to issues with systemd, LXC, and Redis...didn't found a solution for that one, so Redis service won't start (although manually running it with <code>-c</code> works, I don't like that :P)</p>",
+        "id": 565574,
+        "sender_full_name": "Predrag Mijatovic",
+        "timestamp": 1524122120
+    },
+    {
+        "content": "<p>I hacked up /etc/nginx/sites-enabled/zulip-enterprise to listen on 80 rather than 443 to get things working for us using a Kubernetes ingress with cert-manager.   I was planning on basing off <span class=\"user-mention\" data-user-id=\"77\">@Alexander Trost</span>'s Dockerfile to do that, so it doesn't necessarily have to be done in your install script, but I suspect a reverse proxy is not an uncommon scenario.</p>",
+        "id": 565990,
+        "sender_full_name": "Bryan Larsen",
+        "timestamp": 1524155504
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"5545\">@Bryan Larsen</span> if you're interested in contributing a patch to make that a configuration that doesn't require hacking up, I think we could add a puppet variable controlled by a flag in <code>/etc/zulip/zulip.conf</code></p>",
+        "id": 565993,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524155557
+    },
+    {
+        "content": "<p>That's a little bit early yet.   I'm still at the stage of figuring out why send_test_email throws SMTPAuthenticationError   :)</p>",
+        "id": 566030,
+        "sender_full_name": "Bryan Larsen",
+        "timestamp": 1524157770
+    },
+    {
+        "content": "<p>I'm in the same boat as <span class=\"user-mention\" data-user-id=\"7115\">@Predrag Mijatovic</span>  but I had to shelve it after the Redis issues as I'm about to fly.</p>",
+        "id": 566197,
+        "sender_full_name": "nuclearsandwich",
+        "timestamp": 1524166437
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"6338\">@nuclearsandwich</span> interesting; I don't think we've seen that redis issue before, so I'd love to hear what it ends up being.</p>",
+        "id": 566210,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524166983
+    },
+    {
+        "content": "<p>I'm also in an lxc container so I expect it's related to container privileges. There's more info o haven't yet read as I'm on mobile.</p>",
+        "id": 566241,
+        "sender_full_name": "nuclearsandwich",
+        "timestamp": 1524168098
+    },
+    {
+        "content": "<p>I'm also in an lxc container so I expect it's related to container privileges. There's more info o haven't yet read as I'm on mobile.</p>",
+        "id": 566245,
+        "sender_full_name": "nuclearsandwich",
+        "timestamp": 1524169042
+    },
+    {
+        "content": "<p>Interesting, it looks like the mobile client has some double-post issues?</p>",
+        "id": 567186,
+        "sender_full_name": "nuclearsandwich",
+        "timestamp": 1524248815
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"6338\">@nuclearsandwich</span> apparently yes.  <span class=\"user-mention\" data-user-id=\"703\">@Vishwesh Jainkuniya</span> is that a known issue?</p>",
+        "id": 567189,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524248883
+    },
+    {
+        "content": "<p>ya! there is something wrong in out outbox implementation. <br>\n(It is very hard to reproduce, so still persists) <br>\nNow I guess I have some cases which might be causing this. Will fix it next.</p>",
+        "id": 567200,
+        "sender_full_name": "Vishwesh Jainkuniya",
+        "timestamp": 1524249153
+    },
+    {
+        "content": "<p>Cool <span class=\"emoji emoji-1f603\" title=\"smiley\">:smiley:</span></p>",
+        "id": 567220,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524249989
+    },
+    {
+        "content": "<blockquote>\n<p>ya! there is something wrong in out outbox implementation. <br>\n(It is very hard to reproduce, so still persists) <br>\nNow I guess I have some cases which might be causing this. Will fix it next.</p>\n</blockquote>\n<p>If I can provide any info that will help I'll be glad to. If there's an issue I can follow let me know.</p>",
+        "id": 567255,
+        "sender_full_name": "nuclearsandwich",
+        "timestamp": 1524252144
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"6338\">@nuclearsandwich</span> Thanks! Just filed one, as <a href=\"https://github.com/zulip/zulip-mobile/pull/2374\" target=\"_blank\" title=\"https://github.com/zulip/zulip-mobile/pull/2374\">#M2374</a>.</p>",
+        "id": 567271,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1524252587
+    }
+]

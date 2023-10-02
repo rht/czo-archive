@@ -1,0 +1,74 @@
+[
+    {
+        "content": "<p>I tried to upgrade my Zulip server to the last version, but it fails because ruby is not installed (I'm on a Debian 12 Bookworm). Is this a missing dependency? I tried to manually install ruby, but it is not enough.</p>",
+        "id": 1649808,
+        "sender_full_name": "Mattia Monga",
+        "timestamp": 1695997176
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"27921\">@Mattia Monga</span>: Can you paste the output from running the upgrade, in a <a href=\"https://zulip.com/help/code-blocks\">code block</a>?</p>",
+        "id": 1649822,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695997823
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>2023-09-29 14:44:43,447 upgrade-zulip-stage-2: Installing hooks\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2023-09-29-16-40-04/./scripts/zulip-puppet-apply&quot;, line 32, in &lt;module&gt;\n    setup_puppet_modules()\n  File &quot;/home/zulip/deployments/2023-09-29-16-40-04/scripts/lib/puppet_cache.py&quot;, line 37, in setup_puppet_modules\n    sha1sum = generate_sha1sum_puppet_modules()\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File &quot;/home/zulip/deployments/2023-09-29-16-40-04/scripts/lib/puppet_cache.py&quot;, line 25, in generate_sha1sum_puppet_modules\n    data[&quot;puppet-version&quot;] = subprocess.check_output(\n                             ^^^^^^^^^^^^^^^^^^^^^^^^\n  File &quot;/usr/lib/python3.11/subprocess.py&quot;, line 466, in check_output\n    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File &quot;/usr/lib/python3.11/subprocess.py&quot;, line 548, in run\n    with Popen(*popenargs, **kwargs) as process:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File &quot;/usr/lib/python3.11/subprocess.py&quot;, line 1024, in __init__\n    self._execute_child(args, executable, preexec_fn, close_fds,\n  File &quot;/usr/lib/python3.11/subprocess.py&quot;, line 1901, in _execute_child\n    raise child_exception_type(errno_num, err_msg, err_filename)\nFileNotFoundError: [Errno 2] No such file or directory: &#39;ruby&#39;\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2023-09-29-16-40-04/scripts/lib/upgrade-zulip-stage-2&quot;, line 390, in &lt;module&gt;\n    subprocess.check_call(\n  File &quot;/usr/lib/python3.11/subprocess.py&quot;, line 413, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./scripts/zulip-puppet-apply&#39;, &#39;--tags&#39;, &#39;hooks&#39;, &#39;--force&#39;]&#39; returned non-zero exit status 1.\n\nZulip upgrade failed (exit code 1)!\n</code></pre></div>",
+        "id": 1649839,
+        "sender_full_name": "Mattia Monga",
+        "timestamp": 1695998762
+    },
+    {
+        "content": "<p>Thank you <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span></p>",
+        "id": 1649842,
+        "sender_full_name": "Mattia Monga",
+        "timestamp": 1695998802
+    },
+    {
+        "content": "<p>That's very odd.  Ruby is installed as a prerequisite to puppet, which has been a requirement for a very long time.</p>",
+        "id": 1649854,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695999621
+    },
+    {
+        "content": "<p>Can you show:</p>\n<div class=\"codehilite\"><pre><span></span><code>which ruby\n\nls -l /usr/bin/ruby\n\ndpkg --get-selections | grep ruby\n</code></pre></div>",
+        "id": 1649855,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1695999657
+    },
+    {
+        "content": "<p>Yes, ruby is not installed. All the commands you suggested have an \"empty\" result. But if I install ruby I get another problem with puppet.</p>",
+        "id": 1649857,
+        "sender_full_name": "Mattia Monga",
+        "timestamp": 1695999922
+    },
+    {
+        "content": "<p>I'm a little curious to investigate more how ruby came to not be installed, since whatever process may have broken other things.</p>",
+        "id": 1649862,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1696000097
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"27921\">@Mattia Monga</span>: Can you check <code>/var/log/apt/term.log.*</code> for anything involving ruby (un)installation?</p>",
+        "id": 1649864,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1696000162
+    },
+    {
+        "content": "<p>I've found traces of my installation (and then removal) of ruby, nothing else. But if it is required, shouldn't it be installed by the <code>upgrade-zulip</code> process?</p>",
+        "id": 1650791,
+        "sender_full_name": "Mattia Monga",
+        "timestamp": 1696050739
+    },
+    {
+        "content": "<p>At the moment we only install it as part of <code>install</code>, not <code>upgrade-zulip</code>. In general, the upgrader assumes you started with a correctly installed system that is <a href=\"https://zulip.readthedocs.io/en/stable/production/requirements.html#general\">only running Zulip</a>, and although there are various problems it will happen to correct, it can’t possibly account for all the ways someone else on the system might have broken it.</p>\n<p>Run <code>apt-get install puppet</code> and try the upgrade again.</p>",
+        "id": 1650797,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1696051395
+    },
+    {
+        "content": "<p>That worked, thank you! I have no idea about why puppet has been uninstalled, the system provides just the zulip service.</p>",
+        "id": 1650847,
+        "sender_full_name": "Mattia Monga",
+        "timestamp": 1696056595
+    }
+]

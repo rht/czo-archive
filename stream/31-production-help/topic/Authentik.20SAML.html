@@ -1,0 +1,176 @@
+<html>
+<head><meta charset="utf-8"><title>Authentik SAML · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html">Authentik SAML</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1347753"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1347753" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Pat Roam <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1347753">(Mar 18 2022 at 15:55)</a>:</h4>
+<p>Hi - testing a new server install using Authentik as auth provider. After authenticating with Authentik it redirects back to the Zulip register page. The Django log shows:</p>
+<p>2022-03-18 15:39:06.748 WARN [zulip.auth.saml] SAML got invalid email argument.<br>
+2022-03-18 15:39:06.753 INFO [zr] 10.200.70.1     POST    302  31ms (db: 3ms/3q) (+start: 5ms) /complete/saml/ (unauth@root via Mozilla)<br>
+[pid: 366736|app: 0|req: 82/143] 10.200.70.1 () {50 vars in 969 bytes} [Fri Mar 18 15:39:06 2022] POST /complete/saml/ =&gt; generated 0 bytes in 39 msecs (HTTP/2.0 302) 8 headers in 450 bytes (1 switches on core 0)</p>
+<p>I <em>think</em> I followed the docs correctly but it's likely I missed something as this is my first rodeo with SAML as well as Authentik.</p>
+
+
+
+<a name="1347819"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1347819" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1347819">(Mar 18 2022 at 17:35)</a>:</h4>
+<p><span class="user-mention" data-user-id="18975">@Pat Roam</span> I believe that error message indicates your third-party provider claimed that a user's email address was something that is not a valid email address (E.g. doesn't contain an <code>@</code>).</p>
+
+
+
+<a name="1348005"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348005" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Pat Roam <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348005">(Mar 18 2022 at 19:49)</a>:</h4>
+<p>Thanks Tim. Are there any further logs available on the Zulip side that show additional detail for SAML requests?</p>
+
+
+
+<a name="1348007"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348007" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348007">(Mar 18 2022 at 19:50)</a>:</h4>
+<p><span class="user-mention" data-user-id="18975">@Pat Roam</span> not readily but you can potentially add some print statements to debug. This is the right file:</p>
+<div class="codehilite"><pre><span></span><code>zproject/backends.py:            &quot;%s got invalid email argument.&quot;,
+</code></pre></div>
+
+
+
+<a name="1348008"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348008" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348008">(Mar 18 2022 at 19:51)</a>:</h4>
+<p>But you need to look at where <code>invalid_email</code> is set to print out what email address it received from the SAML provider.</p>
+
+
+
+<a name="1348009"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348009" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348009">(Mar 18 2022 at 19:53)</a>:</h4>
+<p>Simplest may be just printing <code>result</code> in this function:</p>
+<div class="codehilite"><pre><span></span><code>class ZulipSAMLIdentityProvider(SAMLIdentityProvider):
+    def get_user_details(self, attributes: Dict[str, Any]) -&gt; Dict[str, Any]:
+        &quot;&quot;&quot;
+        Overridden to support plumbing of additional Attributes
+        from the SAMLResponse.
+        &quot;&quot;&quot;
+        result = super().get_user_details(attributes)
+
+        extra_attr_names = self.conf.get(&quot;extra_attrs&quot;, [])
+        result[&quot;extra_attrs&quot;] = {}
+        for extra_attr_name in extra_attr_names:
+            result[&quot;extra_attrs&quot;][extra_attr_name] = self.get_attr(
+                attributes=attributes, conf_key=None, default_attribute=extra_attr_name
+            )
+
+        return result
+</code></pre></div>
+
+
+
+<a name="1348010"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348010" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348010">(Mar 18 2022 at 19:53)</a>:</h4>
+<p>And then reading <code>django.log</code>, since that's where <code>print()</code> output goes.</p>
+
+
+
+<a name="1348090"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348090" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Pat Roam <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348090">(Mar 18 2022 at 21:35)</a>:</h4>
+<p>Thank you! I’ll dig into this tonight.</p>
+
+
+
+<a name="1348278"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348278" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Pat Roam <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348278">(Mar 19 2022 at 02:43)</a>:</h4>
+<p>So it doesn't look to be receiving  any of the attributes.<br>
+{'fullname': None, 'first_name': None, 'last_name': None, 'username': None, 'email': None}</p>
+
+
+
+<a name="1348511"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348511" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Oktay X <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348511">(Mar 20 2022 at 07:44)</a>:</h4>
+<p><span class="user-mention" data-user-id="18975">@Pat Roam</span> Is your "Property Mappings" configured properly on the zulip provider you created in authentik?</p>
+
+
+
+<a name="1348512"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348512" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Oktay X <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348512">(Mar 20 2022 at 07:45)</a>:</h4>
+<p>I have the default SAML scopes for User ID, Username, Groups, Email and Name selected</p>
+
+
+
+<a name="1348568"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348568" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Pat Roam <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348568">(Mar 20 2022 at 15:51)</a>:</h4>
+<p><span class="user-mention" data-user-id="4703">@Oktay X</span>    Yes I believe so. I have attached a screenshot of that page. <a href="/user_uploads/2/f/8wBg-_vYTv97RVTWoNIMqR4D/auth.png">auth.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/f/8wBg-_vYTv97RVTWoNIMqR4D/auth.png" title="auth.png"><img src="/user_uploads/2/f/8wBg-_vYTv97RVTWoNIMqR4D/auth.png"></a></div>
+
+
+
+<a name="1348646"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348646" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Pat Roam <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348646">(Mar 20 2022 at 20:42)</a>:</h4>
+<p>Finally got some traction on this. <span class="user-mention" data-user-id="7">@Tim Abbott</span> <span class="user-mention" data-user-id="4703">@Oktay X</span>   Tim I saw a little further up in the backend.py was the raw SAML and when I printed that variable print(attributes) out it showed what I needed:</p>
+<p>'<a href="http://schemas.goauthentik.io/2021/02/saml/username">http://schemas.goauthentik.io/2021/02/saml/username</a>': ['akadmin'], <br>
+'<a href="http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn">http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn</a>': ['xxxx@gmail.com'],<br>
+'<a href="http://schemas.microsoft.com/ws/2008/06/identity/claims/windowsaccountname">http://schemas.microsoft.com/ws/2008/06/identity/claims/windowsaccountname</a>': ['akadmin'],<br>
+'<a href="http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name">http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name</a>': ['authentik Default Admin'], <br>
+'<a href="http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress">http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress</a>': ['xxxx@gmail.com'],<br>
+'<a href="http://schemas.goauthentik.io/2021/02/saml/uid">http://schemas.goauthentik.io/2021/02/saml/uid</a>': ['1'], <br>
+'<a href="http://schemas.xmlsoap.org/claims/Group">http://schemas.xmlsoap.org/claims/Group</a>': ['authentik Admins'], 'name_id': 'xxxx@gmail.com'}</p>
+<p>I changed the attribute mappings in the settings.py to match and it started working. Example:</p>
+<p>"attr_username": "<a href="http://schemas.goauthentik.io/2021/02/saml/username">http://schemas.goauthentik.io/2021/02/saml/username</a>",<br>
+"attr_email": "<a href="http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress">http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress</a>",</p>
+<p>I'll probably now try to learn what I need to do to have the attribute come over from Authentik with a more friendly name as is indicated in the documentation.</p>
+
+
+
+<a name="1348841"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348841" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Oktay X <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348841">(Mar 21 2022 at 06:34)</a>:</h4>
+<p>It looks like I missed documenting this scope mapping config thinking it was what was there by default.</p>
+
+
+
+<a name="1348842"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348842" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Oktay X <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348842">(Mar 21 2022 at 06:34)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>    ## the first name and the last name with the &quot;first_name&quot;, &quot;last_name&quot; attribute names.
+    &quot;attr_user_permanent_id&quot;: &quot;http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress&quot;,
+    &quot;attr_first_name&quot;: &quot;http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name&quot;,
+    &quot;attr_last_name&quot;: &quot;http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name&quot;,
+    &quot;attr_username&quot;: &quot;http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress&quot;,
+    #&quot;attr_email&quot;: &quot;email&quot;,
+    &quot;attr_email&quot;: &quot;http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress&quot;,
+</code></pre></div>
+
+
+
+<a name="1348843"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348843" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Oktay X <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348843">(Mar 21 2022 at 06:34)</a>:</h4>
+<p>this is what i have too</p>
+
+
+
+<a name="1348844"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1348844" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Oktay X <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1348844">(Mar 21 2022 at 06:35)</a>:</h4>
+<p>It doesn't match one to one because authentik does not have separate first and last names, but it works ok.</p>
+
+
+
+<a name="1353908"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1353908" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1353908">(Mar 28 2022 at 10:04)</a>:</h4>
+<p><span class="user-mention" data-user-id="4703">@Oktay X</span> Do you want to add a commit about that to <a href="https://github.com/zulip/zulip/pull/20841">#20841</a>?</p>
+
+
+
+<a name="1355937"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1355937" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Oktay X <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1355937">(Mar 30 2022 at 07:25)</a>:</h4>
+<p>Yes i would like that.</p>
+
+
+
+<a name="1355938"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Authentik%20SAML/near/1355938" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Oktay X <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Authentik.20SAML.html#1355938">(Mar 30 2022 at 07:25)</a>:</h4>
+<p>It might take a bit of time though. Thanks.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

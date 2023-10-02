@@ -1,0 +1,134 @@
+[
+    {
+        "content": "<p>Hey guys. Fresh install, click manage.py generate_realm_creation_link link, register account, click some organisation settings. Now manage.py stacktraces at about everything, which requires a realm to have a string_id, because it's empty for the new realm. UPDATE set string_id = 'something' where id = 2; results in manage.py functioning properly, but I cannot login to zulip anymore. Question: How to properly set a realms string_id?</p>",
+        "id": 665953,
+        "sender_full_name": "Mark Kusch",
+        "timestamp": 1543495376
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>zulip@zulip:~$ manage.py list_realms\nid    string_id                                name\n--    ---------                                ----\n<span class=\"m\">1</span>     zulip                                    None\n<span class=\"m\">2</span>                                              foo\n</pre></div>",
+        "id": 665955,
+        "sender_full_name": "Mark Kusch",
+        "timestamp": 1543495768
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>zulip@zulip:~$ manage.py show_admins foo\nTraceback <span class=\"o\">(</span>most recent call last<span class=\"o\">)</span>:\n  File <span class=\"s2\">&quot;/home/zulip/bin/manage.py&quot;</span>, line <span class=\"m\">46</span>, in &lt;module&gt;\n    execute_from_command_line<span class=\"o\">(</span>sys.argv<span class=\"o\">)</span>\n  File <span class=\"s2\">&quot;/home/zulip/deployments/2018-11-29-12-30-19/zulip-py3-venv/lib/python3.5/site-packages/django/core/management/__init__.py&quot;</span>, line <span class=\"m\">364</span>, in execute_from_command_line\n    utility.execute<span class=\"o\">()</span>\n  File <span class=\"s2\">&quot;/home/zulip/deployments/2018-11-29-12-30-19/zulip-py3-venv/lib/python3.5/site-packages/django/core/management/__init__.py&quot;</span>, line <span class=\"m\">356</span>, in execute\n    self.fetch_command<span class=\"o\">(</span>subcommand<span class=\"o\">)</span>.run_from_argv<span class=\"o\">(</span>self.argv<span class=\"o\">)</span>\n  File <span class=\"s2\">&quot;/home/zulip/deployments/2018-11-29-12-30-19/zulip-py3-venv/lib/python3.5/site-packages/django/core/management/base.py&quot;</span>, line <span class=\"m\">283</span>, in run_from_argv\n    self.execute<span class=\"o\">(</span>*args, **cmd_options<span class=\"o\">)</span>\n  File <span class=\"s2\">&quot;/home/zulip/deployments/2018-11-29-12-30-19/zulip-py3-venv/lib/python3.5/site-packages/django/core/management/base.py&quot;</span>, line <span class=\"m\">330</span>, in execute\n    <span class=\"nv\">output</span> <span class=\"o\">=</span> self.handle<span class=\"o\">(</span>*args, **options<span class=\"o\">)</span>\n  File <span class=\"s2\">&quot;/home/zulip/deployments/2018-11-29-12-30-19/zerver/management/commands/show_admins.py&quot;</span>, line <span class=\"m\">26</span>, in handle\n    <span class=\"nv\">users</span> <span class=\"o\">=</span> realm.get_admin_users<span class=\"o\">()</span>\nAttributeError: <span class=\"s1\">&#39;NoneType&#39;</span> object has no attribute <span class=\"s1\">&#39;get_admin_users&#39;</span>\n</pre></div>",
+        "id": 665956,
+        "sender_full_name": "Mark Kusch",
+        "timestamp": 1543495789
+    },
+    {
+        "content": "<p>Looks like this might be related to a missing subdomain?</p>",
+        "id": 665959,
+        "sender_full_name": "Mark Kusch",
+        "timestamp": 1543498002
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10462\">@Mark Kusch</span> hey Mark.  That <code>manage.py list_realms</code> data is likely correct -- the emptry-string subdomain is how we encode the root domain, and the <code>zulip</code> domain is special.</p>",
+        "id": 666218,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543517658
+    },
+    {
+        "content": "<p><code>manage.py show_admins</code> looks like it has a bug in how it handles an invalid ralm, which I'll fix in master shortly, but that's not why youc an't login.</p>",
+        "id": 666219,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543517708
+    },
+    {
+        "content": "<p>You should probably set the <code>string_id</code> for <code>realm_id</code> 2 back to ''.</p>",
+        "id": 666223,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543517755
+    },
+    {
+        "content": "<p>And then we can get to debugging why you can't login.</p>",
+        "id": 666224,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543517764
+    },
+    {
+        "content": "<p>Fixed <code>get_admin_users</code> in <a href=\"https://github.com/zulip/zulip/commit/d828eba2f6f4481617563db90187fa33d972cd2d\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/d828eba2f6f4481617563db90187fa33d972cd2d\">d828eba2f6f4481617563db90187fa33d972cd2d</a>  and then cleaned it up further in <a href=\"https://github.com/zulip/zulip/commit/8a60ab7314be157678b27ff314fa21dcf57cbf0e\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/8a60ab7314be157678b27ff314fa21dcf57cbf0e\">8a60ab7314be157678b27ff314fa21dcf57cbf0e</a></p>",
+        "id": 666288,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543520489
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>: Thanks for pointing that out. I'll install zulip anew from scratch and reproduce login plus reset of string_id.</p>",
+        "id": 666585,
+        "sender_full_name": "Mark Kusch",
+        "timestamp": 1543563864
+    },
+    {
+        "content": "<p>Again: Install. Create realm. Login. </p>\n<div class=\"codehilite\"><pre><span></span><span class=\"k\">UPDATE</span> <span class=\"n\">zerver_realm</span> <span class=\"k\">set</span> <span class=\"n\">string_id</span> <span class=\"o\">=</span> <span class=\"s1\">&#39;&lt;MY_SUBDOMAIN&gt;&#39;</span> <span class=\"k\">where</span> <span class=\"n\">id</span> <span class=\"o\">=</span> <span class=\"mi\">2</span><span class=\"p\">;</span>\n</pre></div>\n\n\n<ul>\n<li>manage.py show_admins &lt;REALM&gt; broken</li>\n<li>login broken</li>\n</ul>\n<div class=\"codehilite\"><pre><span></span><span class=\"k\">UPDATE</span> <span class=\"n\">zerver_realm</span> <span class=\"k\">set</span> <span class=\"n\">string_id</span> <span class=\"o\">=</span> <span class=\"s1\">&#39;&lt;MY_REALM_NAME&gt;&#39;</span> <span class=\"k\">where</span> <span class=\"n\">id</span> <span class=\"o\">=</span> <span class=\"mi\">2</span><span class=\"p\">;</span>\n</pre></div>\n\n\n<ul>\n<li>manage.py show_admins &lt;REALM&gt; functions properly</li>\n<li>login broken</li>\n</ul>\n<div class=\"codehilite\"><pre><span></span><span class=\"k\">UPDATE</span> <span class=\"n\">zerver_realm</span> <span class=\"k\">set</span> <span class=\"n\">string_id</span> <span class=\"o\">=</span> <span class=\"s1\">&#39;&#39;</span> <span class=\"k\">where</span> <span class=\"n\">id</span> <span class=\"o\">=</span> <span class=\"mi\">2</span><span class=\"p\">;</span>\n</pre></div>\n\n\n<ul>\n<li>manage.py broken</li>\n<li>login works</li>\n</ul>",
+        "id": 666587,
+        "sender_full_name": "Mark Kusch",
+        "timestamp": 1543565620
+    },
+    {
+        "content": "<p>I'll try another install with SUBDOMAIN == REALM_NAME.</p>",
+        "id": 666588,
+        "sender_full_name": "Mark Kusch",
+        "timestamp": 1543565675
+    },
+    {
+        "content": "<p>(Using git/master rather than latest.)</p>",
+        "id": 666590,
+        "sender_full_name": "Mark Kusch",
+        "timestamp": 1543565776
+    },
+    {
+        "content": "<p>Whatever I try; zulip does not populate realm.string_id in the database which results in manage.py unable to do anything which requires realm.string_id to be set. That's bad! Further, as soon as I update this one field in the database myself, I cannot login anymore and there's nothing in the logs which might provide a hint :/</p>",
+        "id": 666596,
+        "sender_full_name": "Mark Kusch",
+        "timestamp": 1543567924
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10462\">@Mark Kusch</span> unless you're hosting multiple Zulip organizations, you definitely want the <code>string_id</code> for your realm to be the empty string (<code>''</code>) aka the root domain.  You can interact with it on management commands with e.g. <code>./manage show_admins ''</code>.</p>",
+        "id": 666705,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543599258
+    },
+    {
+        "content": "<p>The <code>string_id</code> is used as the subdomain of the organization, so yes, changing it breaks the ability for anyone to login.</p>",
+        "id": 666706,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543599290
+    },
+    {
+        "content": "<p>There's a reason we don't provide an interface for mucking with it -- it's not something one should be randomly changing <span class=\"emoji emoji-1f642\" title=\"slight smile\">:slight_smile:</span>.</p>",
+        "id": 666707,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543599323
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> : Great, empty string string_id for commands like show_admins did it. I'd ask to have that documented somewhere. Anyhoo thank you very much helping me to sort this out.</p>",
+        "id": 667338,
+        "sender_full_name": "Mark Kusch",
+        "timestamp": 1543829322
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10462\">@Mark Kusch</span> yeah, I'm sorta surprised we didn't already have this covered.  Just added <a href=\"https://github.com/zulip/zulip/commit/e8742f1dd5ee2321f5f85521d65d680c6cdbb8b5\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/e8742f1dd5ee2321f5f85521d65d680c6cdbb8b5\">e8742f1dd5ee2321f5f85521d65d680c6cdbb8b5</a>, which you'll be able to see on <a href=\"https://zulip.readthedocs.io/en/latest/production/maintain-secure-upgrade.html#management-commands\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/maintain-secure-upgrade.html#management-commands\">https://zulip.readthedocs.io/en/latest/production/maintain-secure-upgrade.html#management-commands</a> in about 2 minutes <span class=\"emoji emoji-1f642\" title=\"slight smile\">:slight_smile:</span></p>",
+        "id": 667388,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543857447
+    },
+    {
+        "content": "<p>I'd love any feedback on anything that could be clearer in that text!</p>",
+        "id": 667389,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543857457
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/commit/e8742f1dd5ee2321f5f85521d65d680c6cdbb8b5\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/e8742f1dd5ee2321f5f85521d65d680c6cdbb8b5\">e8742f1dd5ee2321f5f85521d65d680c6cdbb8b5</a> clarifies a lot. Thanks.</p>",
+        "id": 667822,
+        "sender_full_name": "Mark Kusch",
+        "timestamp": 1543917956
+    },
+    {
+        "content": "<p>Great, thanks for the help in ensuring we wrote it <span class=\"user-mention\" data-user-id=\"10462\">@Mark Kusch</span> <span class=\"emoji emoji-1f642\" title=\"slight smile\">:slight_smile:</span></p>",
+        "id": 667891,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543947367
+    }
+]

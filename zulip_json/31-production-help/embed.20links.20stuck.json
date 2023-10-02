@@ -1,0 +1,98 @@
+[
+    {
+        "content": "<p>I can't get link previews to appear for new links. If I re-post old links, they show the same previews again, but no previews appear for new links. I've tried restarting Zulip, and turning the previews off and on again but those didn't work. Not sure where to look next as I can't see anything in the logs that indicate a problem... Any help would be appreciated!</p>",
+        "id": 661814,
+        "sender_full_name": "Tom Daff",
+        "timestamp": 1542292097
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"8488\">@Tom Daff</span> have you checked <code>/var/log/zulip/errors.log</code>?</p>",
+        "id": 661881,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542312083
+    },
+    {
+        "content": "<p>The issue is almost certainly the <code>zulip-workers:zulip_events_embed_links</code> supervisor process being down or stuck throwing errors, since that's the job that fetches for embeds.</p>",
+        "id": 661882,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542312121
+    },
+    {
+        "content": "<p><code>/var/log/zulip/events_embed_links.log</code> might also be helpful.</p>",
+        "id": 661883,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542312142
+    },
+    {
+        "content": "<p>Thanks for the reply!</p>\n<p>Unfortunately posting new links doesn't generate any errors in any of the logs, and the worker was restarted yesterday (and was up beforehand):</p>\n<div class=\"codehilite\"><pre><span></span>zulip-workers:zulip_events_embed_links                          RUNNING   pid 8275, uptime 20:11:15\n</pre></div>\n\n\n<p>Previous error was a \"Failed to establish a new connection: [Errno -5] No address associated with hostname\" but that seems to be a couple of days before the embedding stopped working. </p>\n<p>Is there a way to inspect the queue for that process, <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> ?</p>",
+        "id": 662246,
+        "sender_full_name": "Tom Daff",
+        "timestamp": 1542370950
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"8488\">@Tom Daff</span> <code>rabbitmqctl list_queues</code> is the way to inspect what's in the various queues; the answer should in steady state be 0 for all of them.</p>",
+        "id": 662259,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542386924
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>embed_links 56\n</pre></div>\n\n\n<p><span class=\"emoji emoji-2757\" title=\"exclamation\">:exclamation:</span></p>",
+        "id": 662261,
+        "sender_full_name": "Tom Daff",
+        "timestamp": 1542387580
+    },
+    {
+        "content": "<p>Great, and you said <code>/var/log/zulip/events_embed_links.log</code> doesn't have anything current in it?</p>",
+        "id": 662270,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542390153
+    },
+    {
+        "content": "<p>I suppose one plausible theory is that the process got stuck hanging on network wait and doesn't have a proper timeout.</p>",
+        "id": 662271,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542390226
+    },
+    {
+        "content": "<p>Try doing a <code>supervisorctl restart zulip-workers:zulip_events_embed_links</code>  and watch wahtwaht happens in the logs.</p>",
+        "id": 662272,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542390245
+    },
+    {
+        "content": "<p>But I think a missing timeout is likely the bug there; going to read a bit more code.</p>",
+        "id": 662273,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542390270
+    },
+    {
+        "content": "<p>OK, about to have a commit that should fix the potential timeout issue here (which is probably your problem, but we haven't confirmed it).</p>",
+        "id": 662277,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542390791
+    },
+    {
+        "content": "<p>Tail of all logs during restart, (<code>events</code> <code>heartbeat</code> and <code>presence</code> stripped)</p>\n<div class=\"codehilite\"><pre><span></span>==&gt; events_embed_links.log &lt;==\n2018-11-19 10:15:01.200 INFO [process_queue] Worker 0 disconnecting from queue embed_links\n\n==&gt; workers.log &lt;==\n2018-11-19 10:15:01.200 INFO [process_queue] Worker 0 disconnecting from queue embed_links\n\n==&gt; manage.log &lt;==\n2018-11-19 10:15:02,948: Ran &#39;/home/zulip/deployments/current/manage.py process_queue --queue_name=embed_links&#39;\n\n==&gt; events_embed_links.log &lt;==\n2018-11-19 10:15:04.735 INFO [process_queue] Worker 0 connecting to queue embed_links\n\n==&gt; workers.log &lt;==\n2018-11-19 10:15:04.735 INFO [process_queue] Worker 0 connecting to queue embed_links\n\n==&gt; server.log &lt;==\n2018-11-19 10:15:12.360 INFO [] Tornado   0.8% busy over the past 59.1 seconds\n\n==&gt; tornado.log &lt;==\n2018-11-19 10:15:12.360 INFO [] Tornado   0.8% busy over the past 59.1 seconds\n\n==&gt; server.log &lt;==\n2018-11-19 10:15:17.667 INFO [] Tornado   0.8% busy over the past 59.6 seconds\n\n==&gt; tornado.log &lt;==\n2018-11-19 10:15:17.667 INFO [] Tornado   0.8% busy over the past 59.6 seconds\n\n==&gt; server.log &lt;==\n2018-11-19 10:15:22.493 INFO [] Tornado removed 1 idle event queues owned by 1 users in 0.000s.  Now 20 active queues, 17 handlers, latest ID 23426\n\n==&gt; tornado.log &lt;==\n2018-11-19 10:15:22.493 INFO [] Tornado removed 1 idle event queues owned by 1 users in 0.000s.  Now 20 active queues, 17 handlers, latest ID 23426\n</pre></div>",
+        "id": 662842,
+        "sender_full_name": "Tom Daff",
+        "timestamp": 1542626814
+    },
+    {
+        "content": "<p>Yes, timeout could be an issue. There are quite a few internal links that get posted which would not be accessible to the zulip server. I'll see if I can inspect the queue and see what is at the top.</p>",
+        "id": 662845,
+        "sender_full_name": "Tom Daff",
+        "timestamp": 1542627143
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> can confirm this is a probably a timeout thing!</p>\n<p>All the tasks were sitting as \"unacked\" in rabbitmq, so I couldn't <code>get</code> any of their contents. I restarted the queue to see if they would re-queue so that I could inspect them, but my network went down at exactly the same time and caused all the queued embed tasks to fail at the name resolution stage! This means my queue is cleared, but I've been able to extract the offending URL from the error log.</p>\n<p><code>http://www.merckmillipore.com/GB/en/product/Synergy-Water-Purification-System,MM_NF-C9209</code> works fine in a browser but is hanging indefinitely using <code>curl</code> unless you add enough headers to make it look like a browser.</p>",
+        "id": 662856,
+        "sender_full_name": "Tom Daff",
+        "timestamp": 1542633901
+    },
+    {
+        "content": "<p>OK, great.  It seems very likely that I fixed this, then; you can use <code>upgrade-zulip-from-git master</code> to install the patched version now, or wait until the next release.</p>",
+        "id": 663037,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542682240
+    }
+]

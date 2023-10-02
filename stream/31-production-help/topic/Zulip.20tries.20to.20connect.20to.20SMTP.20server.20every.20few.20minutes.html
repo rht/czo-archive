@@ -1,0 +1,99 @@
+<html>
+<head><meta charset="utf-8"><title>Zulip tries to connect to SMTP server every few minutes · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20tries.20to.20connect.20to.20SMTP.20server.20every.20few.20minutes.html">Zulip tries to connect to SMTP server every few minutes</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1259146"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20tries%20to%20connect%20to%20SMTP%20server%20every%20few%20minutes/near/1259146" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> v3ss0n <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20tries.20to.20connect.20to.20SMTP.20server.20every.20few.20minutes.html#1259146">(Sep 26 2021 at 21:46)</a>:</h4>
+<p>Zulip opens a SMTP connection Every few minutes. Regardless of anyone chatting. And then it closes immediately.<br>
+I  believe it suppose to connect only when mentions are occourts , to send email to mentioned user , right?</p>
+
+
+
+<a name="1259305"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20tries%20to%20connect%20to%20SMTP%20server%20every%20few%20minutes/near/1259305" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20tries.20to.20connect.20to.20SMTP.20server.20every.20few.20minutes.html#1259305">(Sep 27 2021 at 18:19)</a>:</h4>
+<p><span class="user-mention" data-user-id="21466">@v3ss0n</span> I suspect what's expected depends on your configuration.  Do you have the incoming email gateway configured?  And how are you checking whether it actually sends emails?</p>
+
+
+
+<a name="1259306"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20tries%20to%20connect%20to%20SMTP%20server%20every%20few%20minutes/near/1259306" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20tries.20to.20connect.20to.20SMTP.20server.20every.20few.20minutes.html#1259306">(Sep 27 2021 at 18:22)</a>:</h4>
+<p>This may depend on version, but Zulip does initialize an SMTP connection on server startup, and maintain that connection for sending emails from its outgoing email queue.  Additionally, various code paths, like password reset, may initialize an SMTP connection to send an email directly.</p>
+
+
+
+<a name="1259420"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20tries%20to%20connect%20to%20SMTP%20server%20every%20few%20minutes/near/1259420" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20tries.20to.20connect.20to.20SMTP.20server.20every.20few.20minutes.html#1259420">(Sep 27 2021 at 21:43)</a>:</h4>
+<p><span class="user-mention" data-user-id="21466">@v3ss0n</span>: On Zulip 4.0 and above, I would expect it to attempt to leave an SMTP connection open.  If the remote side closes it, then it should attempt to re-open it shortly thereafter.  This is an optimization to make it easier to immediately send multiple messages, without closing and recreating the connection for each.</p>
+<p>Is the connection behaviour causing a problem for you, or was it just unexpected?</p>
+
+
+
+<a name="1259441"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20tries%20to%20connect%20to%20SMTP%20server%20every%20few%20minutes/near/1259441" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20tries.20to.20connect.20to.20SMTP.20server.20every.20few.20minutes.html#1259441">(Sep 27 2021 at 21:57)</a>:</h4>
+<p>Sounds unexpected to me. We ought to open a connection when we need it, leave it open as long as the server lets us, but not attempt to re-open it just because it timed out.</p>
+
+
+
+<a name="1259461"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20tries%20to%20connect%20to%20SMTP%20server%20every%20few%20minutes/near/1259461" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20tries.20to.20connect.20to.20SMTP.20server.20every.20few.20minutes.html#1259461">(Sep 27 2021 at 22:05)</a>:</h4>
+<p>Certainly the immediate close isn't expected, but since we don't have details on the overall setup, it's very possible the SMTP server is doing the closing.  I suppose one possible cause could be if the relevant queue worker is crashing frequently.  </p>
+<p>We need more detail on the SMTP setup, and how that conclusion was reached before we spend a lot of time thinking about what might cause it.</p>
+
+
+
+<a name="1259467"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20tries%20to%20connect%20to%20SMTP%20server%20every%20few%20minutes/near/1259467" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20tries.20to.20connect.20to.20SMTP.20server.20every.20few.20minutes.html#1259467">(Sep 27 2021 at 22:13)</a>:</h4>
+<p>Ah, I mis-remembered -- we don't re-open until there's something to send.   But once we send it, we leave it open and we re-use it until the far side times us out, then leave it closed until the next email needs to go out.</p>
+
+
+
+<a name="1273416"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20tries%20to%20connect%20to%20SMTP%20server%20every%20few%20minutes/near/1273416" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> v3ss0n <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20tries.20to.20connect.20to.20SMTP.20server.20every.20few.20minutes.html#1273416">(Oct 28 2021 at 10:03)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/Zulip.20tries.20to.20connect.20to.20SMTP.20server.20every.20few.20minutes/near/1259420">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="21466">v3ss0n</span>: On Zulip 4.0 and above, I would expect it to attempt to leave an SMTP connection open.  If the remote side closes it, then it should attempt to re-open it shortly thereafter.  This is an optimization to make it easier to immediately send multiple messages, without closing and recreating the connection for each.</p>
+<p>Is the connection behaviour causing a problem for you, or was it just unexpected?</p>
+</blockquote>
+<p>Sorry for the late reply , our internet is out due to civil war events happening.<br>
+Yes i got complained by my email hoster of their server being spammed flodded with smtp connections againg and again ,  i had disabled SMTP So Far.</p>
+<p>And then this behavior , is not observed when i connected via TLS</p>
+
+
+
+<a name="1274892"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20tries%20to%20connect%20to%20SMTP%20server%20every%20few%20minutes/near/1274892" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20tries.20to.20connect.20to.20SMTP.20server.20every.20few.20minutes.html#1274892">(Nov 01 2021 at 21:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="21466">@v3ss0n</span> <a href="#narrow/stream/31-production-help/topic/Zulip.20tries.20to.20connect.20to.20SMTP.20server.20every.20few.20minutes/near/1273416">said</a>:</p>
+<blockquote>
+<p>Sorry for the late reply , our internet is out due to civil war events happening.</p>
+</blockquote>
+<p><em>Absolutely</em> no need to apologize.  I hope you're staying as safe and healthy as you can.</p>
+<blockquote>
+<p>Yes i got complained by my email hoster of their server being spammed flooded with smtp connections again and again ,  i had disabled SMTP So Far.</p>
+<p>And then this behavior , is not observed when i connected via TLS</p>
+</blockquote>
+<p>Were you running Zulip &lt; 4.0 before, and was it working without complaint then?</p>
+<p>Otherwise, I <em>think</em> this might be explained as the email server not supporting non-TLS, and closing the connection, and us repeatedly re-opening it to try again.  Is everything working as expected with TLS, now?</p>
+
+
+
+<a name="1302644"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20tries%20to%20connect%20to%20SMTP%20server%20every%20few%20minutes/near/1302644" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> v3ss0n <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20tries.20to.20connect.20to.20SMTP.20server.20every.20few.20minutes.html#1302644">(Dec 30 2021 at 08:58)</a>:</h4>
+<p>yes i had fully switched to TLS and now all ok</p>
+
+
+
+<a name="1302645"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Zulip%20tries%20to%20connect%20to%20SMTP%20server%20every%20few%20minutes/near/1302645" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> v3ss0n <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Zulip.20tries.20to.20connect.20to.20SMTP.20server.20every.20few.20minutes.html#1302645">(Dec 30 2021 at 08:58)</a>:</h4>
+<p>thanks a lot!</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

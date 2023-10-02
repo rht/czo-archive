@@ -1,0 +1,181 @@
+<html>
+<head><meta charset="utf-8"><title>push notification using proxy · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html">push notification using proxy</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="864579"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/864579" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aggr <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#864579">(Apr 28 2020 at 19:43)</a>:</h4>
+<p>My Zulip-server uses an Internet connection via proxy. It seems that because of this, push notifications are not sent. I have these messages in my "/var/log/zulip/events_missedmessage_mobile_notifications.log"</p>
+<div class="codehilite"><pre><span></span><code>2020-04-28 18:56:48.968 INFO [zerver.lib.push_notifications] Sending push notifications to mobile clients for user 18
+2020-04-28 18:56:59.024 INFO [zerver.lib.push_notifications] Sending push notifications to mobile clients for user 18
+2020-04-28 18:57:09.063 INFO [zerver.lib.push_notifications] Sending push notifications to mobile clients for user 18
+2020-04-28 18:57:19.117 INFO [zerver.lib.push_notifications] Sending push notifications to mobile clients for user 18
+2020-04-28 18:57:29.130 WARN [zerver.worker.queue_processors] Maximum retries exceeded for trigger:18 event:push_notification
+</code></pre></div>
+
+
+<p>How can I fix it?</p>
+
+
+
+<a name="864596"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/864596" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#864596">(Apr 28 2020 at 20:22)</a>:</h4>
+<p><span class="user-mention" data-user-id="10714">@Aggr</span> likely you need to set the <code>http_proxy</code> type environment variables in the context that the queue workers run in.</p>
+
+
+
+<a name="864601"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/864601" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#864601">(Apr 28 2020 at 20:24)</a>:</h4>
+<p>I think if you end <code>/etc/supervisor/conf.d/zulip.conf</code> to run the push_notifications worker with <code>env http_proxy=...</code>, and then <code>service supervisord restart</code>, that will probably work?</p>
+
+
+
+<a name="864602"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/864602" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#864602">(Apr 28 2020 at 20:24)</a>:</h4>
+<p>We'll want to provide a better API for maintaining it; just want to test that's your problem first.</p>
+
+
+
+<a name="864627"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/864627" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aggr <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#864627">(Apr 28 2020 at 20:39)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span>  I already have <code>http_proxy</code> variable in <code>/etc/enviroment</code>this was enough for registration command <code>/home/zulip/deployments/current/manage.py register_server</code>.<br>
+Cant find <code>push_notifications</code> In <code>/etc/supervisor/conf.d/zulip.conf</code> <span aria-label="sad" class="emoji emoji-2639" role="img" title="sad">:sad:</span></p>
+
+
+
+<a name="864636"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/864636" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#864636">(Apr 28 2020 at 20:44)</a>:</h4>
+<p><span class="user-mention" data-user-id="10714">@Aggr</span> search for <code>mobile</code> in that file.</p>
+
+
+
+<a name="864637"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/864637" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#864637">(Apr 28 2020 at 20:44)</a>:</h4>
+<p>If you added that to <code>/etc/environment</code>, maybe just <code>supervisorctl restart all</code> will be good enough.</p>
+
+
+
+<a name="864638"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/864638" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#864638">(Apr 28 2020 at 20:44)</a>:</h4>
+<p>Erm, no, <code>service stop supervisord; service start supervisord</code> is more guaranteed to replace the environment.</p>
+
+
+
+<a name="864639"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/864639" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aggr <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#864639">(Apr 28 2020 at 20:45)</a>:</h4>
+<p>ok. Trying do this now ...</p>
+
+
+
+<a name="864649"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/864649" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aggr <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#864649">(Apr 28 2020 at 20:54)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>root@zserver:/etc/supervisor/conf.d# service stop supervisord; service start supervisord
+stop: unrecognized service
+start: unrecognized service
+root@zserver:/etc/supervisor/conf.d#
+</code></pre></div>
+
+
+<p><span aria-label="sad" class="emoji emoji-2639" role="img" title="sad">:sad:</span></p>
+
+
+
+<a name="864654"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/864654" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#864654">(Apr 28 2020 at 20:58)</a>:</h4>
+<p>I think it might be spelled <code>supervisor</code> there.</p>
+
+
+
+<a name="864659"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/864659" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aggr <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#864659">(Apr 28 2020 at 21:03)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>root@zserver:/etc/supervisor/conf.d# service stop supervisor; service start supervisor
+stop: unrecognized service
+start: unrecognized service
+root@zserver:/etc/supervisor/conf.d#
+</code></pre></div>
+
+
+
+<a name="864663"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/864663" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aggr <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#864663">(Apr 28 2020 at 21:07)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/push.20notification.20using.20proxy/near/864601" title="#narrow/stream/31-production-help/topic/push.20notification.20using.20proxy/near/864601">said</a>:</p>
+<blockquote>
+<p>I think if you end <code>/etc/supervisor/conf.d/zulip.conf</code> to run the push_notifications worker with <code>env http_proxy=...</code>, and then <code>service supervisord restart</code>, that will probably work?</p>
+</blockquote>
+<p>Have <code>[program:zulip_events_missedmessage_mobile_notifications]</code> in <code>/etc/supervisor/conf.d/zulip.conf</code> is that it? Should I change the "command" line?</p>
+
+
+
+<a name="864669"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/864669" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#864669">(Apr 28 2020 at 21:12)</a>:</h4>
+<p>Yeah, change the <code>command</code> line there.</p>
+
+
+
+<a name="865007"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/865007" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aggr <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#865007">(Apr 29 2020 at 10:49)</a>:</h4>
+<p>I change line </p>
+<div class="codehilite"><pre><span></span><code>command=/home/zulip/deployments/current/manage.py process_queue --queue_name=$_name=missedmessage_mobile_notifications
+</code></pre></div>
+
+
+<p>to</p>
+<div class="codehilite"><pre><span></span><code>command=env HTTP_PROXY=http://MyProxyAddress:MyProxyPort HTTPS_PROXY=http://MyProxyAddress:MyProxyPort /home/zulip/deployments/current/manage.py process_queue --queue_name=$_name=missedmessage_mobile_notifications
+</code></pre></div>
+
+
+<p>Now in <code>/var/log/zulip/events_missedmessage_mobile_notifications.log</code> i have only one message per push without errors. But notifications still don't arrive on mobile devices.</p>
+
+
+
+<a name="865010"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/865010" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aggr <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#865010">(Apr 29 2020 at 10:52)</a>:</h4>
+<p>In  access.log of my proxy-server i see messages like<br>
+<code>2020.04.29 13:18:12    981 MyZulipServerAddress TCP_TUNNEL/200 3994 CONNECT push.zulipchat.com:443 - HIER_DIRECT/push.zulipchat.com -</code><br>
+when Zulip server sends push-notification.</p>
+
+
+
+<a name="865101"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/865101" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aggr <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#865101">(Apr 29 2020 at 13:45)</a>:</h4>
+<p>I also noticed messages </p>
+<div class="codehilite"><pre><span></span><code>2020-04-29 13:36:57.122 INFO [] Slow query: X.X.X.X  POST    502 10.0s /api/v1/users/me/android_gcm_reg_id (UserMail@Here.com via ZulipMobile)
+</code></pre></div>
+
+
+<p>in<code>/var/log/zulip/workers.log </code> when users register in the mobile app.</p>
+
+
+
+<a name="865191"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/865191" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#865191">(Apr 29 2020 at 17:39)</a>:</h4>
+<p><span class="user-mention" data-user-id="10714">@Aggr</span> ahh, great!  This means your approach worked.  Now you'll want to do the same thing with the <code>zulip-django</code> workers.</p>
+
+
+
+<a name="865192"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/865192" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#865192">(Apr 29 2020 at 17:39)</a>:</h4>
+<p>And then re-login to your mobile devices, and I think it'll work.</p>
+
+
+
+<a name="865240"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/865240" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Aggr <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#865240">(Apr 29 2020 at 18:16)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> It work! Finally! Thank you very much!</p>
+
+
+
+<a name="865274"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/push%20notification%20using%20proxy/near/865274" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/push.20notification.20using.20proxy.html#865274">(Apr 29 2020 at 18:45)</a>:</h4>
+<p>Great!</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,230 @@
+[
+    {
+        "content": "<p>While running the install script, it keeps failing when trying to execute virtualenv. I'm running as root, and pip tells me virtualenv is installed, but it doesn't appear to be in my <code>PATH</code>. The error in the log is <code>sudo: virtualenv: command not found</code>.</p>",
+        "id": 215640,
+        "sender_full_name": "Ben Ramsey",
+        "timestamp": 1496287733
+    },
+    {
+        "content": "<p>I had to run <code>easy_install virtualenv</code> to get it to create <code>/usr/local/bin/virtualenv</code>.</p>",
+        "id": 215641,
+        "sender_full_name": "Ben Ramsey",
+        "timestamp": 1496288695
+    },
+    {
+        "content": "<p>Hmm. Now, it's failing at line 7 in <code>/srv/zulip-venv-cache/be3568dd4397813e056050f34686a639d1c47218/zulip-venv/local/lib/python2.7/site-packages/setuptools/py27compat.py</code>, which is simply:</p>\n<div class=\"codehilite\"><pre><span></span><span class=\"kn\">import</span> <span class=\"nn\">six</span>\n</pre></div>\n\n\n<p>Error is <code>ImportError: No module named six</code>.</p>",
+        "id": 215644,
+        "sender_full_name": "Ben Ramsey",
+        "timestamp": 1496289443
+    },
+    {
+        "content": "<p>Did something get corrupted on the filesystem? Here's what I have in py27compat.py:</p>\n<div class=\"codehilite\"><pre><span></span>&quot;&quot;&quot;\nCompatibility Support for Python 2.7 and earlier\n&quot;&quot;&quot;\n\nimport platform\n\nimport six\n\n\ndef get_all_headers(message, key):\n    &quot;&quot;&quot;\n    Given an HTTPMessage, return all headers matching a given key.\n    &quot;&quot;&quot;\n    return message.get_all(key)\n\n\nif six.PY2:\n    def get_all_headers(message, key):\n        return message.getheaders(key)\n\n\nlinux_py2_ascii = (\n    platform.system() == &#39;Linux&#39; and\n    six.PY2\n)\n\nrmtree_safe = str if linux_py2_ascii else lambda x: x\n&quot;&quot;&quot;Workaround for http://bugs.python.org/issue24672&quot;&quot;&quot;\n</pre></div>",
+        "id": 215652,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1496290966
+    },
+    {
+        "content": "<p>Yea, seems like master is erroring: <a href=\"https://travis-ci.org/zulip/zulip/builds/238165719\" target=\"_blank\" title=\"https://travis-ci.org/zulip/zulip/builds/238165719\">https://travis-ci.org/zulip/zulip/builds/238165719</a></p>",
+        "id": 215653,
+        "sender_full_name": "Joshua Pan",
+        "timestamp": 1496291041
+    },
+    {
+        "content": "<p>Oh wait, now I see what you mean. I don't know where six might be.</p>",
+        "id": 215654,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1496291051
+    },
+    {
+        "content": "<p>I did a prod install based on this morning's master, did something happen today? (But then, is <span class=\"user-mention\" data-user-email=\"ben@benramsey.com\" data-user-id=\"2504\">@Ben Ramsey</span> using a proper release?)</p>",
+        "id": 215655,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1496291180
+    },
+    {
+        "content": "<p>\"six\" is a library that allows you to write code that works on python2 and python3.  The six-related failure here, though, is probably just a symptom that the virtualenv is not set up correctly.</p>",
+        "id": 215656,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1496291508
+    },
+    {
+        "content": "<p>Correction, it's in /usr/lib/python2.7/dist-packages. Or at least six.py is. Ubuntu 14.04.</p>",
+        "id": 215657,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1496291513
+    },
+    {
+        "content": "<p>Originally, the install script couldn't find <code>virtualenv</code>, so maybe using <code>easy_install</code> to force it was the wrong approach (see above). I'm using the zulip version the is downloaded when following the instructions here: <a href=\"https://zulip.readthedocs.io/en/latest/prod-install.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/prod-install.html\">https://zulip.readthedocs.io/en/latest/prod-install.html</a></p>",
+        "id": 215659,
+        "sender_full_name": "Ben Ramsey",
+        "timestamp": 1496294815
+    },
+    {
+        "content": "<p>I'm on Ubuntu 16.04, and six is in the same location, as is virtualenv, but the install script can't seem to find them.</p>",
+        "id": 215661,
+        "sender_full_name": "Ben Ramsey",
+        "timestamp": 1496294862
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"ben@benramsey.com\" data-user-id=\"2504\">@Ben Ramsey</span> I think setuptools or something similar did a bad release that depends on six incorrectly, and we don't use a pinned version in our bit of code to create the virtualenv.</p>",
+        "id": 215672,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496296410
+    },
+    {
+        "content": "<p>Will debug to see what's up</p>",
+        "id": 215673,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496296423
+    },
+    {
+        "content": "<p>Hmm I need to head to bed and haven't looked into this.  <span class=\"user-mention\" data-user-email=\"umair.waheed@gmail.com\" data-user-id=\"92\">@Umair Khan</span> can you investigate?  The problem is visible in Travis CI's production suite, in e.g. <a href=\"https://travis-ci.org/zulip/zulip/jobs/238198685\" target=\"_blank\" title=\"https://travis-ci.org/zulip/zulip/jobs/238198685\">https://travis-ci.org/zulip/zulip/jobs/238198685</a>.  It looks like the root issue is a new version of setuptools that incorrectly fails to declare a dependency on six</p>",
+        "id": 215692,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496299321
+    },
+    {
+        "content": "<p>We should probably just figure out how to pin the versions of pip/virtualenv/setuptools that we install at the very bottom of <code>setup_venv.py</code></p>",
+        "id": 215693,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496299376
+    },
+    {
+        "content": "<p>Since this totally breaks our CI (and it sounds like our production installer for the last release) it's kinda a top priority issue.  We'll need to do a Zulip server release tomorrow to address this (unless setuptools gets a fix out very soon)</p>",
+        "id": 215694,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496299462
+    },
+    {
+        "content": "<p><a href=\"https://github.com/pypa/setuptools/issues/1042\" target=\"_blank\" title=\"https://github.com/pypa/setuptools/issues/1042\">https://github.com/pypa/setuptools/issues/1042</a> appears to be the issue</p>",
+        "id": 215695,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496299518
+    },
+    {
+        "content": "<p>So yeah, we should be able to just need to add an <code>==35.0.2</code> like so:</p>\n<div class=\"codehilite\"><pre><span></span>diff --git a/scripts/lib/setup_venv.py b/scripts/lib/setup_venv.py\nindex 7b1a5bb..b4fe0b6 100644\n--- a/scripts/lib/setup_venv.py\n+++ b/scripts/lib/setup_venv.py\n@@ -244,7 +244,7 @@ def do_setup_virtualenv(venv_path, requirements_file, virtualenv_args):\n     activate_this = os.path.join(venv_path, &quot;bin&quot;, &quot;activate_this.py&quot;)\n     exec(open(activate_this).read(), {}, dict(__file__=activate_this))\n\n-    run([&quot;pip&quot;, &quot;install&quot;, &quot;-U&quot;, &quot;setuptools&quot;])\n+    run([&quot;pip&quot;, &quot;install&quot;, &quot;-U&quot;, &quot;setuptools==35.0.2&quot;])\n     run([&quot;pip&quot;, &quot;install&quot;, &quot;--upgrade&quot;, &quot;pip&quot;, &quot;wheel&quot;])\n     run([&quot;pip&quot;, &quot;install&quot;, &quot;--no-deps&quot;, &quot;--requirement&quot;, requirements_file])\n     run([&quot;sudo&quot;, &quot;chmod&quot;, &quot;-R&quot;, &quot;a+rX&quot;, venv_path])\n</pre></div>\n\n\n<p>I'm testing that patch now in CI.</p>",
+        "id": 215696,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496299600
+    },
+    {
+        "content": "<p>Sure.</p>",
+        "id": 215710,
+        "sender_full_name": "Umair Khan",
+        "timestamp": 1496300353
+    },
+    {
+        "content": "<p>OK I ended up debugging this after all; just merged <a href=\"https://github.com/zulip/zulip/commit/be814b940d9f80bdd9cfab77311d1c5c78b5db85\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/be814b940d9f80bdd9cfab77311d1c5c78b5db85\">be814b940d9f80bdd9cfab77311d1c5c78b5db85</a></p>",
+        "id": 215712,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496300369
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> Will that commit be included in the \"latest-release\" tarball, or should I grab from master to install? (This is the tarball I mean: <a href=\"https://www.zulip.org/dist/releases/zulip-server-latest.tar.gz\" target=\"_blank\" title=\"https://www.zulip.org/dist/releases/zulip-server-latest.tar.gz\">https://www.zulip.org/dist/releases/zulip-server-latest.tar.gz</a>)</p>",
+        "id": 215827,
+        "sender_full_name": "Ben Ramsey",
+        "timestamp": 1496331892
+    },
+    {
+        "content": "<p>You want to grab from master.</p>",
+        "id": 215829,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1496331983
+    },
+    {
+        "content": "<p>Thanks.</p>",
+        "id": 215830,
+        "sender_full_name": "Ben Ramsey",
+        "timestamp": 1496332058
+    },
+    {
+        "content": "<p>You can use <code>./tools/build-release-tarball</code>, I think.  I haven't done this myself, but I assume it's mostly as simple as that.</p>",
+        "id": 215831,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1496332077
+    },
+    {
+        "content": "<p>As long as I can checkout master and run the same scripts, unless the <code>build-release-tarball</code> script does some special setup of those scripts.</p>",
+        "id": 215833,
+        "sender_full_name": "Ben Ramsey",
+        "timestamp": 1496332265
+    },
+    {
+        "content": "<p>I am not aware of any special setup...you may want to do git grep to see where it gets called.</p>",
+        "id": 215835,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1496332812
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"ben@benramsey.com\" data-user-id=\"2504\">@Ben Ramsey</span> if you're installing for the first time, you need to build a release tarball because otherwise the static assets won't be included.  We support upgrading but not installing from a Git checkout.  I think that's something we'll be working on next week, though, since cases like this make it quite useful</p>",
+        "id": 215841,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496333024
+    },
+    {
+        "content": "<p>I expect Zulip 1.5.2 that just fixes that installer issue and some other minor things to come out ~today</p>",
+        "id": 215842,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496333043
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"ben@benramsey.com\" data-user-id=\"2504\">@Ben Ramsey</span> it looks like setuptools put out a new release fixing their bug, so installing should work again.</p>",
+        "id": 216285,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1496346435
+    },
+    {
+        "content": "<p>Thanks, <span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span>. I'll try installing it again this evening.</p>",
+        "id": 216544,
+        "sender_full_name": "Ben Ramsey",
+        "timestamp": 1496352677
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> Got everything installed and running. Thanks!</p>",
+        "id": 217756,
+        "sender_full_name": "Ben Ramsey",
+        "timestamp": 1496464334
+    },
+    {
+        "content": "<p>general &gt; overall Zulip users Today</p>\n<p>praveen cognizant: I new to zulip, I have install zulip server but that <br>\nPlease visit the following secure single-use link to register your<br>\nnew Zulip organization:</p>\n<p><a href=\"https://164ubuntuhost.local/create_realm/89f80e1dce81c47ff69849d32a47706ded7f3577\" target=\"_blank\" title=\"https://164ubuntuhost.local/create_realm/89f80e1dce81c47ff69849d32a47706ded7f3577\">https://164ubuntuhost.local/create_realm/89f80e1dce81c47ff69849d32a47706ded7f3577</a><br>\nis not opening on browser<br>\ncan any one help me what i am missing here.</p>\n<p>is there any clean way to uninstall zulip server</p>",
+        "id": 254169,
+        "sender_full_name": "praveen cognizant",
+        "timestamp": 1500547857
+    },
+    {
+        "content": "<p>you might have to wait a bit until the zulip developers are online. I only installed zulip on ubuntu server 16.04 but never attempted to uninstall it. I would just recreate the virtual machine if you are using one.</p>",
+        "id": 254171,
+        "sender_full_name": "Matthias",
+        "timestamp": 1500547951
+    },
+    {
+        "content": "<p>/home/zulip/deployments/current/manage.py generate_realm_creation_link <br>\nabove command has worked fine and given the below output</p>\n<p>Please visit the following secure single-use link to register your<br>\nnew Zulip organization:</p>\n<p><a href=\"https://164ubuntuhost.local/create_realm/89f80e1dce81c47ff69849d32a47706ded7f3577\" target=\"_blank\" title=\"https://164ubuntuhost.local/create_realm/89f80e1dce81c47ff69849d32a47706ded7f3577\">https://164ubuntuhost.local/create_realm/89f80e1dce81c47ff69849d32a47706ded7f3577</a></p>\n<p>but the link above when i try open on chrome browser is not working</p>",
+        "id": 254173,
+        "sender_full_name": "praveen cognizant",
+        "timestamp": 1500548338
+    },
+    {
+        "content": "<p>Hi <span class=\"user-mention\" data-user-email=\"pandit.praveen@gmail.com\" data-user-id=\"2887\">@praveen cognizant</span> Does your machine have another hostname besides .local? Is that the hostname you configured in settings.py?</p>",
+        "id": 255150,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500643081
+    },
+    {
+        "content": "<p>I have tried using an ip address, but I've not tried a .local name. Perhaps it has something to do with that. Do you see any particular errors in the Zulip logs?</p>",
+        "id": 255152,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500643132
+    },
+    {
+        "content": "<p>If you go to <a href=\"https://164ubuntuhost.local\" target=\"_blank\" title=\"https://164ubuntuhost.local\">https://164ubuntuhost.local</a> directly in your browser, do you see anything?</p>",
+        "id": 255153,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500643165
+    },
+    {
+        "content": "<p>I see someone has responded to your question in a different topic. You might want to try using an ip address instead, just specify that where you would use EXTERNAL_HOST. There's a note about it in the <a href=\"http://zulip.readthedocs.io/en/latest/ssl-certificates.html\" target=\"_blank\" title=\"http://zulip.readthedocs.io/en/latest/ssl-certificates.html\">SSL documentation</a></p>",
+        "id": 255155,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1500643410
+    }
+]

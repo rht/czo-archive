@@ -1,0 +1,142 @@
+<html>
+<head><meta charset="utf-8"><title>works in Edge not Chrome · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html">works in Edge not Chrome</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="718720"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/718720" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Wayne Scott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#718720">(Mar 14 2019 at 01:46)</a>:</h4>
+<p>I just installed Zulip 2.0.1 via Docker on a 4G linux server behind a series of firewalls.</p>
+<p>It works OK from Microsoft Edge on a Windows client, but from Google Chrome all I get is "Internal Server Error".</p>
+<p>Looked in the zulip container at the log files the most obvious error this when a Chrome client tries to connect.</p>
+<div class="codehilite"><pre><span></span>==&gt; django.log &lt;==
+invalid request block size: 8183 (max 4096)...skip
+invalid request block size: 8124 (max 4096)...skip
+</pre></div>
+
+
+
+<a name="718725"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/718725" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Wayne Scott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#718725">(Mar 14 2019 at 02:01)</a>:</h4>
+<p>googling it appears I need to increase the size in <code>/etc/zulip/uwsgi.ini</code> to something like 16k.  I tried to do that in the Docker container, but it didn't work and the error message suggested I didn't really change the size.</p>
+
+
+
+<a name="718789"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/718789" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Wayne Scott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#718789">(Mar 14 2019 at 09:32)</a>:</h4>
+<p>Wrong size.  Instead, in the zulip container, I added <code>buffer-size=32768</code> to /etc/zulip/uwsgi.ini and then ran <code>/home/zulip/deployments/current/scripts/restart-server</code>. And now it works on Chrome.  The problem is that Chrome was sending a lot more headers than my mostly unused Edge install.  I also found that Chrome worked in Incognito mode.</p>
+<p>Now, how do I make these changes stick when I restart the container?</p>
+
+
+
+<a name="719155"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/719155" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#719155">(Mar 14 2019 at 19:40)</a>:</h4>
+<p><span class="user-mention" data-user-id="11605">@Wayne Scott</span> is your Zulip server behind a proxy of some sort?</p>
+
+
+
+<a name="719156"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/719156" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#719156">(Mar 14 2019 at 19:41)</a>:</h4>
+<p>I'm surprised that you need more than 8KB of headers; we only recently changed this from 4KB.</p>
+
+
+
+<a name="719158"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/719158" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#719158">(Mar 14 2019 at 19:41)</a>:</h4>
+<p>I'm open to increasing these default values, but also want to understand what's going on before doing so.</p>
+
+
+
+<a name="719397"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/719397" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Wayne Scott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#719397">(Mar 14 2019 at 23:00)</a>:</h4>
+<p>No explicit proxy.  I did configure nginx as a reverse proxy to talk to the docker container but that didn't change anything.</p>
+
+
+
+<a name="719523"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/719523" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Wayne Scott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#719523">(Mar 15 2019 at 10:00)</a>:</h4>
+<p>This is internally at <a href="http://zulip.sub.company.com" target="_blank" title="http://zulip.sub.company.com">zulip.sub.company.com</a>, but my browser has a pile of domain cookies for <a href="http://company.com" target="_blank" title="http://company.com">company.com</a> that I suspect get tacked on for all requests.  Not sure what I can do about that.</p>
+
+
+
+<a name="719524"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/719524" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Wayne Scott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#719524">(Mar 15 2019 at 10:09)</a>:</h4>
+<p>my hope is that I can spark a zulip addiction inside this large corporation and switch to enterprise support to build a version that will scale.</p>
+
+
+
+<a name="719645"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/719645" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#719645">(Mar 15 2019 at 17:23)</a>:</h4>
+<p><span class="user-mention" data-user-id="11605">@Wayne Scott</span> ok, that makes sense, I guess.</p>
+
+
+
+<a name="719646"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/719646" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#719646">(Mar 15 2019 at 17:24)</a>:</h4>
+<p>I don't get the sense that increasing that parameter has major downsides, so I'm sorta tempted to just do so rather than adding an override setting.</p>
+
+
+
+<a name="719647"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/719647" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#719647">(Mar 15 2019 at 17:24)</a>:</h4>
+<p>Though 32K is kinda crazy as a minimum buffer size, so maybe we should do the work to make it a parameter..</p>
+
+
+
+<a name="719648"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/719648" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#719648">(Mar 15 2019 at 17:26)</a>:</h4>
+<p>OK, let's try this.  <span class="user-mention" data-user-id="11605">@Wayne Scott</span> can you try applying these changes to your zulip checkout:</p>
+<div class="codehilite"><pre><span></span>diff --git a/puppet/zulip/manifests/app_frontend_base.pp b/puppet/zulip/manifests/app_frontend_base.pp
+index a071dc2297..2f726ec16f 100644
+--- a/puppet/zulip/manifests/app_frontend_base.pp
++++ b/puppet/zulip/manifests/app_frontend_base.pp
+@@ -89,6 +89,7 @@ class zulip::app_frontend_base {
+     notify  =&gt; Service[$zulip::common::supervisor_service],
+   }
+
++  $uwsgi_buffer_size = zulipconf(&#39;application_server&#39;, &#39;uwsgi_buffer_size&#39;, 8192)
+   $uwsgi_processes = zulipconf(&#39;application_server&#39;, &#39;uwsgi_processes&#39;, $uwsgi_default_processes)
+   file { &#39;/etc/zulip/uwsgi.ini&#39;:
+     ensure  =&gt; file,
+diff --git a/puppet/zulip/templates/uwsgi.ini.template.erb b/puppet/zulip/templates/uwsgi.ini.template.erb
+index 368dc5d8b6..6669795822 100644
+--- a/puppet/zulip/templates/uwsgi.ini.template.erb
++++ b/puppet/zulip/templates/uwsgi.ini.template.erb
+@@ -7,7 +7,7 @@ chmod-socket=700
+ chown-socket=zulip:zulip
+ processes=&lt;%= @uwsgi_processes %&gt;
+ harakiri=20
+-buffer-size=8192
++buffer-size=&lt;%= @uwsgi_buffer_size %&gt;
+ post-buffering=4096
+ env= LANG=en_US.UTF-8
+ uid=zulip
+</pre></div>
+
+
+
+<a name="719649"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/719649" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#719649">(Mar 15 2019 at 17:27)</a>:</h4>
+<p>And then you can set <code>uwsgi_buffer_size = 32768</code> in <code>/etc/zulip/zulip.conf</code> inside the <code>application_server</code> section.</p>
+
+
+
+<a name="719650"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/719650" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#719650">(Mar 15 2019 at 17:27)</a>:</h4>
+<p>And then run <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code> and see if that's happy to not revert your changes.</p>
+
+
+
+<a name="719651"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/works%20in%20Edge%20not%20Chrome/near/719651" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Wayne Scott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/works.20in.20Edge.20not.20Chrome.html#719651">(Mar 15 2019 at 17:28)</a>:</h4>
+<p>will do</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

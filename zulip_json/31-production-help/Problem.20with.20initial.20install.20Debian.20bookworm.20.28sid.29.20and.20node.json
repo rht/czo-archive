@@ -1,0 +1,110 @@
+[
+    {
+        "content": "<p>I am having a rather strange problem with installing on Debian bookworm (sid) updated today.</p>\n<p>It is actually a problem with node, and I don't understand it.</p>\n<p>This is a snippet:</p>\n<ul>\n<li>\n<p>/tmp/tmp.SxW1Wuwaum/zulip-server-7.0/scripts/lib/install-node<br>\n++ mktemp -d</p>\n</li>\n<li>\n<p>tmpdir=/tmp/tmp.pbgamuzMZS</p>\n</li>\n<li>trap 'rm -r \"$tmpdir\"' EXIT</li>\n<li>cd /tmp/tmp.pbgamuzMZS</li>\n<li>curl_opts=(-fLO --retry 3)</li>\n<li>'[' -n '' ']'</li>\n<li>\n<p>curl -fLO --retry 3 <a href=\"https://nodejs.org/dist/v18.16.0/node-v18.16.0-linux-x64.tar.xz\">https://nodejs.org/dist/v18.16.0/node-v18.16.0-linux-x64.tar.xz</a><br>\n  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current<br>\n                                 Dload  Upload   Total   Spent    Left  Speed<br>\n100 22.6M  100 22.6M    0     0   131M      0 --:--:-- --:--:-- --:--:--  133M</p>\n</li>\n<li>\n<p>sha256sum -c<br>\nnode-v18.16.0-linux-x64.tar.xz: OK</p>\n</li>\n<li>\n<p>rm -rf /srv/zulip-node</p>\n</li>\n<li>mkdir -p /srv/zulip-node</li>\n<li>tar -xJf node-v18.16.0-linux-x64.tar.xz --no-same-owner --strip-components=1 -C /srv/zulip-node</li>\n<li>ln -sf /srv/zulip-node/bin/corepack /srv/zulip-node/bin/node /srv/zulip-node/bin/npm /srv/zulip-node/bin/npx /usr/local/bin</li>\n<li>COREPACK_DEFAULT_TO_LATEST=0</li>\n<li>/usr/local/bin/corepack enable</li>\n<li>rm -rf /srv/zulip-yarn /usr/bin/yarn /usr/local/nvm</li>\n<li>check_version<br>\n++ node --version<br>\n/tmp/tmp.SxW1Wuwaum/zulip-server-7.0/scripts/lib/install-node: line 20: /usr/local/bin/node: cannot execute: required file not found</li>\n</ul>\n<p>line 20 is an invocation of node --version</p>\n<p>/srv/zulip-node/bin/node exists, and ls -l shows:<br>\n-rwxr-xr-x 1 root root 90940576 Apr 12 05:31 node</p>\n<p>file shows: </p>\n<p>file /srv/zulip-node/bin/node<br>\n/srv/zulip-node/bin/node: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=ea1ea7c2d0aeb35866046ffa3fc8bfc053a55e26, with debug_info, not stripped, too many notes (256)</p>\n<p>but, it does not appear to be a dynamically linked file:</p>\n<p>ldd /srv/zulip-node/bin/node<br>\n    not a dynamic executable</p>\n<p>Can somebody hit me with a cluestick?</p>",
+        "id": 1583257,
+        "sender_full_name": "Jim Penny",
+        "timestamp": 1685647276
+    },
+    {
+        "content": "<p>Hmm, it's a bit puzzling -- I see it literally installing <code>node</code> 5 lines before failing to find it. <span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> do you have ideas?</p>",
+        "id": 1583258,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685647381
+    },
+    {
+        "content": "<p>OK, further info.  I did an upgrade on an ubuntu yesterday.  Node has same size there, and ldd works as I would expect.</p>",
+        "id": 1583264,
+        "sender_full_name": "Jim Penny",
+        "timestamp": 1685647593
+    },
+    {
+        "content": "<p>I suspect you are missing your <code>/lib64</code> symlink. Can you run <code>dpkg --verify libc6</code>?</p>",
+        "id": 1583265,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1685647616
+    },
+    {
+        "content": "<p>dpkg --verify libc6 is silent.</p>",
+        "id": 1583268,
+        "sender_full_name": "Jim Penny",
+        "timestamp": 1685647672
+    },
+    {
+        "content": "<p>I think you are right, though, link exists, but /usr/lib64 appears to be empty.</p>",
+        "id": 1583272,
+        "sender_full_name": "Jim Penny",
+        "timestamp": 1685647802
+    },
+    {
+        "content": "<p>By the way, bookworm (testing) is not sid (unstable); it’s been in freeze for a few months.</p>",
+        "id": 1583277,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1685647928
+    },
+    {
+        "content": "<p>gcc is 32 bit.</p>",
+        "id": 1583278,
+        "sender_full_name": "Jim Penny",
+        "timestamp": 1685647938
+    },
+    {
+        "content": "<p>Yes, but uname reported it as bookworm, which also confused me.</p>",
+        "id": 1583279,
+        "sender_full_name": "Jim Penny",
+        "timestamp": 1685648003
+    },
+    {
+        "content": "<p>Oh, yeah, we require a 64-bit system.</p>",
+        "id": 1583280,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1685648029
+    },
+    {
+        "content": "<p>That is reasonable, the kernel is 64-bit, but it looks like some of the rest is not.</p>",
+        "id": 1583282,
+        "sender_full_name": "Jim Penny",
+        "timestamp": 1685648074
+    },
+    {
+        "content": "<p>So, thanks....</p>",
+        "id": 1583285,
+        "sender_full_name": "Jim Penny",
+        "timestamp": 1685648121
+    },
+    {
+        "content": "<p>I have enough clues, I think.</p>",
+        "id": 1583286,
+        "sender_full_name": "Jim Penny",
+        "timestamp": 1685648139
+    },
+    {
+        "content": "<p>What does <code>dpkg --print-architecture</code> say on your system? We should try adding a check for this.</p>",
+        "id": 1583287,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1685648152
+    },
+    {
+        "content": "<p>i386</p>",
+        "id": 1583289,
+        "sender_full_name": "Jim Penny",
+        "timestamp": 1685648235
+    },
+    {
+        "content": "<p>starting to crossgrade</p>",
+        "id": 1583291,
+        "sender_full_name": "Jim Penny",
+        "timestamp": 1685648325
+    },
+    {
+        "content": "<p>(Adding this check in <a href=\"https://github.com/zulip/zulip/pull/25868\">#25868</a>.)</p>",
+        "id": 1583389,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1685652206
+    },
+    {
+        "content": "<p>OK, that was \"fun\".  Debian wiki on crossgrading was not helpful, it looks like apt is much more paranoid than when the wiki was written; so I spent a lot of time copying libraries from a working system to get the dpkg, apt, et al working in amd64.  Then it was just a matter of upgrading all i386 packages to amd64.  essential packages are more painful than the rest.  postgres had to be dumped in 32 bit, the cluster had to be dropped, the 64 bit version installed, the cluster recreated and the dump loaded.  I then had some 32bit remnants, so I ran \"find / -name \"<em>zulip</em>\" -exec rm -R {} \\;<br>\nThe install script then nearly finished.  I had to create /home/zulip by hand (which makes send to me, the install script probably saw that the user existed and didn't check for home).  After that was done, restarted the install script, and I think it finished on that run.<br>\nThanks.</p>",
+        "id": 1583575,
+        "sender_full_name": "Jim Penny",
+        "timestamp": 1685659446
+    }
+]

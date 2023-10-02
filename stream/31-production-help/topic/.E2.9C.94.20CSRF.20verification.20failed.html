@@ -1,0 +1,129 @@
+<html>
+<head><meta charset="utf-8"><title>✔ CSRF verification failed · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html">✔ CSRF verification failed</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1594349"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1594349" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Panagiotis Famelis <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1594349">(Jun 16 2023 at 12:49)</a>:</h4>
+<p>Hello, I upgraded to latest version (7.1). The upgrade went well, but when I try to log in I get the following message:<br>
+<a href="/user_uploads/2/21/C-EWgAXJmI7kR17EJHFEL5CV/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/21/C-EWgAXJmI7kR17EJHFEL5CV/image.png" title="image.png"><img src="/user_uploads/2/21/C-EWgAXJmI7kR17EJHFEL5CV/image.png"></a></div><p>I don't seem to be able to find what is happening.<br>
+In the <code>/var/log/zulip/errors.log</code> I get many of the following messages:</p>
+<div class="codehilite"><pre><span></span><code>2023-06-16 12:45:37.270 WARN [django.security.csrf] Forbidden (Origin checking failed - https://***REDACTED*** does not match any trusted origins.): /accounts/login/
+</code></pre></div>
+<p>Has this happened to anyone else? Any workarounds?</p>
+<p>I am using regular zulip installation (not docker, patched or modified)</p>
+
+
+
+<a name="1594354"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1594354" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Panagiotis Famelis <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1594354">(Jun 16 2023 at 13:06)</a>:</h4>
+<p>Solved it following the instructions here:<br>
+<a href="https://github.com/zulip/zulip/issues/24599">https://github.com/zulip/zulip/issues/24599</a></p>
+<p>Basically you need to enter the following in you <code>/etc/zulip/settings.py</code>:</p>
+<div class="codehilite"><pre><span></span><code>CSRF_TRUSTED_ORIGINS = [&quot;https://***REDACTED***&quot;, &quot;http://127.0.0.1&quot;, &quot;http://localhost&quot;]
+</code></pre></div>
+
+
+
+<a name="1594355"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1594355" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Panagiotis Famelis <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1594355">(Jun 16 2023 at 13:06)</a>:</h4>
+<p>and run:</p>
+<div class="codehilite"><pre><span></span><code>su zulip -c &#39;/home/zulip/deployments/current/scripts/restart-server&#39;
+</code></pre></div>
+
+
+
+<a name="1594356"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1594356" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Notification Bot <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1594356">(Jun 16 2023 at 13:10)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="24875">Panagiotis Famelis</span> has marked this topic as resolved.</p>
+
+
+
+<a name="1594410"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1594410" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1594410">(Jun 16 2023 at 15:38)</a>:</h4>
+<p><span class="user-mention" data-user-id="24875">@Panagiotis Famelis</span>: No, that is not the right fix.  As I explain in <a href="https://github.com/zulip/docker-zulip/pull/403">#DZ403</a>, this is because you have a <a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy">reverse proxy in front of Zulip</a>, you have <a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#configuring-zulip-to-allow-http">configured Zulip itself to serve over HTTP</a>, but you have not <a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#configuring-zulip-to-trust-proxies">told Zulip the IP address of your proxy to trust it</a> or your <a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#nginx-configuration">proxy is misconfigured and does not send the necessary headers</a>.</p>
+<p>Adding <code>http://127.0.0.1</code> and <code>http://localhost</code> to <code>CSRF_ALLOWED_ORIGINS</code> is a security vulnerability; please don't do that.</p>
+<p>We're happy to help you if you have questions about your proxy configuration.</p>
+
+
+
+<a name="1594412"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1594412" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1594412">(Jun 16 2023 at 15:39)</a>:</h4>
+<p>I suspect we need to catch this error and provide a custom warning message in the logs.</p>
+
+
+
+<a name="1594540"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1594540" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1594540">(Jun 16 2023 at 19:33)</a>:</h4>
+<p><a href="https://github.com/zulip/zulip/pull/26046">#26046</a>.</p>
+
+
+
+<a name="1595172"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1595172" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Panagiotis Famelis <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1595172">(Jun 19 2023 at 07:13)</a>:</h4>
+<p>Hello <span class="user-mention" data-user-id="12178">@Alex Vandiver</span> , thank you very much.<br>
+I changed the configuration according to the links and it works (also removed the CSRF_TRUSTED_ORIGINS):</p>
+<div class="codehilite"><pre><span></span><code>Add the following block to /etc/zulip/zulip.conf.
+
+[loadbalancer]
+# Use the IP addresses (of the proxy) you determined above, separated by commas. example:
+ips = 192.168.0.100
+</code></pre></div>
+
+
+
+<a name="1595258"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1595258" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1595258">(Jun 19 2023 at 13:04)</a>:</h4>
+<p>Glad to hear that worked!</p>
+
+
+
+<a name="1595554"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1595554" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Angel de Vicente <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1595554">(Jun 20 2023 at 07:17)</a>:</h4>
+<p>I'm also having the CSRF verification failed message, but in a Cloud Hosted organization, so I don't think any of the previous fixes apply to me [really bad timing, since I'm giving a demo of Zulip at our organization in three hours... <span aria-label="grimacing" class="emoji emoji-1f62c" role="img" title="grimacing">:grimacing:</span> ]</p>
+
+
+
+<a name="1595607"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1595607" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1595607">(Jun 20 2023 at 10:40)</a>:</h4>
+<p><span class="user-mention" data-user-id="26261">@Angel de Vicente</span> Can you provide more information on this? When exactly do you encounter this and browser are you using? (Trying to log in? Or just opening the organization's page etc.?)</p>
+
+
+
+<a name="1595625"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1595625" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Angel de Vicente <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1595625">(Jun 20 2023 at 12:34)</a>:</h4>
+<p>I <em>think</em> it was just opening the organization's page, but I figured out that it was due to the browser I'm trying. It is Sidekick browser, and I open Zulip as a web app, which I understand that it is somehow like a containerized tab in Firefox, so the issue was probably coming from that. Opening it in a new tab (not a containerized one gave me no trouble, and I was able to deliver the Zulip demo withous issues <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<a name="1596274"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1596274" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> SimonD <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1596274">(Jun 21 2023 at 12:19)</a>:</h4>
+<p>Hello all, and very happy to be here in this nice chat !</p>
+<p>FYI, the same for me : after upgrading from 6.4 to 7.1, CSRF error.</p>
+<p>The solution (found here <span aria-label="grinning face with smiling eyes" class="emoji emoji-1f601" role="img" title="grinning face with smiling eyes">:grinning_face_with_smiling_eyes:</span> ) is to add the line on /etc/zulip/settings.py:<br>
+CSRF_TRUSTED_ORIGINS = ["https://<strong><em>REDACTED</em></strong>", "<a href="http://127.0.0.1">http://127.0.0.1</a>", "http://localhost"]</p>
+<p>Hope this can help/confirm.</p>
+
+
+
+<a name="1596353"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1596353" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1596353">(Jun 21 2023 at 14:12)</a>:</h4>
+<p><span class="user-mention" data-user-id="27256">@SimonD</span>: No, that is not the right fix.  Please see <a href="#narrow/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed/near/1594410">https://chat.zulip.org/#narrow/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed/near/1594410</a> above which points to the right fix.</p>
+
+
+
+<a name="1599552"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20CSRF%20verification%20failed/near/1599552" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed.html#1599552">(Jun 27 2023 at 17:47)</a>:</h4>
+<p>Yeah the issue here is that some privacy browsers disable the HTTP headers used by Django CSRF's protection system.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

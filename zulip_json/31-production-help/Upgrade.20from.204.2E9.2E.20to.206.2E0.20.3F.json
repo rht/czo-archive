@@ -1,0 +1,128 @@
+[
+    {
+        "content": "<p>Hi, is it possible to upgrade directly from 4.9. to 6.0 (Ubuntu 20.04) ? Thanks</p>",
+        "id": 1492987,
+        "sender_full_name": "Stefan Meyer",
+        "timestamp": 1674153011
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11118\">@Stefan Meyer</span>: Yup.  <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-to-a-release\">https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-to-a-release</a> should get you started.</p>",
+        "id": 1492988,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1674153112
+    },
+    {
+        "content": "<p><span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span> <span aria-label=\"+1\" class=\"emoji emoji-1f44d\" role=\"img\" title=\"+1\">:+1:</span></p>",
+        "id": 1492989,
+        "sender_full_name": "Stefan Meyer",
+        "timestamp": 1674153164
+    },
+    {
+        "content": "<p>I've made an upgrade to Zulip 6.0/Ubuntu 22.04 from  Zulip 4.9./Ubuntu 18.04  step by step. Everthing seems to work, by no I get a large number of these messages in /var/log/syslog: </p>\n<div class=\"codehilite\"><pre><span></span><code>puppet-agent[1108]: Could not request certificate: Failed to open TCP connection to puppet:8140 (getaddrinfo: Temporary failure in name resolution)\n</code></pre></div>",
+        "id": 1495070,
+        "sender_full_name": "Stefan Meyer",
+        "timestamp": 1674500797
+    },
+    {
+        "content": "<p>Hmm, the configuration file /etc/puppet/puppet.conf seems to be wrong, /var/lib/puppet/ssl/ca does not exist</p>",
+        "id": 1495080,
+        "sender_full_name": "Stefan Meyer",
+        "timestamp": 1674501253
+    },
+    {
+        "content": "<p>Those are all only relevant if you're using a central puppet server, which we're not.</p>",
+        "id": 1495087,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1674501754
+    },
+    {
+        "content": "<p>I've changed to netplan, perhaps this is the reason</p>\n<div class=\"codehilite\"><pre><span></span><code> ping puppet\nping: puppet: Temporary failure in name resolution\n</code></pre></div>",
+        "id": 1495088,
+        "sender_full_name": "Stefan Meyer",
+        "timestamp": 1674501962
+    },
+    {
+        "content": "<p>Let me try to explain better -- <code>puppet</code> has two modes of operation, one where you hand it a manifest directly, and the other where it connects to a central server who hands it the right manifest based on some properties.  Zulip uses the former; however, in installing it to do that, we also get the <code>puppet</code> system service, which tries to do the latter.  By default, it assumes that your central Puppet server is named <code>puppet</code> -- that's what it's trying and failing to look up in that warning.</p>\n<p>This warning is harmless.  It's not related to netplan, as far I would guess.</p>\n<p>Regardless, we potentially should disable the <code>puppet</code> service so it doesn't try and fail to reach a <code>puppet</code> server repeatedly.  Ironically, we'd probably do this within our puppet configuration.</p>",
+        "id": 1495124,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1674503296
+    },
+    {
+        "content": "<blockquote>\n<p>This warning is harmless.  It's not related to netplan, as far I would guess.</p>\n</blockquote>\n<p>Ok thanks, but I get the message every two minutes in /var/log/syslog</p>",
+        "id": 1495143,
+        "sender_full_name": "Stefan Meyer",
+        "timestamp": 1674504005
+    },
+    {
+        "content": "<p>You can run <code>systemctl disable puppet</code> if that's an issue.</p>",
+        "id": 1495146,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1674504167
+    },
+    {
+        "content": "<p>Now puppet is disabled <span aria-label=\"+1\" class=\"emoji emoji-1f44d\" role=\"img\" title=\"+1\">:+1:</span></p>",
+        "id": 1495154,
+        "sender_full_name": "Stefan Meyer",
+        "timestamp": 1674504334
+    },
+    {
+        "content": "<p>Pushed <a href=\"https://github.com/zulip/zulip/pull/24148\">#24148</a>.</p>",
+        "id": 1495178,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1674505571
+    },
+    {
+        "content": "<p>Hmm, I worry that this will break anyone's configuration that is using <code>puppet</code> to manage their own non-Zulip-related configuration (SSH keys, logging configuration, etc. -- the sorts of things that one might manage for one's entire fleet centrally).</p>\n<p>We don't want to start/run the puppet daemon ourselves, but won't this stop the puppet daemon on every Zulip upgrade even if the installation is using puppet.</p>",
+        "id": 1495542,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1674526304
+    },
+    {
+        "content": "<p>I don't know that we really expect that configuration to work?  I guess it might, but it just seems likely to have the puppet configs fight.</p>",
+        "id": 1496066,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1674586901
+    },
+    {
+        "content": "<p>My memory could be wrong, but I'm pretty sure that like 5 years ago we fixed all the issues around that -- I think the construction of<code>scripts/zulip-puppet-apply</code> is such that it doesn't use the <code>/etc/puppet</code>  configuration at all, passing its own configuration to <code>puppet</code> instead of the <code>/etc/</code> stuff, and so we should only have an issue if their puppet tries to manage the same files that ours does.</p>",
+        "id": 1496124,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1674589164
+    },
+    {
+        "content": "<p>I don't see anything in the history of <code>scripts/zulip-puppet-apply</code> that hints at that.  Though it's quite possible I'm missing it, or it didn't call out that reason, or didn't need to touch that file.</p>",
+        "id": 1496126,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1674589425
+    },
+    {
+        "content": "<p>I do find <a href=\"https://github.com/zulip/zulip/pull/23\">#23</a> and <a href=\"https://github.com/zulip/zulip/commit/974878019224869908bf014fa3363a3dd7b217f1\">974878019224869908bf014fa3363a3dd7b217f1</a> which are tangentially relevant.</p>",
+        "id": 1496127,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1674589590
+    },
+    {
+        "content": "<p>Yeah, I think stopping managing <code>/etc/puppet</code> was the key change to make \"ahh I also use puppet and it's broken\" stop being a thing we got complaints about.</p>",
+        "id": 1496150,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1674591561
+    },
+    {
+        "content": "<p>We were definitely less good about describing the motivations for changes back in 2015 <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1496151,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1674591603
+    },
+    {
+        "content": "<p>This is in some sense a regression of <a href=\"https://github.com/zulip/zulip/pull/23\">#23</a>, though.</p>",
+        "id": 1496154,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1674591796
+    },
+    {
+        "content": "<p>We can revert <a href=\"https://github.com/zulip/zulip/pull/24148\">#24148</a>, but that will restore zulip hosts to trying to connect to a local <code>puppet</code> host to configure themselves.</p>",
+        "id": 1496158,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1674591832
+    }
+]

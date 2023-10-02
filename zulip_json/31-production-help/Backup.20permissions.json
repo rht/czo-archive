@@ -1,0 +1,134 @@
+[
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"131\">@Rishi Gupta</span> I just upgraded to V2.02, and tried running backup as the Zulip user:</p>\n<div class=\"codehilite\"><pre><span></span>/home/zulip/deployments/current/manage.py backup\n</pre></div>\n\n\n<p>Script fails with:</p>\n<div class=\"codehilite\"><pre><span></span>zulip@chat:~$ ./deployments/current/manage.py backup\n+ pg_dump --format=directory --file /tmp/zulip-backup-2019-03-29-16-18-12-ejlhhz4i/zulip-backup/database -- zulip\n+ tar -C /tmp/zulip-backup-2019-03-29-16-18-12-ejlhhz4i -chzf /tmp/zulip-backup-2019-03-29-16-18-12-dlzc2ysx.tar.gz -- zulip-backup/zulip-version zulip-backup/os-version zulip-backup/postgres-version zulip-backup/settings zulip-backup/database zulip-backup/uploads\ntar: zulip-backup/settings/backup/zulip-secrets.conf: Cannot open: Permission denied\n\ntar: Exiting with failure status due to previous errors\n</pre></div>\n\n\n<p>Obviously a permissions error, but what is the root directory for zulip-backup/settings/...  ?</p>",
+        "id": 725686,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1553876719
+    },
+    {
+        "content": "<p>OK, I found that it was creating a subdirectory in /etc/zulip/backup.</p>\n<p>That has to be a very bad idea... Is there a way to specify the destination directory for backup? If not, there should be... :-)</p>",
+        "id": 725692,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1553877407
+    },
+    {
+        "content": "<p>hm, Tim is probably the most knowledgeable for this part of the system -- he may be out sick today, but will reply when he returns</p>",
+        "id": 725703,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1553880765
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> can you investigate this?</p>",
+        "id": 725792,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1553894715
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2530\">@Edmund Lian</span> I don't see where you're getting <code>/etc/zulip/backup</code> as being a thing in the logs above -- instead, I see a temporary directory under <code>/tmp/zulip-backup-*</code> as designed.</p>",
+        "id": 725794,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1553894779
+    },
+    {
+        "content": "<p>Can you provide more details on your investigation here?</p>",
+        "id": 725795,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1553894786
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2530\">@Edmund Lian</span> You must have previously created an <code>/etc/zulip/backup</code> directory manually. That path is not specifically relevant to the backup script or any other part of Zulip, except in that the backup script tries to copy the entire contents of <code>/etc/zulip</code> (to <code>zulip-backup/settings</code> within the tarball). If the <code>zulip</code> user can’t read the <code>/etc/zulip/backup</code> directory that you created, that would explain the permission error.</p>",
+        "id": 725802,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1553896313
+    },
+    {
+        "content": "<p>The error message doesn’t list the real <code>/etc/zulip/backup</code> path because it’s being read through a temporary symlink so that it ends up in the right place within the archive. I’ll have to think about how to do this in a way that yields clearer error messages.</p>",
+        "id": 725803,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1553896448
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> That makes sense; I've just confirmed that backup works with the directory deleted. Is there currently a way to specify the file name and path for the backup file? Specifying the path, to me, is more important. I will have a remote server pulling the backup for safety. I'd like to be able to just rsync a specific directory that is not /tmp.</p>",
+        "id": 725810,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1553897519
+    },
+    {
+        "content": "<p>I assume it has a --help that documents the option for that?</p>",
+        "id": 725818,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1553897733
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> I guess we should mention that it readthedocs for folks who aren't used to unix conventions</p>",
+        "id": 725821,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1553897773
+    },
+    {
+        "content": "<p>I see the option and docs now. But as you know, different Unix commands give help in response to different conventions... -h, --help, etc. \"--help\" wasn't in my vocabulary. Best to just document this in Zulip docs.</p>",
+        "id": 725823,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1553897930
+    },
+    {
+        "content": "<p>Agreed</p>",
+        "id": 725824,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1553897956
+    },
+    {
+        "content": "<p>FWIW, <code>--help</code> is the closest thing there is to a <a href=\"https://www.gnu.org/prep/standards/standards.html#g_t_002d_002dhelp\" target=\"_blank\" title=\"https://www.gnu.org/prep/standards/standards.html#g_t_002d_002dhelp\">standard</a>.</p>",
+        "id": 725825,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1553898017
+    },
+    {
+        "content": "<p>One more thing... /home/zulip has a backups directory. This is actually where I looked for the backup file.</p>",
+        "id": 725826,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1553898023
+    },
+    {
+        "content": "<p>You probably created that as well... I don't think zulip uses that path</p>",
+        "id": 725827,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1553898064
+    },
+    {
+        "content": "<p>Ah, my bad.</p>",
+        "id": 725828,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1553898093
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> I actually like the rsnapshot method, which is to spit out a short summary of options if no parameters are specified. Further info given in response to \"rsnapshot help\".</p>",
+        "id": 725829,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1553898196
+    },
+    {
+        "content": "<p>This way, one doesn't have to guess about how to get help.</p>",
+        "id": 725830,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1553898217
+    },
+    {
+        "content": "<p>You had to guess that the command wouldn’t do anything when given no arguments.</p>",
+        "id": 725831,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1553898279
+    },
+    {
+        "content": "<p>That is true... \\o/</p>",
+        "id": 725832,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1553898304
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/12010\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/12010\">#12010</a> improves the backup and restore scripts so tar can print the true paths in error messages instead of temporary symlinks.</p>",
+        "id": 725904,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1553913399
+    }
+]

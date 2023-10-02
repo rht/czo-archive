@@ -1,0 +1,255 @@
+<html>
+<head><meta charset="utf-8"><title>server migration with new database · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html">server migration with new database</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1511224"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1511224" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1511224">(Feb 22 2023 at 06:21)</a>:</h4>
+<p>Hi guys, I've seen a few server migration topics on this stream but would not like to hijack them, hence, I'm creating a new topic about it.<br>
+Currently I have a running Zulip installation on-site, and I need to migrate it to the Datacenter. As I have created a PostgreSQL Cluster, I am planning to move the local DB to the newly created cluster, however, I need to clarify a few things and see if what I am doing is correct:</p>
+<ol>
+<li>Create new database on cluster</li>
+<li>connect new Zulip VM to Posgresql</li>
+<li>export Zulip using export tools</li>
+<li>import tar.gz file</li>
+</ol>
+<p>Is this the right way to do it?</p>
+<p>Thank you!</p>
+
+
+
+<a name="1511225"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1511225" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1511225">(Feb 22 2023 at 06:24)</a>:</h4>
+<p>In this case, is the Export tool the most suitable or it's better to do Backup/Restore method?</p>
+
+
+
+<a name="1511262"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1511262" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1511262">(Feb 22 2023 at 09:27)</a>:</h4>
+<p>I think it would be very useful if there is a table to compare the differences between backup vs export</p>
+
+
+
+<a name="1511399"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1511399" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1511399">(Feb 22 2023 at 18:22)</a>:</h4>
+<p><span class="user-mention" data-user-id="24612">@Gyver Chang</span>:</p>
+<p>A backup is everything on a server -- it's a direct dump of the whole database, a copy of the uploaded attachments, and all of the server settings.</p>
+<p>An export is just one realm (i.e. "organization") on a server, and is in a format which is meant to be easy to import into a server which may already have organizations on it.  It contains uploaded attachments, but no server settings, and take a lot more processing to generate (since it wants to be self-consistent but not include any extra information).</p>
+<p>You probably want a backup.</p>
+
+
+
+<a name="1511401"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1511401" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1511401">(Feb 22 2023 at 18:23)</a>:</h4>
+<p>Specifically, you probably care about preserving the existing server settings (i.e. all of <code>/etc/zulip</code>) which a backup does for you.</p>
+
+
+
+<a name="1511607"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1511607" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1511607">(Feb 22 2023 at 22:16)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/server.20migration.20with.20new.20database/near/1511399">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="24612">Gyver Chang</span>:</p>
+<p>A backup is everything on a server -- it's a direct dump of the whole database, a copy of the uploaded attachments, and all of the server settings.</p>
+<p>An export is just one realm (i.e. "organization") on a server, and is in a format which is meant to be easy to import into a server which may already have organizations on it.  It contains uploaded attachments, but no server settings, and take a lot more processing to generate (since it wants to be self-consistent but not include any extra information).</p>
+<p>You probably want a backup.</p>
+</blockquote>
+<p>Wow thanks for the clarification Alex, it all make sense now :)</p>
+
+
+
+<a name="1511608"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1511608" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1511608">(Feb 22 2023 at 22:17)</a>:</h4>
+<p>In my case, I only have one organiazation in my server, so a backup will make most sense right?</p>
+
+
+
+<a name="1511876"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1511876" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1511876">(Feb 23 2023 at 01:59)</a>:</h4>
+<p>Yes.  And also you presumably want to bring over the rest of your server configuration in <code>/etc/zulip</code>, which a backup will do.</p>
+
+
+
+<a name="1512657"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1512657" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1512657">(Feb 24 2023 at 00:14)</a>:</h4>
+<p>Thank you for the instructions</p>
+
+
+
+<a name="1512658"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1512658" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1512658">(Feb 24 2023 at 00:14)</a>:</h4>
+<p>The backup was met with this error<br>
+<a href="/user_uploads/2/47/3fORnPISZ8O2QcGSA60kDs3M/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/47/3fORnPISZ8O2QcGSA60kDs3M/image.png" title="image.png"><img src="/user_uploads/2/47/3fORnPISZ8O2QcGSA60kDs3M/image.png"></a></div>
+
+
+
+<a name="1512659"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1512659" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1512659">(Feb 24 2023 at 00:15)</a>:</h4>
+<p>Old server: local db<br>
+New server: remote db</p>
+
+
+
+<a name="1512660"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1512660" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1512660">(Feb 24 2023 at 00:15)</a>:</h4>
+<p>Is there a chance to edit and change it to a remote server before restore?</p>
+
+
+
+<a name="1512662"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1512662" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1512662">(Feb 24 2023 at 00:15)</a>:</h4>
+<p>Or do I have to do pg dump and restore before hand?</p>
+
+
+
+<a name="1512663"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1512663" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1512663">(Feb 24 2023 at 00:15)</a>:</h4>
+<p>just saw this</p>
+
+
+
+<a name="1512664"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1512664" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1512664">(Feb 24 2023 at 00:15)</a>:</h4>
+<p><a href="/user_uploads/2/e6/zJqx46SF1ZG9jbZ18n6ZVx9j/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/e6/zJqx46SF1ZG9jbZ18n6ZVx9j/image.png" title="image.png"><img src="/user_uploads/2/e6/zJqx46SF1ZG9jbZ18n6ZVx9j/image.png"></a></div>
+
+
+
+<a name="1512666"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1512666" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1512666">(Feb 24 2023 at 00:16)</a>:</h4>
+<p>Will give it a try :)</p>
+
+
+
+<a name="1513284"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1513284" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1513284">(Feb 24 2023 at 14:43)</a>:</h4>
+<p><span class="user-mention" data-user-id="24612">@Gyver Chang</span>: BTW, did you see <a href="https://zulip.readthedocs.io/en/latest/production/export-and-import.html#backups-export-and-import">https://zulip.readthedocs.io/en/latest/production/export-and-import.html#backups-export-and-import</a> before asking your question?  If so, what could we clarify there to help answer the question?  If not, where did you look, so we can add a link from there to that?</p>
+
+
+
+<a name="1513884"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1513884" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1513884">(Feb 24 2023 at 23:06)</a>:</h4>
+<p>Yes I need, been on this article for a long time and I have this issue where the postgre_password always getting missing on restore on the secrets.conf</p>
+
+
+
+<a name="1513923"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1513923" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1513923">(Feb 24 2023 at 23:39)</a>:</h4>
+<p>always getting this error</p>
+
+
+
+<a name="1513925"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1513925" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1513925">(Feb 24 2023 at 23:39)</a>:</h4>
+<p><a href="/user_uploads/2/92/M3KuCyTqwpc3j64M_lwzFznI/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/92/M3KuCyTqwpc3j64M_lwzFznI/image.png" title="image.png"><img src="/user_uploads/2/92/M3KuCyTqwpc3j64M_lwzFznI/image.png"></a></div>
+
+
+
+<a name="1513926"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1513926" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1513926">(Feb 24 2023 at 23:39)</a>:</h4>
+<p>Basically I need the db restored on the remote database</p>
+
+
+
+<a name="1513927"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1513927" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1513927">(Feb 24 2023 at 23:40)</a>:</h4>
+<p>db name is zulip and user is also zulip</p>
+
+
+
+<a name="1513928"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1513928" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1513928">(Feb 24 2023 at 23:40)</a>:</h4>
+<p>all information are provided correctly</p>
+
+
+
+<a name="1513938"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1513938" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1513938">(Feb 24 2023 at 23:55)</a>:</h4>
+<p>hold on, I think I have found the issue</p>
+
+
+
+<a name="1513952"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1513952" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1513952">(Feb 25 2023 at 00:19)</a>:</h4>
+<p>Getting this error now</p>
+
+
+
+<a name="1513953"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1513953" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1513953">(Feb 25 2023 at 00:19)</a>:</h4>
+<p><a href="/user_uploads/2/bc/86rI_JU-uJpDpNk1DmvrQ3Bn/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/bc/86rI_JU-uJpDpNk1DmvrQ3Bn/image.png" title="image.png"><img src="/user_uploads/2/bc/86rI_JU-uJpDpNk1DmvrQ3Bn/image.png"></a></div>
+
+
+
+<a name="1513966"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1513966" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1513966">(Feb 25 2023 at 00:29)</a>:</h4>
+<p>i think this has to do with permissions for virtual hosts eh</p>
+
+
+
+<a name="1514124"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1514124" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1514124">(Feb 25 2023 at 10:14)</a>:</h4>
+<p>I gave up restoring to a remote database</p>
+
+
+
+<a name="1514125"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1514125" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1514125">(Feb 25 2023 at 10:14)</a>:</h4>
+<p>Tried with the local database instead but still not as troublefree</p>
+
+
+
+<a name="1514132"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1514132" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1514132">(Feb 25 2023 at 10:47)</a>:</h4>
+<p>Successfully resotred but getting errors on multiple services</p>
+
+
+
+<a name="1514133"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1514133" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1514133">(Feb 25 2023 at 10:47)</a>:</h4>
+<p><a href="/user_uploads/2/9c/V1bgeAWZeVtN47XTPnFaGHOx/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/9c/V1bgeAWZeVtN47XTPnFaGHOx/image.png" title="image.png"><img src="/user_uploads/2/9c/V1bgeAWZeVtN47XTPnFaGHOx/image.png"></a></div>
+
+
+
+<a name="1514573"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1514573" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1514573">(Feb 27 2023 at 01:52)</a>:</h4>
+<p><span class="user-mention" data-user-id="24612">@Gyver Chang</span> check our troubleshooting guide for advice on how to get the actual error messages; we need those for anyone to help.</p>
+
+
+
+<a name="1514705"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1514705" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1514705">(Feb 27 2023 at 11:26)</a>:</h4>
+<p>Thanks for the info</p>
+
+
+
+<a name="1514706"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1514706" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1514706">(Feb 27 2023 at 11:26)</a>:</h4>
+<p>Didn't realize there was troubleshooting articles to read up on</p>
+
+
+
+<a name="1514711"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1514711" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1514711">(Feb 27 2023 at 11:28)</a>:</h4>
+<p>In the end I resorted to using a local database</p>
+
+
+
+<a name="1514712"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/server%20migration%20with%20new%20database/near/1514712" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Gyver Chang <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/server.20migration.20with.20new.20database.html#1514712">(Feb 27 2023 at 11:28)</a>:</h4>
+<p>And the restore was smooth and instantaneous</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,92 @@
+[
+    {
+        "content": "<p>Hi there,</p>\n<p>How can we bypass the organization subdomains restrictions when creating a new organization via the <code>generate_realm_creation_link</code> command.<br>\nWhile it can make sense with your SaaS offering, I don't get why we have the same limitation on private setups with custom domains.</p>\n<p>In our case, we would like to use <code>community.&lt;our-zulip-domain&gt;</code> but we can't:<br>\n<a href=\"https://github.com/zulip/zulip/blob/6540285a9caf68f22e06c0cc3fecbe653ecba960/zerver/lib/name_restrictions.py#L157\">https://github.com/zulip/zulip/blob/6540285a9caf68f22e06c0cc3fecbe653ecba960/zerver/lib/name_restrictions.py#L157</a></p>\n<p>Thanks in advance,</p>",
+        "id": 1129349,
+        "sender_full_name": "Steve Durrheimer",
+        "timestamp": 1615376397
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"18934\">@Steve Durrheimer</span> thanks for the question!  I feel like there is a way to get around this, but can't recall it right now.</p>",
+        "id": 1129658,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615413255
+    },
+    {
+        "content": "<p>In any case, certainly the intent is that you should be able to use whatever subdomain you want if you're self-hosting.</p>",
+        "id": 1129659,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615413268
+    },
+    {
+        "content": "<p>OK, it looks I am remembering correctly that we have an <code>allow_reserved_subdomain</code> that controls what's allowed, but it appears that is only available when using our data import tools, not when self-hosting.</p>\n<div class=\"codehilite\"><pre><span></span><code>$ git grep allow_reserved_subdomain\nzerver/forms.py:def check_subdomain_available(subdomain: str, allow_reserved_subdomain: bool = False) -&gt; None:\nzerver/forms.py:    if is_reserved_subdomain(subdomain) and not allow_reserved_subdomain:\nzerver/management/commands/import.py:        allow_reserved_subdomain = False\nzerver/management/commands/import.py:        if options[&quot;allow_reserved_subdomain&quot;]:\nzerver/management/commands/import.py:            allow_reserved_subdomain = True\nzerver/management/commands/import.py:            check_subdomain_available(subdomain, allow_reserved_subdomain)\nzerver/tests/test_signup.py:            check_subdomain_available(&quot;aa&quot;, allow_reserved_subdomain=True)\nzerver/tests/test_signup.py:            check_subdomain_available(&quot;-ba_d-&quot;, allow_reserved_subdomain=True)\nzerver/tests/test_signup.py:                check_subdomain_available(&quot;zulip&quot;, allow_reserved_subdomain=True)\nzerver/tests/test_signup.py:        check_subdomain_available(&quot;stream&quot;, allow_reserved_subdomain=True)\n</code></pre></div>",
+        "id": 1129660,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615413355
+    },
+    {
+        "content": "<p>So I think the bug is that we should be defaulting that parameter to true for self-hosted installations.</p>",
+        "id": 1129661,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615413371
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> FYI as the maintainer of this subsystem.</p>",
+        "id": 1129662,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615413386
+    },
+    {
+        "content": "<p>I think probably what we want to control this behavior is <code>settings.OPEN_REALM_CREATION</code> -- if anyone can create a new organization on the server, we should enforce reserved subdomains, otherwise we shouldn't.</p>",
+        "id": 1129663,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615413416
+    },
+    {
+        "content": "<p>With perhaps the exception of the special ones like the root domain and <code>SOCIAL_AUTH_SUBDOMAIN</code>, which we probably want to enforce unconditionally, though I'm not sure that's done via the <code>reserved_subdomain</code> system anyway.</p>",
+        "id": 1129665,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615413480
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/disallowed.20org.20subdomains.20on.20private.20setup/near/1129663\">said</a>:</p>\n<blockquote>\n<p>I think probably what we want to control this behavior is <code>settings.OPEN_REALM_CREATION</code> -- if anyone can create a new organization on the server, we should enforce reserved subdomains, otherwise we shouldn't.</p>\n</blockquote>\n<p>Yeah, that should make sense.</p>\n<p>For the immediate issue, the way I did it when I wanted to created an org on a prohibited subdomain was that I just deleted it from the <code>ZULIP_RESERVED_SUBDOMAINS</code> or <code>GENERIC_RESERVED_SUBDOMAINS</code> lists in <code>zerver/lib/name_restrictions.py</code>, so that should work for the time being as a hacky approach</p>",
+        "id": 1129708,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1615414853
+    },
+    {
+        "content": "<p>Yeah, that's surely the right answer for <span class=\"user-mention silent\" data-user-id=\"18934\">Steve Durrheimer</span>'s immediate problem.</p>",
+        "id": 1129720,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615415401
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <a href=\"#narrow/stream/31-production-help/topic/disallowed.20org.20subdomains.20on.20private.20setup/near/1129708\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/disallowed.20org.20subdomains.20on.20private.20setup/near/1129663\">said</a>:</p>\n<blockquote>\n<p>I think probably what we want to control this behavior is <code>settings.OPEN_REALM_CREATION</code> -- if anyone can create a new organization on the server, we should enforce reserved subdomains, otherwise we shouldn't.</p>\n</blockquote>\n<p>Yeah, that should make sense.</p>\n<p>For the immediate issue, the way I did it when I wanted to created an org on a prohibited subdomain was that I just deleted it from the <code>ZULIP_RESERVED_SUBDOMAINS</code> or <code>GENERIC_RESERVED_SUBDOMAINS</code> lists in <code>zerver/lib/name_restrictions.py</code>, so that should work for the time being as a hacky approach</p>\n</blockquote>\n<p>Thought of that solution as well, but preferred asking before as they were maybe another solution available and might help changing thing preventing other folks of having the same issue.<br>\n<span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> <span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span>  Thank you for your answers.</p>",
+        "id": 1129984,
+        "sender_full_name": "Steve Durrheimer",
+        "timestamp": 1615451093
+    },
+    {
+        "content": "<p>Yeah, we much appreciate the report, since I'm sure you won't be the last person in this situation <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1130179,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1615485678
+    },
+    {
+        "content": "<p><del>Hi there !</del><br>\n<del>Juste a quick question: is there a way to allow an admin to bypass reserved / protected subdomains ?</del><br>\n<del>I checked the code and it seems there's no way to go through it.</del><br>\n<del>I'm trying to create realms for different usages in our company, one of them concerns our customers, which translates to \"clients\" in French. Being restricted isn't really convenient <span aria-label=\"frown\" class=\"emoji emoji-1f641\" role=\"img\" title=\"frown\">:frown:</span> (same for \"support\" btw)</del></p>",
+        "id": 1328068,
+        "sender_full_name": "Benjamin MALYNOVYTCH",
+        "timestamp": 1644849593
+    },
+    {
+        "content": "<p>-</p>",
+        "id": 1328071,
+        "sender_full_name": "Benjamin MALYNOVYTCH",
+        "timestamp": 1644849650
+    },
+    {
+        "content": "<p>I confirm that the feature should be disabled when running on closed realm creations (or at least configurable)</p>",
+        "id": 1328073,
+        "sender_full_name": "Benjamin MALYNOVYTCH",
+        "timestamp": 1644849716
+    }
+]

@@ -1,0 +1,170 @@
+[
+    {
+        "content": "<p>Has anyone setup inbound email with MS Exchange? That’s my goal today and I’m looking for any config detail that might be Exchange specific.</p>",
+        "id": 490165,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518183529
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"scott@frak.ms\" data-user-id=\"5233\">@Scott Russell</span> to be clear, this is inbound email (i.e. the email gateway)?  I haven't heard reports of it, but it's the kind of thing that should just work.</p>",
+        "id": 490456,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518194873
+    },
+    {
+        "content": "<p>Yes, that’s what I’m going to try and get going. I’ll let you know the experience and document any exchange specific I find. </p>\n<p>It looks like all the setup docs on this are based on comments of the settings.py. Am I missing any other info?</p>",
+        "id": 490463,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518195050
+    },
+    {
+        "content": "<p>Yep, that's where it's documented.  We should probably move those to ReadTheDocs; the integration is pretty stable and thus hasn't had major work on it since before we even had ReadTheDocs.</p>",
+        "id": 490691,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518202314
+    },
+    {
+        "content": "<p>FYI. It doesn't look like exchange supports plus-addressing such as username+%s@example.com. That leaves out the possibility of IMAP polling.</p>",
+        "id": 491783,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518285072
+    },
+    {
+        "content": "<p>Really?  Amazing.  It's one of those features that is incredibly useful and has been around for decades...</p>",
+        "id": 491869,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518292573
+    },
+    {
+        "content": "<p>I cannot say I'm terribly surprised. I'll start a conversation with IT to see if they can do forwarding from exchange to the Zulip server.</p>",
+        "id": 491883,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518293525
+    },
+    {
+        "content": "<p>I'm just going to leave this here to troubleshoot on Monday</p>\n<div class=\"codehilite\"><pre><span></span>root@zulip:~/zulip-server-1.7.1# ./scripts/zulip-puppet-apply -f\nError: Could not run: Could not retrieve facts for zulip.eng.nimblestorage.com: No such file or directory @ rb_sysopen - /etc/sysconfig/authconfig\n</pre></div>",
+        "id": 491906,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518294209
+    },
+    {
+        "content": "<p>So <code>/etc/sysconfig</code> is something I typically see on CentOS, not Ubuntu. This doesn't exist on my 16.04 install. Do I have to set some env variables before running zulip-puppet-apply?</p>\n<p>I'm running this command based on the comments in the setup.py for configuring the email gateway local delivery option.</p>\n<div class=\"codehilite\"><pre><span></span># There are two ways to configure email mirroring in Zulip:\n#  1. Local delivery: A MTA runs locally and passes mail directly to Zulip\n#  2. Polling: Checks an IMAP inbox every minute for new messages.\n#\n# The local delivery configuration is preferred for production because\n# it supports nicer looking email addresses and has no cron delay,\n# while the polling mechanism is better for testing/developing this\n# feature because it doesn&#39;t require a public-facing IP/DNS setup.\n#\n# The main email mirror setting is the email address pattern, where\n# you specify the email address format you&#39;d like the integration to\n# use.  It should be one of the following:\n#   %s@zulip.example.com (for local delivery)\n#   username+%s@example.com (for polling if EMAIL_GATEWAY_LOGIN=username@example.com)\nEMAIL_GATEWAY_PATTERN = &quot;%s@zulip.eng.nimblestorage.com&quot;\n#\n# If you are using local delivery, EMAIL_GATEWAY_PATTERN is all you need\n# to change in this file.  You will also need to enable the Zulip postfix\n# configuration to support local delivery by adding\n#   , zulip::postfix_localmail\n# to puppet_classes in /etc/zulip/zulip.conf and then running\n# `scripts/zulip-puppet-apply -f` to do the installation.\n</pre></div>",
+        "id": 494245,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518449006
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"scott@frak.ms\" data-user-id=\"5233\">@Scott Russell</span> question: have you already installed Zulip on the server in question?  I notice that the path you're running from isn't a /home/zulip/deploments/... path</p>",
+        "id": 494414,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518455297
+    },
+    {
+        "content": "<p>You definitely need to run that command.</p>",
+        "id": 494416,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518455318
+    },
+    {
+        "content": "<p>The error in question is coming from <code>puppet</code> -- do you by any chance have a puppet agent running on the system?</p>",
+        "id": 494419,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518455389
+    },
+    {
+        "content": "<p>We use <code>puppet</code> to install/upgrade the configuration of various dependencies.</p>",
+        "id": 494421,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518455416
+    },
+    {
+        "content": "<p>And it would appear that <code>puppet</code> is somehow incorrectly detecting your system as not an Ubuntu system and thus trying to look for RHEL/CentOS configuration files.  I don't think the issue is in any code that we wrote; so it's likely some sort of interaction between puppet defaults and something on your system.  Probably the fix for Zulip will be to add some sort of override option, but we need to debug more to figure this out.</p>",
+        "id": 494426,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518455496
+    },
+    {
+        "content": "<p>I do have puppet running. systemctl status puppet reports it enabled and running. The issue is my install.. I assumed I should go back to the unpacked /root/zulip-server-1.7.1 I installed from initially.</p>\n<p>So I think he only question remaining  is should this be run as root or zulip userid?</p>",
+        "id": 494429,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518455531
+    },
+    {
+        "content": "<p>You can try running <code>scripts/zulip-puppet-apply -f --verbose</code> and see if that helps provide useful debugging output.</p>",
+        "id": 494430,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518455545
+    },
+    {
+        "content": "<p>It should definitely be run as root; <code>puppet</code> effectively needs root access to work.</p>",
+        "id": 494431,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518455560
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>root@zulip:/home/zulip/deployments/current# pwd\n/home/zulip/deployments/current\nroot@zulip:/home/zulip/deployments/current# ./scripts/zulip-puppet-apply -f --verbose\nInfo: Loading facts\nInfo: Loading facts\nError: Could not run: Could not retrieve facts for zulip.eng.nimblestorage.com: No such file or directory @ rb_sysopen - /etc/sysconfig/authconfig\n</pre></div>",
+        "id": 494434,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518455606
+    },
+    {
+        "content": "<p>that was surprisingly unhelpful.</p>",
+        "id": 494443,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518455802
+    },
+    {
+        "content": "<p>Try replacing <code>--verbose</code> with <code>--debug</code>?</p>",
+        "id": 494445,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518455826
+    },
+    {
+        "content": "<p>I had a bad puppet install with a bunch of facts in <code>/var/lib/puppet/facts.d</code> that should not have been there. This was because of prior install troubles with puppet I tried using a newer version of puppet than the provided 16.04 one. Once I cleaned up all puppet installations and installed puppet....</p>\n<div class=\"codehilite\"><pre><span></span>root@zulip:~# cd /home/zulip/deployments/current\nroot@zulip:/home/zulip/deployments/current# ./scripts/zulip-puppet-apply -f\nNotice: Compiled catalog for zulip.eng.nimblestorage.com in environment production in 1.50 seconds\nNotice: /Stage[main]/Zulip::Postfix_localmail/File[/etc/mailname]/content: content changed &#39;{md5}80d0005409a7b19c01cd73f17e431006&#39; to &#39;{md5}2b354f3f13925e37dd178bf6150bee18&#39;\nNotice: /Stage[main]/Zulip::Postfix_localmail/File[/etc/postfix/virtual]/ensure: defined content as &#39;{md5}fae0ae3c6060e94d1934140bb30d9743&#39;\nNotice: /Stage[main]/Zulip::Postfix_localmail/File[/etc/postfix/main.cf]/content: content changed &#39;{md5}98cf3eb94d919e7eec502113fac01413&#39; to &#39;{md5}31a0e00d2e788956daa9e290b8333e68&#39;\nNotice: /Stage[main]/Zulip::Postfix_localmail/Exec[postmap /etc/postfix/virtual]: Triggered &#39;refresh&#39; from 1 events\nNotice: /Stage[main]/Zulip::Postfix_localmail/File[/etc/postfix/master.cf]/content: content changed &#39;{md5}23609c98b3e8692fc2938e461eb65ba4&#39; to &#39;{md5}68eabd2f28b14e61169b7e1d9bc315f0&#39;\nNotice: /Stage[main]/Zulip::Postfix_localmail/Service[postfix]: Triggered &#39;refresh&#39; from 2 events\nNotice: /Stage[main]/Zulip::Postfix_localmail/File[/etc/postfix/transport]/ensure: defined content as &#39;{md5}43fd54746bab5ff362e661abc30869e7&#39;\nNotice: /Stage[main]/Zulip::Postfix_localmail/Exec[postmap /etc/postfix/transport]: Triggered &#39;refresh&#39; from 1 events\n</pre></div>\n\n\n<p>thank you for pointing me in the right direction!</p>",
+        "id": 494746,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518463723
+    },
+    {
+        "content": "<p>Great :)</p>",
+        "id": 494759,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518464084
+    },
+    {
+        "content": "<p>Hello,</p>\n<p>I'm new to Zulip and deployed self-hosted in production<br>\nI'm running Postfix server with google account ID as Relay for outgoing emails. I've configured Zulip for incoming mails, but mails are bounced back with error as \"temporary failed\" and google keeps retrying. any help?<br>\nDo I need to configure Postfix as incoming mail also?</p>\n<p>I'm unable to find such help on google</p>",
+        "id": 1452884,
+        "sender_full_name": "Muhammad Laique",
+        "timestamp": 1666249723
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"25023\">@Muhammad Laique</span>: Setting up Zulip for incoming mail should configure Postfix for incoming mail.  Did you follow all of the steps in <a href=\"https://zulip.readthedocs.io/en/latest/production/email-gateway.html#local-delivery-setup\">https://zulip.readthedocs.io/en/latest/production/email-gateway.html#local-delivery-setup</a> ?  Is there anything interesting in <code>/var/log/mail.log</code> ?</p>",
+        "id": 1452980,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1666281376
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Inbound.20mail.20ms.20exchange/near/1452980\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"25023\">Muhammad Laique</span>: Setting up Zulip for incoming mail should configure Postfix for incoming mail.  Did you follow all of the steps in <a href=\"https://zulip.readthedocs.io/en/latest/production/email-gateway.html#local-delivery-setup\">https://zulip.readthedocs.io/en/latest/production/email-gateway.html#local-delivery-setup</a> ?  Is there anything interesting in <code>/var/log/mail.log</code> ?</p>\n</blockquote>\n<p>Yes, I've followed all these configurations.,  before that sending emails were bounced back immediately but after this configuration, mail was temporarily failed and gmail keeps retrying the email for few days. <br>\nnothing in the mail.log</p>",
+        "id": 1453484,
+        "sender_full_name": "Muhammad Laique",
+        "timestamp": 1666328530
+    },
+    {
+        "content": "<p>The temporary failure messages may be able to tell you more about what the failure is.  If you don't see anything in <code>/var/log/mail.log</code>, then the mail isn't getting to Postfix, so your problem is at a higher level, or before that (e.g. your MX is not configured, or port 25 is blocked on your host)</p>",
+        "id": 1454842,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1666666460
+    },
+    {
+        "content": "<p>Oh, hm:</p>\n<blockquote>\n<p>I'm running Postfix server with google account ID as Relay for outgoing emails</p>\n</blockquote>\n<p>Zulip wants to configure your Postfix to accept the incoming emails.  Do if that's a manual configuration, that's not likely to work out of the box. <br>\n Did you run <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code>?  If you run that again, does it show any changes it would want to apply?</p>",
+        "id": 1454843,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1666666587
+    },
+    {
+        "content": "<p>Your topic also mentions \"MS Exchange\" -- did you just pick a pre-existing topic that had some reference to incoming email, or is Exchange also somehow involved?</p>",
+        "id": 1454844,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1666666632
+    }
+]

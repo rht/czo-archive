@@ -1,0 +1,79 @@
+<html>
+<head><meta charset="utf-8"><title>Change emails for all users · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Change.20emails.20for.20all.20users.html">Change emails for all users</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="670506"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Change%20emails%20for%20all%20users/near/670506" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scott Russell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Change.20emails.20for.20all.20users.html#670506">(Dec 10 2018 at 22:41)</a>:</h4>
+<p>We are an LDAP shop and we login with emails (mail=%s). But we'll be switching from our current LDAP to a new server where we have different email addresses. (short version, company was bought) </p>
+<p>I have a task to figure out how to migrate Zulip so users don't lose their history. My plan is some kind of high level of </p>
+<p>1. force log everyone out (I think there is a manage.py for this)<br>
+2. shut down zulip instance<br>
+3. Do some kind of update mapping <a href="mailto:user@old-domain.com" title="mailto:user@old-domain.com">user@old-domain.com</a> -&gt; <a href="mailto:user@new-domain.com" title="mailto:user@new-domain.com">user@new-domain.com</a><br>
+4. start up zulip and let people login with <a href="mailto:user@new-domain.com" title="mailto:user@new-domain.com">user@new-domain.com</a> again</p>
+<p>I can generate a mapping as a CSV, or text file for reference since not all user names will be identical either. But how do I apply it to Zulip? Will this be a direct DB update?</p>
+
+
+
+<a name="670507"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Change%20emails%20for%20all%20users/near/670507" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scott Russell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Change.20emails.20for.20all.20users.html#670507">(Dec 10 2018 at 22:42)</a>:</h4>
+<p>To be clear, this isn't happening until late January. I have time to plan and test.</p>
+
+
+
+<a name="670520"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Change%20emails%20for%20all%20users/near/670520" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Change.20emails.20for.20all.20users.html#670520">(Dec 10 2018 at 22:51)</a>:</h4>
+<p>I think you can just run <code>manage.py change_user_email</code> in a loop.</p>
+
+
+
+<a name="670521"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Change%20emails%20for%20all%20users/near/670521" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Change.20emails.20for.20all.20users.html#670521">(Dec 10 2018 at 22:51)</a>:</h4>
+<p>(And you may need to update the Zulip LDAP configuration to use the <code>LDAP_EMAIL_ATTR</code> feature.</p>
+
+
+
+<a name="670667"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Change%20emails%20for%20all%20users/near/670667" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scott Russell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Change.20emails.20for.20all.20users.html#670667">(Dec 11 2018 at 17:09)</a>:</h4>
+<p>Thanks <span class="user-mention" data-user-id="7">@Tim Abbott</span>. To be clear, we login with user@old-domain now so we do not use LDAP_EMAIL_ATTR. So if we use change_user_email (cool, didn't know about this!) that will update the user email address people login with?</p>
+
+
+
+<a name="670744"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Change%20emails%20for%20all%20users/near/670744" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Change.20emails.20for.20all.20users.html#670744">(Dec 11 2018 at 19:19)</a>:</h4>
+<p>Right, so structurally, you need to without anyone trying to login in between, (1) use <code>change_user_email</code> to update the email addresses in the Zulip database and (2) Change your LDAP_EMAIL_ATTR from method A to C in <a href="https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#ldap-including-active-directory" target="_blank" title="https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#ldap-including-active-directory">https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#ldap-including-active-directory</a> (that doc also has info on testing your config).  If you do just one or the other, the next time users login they'll auto-create a duplicate account for themselves with the other email, which isn't what you want.</p>
+
+
+
+<a name="670749"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Change%20emails%20for%20all%20users/near/670749" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scott Russell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Change.20emails.20for.20all.20users.html#670749">(Dec 11 2018 at 19:38)</a>:</h4>
+<p>I'm just missing why I would change my LDAP_EMAIL_ATTR. I think we will still login as <a href="mailto:user@new-domain.com" title="mailto:user@new-domain.com">user@new-domain.com</a> after the email changes.</p>
+
+
+
+<a name="670750"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Change%20emails%20for%20all%20users/near/670750" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scott Russell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Change.20emails.20for.20all.20users.html#670750">(Dec 11 2018 at 19:39)</a>:</h4>
+<p>ether there is an internal zulip thing I don't get or I didn't comm the issue well</p>
+
+
+
+<a name="670763"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Change%20emails%20for%20all%20users/near/670763" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Change.20emails.20for.20all.20users.html#670763">(Dec 11 2018 at 20:33)</a>:</h4>
+<p>Oh, I see, I had misunderstood your situation <span class="user-mention" data-user-id="5233">@Scott Russell</span>; you only need to do that if the way to get the email from the LDAP data has changed.</p>
+
+
+
+<a name="670764"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Change%20emails%20for%20all%20users/near/670764" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scott Russell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Change.20emails.20for.20all.20users.html#670764">(Dec 11 2018 at 20:34)</a>:</h4>
+<p>Gotcha. Thank you Tim.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

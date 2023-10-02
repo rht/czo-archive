@@ -1,0 +1,224 @@
+[
+    {
+        "content": "<p>My server (using <a href=\"https://hub.docker.com/r/galexrt/zulip/\" target=\"_blank\" title=\"https://hub.docker.com/r/galexrt/zulip/\">zulip docker 1.6</a>) is responding to <code>/api/v1/server_settings</code> with a response that does not include \"realm_icon\". It is a simple url setup: <a href=\"http://subdomain.domain.com\" target=\"_blank\" title=\"http://subdomain.domain.com\">subdomain.domain.com</a>, with no \"/realm\" in the path.<br/>\nThis causes the <a href=\"https://github.com/zulip/zulip-electron/blob/master/app/renderer/js/utils/domain-util.js\" target=\"_blank\" title=\"https://github.com/zulip/zulip-electron/blob/master/app/renderer/js/utils/domain-util.js\">client electron code</a> to look for a realm icon, then if not found, <em>not even call resolve on the promise??</em>.. this is almost definitely a bug in the electron code, but obviously this must be rare or something for a server not to include a realm_icon?</p>\n<p>I'm not sure what's going on. What config setting is involved in order to get my server to respond with a realm_icon? I noticed I visit the server in a non-electron browser, the <code>/api/v1/server_settings</code> responds with a realm_icon.. I tested with curl and if I include the session cookie, the realm_icon appears.</p>\n<p>I googled and found this <a href=\"https://github.com/zulip/zulip-mobile/issues/392\" target=\"_blank\" title=\"https://github.com/zulip/zulip-mobile/issues/392\">issue</a>.  So apparently my server is unaware of its realm or something if there is no session? I'm a bit lost here on how to solve.</p>",
+        "id": 301554,
+        "sender_full_name": "Mark Clifton",
+        "timestamp": 1508466816
+    },
+    {
+        "content": "<p>Notice the <code>if</code> with no action or <code>else</code> after checking for <code>realm_icon</code> in <a href=\"https://github.com/zulip/zulip-electron/blob/master/app/renderer/js/utils/domain-util.js\" target=\"_blank\" title=\"https://github.com/zulip/zulip-electron/blob/master/app/renderer/js/utils/domain-util.js\">electron's app code</a>:</p>\n<div class=\"codehilite\"><pre><span></span>               <span class=\"k\">if</span> <span class=\"p\">(</span><span class=\"o\">!</span><span class=\"nx\">error</span> <span class=\"o\">&amp;&amp;</span> <span class=\"nx\">response</span><span class=\"p\">.</span><span class=\"nx\">statusCode</span> <span class=\"o\">===</span> <span class=\"mi\">200</span><span class=\"p\">)</span> <span class=\"p\">{</span>\n                    <span class=\"kr\">const</span> <span class=\"nx\">data</span> <span class=\"o\">=</span> <span class=\"nx\">JSON</span><span class=\"p\">.</span><span class=\"nx\">parse</span><span class=\"p\">(</span><span class=\"nx\">response</span><span class=\"p\">.</span><span class=\"nx\">body</span><span class=\"p\">);</span>\n                    <span class=\"k\">if</span> <span class=\"p\">(</span><span class=\"nx\">data</span><span class=\"p\">.</span><span class=\"nx\">hasOwnProperty</span><span class=\"p\">(</span><span class=\"s1\">'realm_icon'</span><span class=\"p\">)</span> <span class=\"o\">&amp;&amp;</span> <span class=\"nx\">data</span><span class=\"p\">.</span><span class=\"nx\">realm_icon</span><span class=\"p\">)</span> <span class=\"p\">{</span>\n                        <span class=\"nx\">resolve</span><span class=\"p\">({</span>\n                            <span class=\"c1\">// Some Zulip Servers use absolute URL for server icon whereas others use relative URL</span>\n                            <span class=\"c1\">// Following check handles both the cases</span>\n                            <span class=\"nx\">icon</span><span class=\"o\">:</span> <span class=\"nx\">data</span><span class=\"p\">.</span><span class=\"nx\">realm_icon</span><span class=\"p\">.</span><span class=\"nx\">startsWith</span><span class=\"p\">(</span><span class=\"s1\">'/'</span><span class=\"p\">)</span> <span class=\"o\">?</span> <span class=\"nx\">data</span><span class=\"p\">.</span><span class=\"nx\">realm_uri</span> <span class=\"o\">+</span> <span class=\"nx\">data</span><span class=\"p\">.</span><span class=\"nx\">realm_icon</span> <span class=\"o\">:</span> <span class=\"nx\">data</span><span class=\"p\">.</span><span class=\"nx\">realm_icon</span><span class=\"p\">,</span>\n                            <span class=\"nx\">url</span><span class=\"o\">:</span> <span class=\"nx\">data</span><span class=\"p\">.</span><span class=\"nx\">realm_uri</span><span class=\"p\">,</span>\n                            <span class=\"nx\">alias</span><span class=\"o\">:</span> <span class=\"nx\">data</span><span class=\"p\">.</span><span class=\"nx\">realm_name</span>\n                        <span class=\"p\">});</span>\n                    <span class=\"p\">}</span>\n                <span class=\"p\">}</span> <span class=\"k\">else</span> <span class=\"p\">{</span>\n                    <span class=\"nx\">reject</span><span class=\"p\">(</span><span class=\"s1\">'Zulip server version &lt; 1.6.'</span><span class=\"p\">);</span>\n                <span class=\"p\">}</span>\n</pre></div>",
+        "id": 301555,
+        "sender_full_name": "Mark Clifton",
+        "timestamp": 1508467069
+    },
+    {
+        "content": "<p>cc: <span class=\"user-mention\" data-user-email=\"svnitakash@gmail.com\" data-user-id=\"53\">@Akash Nimare</span></p>",
+        "id": 301558,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1508467628
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"mark.clifton@gmail.com\" data-user-id=\"2945\">@Mark Clifton</span> interesting.</p>",
+        "id": 301571,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508477576
+    },
+    {
+        "content": "<p>Did you by any chance setup multiple realms on your server?</p>",
+        "id": 301573,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508477603
+    },
+    {
+        "content": "<p>The problem you describe sounds like what happens with that on 1.6</p>",
+        "id": 301574,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508477615
+    },
+    {
+        "content": "<p>If that's your problem, you may want to just upgrade to <code>master</code>, which will become 1.7 within a couple days.</p>",
+        "id": 301575,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508477634
+    },
+    {
+        "content": "<p>no I did not set up multiple realms afaik. is there a command to list realms in the manage.py shell?</p>",
+        "id": 301581,
+        "sender_full_name": "Mark Clifton",
+        "timestamp": 1508478013
+    },
+    {
+        "content": "<p>you could try Realm.objects.all()</p>",
+        "id": 301585,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1508480729
+    },
+    {
+        "content": "<p>Ok, I'm seeing 3 realms.. how do I delete them? there's <a href=\"http://example.com\" target=\"_blank\" title=\"http://example.com\">example.com</a>, zulip 1, and the one I'm actually using.</p>",
+        "id": 301599,
+        "sender_full_name": "Mark Clifton",
+        "timestamp": 1508485176
+    },
+    {
+        "content": "<p>(Make sure about which of the realms you are using, before removing others. On my server, the realm that I expect the least for it to be the realm that I'm using, is actually the one!!)</p>",
+        "id": 301616,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1508487077
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"mark.clifton@gmail.com\" data-user-id=\"2945\">@Mark Clifton</span> so, still in the <code>manage.py shell</code>, you can use <code>UserProfile.objects.filter(realm=realm)</code> to see which one has your users in it.</p>",
+        "id": 301794,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508515797
+    },
+    {
+        "content": "<p>I can send you notes on options for how to clean things up when you're online.</p>",
+        "id": 301795,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508515850
+    },
+    {
+        "content": "<p>great, I found the realm I want to keep</p>",
+        "id": 301796,
+        "sender_full_name": "Mark Clifton",
+        "timestamp": 1508515901
+    },
+    {
+        "content": "<p>it is \"<a href=\"http://example.com\" target=\"_blank\" title=\"http://example.com\">example.com</a>\"</p>",
+        "id": 301799,
+        "sender_full_name": "Mark Clifton",
+        "timestamp": 1508515915
+    },
+    {
+        "content": "<p>is deleting the other realms going to switch the server into single-realm-mode?</p>",
+        "id": 301802,
+        "sender_full_name": "Mark Clifton",
+        "timestamp": 1508515969
+    },
+    {
+        "content": "<p>Yeah, it will.</p>",
+        "id": 301807,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508516011
+    },
+    {
+        "content": "<p>Well</p>",
+        "id": 301808,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508516018
+    },
+    {
+        "content": "<p>Don't delete the \"zulip\" one</p>",
+        "id": 301809,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508516024
+    },
+    {
+        "content": "<p>That one is used for various \"system bots\".</p>",
+        "id": 301810,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508516034
+    },
+    {
+        "content": "<p>oh ok</p>",
+        "id": 301812,
+        "sender_full_name": "Mark Clifton",
+        "timestamp": 1508516039
+    },
+    {
+        "content": "<p>(E.g. the Notification Bot)</p>",
+        "id": 301814,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508516069
+    },
+    {
+        "content": "<p>I would take a backup of your database before doing this using <code>pg_dump</code>.</p>",
+        "id": 301815,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508516084
+    },
+    {
+        "content": "<p>Just because that makes human error less risky :)</p>",
+        "id": 301816,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508516091
+    },
+    {
+        "content": "<p>but there's one I seem to have inadvertently created but not used. should I just call <code>.delete()</code> on it or is there more to it than that?</p>",
+        "id": 301817,
+        "sender_full_name": "Mark Clifton",
+        "timestamp": 1508516108
+    },
+    {
+        "content": "<p>I suspect calling <code>.delete()</code> on it will just work (that should cascade to deleting related objects).  It might also be good enough to just do a <code>do_deactivate_realm</code> on it, but I'd need to read some code to verify.  Certainly it <strong>should</strong> just work to do that.</p>",
+        "id": 301820,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508516234
+    },
+    {
+        "content": "<p>Yeah, deactivating the realm should suffice.</p>",
+        "id": 301821,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508516262
+    },
+    {
+        "content": "<p>ok cool well considering <code>do_deactivate_realm</code> feels less destructive I'll try that first</p>",
+        "id": 301822,
+        "sender_full_name": "Mark Clifton",
+        "timestamp": 1508516286
+    },
+    {
+        "content": "<p>ok, the realm_icon is showing up in the <code>/api/v1/server_settings</code> now! thanks a ton!</p>",
+        "id": 301827,
+        "sender_full_name": "Mark Clifton",
+        "timestamp": 1508516469
+    },
+    {
+        "content": "<p>Thank you <span class=\"user-mention\" data-user-email=\"mark.clifton@gmail.com\" data-user-id=\"2945\">@Mark Clifton</span>!  This discussion caused me to notice we need to do <a href=\"https://github.com/zulip/zulip/commit/88245d2cd66c75e1096eec53882a2750826f03be\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/88245d2cd66c75e1096eec53882a2750826f03be\">88245d2cd66c75e1096eec53882a2750826f03be</a> for the 1.7 release to handle your case correctly :)</p>",
+        "id": 301834,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508516624
+    },
+    {
+        "content": "<p>BTW if you'd like to help further, give a skip through the release/upgrades notes part of <a href=\"http://zulip.readthedocs.io/en/latest/changelog.html\" target=\"_blank\" title=\"http://zulip.readthedocs.io/en/latest/changelog.html\">http://zulip.readthedocs.io/en/latest/changelog.html</a> and let us know if everything makes sense :)</p>",
+        "id": 301835,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508516676
+    },
+    {
+        "content": "<p>We're going to be shipping that in the next day or so :)</p>",
+        "id": 301836,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508516684
+    },
+    {
+        "content": "<p>regarding the 2014 desktop app, the notes should probably <em>not</em> say \"deprecated completely soon.\".. my guess is \"removed completely soon\" is more to the point</p>",
+        "id": 301841,
+        "sender_full_name": "Mark Clifton",
+        "timestamp": 1508516832
+    },
+    {
+        "content": "<p>(in the changelog)</p>",
+        "id": 301842,
+        "sender_full_name": "Mark Clifton",
+        "timestamp": 1508516852
+    },
+    {
+        "content": "<p>Well, we probably don't delete the original copy, we'll just stop supporting its weird way of getting notifications.  Maybe that's sorta the same though.  Good point, we should change that language somehow.</p>",
+        "id": 301844,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508516877
+    },
+    {
+        "content": "<p>I like the fix re: legacy desktop app discussion in changelog.. you're so quick!</p>",
+        "id": 302125,
+        "sender_full_name": "Mark Clifton",
+        "timestamp": 1508526755
+    },
+    {
+        "content": "<p>Great :)</p>",
+        "id": 302127,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1508526890
+    }
+]

@@ -1,0 +1,176 @@
+[
+    {
+        "content": "<p>Hello. If anyone can please give me advice? I tried upgrading to 4.8 and then to \"main\" from GIT, but with the same Error:</p>\n<div class=\"codehilite\"><pre><span></span><code>Error: Evaluation Error: Error while evaluating a Function Call, Could not find template &#39;zulip/postgresql//postgresql.conf.template.erb&#39; (file: /home/zulip/deployments/2022-01-11-10-20-59/puppet/zulip/manifests/profile/postgresql.pp, line: 33, column: 16)\n</code></pre></div>\n<p>I have a postgesql version 13. It looks that it cant get a proper version for the file path. The mentioned code looks like:</p>\n<div class=\"codehilite\"><pre><span></span><code>content =&gt; template(&quot;zulip/postgresql/${zulip::postgresql_common::version}/postgresql.conf.template.erb&quot;)\n</code></pre></div>\n<p>Thank to all of you for your work here!<br>\nJura</p>",
+        "id": 1308054,
+        "sender_full_name": "Jura Ryszawy",
+        "timestamp": 1641899954
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19494\">@Jura Ryszawy</span> is this failing on the 4.8 upgrade or the <code>main</code> one?</p>",
+        "id": 1308191,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1641927460
+    },
+    {
+        "content": "<p>(I'll be AFK for the next bit but that detail should be helpful).</p>",
+        "id": 1308192,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1641927469
+    },
+    {
+        "content": "<p>Also what Zulip version and host OS are you starting from?</p>",
+        "id": 1308193,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1641927489
+    },
+    {
+        "content": "<p>It is failing on both. I tried 4.8 first and then the Main from GIT. Both ended the same way.<br>\nThe Main version also failed when reaching \"./tools/webpack --quiet\" , but stoping Zulip manualy (which you suggested elsewhere) helped - server has only 2GB RAM.<br>\nThe server is Debian 10 Buster, zulip_version   \"4.2\"<br>\nThank You for help! The server is running but I want to upgrade (at least for security reasons).</p>",
+        "id": 1308231,
+        "sender_full_name": "Jura Ryszawy",
+        "timestamp": 1641932266
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19494\">@Jura Ryszawy</span>: Can you show your <code>/etc/zulip/zulip.conf</code>?</p>",
+        "id": 1308245,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1641932808
+    },
+    {
+        "content": "<p>Feel free to redact anything sensitive -- specifically what I'm interested in is the <code>[postgresql]</code> section, if any.</p>",
+        "id": 1308246,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1641932830
+    },
+    {
+        "content": "<p>[machine]<br>\npuppet_classes = zulip::profile::standalone<br>\ndeploy_type = production</p>\n<p>[postgresql]<br>\nversion = 13</p>\n<p>[certbot]<br>\nauto_renew = yes</p>\n<p>[rabbitmq]<br>\nnodename = zulip@localhost</p>",
+        "id": 1308346,
+        "sender_full_name": "Jura Ryszawy",
+        "timestamp": 1641937094
+    },
+    {
+        "content": "<p>... nothing looks sensitive so here is all the content of the file</p>",
+        "id": 1308347,
+        "sender_full_name": "Jura Ryszawy",
+        "timestamp": 1641937148
+    },
+    {
+        "content": "<p>That's very confusing!  As a long shot, can you show the output of:</p>\n<div class=\"codehilite\"><pre><span></span><code>ls -l /etc/zulip/zulip.conf\n\n/usr/bin/crudini --get /etc/zulip/zulip.conf postgresql version\n</code></pre></div>",
+        "id": 1308349,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1641937565
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>-rw-r--r-- 1 zulip zulip 174 May 27  2021 /etc/zulip/zulip.conf\n\n  File &quot;/usr/bin/crudini&quot;, line 39\n    print str(e)\n            ^\nSyntaxError: invalid syntax\n</code></pre></div>",
+        "id": 1308727,
+        "sender_full_name": "Jura Ryszawy",
+        "timestamp": 1641970414
+    },
+    {
+        "content": "<p>Did you repoint the <code>/usr/bin/python</code> symlink to <code>python3</code>? That’s going to break lots of system packages, don’t do that.</p>",
+        "id": 1308731,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1641970816
+    },
+    {
+        "content": "<p>I found at /usr/bin/python this:    /usr/bin/python: symbolic link to /etc/alternatives/python <br>\nAnd at /etc/alternatives/python this:    /etc/alternatives/python: symbolic link to /usr/bin/python3.7<br>\nI am not aware, that I did this manually and I use fairly standard server just for Zulip.<br>\nThanks to all for trying to help me!</p>",
+        "id": 1308786,
+        "sender_full_name": "Jura Ryszawy",
+        "timestamp": 1641978584
+    },
+    {
+        "content": "<p>The <code>python</code> symlink does not use the <code>alternatives</code> system on Debian. That suggests that either you ran a manual <code>update-alternatives</code> command, or you installed something else that did, or you started with a base image where someone had already done this.</p>",
+        "id": 1308787,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1641978817
+    },
+    {
+        "content": "<p>You can probably fix it with <code>update-alternatives --remove-all python; apt reinstall python-minimal</code>.</p>",
+        "id": 1308788,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1641979011
+    },
+    {
+        "content": "<p>Is the package <code>python-is-python3</code> installed?</p>",
+        "id": 1308793,
+        "sender_full_name": "Philipp Huebner",
+        "timestamp": 1641981613
+    },
+    {
+        "content": "<p>That only exists in Debian 11, and still doesn’t use the <code>alternatives</code> system.</p>",
+        "id": 1308802,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1641986026
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"699\">Anders Kaseorg</span> <a href=\"#narrow/stream/31-production-help/topic/Upgrade.20failure.20.28due.20to.20postgresql.3F.29/near/1308802\">said</a>:</p>\n<blockquote>\n<p>That only exists in Debian 11, and still doesn’t use the <code>alternatives</code> system.</p>\n</blockquote>\n<p>Yes, but it's the only package I know that would redirect python to python3.</p>",
+        "id": 1308814,
+        "sender_full_name": "Philipp Huebner",
+        "timestamp": 1641988853
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"22107\">Philipp Huebner</span> <a href=\"#narrow/stream/31-production-help/topic/Upgrade.20failure.20.28due.20to.20postgresql.3F.29/near/1308793\">said</a>:</p>\n<blockquote>\n<p>Is the package <code>python-is-python3</code> installed?</p>\n</blockquote>\n<p>And that one should or should not be installed?</p>",
+        "id": 1308833,
+        "sender_full_name": "Jura Ryszawy",
+        "timestamp": 1641994746
+    },
+    {
+        "content": "<p>I found that trying multiple installations run out of my available space on server so I delete unused deplouments. I also tried to use <code>su zulip -c '/home/zulip/deployments/current/scripts/lib/clean-unused-caches' </code> . But it ended with <code>PermissionError: [Errno 13] Permission denied: 'sudo'</code> . May be I should not try to run my own server...</p>",
+        "id": 1308834,
+        "sender_full_name": "Jura Ryszawy",
+        "timestamp": 1641994997
+    },
+    {
+        "content": "<p><code>python-is-python3</code> is not, should not, and cannot be installed in your system, because it does not exist in Debian 10 and would not explain your observation if it were. Ignore that.</p>",
+        "id": 1308994,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1642016162
+    },
+    {
+        "content": "<p>The suggestion remains <code>update-alternatives --remove-all python; apt reinstall python-minimal</code>.</p>",
+        "id": 1308995,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1642016175
+    },
+    {
+        "content": "<p>Can you post a full traceback for that error?</p>",
+        "id": 1308999,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1642016346
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> Your suggestion helped! Thanks a lot! I tried upgrading to LATEST now again and not from GIT and now Zulip succesfully upgraded a caches are cleaned (there is 1,3GB more of free space then before the upgrade). <br>\nThanks to all of you! <br>\nDo You still need the traceback? I can search in a log for it ...</p>",
+        "id": 1309052,
+        "sender_full_name": "Jura Ryszawy",
+        "timestamp": 1642019386
+    },
+    {
+        "content": "<p>I’m a little curious, if it’s not too hard to find. We’re never supposed to rely on <code>sudo</code> in production.</p>",
+        "id": 1309054,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1642019533
+    },
+    {
+        "content": "<p>Oh never mind, I found where we use it: <code>run_as_root([\"rm\", \"-rf\", directory])</code> in <code>may_be_perform_purging</code>. (It only uses <code>sudo</code> if you aren’t root already.)</p>",
+        "id": 1309055,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1642019635
+    },
+    {
+        "content": "<p>I thought that I ran it as root, but as you probably figured out, I am still learning a lot while trying to admin Zulip so may be I did something wrong again?</p>",
+        "id": 1309064,
+        "sender_full_name": "Jura Ryszawy",
+        "timestamp": 1642020227
+    },
+    {
+        "content": "<p>Okay that function name has annoyed me for the last time (<a href=\"https://github.com/zulip/zulip/pull/20769\">#20769</a>)—sorry we infected your spelling. <span aria-label=\"grinning\" class=\"emoji emoji-1f600\" role=\"img\" title=\"grinning\">:grinning:</span></p>",
+        "id": 1309077,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1642021024
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19494\">Jura Ryszawy</span> has marked this topic as resolved.</p>",
+        "id": 1310340,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1642162601
+    }
+]

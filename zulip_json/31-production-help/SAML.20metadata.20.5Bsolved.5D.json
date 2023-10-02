@@ -1,0 +1,242 @@
+[
+    {
+        "content": "<p>I'm getting sp_cert_not_found_and_required<br>\nwhen configuring Zulip with the X509Certificate from my IDP and setting<br>\nauthnRequestsSigned\": True</p>\n<div class=\"codehilite\"><pre><span></span><code>SOCIAL_AUTH_SAML_SECURITY_CONFIG: Dict[str, Any] = {\n    &quot;authnRequestsSigned&quot;: True,\n}\n</code></pre></div>\n<p>Here's the full traceback</p>\n<div class=\"codehilite\"><pre><span></span><code>   auth = self._create_saml_auth(idp=self.get_idp(idp_name))\n  File &quot;/srv/zulip-venv-cache/3738dadf748d3baa2eb0371a83c912149a50d964/zulip-py3-venv/lib/python3.6/site-packages/social_core/backends/saml.py&quot;, line 276, in _create_saml_auth\n    return OneLogin_Saml2_Auth(request_info, config)\n  File &quot;/srv/zulip-venv-cache/3738dadf748d3baa2eb0371a83c912149a50d964/zulip-py3-venv/lib/python3.6/site-packages/onelogin/saml2/auth.py&quot;, line 59, in __init__\n    self.__settings = OneLogin_Saml2_Settings(old_settings, custom_base_path)\n  File &quot;/srv/zulip-venv-cache/3738dadf748d3baa2eb0371a83c912149a50d964/zulip-py3-venv/lib/python3.6/site-packages/onelogin/saml2/settings.py&quot;, line 131, in __init__\n    &#39;,&#39;.join(self.__errors)\nonelogin.saml2.errors.OneLogin_Saml2_Error: Invalid dict settings: sp_cert_not_found_and_required\n2021-05-29 02:19:23.485 WARN [zerver.lib.push_notifications] Mobile push notifications are not configured.\n</code></pre></div>",
+        "id": 1190984,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622255219
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"20384\">@David Bain</span> Did you set up the cert files as mentioned in point 4 of <a href=\"https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#saml\">https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#saml</a> ? <code>/etc/zulip/saml/zulip-cert.crt</code> and <code>/etc/zulip/saml/zulip-private-key.key</code></p>",
+        "id": 1191111,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622302270
+    },
+    {
+        "content": "<p>I've probably done that incorrectly.<br>\nI only have the private key and it's symlinked to the key I use with nginx<br>\n<code>/etc/zulip/saml/zulip-private-key.key -&gt; /etc/ssl/private/zulip.key</code><br>\nrereading the docs now :(</p>",
+        "id": 1191135,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622304379
+    },
+    {
+        "content": "<p>I do have a full chain of trust cert<br>\n<code>/etc/ssl/certs/zulip.combined-chain.crt</code><br>\nBut the instructions say</p>\n<div class=\"codehilite\"><pre><span></span><code>    the certificate should be the single X.509 certificate for the server, not a full chain of trust, which consists of multiple certificates.\n</code></pre></div>\n<p>So I'm currently trying to figure out which cert  I should extract from the chain.</p>",
+        "id": 1191140,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622304811
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"20384\">@David Bain</span>  You don't need to extract, you can grab any X.509 certificate and private key, or just generate a new pair</p>",
+        "id": 1191143,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622304944
+    },
+    {
+        "content": "<p>Sorry for being so clueless... what about expiration issues?<br>\nI was trying to piggyback on the LetsEncrypt stuff for <br>\nwhich I would have an auto-updater in place.</p>",
+        "id": 1191146,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622305114
+    },
+    {
+        "content": "<p>So I went ahead and created the certificate and key in the /etc/zulip folder and moved them over to the saml/ folder</p>\n<div class=\"codehilite\"><pre><span></span><code>openssl genrsa -des3 -out zulip-private-key.key 2048\nopenssl req -new -key zulip-private-key.key -out saml.csr\nopenssl x509 -req -days 365 -in saml.csr -signkey zulip-private-key.key -out zulip-cert.crt\n\nmv zulip-private-key.key saml/\nmv zulip-cert.crt saml/\n</code></pre></div>\n<p>testing to see if this resolves everything.</p>",
+        "id": 1191154,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622306075
+    },
+    {
+        "content": "<p>Now I have a new error:</p>\n<div class=\"codehilite\"><pre><span></span><code> return auth.login(return_to=relay_state)\n  File &quot;/srv/zulip-venv-cache/3738dadf748d3baa2eb0371a83c912149a50d964/zulip-py3-venv/lib/python3.6/site-packages/onelogin/saml2/auth.py&quot;, line 417, in login\n    self.add_request_signature(parameters, security[&#39;signatureAlgorithm&#39;])\n  File &quot;/srv/zulip-venv-cache/3738dadf748d3baa2eb0371a83c912149a50d964/zulip-py3-venv/lib/python3.6/site-packages/onelogin/saml2/auth.py&quot;, line 516, in add_request_signature\n    return self.__build_signature(request_data, &#39;SAMLRequest&#39;, sign_algorithm)\n  File &quot;/srv/zulip-venv-cache/3738dadf748d3baa2eb0371a83c912149a50d964/zulip-py3-venv/lib/python3.6/site-packages/onelogin/saml2/auth.py&quot;, line 590, in __build_signature\n    signature = OneLogin_Saml2_Utils.sign_binary(msg, key, sign_algorithm_transform, self.__settings.is_debug_active())\n  File &quot;/srv/zulip-venv-cache/3738dadf748d3baa2eb0371a83c912149a50d964/zulip-py3-venv/lib/python3.6/site-packages/onelogin/saml2/utils.py&quot;, line 1019, in sign_binary\n    dsig_ctx.key = xmlsec.Key.from_memory(key, xmlsec.KeyFormat.PEM, None)\nxmlsec.InternalError: (-1, &#39;cannot load key&#39;)\n</code></pre></div>",
+        "id": 1191156,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622306317
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"20384\">@David Bain</span> Hmm yeah I'm getting this error for certificates generated in this way as well. Can you try <a href=\"https://www.samltool.com/self_signed_certs.php\">https://www.samltool.com/self_signed_certs.php</a>?  What this tool generates works for me now</p>",
+        "id": 1191207,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622313605
+    },
+    {
+        "content": "<p>Ohh, right... The private key we were generating was encrypted with a password, so that wasn't going to be possible to load.<br>\nE.g. this works</p>\n<div class=\"codehilite\"><pre><span></span><code>openssl req -x509 -newkey rsa:1024 -keyout zulip-private-key.key -out zulip-cert.crt -days 365 -nodes\n</code></pre></div>\n<p>Need <code>-nodes</code> so that the password isn't needed.</p>",
+        "id": 1191213,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622314425
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"20384\">David Bain</span> <a href=\"#narrow/stream/31-production-help/topic/SAML.20metadata/near/1191146\">said</a>:</p>\n<blockquote>\n<p>Sorry for being so clueless... what about expiration issues?<br>\nI was trying to piggyback on the LetsEncrypt stuff for <br>\nwhich I would have an auto-updater in place.</p>\n</blockquote>\n<p>And yeah, regarding that, expiry has to be handled manually for now <span aria-label=\"sad\" class=\"emoji emoji-2639\" role=\"img\" title=\"sad\">:sad:</span></p>",
+        "id": 1191217,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622315318
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/18648\">https://github.com/zulip/zulip/pull/18648</a> to improve the doc a bit based on this thread</p>",
+        "id": 1191219,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622315567
+    },
+    {
+        "content": "<p>I guess I can create a script for that. Will I need to restart zulip after regenerating the certs etc..?</p>",
+        "id": 1191230,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622317467
+    },
+    {
+        "content": "<p>Yes, the server has to be restarted to load the new certs</p>",
+        "id": 1191241,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622318199
+    },
+    {
+        "content": "<p>How do I go about getting more verbose debugging messages?</p>",
+        "id": 1197894,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622386059
+    },
+    {
+        "content": "<p>Some additional auth-specific things get logged to /var/log/auth.log but e.g. this situation that we encountered wasn't gonna have better logging. Ultimately this was the <code>xmlsec</code> library giving a very vague error, I don't think there was a good way of getting more verbose information about what was going on since that's a limitation of upstream.</p>",
+        "id": 1197895,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622386909
+    },
+    {
+        "content": "<p>seeing this stuff in my auth.log</p>\n<div class=\"codehilite\"><pre><span></span><code>INFO [zulip.auth.saml] /login/saml/ : Bad idp param: KeyError: &#39;IDP must contain x509cert or x509certMulti&#39;.\nINFO [zulip.auth.saml] /complete/saml/: No valid IdP as issuer of the SAMLResponse.\n</code></pre></div>",
+        "id": 1198003,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622406878
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"20384\">@David Bain</span>  Sounds like the IdP cert is missing. From the instructions: <code>Put the IDP public certificate in /etc/zulip/saml/idps/{idp_name}.crt</code></p>",
+        "id": 1198143,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622448062
+    },
+    {
+        "content": "<p>This is what I have in my settings.py</p>\n<div class=\"codehilite\"><pre><span></span><code>SOCIAL_AUTH_SAML_ENABLED_IDPS = {\n    &quot;theidp&quot;: {\n        ## Configure entity_id and url according to information provided to you by your IdP:\n        &quot;entity_id&quot;: &quot;https://samldemo.myidp.com/saml2idp&quot;,\n        &quot;url&quot;: &quot;https://samldemo.myidp.com/saml2idp/redirect&quot;,\n       &quot;attr_user_permanent_id&quot;: &quot;user_id&quot;,\n        &quot;attr_first_name&quot;: &quot;user_id&quot;,\n #       &quot;attr_last_name&quot;: &quot;last_name&quot;,\n        &quot;attr_username&quot;: &quot;email&quot;,\n        &quot;attr_email&quot;: &quot;email&quot;,\n\n    },\n}\n</code></pre></div>\n<p>The cert is located at <code>/etc/zulip/saml/idps/theidp.crt</code><br>\nMy understanding is that the crt name should match the key used in <code>SOCIAL_AUTH_SAML_ENABLED_IDPS</code></p>",
+        "id": 1198193,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622459276
+    },
+    {
+        "content": "<p>It seems my <code>entity_id</code> was wrong. It wasn't even a URL, my idp returned a simple string. Once I updated the <code>entity_id</code>  I started seeing this error in the auth.log.</p>\n<div class=\"codehilite\"><pre><span></span><code>INFO [zulip.auth.saml] AuthFailed: Authentication failed: SAML login failed: [&#39;invalid_response&#39;] (There is no AttributeStatement on the Response)\n</code></pre></div>",
+        "id": 1198227,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622462884
+    },
+    {
+        "content": "<p>It seems that the IdP isn't sending any attribute statements, when it should, as configured in the</p>\n<div class=\"codehilite\"><pre><span></span><code>       &quot;attr_user_permanent_id&quot;: &quot;user_id&quot;,\n        &quot;attr_first_name&quot;: &quot;user_id&quot;,\n #       &quot;attr_last_name&quot;: &quot;last_name&quot;,\n        &quot;attr_username&quot;: &quot;email&quot;,\n        &quot;attr_email&quot;: &quot;email&quot;,\n</code></pre></div>\n<p>part</p>",
+        "id": 1198277,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622471610
+    },
+    {
+        "content": "<p>Did you see this doc <a href=\"https://zulip.com/help/saml-authentication\">https://zulip.com/help/saml-authentication</a> ? This is for configuring Okta and onelogin IdPs for Zulip  Cloud specifically but it may be useful as examples of what the process usually involves even if this doesn't exactly apply to your situation</p>",
+        "id": 1198279,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622471774
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> I'll look at it. I'm actually using Plone with collective.saml2 as my Idp.</p>",
+        "id": 1198280,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622472112
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> for clarification<br>\nWhen we put  \"attr_user_permanent_id\": \"user_id\"<br>\ndoes it means that Zulip has an internal value of \"attr_user_permanent_id\" and it expects the IdP to return a response containing \"user_id\" as an attribute to map to that internal value?</p>",
+        "id": 1198285,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622473337
+    },
+    {
+        "content": "<p>Yes, exactly</p>",
+        "id": 1198286,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622473458
+    },
+    {
+        "content": "<p>I think that usually should be set to the same thing as attr_email because zulip uses the email address as user identifier</p>",
+        "id": 1198287,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622473506
+    },
+    {
+        "content": "<p>I'm testing my Zulip SP with a test IdP service<br>\n<a href=\"https://samltest.id\">https://samltest.id</a></p>\n<p>Am I missing something?<br>\nThis is the AuthnRequest generated by my Zulip SP<br>\nI expected to see at least the 'email' attribute as part of the request.</p>\n<div class=\"codehilite\"><pre><span></span><code>&lt;samlp:AuthnRequest\n    AssertionConsumerServiceURL=&quot;https://zulipsp.mysite.com/complete/saml/&quot;\n    Destination=&quot;https://samltest.id/idp/profile/SAML2/Redirect/SSO&quot;\n    ID=&quot;ONELOGIN_b3169c2849ebdccfbb0b7df82694fc34a44dad01&quot;\n    IssueInstant=&quot;2021-06-03T02:48:34Z&quot;\n    ProtocolBinding=&quot;urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST&quot;\n    ProviderName=&quot;Incrementic Zulip&quot; Version=&quot;2.0&quot;\n    xmlns:saml=&quot;urn:oasis:names:tc:SAML:2.0:assertion&quot;\n        xmlns:samlp=&quot;urn:oasis:names:tc:SAML:2.0:protocol&quot;&gt;\n    &lt;saml:Issuer&gt;https://zulipsp.mysite.com&lt;/saml:Issuer&gt;\n    &lt;samlp:NameIDPolicy\n        AllowCreate=&quot;true&quot;\n        Format=&quot;urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified&quot;/&gt;\n    &lt;samlp:RequestedAuthnContext Comparison=&quot;exact&quot;&gt;\n        &lt;saml:AuthnContextClassRef&gt;urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport&lt;/saml:AuthnContextClassRef&gt;\n    &lt;/samlp:RequestedAuthnContext&gt;\n&lt;/samlp:AuthnRequest&gt;\n</code></pre></div>\n<p>This is despite having attributes in my /etc/zulip/settings.py<br>\nHere's the entry:</p>\n<div class=\"codehilite\"><pre><span></span><code>SOCIAL_AUTH_SAML_ENABLED_IDPS = {\n&quot;test&quot;:{\n        &quot;entity_id&quot;: &quot;https://samltest.id/saml/idp&quot;, #https://samldemo.alteroo.com/saml2idp&quot;,\n        &quot;url&quot;: &quot;https://samltest.id/idp/profile/SAML2/Redirect/SSO&quot;,\n       &quot;attr_user_permanent_id&quot;: &quot;email&quot;,\n        &quot;attr_email&quot;: &quot;email&quot;,\n        &quot;display_name&quot;: &quot;Test&quot;,\n\n        }\n}\n</code></pre></div>",
+        "id": 1200101,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622692397
+    },
+    {
+        "content": "<p>I now understand that attributes are declared through the SP's metadata.<br>\nMy expectation was that Zulip would provide an <code>AttributeConsumingService</code> entry containing the <code>RequestedAttribute</code> entries inline.<br>\nsimilar to the example here: </p>\n<div class=\"codehilite\"><pre><span></span><code>&lt;md:EntityDescriptor entityID=&quot;https://sso.example.com/portal&quot; validUntil=&quot;2017-08-30T19:10:29Z&quot;\n…”&gt;\n    &lt;!-- insert ds:Signature element (omitted) --&gt;\n…\n    &lt;md:SPSSODescriptor WantAssertionsSigned=&quot;true&quot; protocolSupportEnumeration=&quot;urn:oasis:names:tc:SAML:2.0:protocol&quot;&gt;\n…\n      &lt;md:NameIDFormat&gt;urn:oasis:names:tc:SAML:2.0:nameid-format:transient&lt;/md:NameIDFormat&gt;\n      &lt;md:AssertionConsumerService index=&quot;0&quot; Binding=&quot;urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST&quot;  Location=&quot;https://service.example.com/SAML2/SSO/POST&quot;/&gt;\n      &lt;md:AttributeConsumingService index=&quot;0&quot;&gt;\n        &lt;md:ServiceName xml:lang=&quot;en&quot;&gt;Example.com Employee Portal&lt;/md:ServiceName&gt;\n        &lt;md:RequestedAttribute isRequired=&quot;true&quot;\n          NameFormat=&quot;urn:oasis:names:tc:SAML:2.0:attrname-format:uri&quot;\n          Name=&quot;urn:oid:1.3.6.1.4.1.5923.1.1.1.13&quot; FriendlyName=&quot;eduPersonUniqueId&quot;/&gt;\n        &lt;md:RequestedAttribute\n          NameFormat=&quot;urn:oasis:names:tc:SAML:2.0:attrname-format:uri&quot;\n          Name=&quot;urn:oid:0.9.2342.19200300.100.1.3&quot; FriendlyName=&quot;mail&quot;/&gt;\n      &lt;/md:AttributeConsumingService&gt;\n    &lt;/md:SPSSODescriptor&gt;\n…\n  &lt;/md:EntityDescriptor&gt;\n</code></pre></div>\n<p>I don't see an <code>AttributeConsumingService</code> in my metadata.</p>\n<p>Once I know how to \"switch\" on the <code>AttributeConsumingService</code>, I think I'll be good.</p>\n<p>All roads lead to this code <a href=\"https://github.com/onelogin/python-saml/blob/master/src/onelogin/saml2/metadata.py#L79-L95\">https://github.com/onelogin/python-saml/blob/master/src/onelogin/saml2/metadata.py#L79-L95</a></p>",
+        "id": 1200226,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622725812
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> <span aria-label=\"point up\" class=\"emoji emoji-1f446\" role=\"img\" title=\"point up\">:point_up:</span>  my last post is a good summary of the issue.</p>",
+        "id": 1200231,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622726517
+    },
+    {
+        "content": "<p>Hmm, Zulip doesn't use requestedAttributes. The IdP has to be configured to send the attribute statements by default- like in the Okta and Onelogin configuration examples.</p>",
+        "id": 1200266,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622728842
+    },
+    {
+        "content": "<p>That explains a lot. So I MUST get my IdP to send the attributes.</p>",
+        "id": 1200272,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622731361
+    },
+    {
+        "content": "<p>The python saml code (onelogin) that I linked to seems capable of generated attributes. I wonder why Zulip doesn't use that.</p>",
+        "id": 1200273,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622731418
+    },
+    {
+        "content": "<p>or... I could force my IdP to send the attributes.</p>",
+        "id": 1200275,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622731505
+    },
+    {
+        "content": "<p>Okay... now I've forced my IdP to send the attributes.<br>\nNew error:</p>\n<div class=\"codehilite\"><pre><span></span><code>No valid IdP as issuer of the SAMLResponse.PD94bWwgdmVy...\n</code></pre></div>",
+        "id": 1200338,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622735010
+    },
+    {
+        "content": "<p>I fixed the <code>No Valid IdP</code> issue by updating the <code>entity_id</code> to match what I have on my IdP.<br>\nNow log in takes me to a screen saying:</p>\n<div class=\"codehilite\"><pre><span></span><code>You need an invitation to join this organization.\n</code></pre></div>",
+        "id": 1200372,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622736014
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"20384\">David Bain</span> <a href=\"#narrow/stream/31-production-help/topic/SAML.20metadata/near/1200372\">said</a>:</p>\n<blockquote>\n<p>I fixed the <code>No Valid IdP</code> issue by updating the <code>entity_id</code> to match what I have on my IdP.<br>\nNow log in takes me to a screen saying:</p>\n<p><div class=\"codehilite\"><pre><span></span><code>You need an invitation to join this organization.\n</code></pre></div><br>\n</p>\n</blockquote>\n<p>Small things :)<br>\nI needed to allow joining without an invitation<br>\n<a href=\"https://zulip.com/help/allow-anyone-to-join-without-an-invitation\">https://zulip.com/help/allow-anyone-to-join-without-an-invitation</a></p>",
+        "id": 1200385,
+        "sender_full_name": "David Bain",
+        "timestamp": 1622736327
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"20384\">@David Bain</span> so is it now working for you?</p>",
+        "id": 1200572,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1622749006
+    },
+    {
+        "content": "<p>Would it be useful to make our SAML integration attempt to send <code>requestedAttributes</code> using the fields that are declared as keys in <code>settings.py</code> for the SAML backend?</p>",
+        "id": 1200573,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1622749064
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  MOST definitely! Especially since the underlying code <a href=\"https://github.com/onelogin/python-saml/blob/master/src/onelogin/saml2/metadata.py#L79-L95\">https://github.com/onelogin/python-saml/blob/master/src/onelogin/saml2/metadata.py#L79-L95</a> seems to support the capability.</p>",
+        "id": 1202561,
+        "sender_full_name": "David Bain",
+        "timestamp": 1623070026
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"20384\">@David Bain</span> would you be up for opening an issue for that in <a href=\"https://github.com/zulip/zulip/issues/new\">https://github.com/zulip/zulip/issues/new</a> so that we can track that request?</p>\n<p>If you can provide background on how <code>requestedAttributes</code> works and any risks you're aware of around it, that'd be great; I'm not personally an expert on this sort of SAML specification detail.</p>",
+        "id": 1203028,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623095000
+    }
+]

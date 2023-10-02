@@ -1,0 +1,100 @@
+<html>
+<head><meta charset="utf-8"><title>Update to Debian Buster · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Update.20to.20Debian.20Buster.html">Update to Debian Buster</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="806183"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Update%20to%20Debian%20Buster/near/806183" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andreas Karsten <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Update.20to.20Debian.20Buster.html#806183">(Jan 03 2020 at 13:21)</a>:</h4>
+<p>Are there any migrations, database or otherwise, that need to be run when upgrading Debian to Buster, now that Zulip supports that? The <a href="https://zulip.readthedocs.io/en/stable/production/upgrade-or-modify.html#upgrading-the-operating-system" target="_blank" title="https://zulip.readthedocs.io/en/stable/production/upgrade-or-modify.html#upgrading-the-operating-system">documentation</a> has specific steps for Ubuntu upgrades, but not (yet) for Debian, so I thought I'd ask before taking the plunge :)</p>
+
+
+
+<a name="806217"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Update%20to%20Debian%20Buster/near/806217" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Update.20to.20Debian.20Buster.html#806217">(Jan 03 2020 at 19:59)</a>:</h4>
+<p><span class="user-mention" data-user-id="13168">@Andreas Karsten</span> good question!  I would expect the same process to work after replacing the postgres versions in the Ubuntu docs with the appropriate ones for Debian (and of course, replacing <code>do-release-upgrade</code> with the Debian way).</p>
+
+
+
+<a name="806219"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Update%20to%20Debian%20Buster/near/806219" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Update.20to.20Debian.20Buster.html#806219">(Jan 03 2020 at 20:00)</a>:</h4>
+<p>If you're up for verifying that, we can take this opportunity to update the documentation to cover Debian upgrades as well.</p>
+
+
+
+<a name="820036"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Update%20to%20Debian%20Buster/near/820036" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andreas Karsten <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Update.20to.20Debian.20Buster.html#820036">(Feb 23 2020 at 10:18)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/Update.20to.20Debian.20Buster/near/806219" title="#narrow/stream/31-production-help/topic/Update.20to.20Debian.20Buster/near/806219">said</a>:</p>
+<blockquote>
+<p>If you're up for verifying that, we can take this opportunity to update the documentation to cover Debian upgrades as well.</p>
+</blockquote>
+<p>Done, and documented. Will place my documentation below for easy reference in here, but also happy to edit the official documentation if you would like that and my summary is succinct and precise enough.</p>
+
+
+
+<a name="820038"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Update%20to%20Debian%20Buster/near/820038" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andreas Karsten <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Update.20to.20Debian.20Buster.html#820038">(Feb 23 2020 at 10:24)</a>:</h4>
+<p><em>A // Run a backup in preparation</em></p>
+<p><strong>1. Stop all Zulip related services with</strong><br>
+<code>supervisorctl stop all</code></p>
+<p><strong>2. Then run a backup (!) as the zulip user</strong><br>
+<code>su zulip -c '/home/zulip/deployments/current/manage.py backup --output=/home/zulip/release-upgrade.backup.tar.gz'</code></p>
+<p><em>B // Upgrade the operating system using standard tooling</em></p>
+<p><strong>3. Upgrade all Debian 9 packages in preparation</strong><br>
+<code>sudo apt update &amp;&amp; sudo apt upgrade -y</code></p>
+<p><strong>4. Modify package repository to point to buster</strong></p>
+<p>a. Backup current package repository file<br>
+<code>sudo cp /etc/apt/sources.list /etc/apt/sources.list.orig</code></p>
+<p>b. Replace all references to stretch with buster<br>
+<code>sudo sed -i 's/stretch/buster/g' /etc/apt/sources.list</code><br>
+<code>sudo sed -i 's/stretch/buster/g' /etc/apt/sources.list.d/*.list</code></p>
+<p>c. Update package repository index<br>
+<code>sudo apt update</code></p>
+<p><strong>5. Update operating system to Debian 10</strong></p>
+<p>a. Update and upgrade packages<br>
+<code>sudo apt update &amp;&amp; sudo apt upgrade -y</code></p>
+<p>Choose N = keep current version of configuration whenever asked</p>
+<p>b. Upgrade the distribution itself<br>
+<code>sudo apt dist-upgrade -y</code></p>
+<p><em>C // Upgrade database</em></p>
+<p><strong>6. Upgrade database</strong><br>
+First install the current version of PostgreSQL (11.5 for Debian Buster) with<br>
+<code>apt install postgresql postgresql-contrib</code><br>
+Then<br>
+<code>touch /usr/share/postgresql/11/pgroonga_setup.sql.applied
+/home/zulip/deployments/current/scripts/zulip-puppet-apply -f
+pg_dropcluster 11 main --stop
+systemctl stop postgresql
+pg_upgradecluster 9.6 main
+pg_dropcluster 9.6 main
+apt remove postgresql-9.6
+systemctl start postgresql
+systemctl restart memcached</code></p>
+<p><em>D // Upgrade Zulip</em></p>
+<p><strong>7. Reinstall and recompile Zulip</strong><br>
+<code>rm -rf /srv/zulip-venv-cache/*
+/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 \
+/home/zulip/deployments/current/ --ignore-static-assets</code></p>
+<p><strong>8. Reboot the machine and verify version</strong><br>
+<code> cat /etc/*-release</code></p>
+<p>This should show output like<br>
+<code>PRETTY_NAME="Debian GNU/Linux 10 (buster)"
+NAME="Debian GNU/Linux"
+VERSION_ID="10"
+VERSION="10 (buster)"</code></p>
+
+
+
+<a name="820210"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Update%20to%20Debian%20Buster/near/820210" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Update.20to.20Debian.20Buster.html#820210">(Feb 23 2020 at 18:26)</a>:</h4>
+<p><span class="user-mention" data-user-id="13168">@Andreas Karsten</span> yeah it's be awesome if you can submit that as a pull request.   Our docs live under docs/ in the main repository.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

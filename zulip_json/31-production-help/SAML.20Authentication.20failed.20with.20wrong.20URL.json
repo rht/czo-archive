@@ -1,0 +1,86 @@
+[
+    {
+        "content": "<p>Hi, I come from this issue: <a href=\"https://github.com/zulip/zulip/issues/18659\">https://github.com/zulip/zulip/issues/18659</a><br>\nIn short, the problem is that I cannot authenticate with SAML because of the error <code>The response was received at https://zulip.example.com:80/complete/saml/ instead of https://zulip.example.com/complete/saml/</code><br>\nI think the problem lies between the request forwarding from my Traefik reverse proxy to my zulip docker image, but I have no idea how to solve this. Hope, somebody here can help :)</p>",
+        "id": 1201673,
+        "sender_full_name": "Lumrenion",
+        "timestamp": 1622887789
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"20570\">@Lumrenion</span>  I might have an idea. This is the underlying code where python3-saml determines the relevant part of the URL that it compares with <code>Destination</code> of the SAMLResponse:</p>\n<div class=\"codehilite\"><pre><span></span><code>    @staticmethod\n    def get_self_url_host(request_data):\n        &quot;&quot;&quot;\n        Returns the protocol + the current host + the port (if different than\n        common ports).\n\n        :param request_data: The request as a dict\n        :type: dict\n\n        :return: Url\n        :rtype: string\n        &quot;&quot;&quot;\n        current_host = OneLogin_Saml2_Utils.get_self_host(request_data)\n        port = &#39;&#39;\n        if OneLogin_Saml2_Utils.is_https(request_data):\n            protocol = &#39;https&#39;\n        else:\n            protocol = &#39;http&#39;\n\n        if &#39;server_port&#39; in request_data and request_data[&#39;server_port&#39;] is not None:\n            port_number = str(request_data[&#39;server_port&#39;])\n            port = &#39;:&#39; + port_number\n\n            if protocol == &#39;http&#39; and port_number == &#39;80&#39;:\n                port = &#39;&#39;\n            elif protocol == &#39;https&#39; and port_number == &#39;443&#39;:\n                port = &#39;&#39;\n\n        return &#39;%s://%s%s&#39; % (protocol, current_host, port)\n</code></pre></div>\n<p>So this would indicate that you're getting :80 appended to the hostname because it doesn't match what's expected for https. So the solution could be to simply make the Docker container with Zulip receive requests on port 443 instead of 80.</p>",
+        "id": 1202023,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622982230
+    },
+    {
+        "content": "<p>Thanks for pointing me to the code snippet. The receiving port of a docker container can be changed in traefik with <code>traefik.http.services.zulip.loadbalancer.server.port=443</code>. But doing so results in a Bad Gateway, probably because there is no SSL certificate set internally <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>",
+        "id": 1202044,
+        "sender_full_name": "Lumrenion",
+        "timestamp": 1622991361
+    },
+    {
+        "content": "<p>Maybe you have to ignore self signed ssl certificates.<br>\nI did find the following regarding Traefik: <a href=\"https://community.traefik.io/t/problem-using-ssl-backend-with-selfsigned-certificates/1974/3\">https://community.traefik.io/t/problem-using-ssl-backend-with-selfsigned-certificates/1974/3</a></p>",
+        "id": 1202052,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1622991987
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15808\">@Felix (strifel)</span> that would only apply if Zulip would provide SSL certificates itself, wouldn't it? In my case, certificates are handled by Traefik and Zulip is configured with <code>DISABLE_HTTPS: \"True\"</code></p>\n<p>I think I was able to bypass this issue with some help from here: <a href=\"https://github.com/onelogin/python3-saml/issues/83\">https://github.com/onelogin/python3-saml/issues/83</a> <br>\nFirst I had to set the environment variable <code>SETTING_USE_X_FORWARDED_PORT: \"True\"</code>, second I had to add the Header <code>X-Forwarded-Proto=https</code> by adding the docker label <code>traefik.http.middlewares.zulip-headers.headers.sslproxyheaders.X-Forwarded-Proto=https</code> (and of course adding the middleware to the service). <br>\nBut the login still refuses to work with another error in the django.log <span aria-label=\"sweat smile\" class=\"emoji emoji-1f605\" role=\"img\" title=\"sweat smile\">:sweat_smile:</span></p>\n<div class=\"codehilite\"><pre><span></span><code>2021-06-06 15:23:11.842 INFO [zulip.auth.saml] AuthFailed: Authentication failed: SAML login failed: [&#39;invalid_response&#39;] (Signature validation failed. SAML Response rejected)\n</code></pre></div>",
+        "id": 1202080,
+        "sender_full_name": "Lumrenion",
+        "timestamp": 1622993749
+    },
+    {
+        "content": "<p>Did not know that you had actively disabled https. sorry<span aria-label=\"frown\" class=\"emoji emoji-1f641\" role=\"img\" title=\"frown\">:frown:</span></p>",
+        "id": 1202083,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1622993863
+    },
+    {
+        "content": "<p>Hmm, do you have the IdP certificate correctly set up in /etc/zulip/saml/idps/? Perhaps <a href=\"https://www.samltool.com/validate_response.php\">https://www.samltool.com/validate_response.php</a> can be used for double-checking if Zulip server is confused or if there's something genuinely wrong with the SAMLResponse?</p>",
+        "id": 1202090,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1622994316
+    },
+    {
+        "content": "<p>Thanks for your support all of you. I had configured the wrong certificate as <code>/etc/zulip/saml/idps/{idp_name}.crt</code>. You have to use the keycloak realms certificate, not the keycloak clients certificate. I will provide a walk through to get SAML authentication in zulip up and running with keycloak soon! I am still not able to log in because users need to be invited (at least thats what displays in the browser after I try to login with SAML), but thats a different topic :)</p>",
+        "id": 1202474,
+        "sender_full_name": "Lumrenion",
+        "timestamp": 1623056896
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"20570\">@Lumrenion</span> You can fix the invitattion requirement with <a href=\"https://zulip.com/help/allow-anyone-to-join-without-an-invitation\">https://zulip.com/help/allow-anyone-to-join-without-an-invitation</a> + making SAML the only enabled authentication method (so that people outside the organization can't just sign up via a non-SAML method)</p>",
+        "id": 1202495,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1623058023
+    },
+    {
+        "content": "<p>I did that and have a working setup now. It might be a bit confusing, that users signing in with SAML will see the screen \"Continue registering\", when signing in for the first time. A auto signup for users authenticating with SAML might be useful. <br>\nI have documented my setup here: <a href=\"https://github.com/zulip/zulip/issues/18659#issuecomment-855799758\">https://github.com/zulip/zulip/issues/18659#issuecomment-855799758</a></p>\n<p>There is one last thing: It seems, the <code>attr_user_permanent_id</code> is not respected. When I have a user registered for zulip with email <a href=\"mailto:mail@example.com\">mail@example.com</a> and username example.user and change the email to <a href=\"mailto:test@example.com\">test@example.com</a>, Zulip says, there is no user with that email address <a href=\"mailto:test@example.com\">test@example.com</a> and I can continue with the registration. But the user should be identified by its username example.user and be able to sign in with their user account even when their email address changes. Am I doing something wrong?</p>",
+        "id": 1202518,
+        "sender_full_name": "Lumrenion",
+        "timestamp": 1623061330
+    },
+    {
+        "content": "<p>The issue with the username is discussed here: <a href=\"https://github.com/zulip/zulip/issues/17910\">https://github.com/zulip/zulip/issues/17910</a><br>\nThis topic can be \"closed\" from my side now <span aria-label=\"blush\" class=\"emoji emoji-1f60a\" role=\"img\" title=\"blush\">:blush:</span></p>",
+        "id": 1202532,
+        "sender_full_name": "Lumrenion",
+        "timestamp": 1623062532
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"20570\">Lumrenion</span> <a href=\"#narrow/stream/31-production-help/topic/SAML.20Authentication.20failed.20with.20wrong.20URL/near/1202518\">said</a>:</p>\n<blockquote>\n<p>I did that and have a working setup now. It might be a bit confusing, that users signing in with SAML will see the screen \"Continue registering\", when signing in for the first time. A auto signup for users authenticating with SAML might be useful. </p>\n</blockquote>\n<p>Ah, I had a PR for that I think!</p>",
+        "id": 1202573,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1623072850
+    },
+    {
+        "content": "<p>Got it - <a href=\"https://github.com/zulip/zulip/pull/16009\">https://github.com/zulip/zulip/pull/16009</a> </p>\n<p>I should take this opportunity to refresh it so that it can be merged</p>",
+        "id": 1202574,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1623072913
+    },
+    {
+        "content": "<p>Yeah, that'd be really valuable to finish <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1203026,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623094923
+    }
+]

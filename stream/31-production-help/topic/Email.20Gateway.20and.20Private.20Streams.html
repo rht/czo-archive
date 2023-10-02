@@ -1,0 +1,273 @@
+<html>
+<head><meta charset="utf-8"><title>Email Gateway and Private Streams · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html">Email Gateway and Private Streams</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="570503"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/570503" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> AndreM <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#570503">(Apr 26 2018 at 12:24)</a>:</h4>
+<p>Hi!<br>
+I'm trying to setup the email gateway (via imap for now) and it works pretty well for public streams.<br>
+But if I try to forward a message to a private stream (in this case <code>maotest</code>) I'll receive this error:</p>
+<div class="codehilite"><pre><span></span>2018-04-26 12:20:36.346 ERR  [] Error queueing internal message by emailgateway@zulip.com: Not authorized to send to stream &#39;maotest&#39;
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2018-04-26-08-12-26/zerver/lib/actions.py&quot;, line 1965, in _internal_prep_message
+    content, realm=realm)
+  File &quot;/home/zulip/deployments/2018-04-26-08-12-26/zerver/lib/actions.py&quot;, line 1899, in check_message
+    raise JsonableError(_(&quot;Not authorized to send to stream &#39;%s&#39;&quot;) % (stream.name,))
+zerver.lib.exceptions.JsonableError: Not authorized to send to stream &#39;maotest&#39;
+2018-04-26 12:20:36.357 INFO [zerver.lib.email_mirror] Successfully processed email to maotest ()
+</pre></div>
+
+
+<p>I don't see any option to add <code>emailgateway@zulip.com</code> to the channel either. Do I miss something, or does the gateway not support forwarding to private streams?</p>
+
+
+
+<a name="570552"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/570552" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#570552">(Apr 26 2018 at 15:49)</a>:</h4>
+<p><span class="user-mention" data-user-id="6056">@AndreM</span> hmm, interesting question!  It certainly should support sending to private streams, but it's possible that we broke that by accident recently.  Let me investigate.</p>
+
+
+
+<a name="570567"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/570567" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> AndreM <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#570567">(Apr 26 2018 at 16:07)</a>:</h4>
+<p>Thank you for looking into it!<br>
+In the meantime my DNS records were finally updated, but using the local gateway did result in the same error unsurprisingly.</p>
+
+
+
+<a name="570862"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/570862" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#570862">(Apr 26 2018 at 23:08)</a>:</h4>
+<p>Hey, just looking into this myself and I can confirm the same thing. I set a stream private and emails immediately started to get rejected. Glad it's not just me!</p>
+
+
+
+<a name="570974"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/570974" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#570974">(Apr 27 2018 at 15:25)</a>:</h4>
+<p>Thanks for the confirmation.  I should have a fix for this today.</p>
+
+
+
+<a name="571082"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571082" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571082">(Apr 27 2018 at 18:53)</a>:</h4>
+<p><span class="user-mention" data-user-id="6056">@AndreM</span> <span class="user-mention" data-user-id="7571">@Michael Potts</span> so, it turns out this issue is a little interesting.</p>
+
+
+
+<a name="571084"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571084" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571084">(Apr 27 2018 at 18:53)</a>:</h4>
+<p>The sorta historical model for how this worked was that the email gateway bot is set as an <code>api_super_user</code> user (a permission that allows it to send to arbitrary streams)</p>
+
+
+
+<a name="571090"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571090" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571090">(Apr 27 2018 at 18:56)</a>:</h4>
+<p>So one option is to set that manually for the email gateway bot.</p>
+
+
+
+<a name="571091"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571091" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571091">(Apr 27 2018 at 18:57)</a>:</h4>
+<p>Hmm, something puzzling for ms is that it looks like we do that in the code for creating the database...</p>
+
+
+
+<a name="571092"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571092" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571092">(Apr 27 2018 at 18:57)</a>:</h4>
+<p>Oh, are both of you using Slack import?</p>
+
+
+
+<a name="571093"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571093" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571093">(Apr 27 2018 at 18:57)</a>:</h4>
+<p>It's possible that doing so could result in the email gateway bot not getting its special permissions...</p>
+
+
+
+<a name="571099"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571099" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> AndreM <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571099">(Apr 27 2018 at 19:01)</a>:</h4>
+<p>Nope, no import. But I set up LDAP authentication in addition to email auth. Could it have something to do with that?</p>
+
+
+
+<a name="571105"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571105" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571105">(Apr 27 2018 at 19:11)</a>:</h4>
+<p>No, that shouldn't have any effect.</p>
+
+
+
+<a name="571106"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571106" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571106">(Apr 27 2018 at 19:11)</a>:</h4>
+<p>Let me do a bit more testing.</p>
+
+
+
+<a name="571116"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571116" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571116">(Apr 27 2018 at 19:33)</a>:</h4>
+<p>Nope, no import as well. No special auth either.</p>
+
+
+
+<a name="571168"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571168" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571168">(Apr 27 2018 at 20:51)</a>:</h4>
+<p><span class="user-mention" data-user-id="7571">@Michael Potts</span> <span class="user-mention" data-user-id="6056">@AndreM</span> can you try running the following in a <code>manage.py shell</code> and let me know what it prints?</p>
+<div class="codehilite"><pre><span></span>email_gateway_bot = get_system_bot(settings.EMAIL_GATEWAY_BOT)
+email_gateway_bot.is_api_super_user
+</pre></div>
+
+
+
+<a name="571171"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571171" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571171">(Apr 27 2018 at 20:56)</a>:</h4>
+<p>Did I do it right?<br>
+<a href="/user_uploads/2/60/zEvu8kWbxXsrjYMLlULLJEUI/pasted_image.png" target="_blank" title="pasted_image.png">pasted image</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/60/zEvu8kWbxXsrjYMLlULLJEUI/pasted_image.png" target="_blank" title="pasted image"><img src="/user_uploads/2/60/zEvu8kWbxXsrjYMLlULLJEUI/pasted_image.png"></a></div>
+
+
+
+<a name="571173"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571173" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571173">(Apr 27 2018 at 20:57)</a>:</h4>
+<p>yep, you did!</p>
+
+
+
+<a name="571174"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571174" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571174">(Apr 27 2018 at 20:57)</a>:</h4>
+<p>Interesting.</p>
+
+
+
+<a name="571175"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571175" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571175">(Apr 27 2018 at 20:57)</a>:</h4>
+<p>So, if you set that to True and do <code>email_gateway_bot.save()</code>, you should be good.</p>
+
+
+
+<a name="571176"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571176" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571176">(Apr 27 2018 at 20:58)</a>:</h4>
+<p>But there's still the mystery of what that wasn't set correctly when you created your server.</p>
+
+
+
+<a name="571177"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571177" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571177">(Apr 27 2018 at 20:58)</a>:</h4>
+<p>Are you folks using the Docker image?</p>
+
+
+
+<a name="571189"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571189" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571189">(Apr 27 2018 at 21:03)</a>:</h4>
+<p>(That's the best idea for what might result in not running the default Zulip server DB initialization code)</p>
+
+
+
+<a name="571208"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571208" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571208">(Apr 27 2018 at 21:13)</a>:</h4>
+<p>I am not running the docker image. Debian VM for me</p>
+
+
+
+<a name="571218"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571218" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571218">(Apr 27 2018 at 21:24)</a>:</h4>
+<p>OK.  I think my next step is to install a test server and see if I can reproduce the email gateway bot not getting that flag there.</p>
+
+
+
+<a name="571237"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571237" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571237">(Apr 27 2018 at 21:33)</a>:</h4>
+<p>Ok. I could spin up another VM and test it, but I recorded all the changes I made and none of them would seem to have affected that.</p>
+
+
+
+<a name="571239"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571239" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571239">(Apr 27 2018 at 21:33)</a>:</h4>
+<p>Do you want a git issue created for this?</p>
+
+
+
+<a name="571245"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571245" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571245">(Apr 27 2018 at 21:37)</a>:</h4>
+<p>I'll open an issue by EOD today if I don't get to the bottom of this; it's a weird enough issue that realistically I should investigate it myself regardless.</p>
+
+
+
+<a name="571252"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571252" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> AndreM <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571252">(Apr 27 2018 at 21:45)</a>:</h4>
+<p>Sorry for the late reply...</p>
+<div class="codehilite"><pre><span></span>In [1]: email_gateway_bot = get_system_bot(settings.EMAIL_GATEWAY_BOT)
+In [2]: email_gateway_bot.is_api_super_user
+Out[2]: False
+</pre></div>
+
+
+<p>Same for me.</p>
+<p>I tried setting</p>
+<div class="codehilite"><pre><span></span>In [6]: email_gateway_bot.is_api_super_user = True
+In [7]: email_gateway_bot.is_api_super_user
+Out[7]: True
+In [8]: email_gateway_bot.save()
+</pre></div>
+
+
+<p>but same result...</p>
+<div class="codehilite"><pre><span></span>2018-04-27 21:42:08.029 ERR  [] Error queueing internal message by emailgateway@zulip.com: Not authorized to send to stream &#39;maotest&#39;
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2018-04-26-08-12-26/zerver/lib/actions.py&quot;, line 1965, in _internal_prep_message
+    content, realm=realm)
+  File &quot;/home/zulip/deployments/2018-04-26-08-12-26/zerver/lib/actions.py&quot;, line 1899, in check_message
+    raise JsonableError(_(&quot;Not authorized to send to stream &#39;%s&#39;&quot;) % (stream.name,))
+zerver.lib.exceptions.JsonableError: Not authorized to send to stream &#39;maotest&#39;
+2018-04-27 21:42:08.034 INFO [zerver.lib.email_mirror] Successfully processed email to maotest ()
+</pre></div>
+
+
+<p>I don't know if it matters, but I installed Zulip inside an LXC container, running Ubuntu 16.04.4 LTS on a Debian 9 host.</p>
+
+
+
+<a name="571286"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571286" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571286">(Apr 28 2018 at 00:14)</a>:</h4>
+<p><span class="user-mention" data-user-id="6056">@AndreM</span> hmm, can you try doing <code>scripts/setup/flush-memcached</code>?  I think it's probably just a caching issue that your changes didn't take effect properly.</p>
+
+
+
+<a name="571311"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571311" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> AndreM <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571311">(Apr 28 2018 at 05:42)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> that worked!<br>
+Just tested the email gateway again and the bot was able to post the message :)<br>
+Thank you very much for your efforts!</p>
+
+
+
+<a name="571366"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/571366" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#571366">(Apr 28 2018 at 16:00)</a>:</h4>
+<p>Cool, good to know.  So the remaining mystery is why that wasn't done automatically by the install process.</p>
+
+
+
+<a name="573184"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/573184" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#573184">(May 02 2018 at 17:28)</a>:</h4>
+<p><span class="user-mention" data-user-id="7571">@Michael Potts</span> were you able to get this working after doing a memcached flush?</p>
+
+
+
+<a name="573284"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/573284" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#573284">(May 02 2018 at 18:19)</a>:</h4>
+<p>Yep, it worked perfect!</p>
+
+
+
+<a name="573308"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Email%20Gateway%20and%20Private%20Streams/near/573308" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Email.20Gateway.20and.20Private.20Streams.html#573308">(May 02 2018 at 18:31)</a>:</h4>
+<p>Great, thanks for testing, folks!  I still have on my TODO list tracking down why you needed to do that.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

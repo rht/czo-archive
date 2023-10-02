@@ -1,0 +1,308 @@
+[
+    {
+        "content": "<p>For new users, it's very confusing when you're scrolled up in the message view and send a message, since it appears as if nothing happened. I was watching someone use Zulip over their shoulder, and it definitely wasn't clear to them that a successful thing happened when they hit \"Send\".</p>\n<p>Would it be hard to add a <code>Sending ..</code> and  <code>Message sent</code> somewhere (e.g. right above the compose box) if the local echo is not in view?</p>",
+        "id": 659600,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1541700414
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"131\">@Rishi Gupta</span> I thought we show a notification above the compose box in this case with a link, though maybe we just do that if you send to something not in your current narrow?  In any case it'd probably not be hard to add something similar to that existing feature.</p>",
+        "id": 659627,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1541706329
+    },
+    {
+        "content": "<p>We don't really show anything for the normal case.</p>",
+        "id": 659663,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1541707867
+    },
+    {
+        "content": "<p>I think we definitely want some kinda feedback here.  It can probably be similar to other messages over the compose box, but there's a danger of them being annoying to clear, so I think having them on a timer or be super easy to dismiss is gonna be the trickiest part of fixing this.</p>",
+        "id": 659666,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1541707947
+    },
+    {
+        "content": "<p>Yeah, let's open an issue for doing the exact same thing we do for messages sent to another topic appearing offscreen; I think we should start with that and play with it.</p>",
+        "id": 659668,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1541708040
+    },
+    {
+        "content": "<p>I'll open it.</p>",
+        "id": 659682,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1541709088
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/10792\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/10792\">#10792</a></p>",
+        "id": 659683,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1541709294
+    },
+    {
+        "content": "<p>Great, thanks Rishi for tagging as a priority (I agree with that)</p>",
+        "id": 659724,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1541716441
+    },
+    {
+        "content": "<p>Hey! I would like to work on this issue. I have claimed this issue on Github. Could you help me get started with it?</p>",
+        "id": 663402,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1542795483
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"5593\">@Vaibhav</span> I would start here:</p>\n<p><a href=\"https://zulip.readthedocs.io/en/latest/overview/contributing.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/overview/contributing.html\">https://zulip.readthedocs.io/en/latest/overview/contributing.html</a></p>",
+        "id": 663583,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1542824292
+    },
+    {
+        "content": "<p>I was working on this issue and I encountered a problem. I tried to check if the local echo is not in view along with other <code>local_mixes</code> but the problem arises that when the insert local echo function is being called, the message has still not been inserted and hence the offset I get for the <code>local_echo</code> is 0. One way is to check for the same when the message has been sent but this is something that can easily be done locally, also, then <code>Sending...</code> thing won't be possible to add.</p>\n<p>Any ideas...?</p>",
+        "id": 664214,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1543235391
+    },
+    {
+        "content": "<p>You want to render the indication basically when the message itself gets drawn.  Have you traced through the code to find out where that happens?</p>",
+        "id": 664273,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543254019
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"5593\">@Vaibhav</span> </p>\n<p>In <code>static/js/local_message.js</code> there is a function called <code>insert_message</code> that basically starts the process of inserting the message into the view:</p>\n<div class=\"codehilite\"><pre><span></span> <span class=\"mi\">15</span> <span class=\"nx\">exports</span><span class=\"p\">.</span><span class=\"nx\">insert_message</span> <span class=\"o\">=</span> <span class=\"kd\">function</span> <span class=\"p\">(</span><span class=\"nx\">message</span><span class=\"p\">)</span> <span class=\"p\">{</span>\n <span class=\"mi\">16</span>     <span class=\"c1\">// It is a little bit funny to go through the message_events</span>\n <span class=\"mi\">17</span>     <span class=\"c1\">// codepath, but it&#39;s sort of the idea behind local echo that</span>\n <span class=\"mi\">18</span>     <span class=\"c1\">// we are simulating server events before they actually arrive.</span>\n <span class=\"mi\">19</span>     <span class=\"nx\">message_events</span><span class=\"p\">.</span><span class=\"nx\">insert_new_messages</span><span class=\"p\">([</span><span class=\"nx\">message</span><span class=\"p\">],</span> <span class=\"kc\">true</span><span class=\"p\">);</span>\n <span class=\"mi\">20</span> <span class=\"p\">};</span>\n</pre></div>",
+        "id": 664280,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543255208
+    },
+    {
+        "content": "<p>You'll note that <code>true</code> is passed as the second parameter there, and that is called <code>locally_echoed</code> inside of <code>message_events.insert_new_messages</code>, which allows you to have any special logic for the local-echo case.</p>",
+        "id": 664281,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543255315
+    },
+    {
+        "content": "<p>An example of that is here:</p>\n<div class=\"codehilite\"><pre><span></span> <span class=\"mi\">81</span>     <span class=\"k\">if</span> <span class=\"p\">(</span><span class=\"nx\">locally_echoed</span><span class=\"p\">)</span> <span class=\"p\">{</span>\n <span class=\"mi\">82</span>         <span class=\"nx\">notifications</span><span class=\"p\">.</span><span class=\"nx\">notify_local_mixes</span><span class=\"p\">(</span><span class=\"nx\">messages</span><span class=\"p\">);</span>\n <span class=\"mi\">83</span>     <span class=\"p\">}</span>\n</pre></div>",
+        "id": 664282,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543255351
+    },
+    {
+        "content": "<p>Hopefully this gets you a bit closer to where you'll want to add code for the indication.  It's definitely a bit of a tricky codepath to understand, so I'd try to give yourself a couple hours to just read code, and maybe add some console statements while you're running the app to better understand the order things happen in.</p>",
+        "id": 664283,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543255456
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"58\">@Steve Howell</span> What I did first was that I added the check for the message after all the checks of <code>local_mixes</code>, this one having the least priority and the changes were made in the above <code>notifications.notify_local_mixes</code>.  I guess I'll have to add many more console statements to figure this out, hopefully this will be done by tomorrow.<br>\nThanks for the help :D</p>",
+        "id": 664343,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1543260847
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"58\">@Steve Howell</span> I made the required changes, but there is still a big problem. The whole thing is working kind of unpredictably. As I mentioned the other day, when adding the notification function in <code>success</code> it worked, today it wasn't working first, and then after sometime it started functioning properly. I really don't have any clue why, I logged the offset to the console and when it's not working, the y-offset is 0. Any idea about this kind of behaviour?</p>\n<p>Right now, considering everything is working fine, a notification saying \"Sending...\" is posted above compose-box and when the message is sent, \"Your message was sent!\" is posted, and the notification exits after 3 seconds.<br>\nI made a pull request, you can check the code here -&gt; <a href=\"https://github.com/zulip/zulip/pull/10889\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/10889\">#10889</a>. The PR is still marked <strong>[WIP]</strong></p>",
+        "id": 664864,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1543346096
+    },
+    {
+        "content": "<p>I'd add some debugging around this code:</p>\n<div class=\"codehilite\"><pre><span></span><span class=\"kd\">var</span> <span class=\"nx\">echo_offset_y</span> <span class=\"o\">=</span> <span class=\"nx\">$</span><span class=\"p\">(</span><span class=\"s1\">&#39;[zid=&#39;</span> <span class=\"o\">+</span> <span class=\"nb\">Math</span><span class=\"p\">.</span><span class=\"nx\">round</span><span class=\"p\">(</span><span class=\"nx\">local_id</span><span class=\"p\">)</span> <span class=\"o\">+</span> <span class=\"s1\">&#39;]&#39;</span><span class=\"p\">).</span><span class=\"nx\">offset</span><span class=\"p\">().</span><span class=\"nx\">top</span><span class=\"p\">;</span>\n</pre></div>",
+        "id": 664880,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543346956
+    },
+    {
+        "content": "<p>It's not clear why you're rounding the id to the nearest integer.  <span class=\"user-mention\" data-user-id=\"5593\">@Vaibhav</span> I wonder if that selector returns a jQuery object with zero elements.  And then maybe <code>offset()</code> just returns some kind of null object?</p>",
+        "id": 664882,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543347028
+    },
+    {
+        "content": "<p>I rounded because the local ID is a floating point, but the <code>zid</code> attribute has the integer value. Also, if jQuery finds 0 elements it logs an error in the console, tried that <span class=\"emoji emoji-1f605\" title=\"sweat smile\">:sweat_smile:</span></p>",
+        "id": 664884,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1543347129
+    },
+    {
+        "content": "<p>A good debugging trick here is to do something like this:</p>\n<div class=\"codehilite\"><pre><span></span><span class=\"kd\">var</span> <span class=\"nx\">message_elem</span> <span class=\"o\">=</span> <span class=\"nx\">$</span><span class=\"p\">(</span><span class=\"s1\">&#39;[zid=&#39;</span><span class=\"o\">+</span><span class=\"p\">...)</span>\n<span class=\"nx\">message_elem</span><span class=\"p\">.</span><span class=\"nx\">css</span><span class=\"p\">(</span><span class=\"s1\">&#39;background&#39;</span><span class=\"p\">,</span> <span class=\"s1\">&#39;red&#39;</span><span class=\"p\">)</span>\n<span class=\"kd\">var</span> <span class=\"nx\">echo_offset_y</span> <span class=\"o\">=</span> <span class=\"nx\">message_elem</span><span class=\"p\">.</span><span class=\"nx\">offset</span><span class=\"p\">().</span><span class=\"nx\">top</span><span class=\"p\">;</span>\n<span class=\"nx\">console</span><span class=\"p\">.</span><span class=\"nx\">log</span><span class=\"p\">(</span><span class=\"nx\">echo_offset_y</span><span class=\"p\">)</span>\n</pre></div>",
+        "id": 664885,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543347135
+    },
+    {
+        "content": "<p>Have you tried debugging this without server responses?</p>",
+        "id": 664886,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543347172
+    },
+    {
+        "content": "<p>Can you elaborate?</p>",
+        "id": 664888,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1543347196
+    },
+    {
+        "content": "<p>What happens with local echo is a two-step process:</p>\n<ul>\n<li>we immediately render with a locally generated id</li>\n<li>when the server response comes back with a <strong>permanent</strong> id, we re-render the message</li>\n</ul>",
+        "id": 664889,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543347225
+    },
+    {
+        "content": "<p>Re-rendering means the UI is updated again...?</p>",
+        "id": 664892,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1543347277
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> I have a theory on why this code is tricky, and it might be what <span class=\"user-mention\" data-user-id=\"5593\">@Vaibhav</span> is running up against.  There are places in MLV where we do <code>setTimeout(...., 0)</code> before actually rendering stuff.</p>",
+        "id": 664895,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543347300
+    },
+    {
+        "content": "<blockquote>\n<p>Re-rendering means the UI is updated again...?</p>\n</blockquote>\n<p>yes</p>",
+        "id": 664896,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543347306
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> I've run across this code in various contexts, and it's always perplexed me, and it seems like it's inviting strange race conditions where we break invariants.</p>\n<div class=\"codehilite\"><pre><span></span><span class=\"mi\">530</span>         <span class=\"c1\">// If this message is now out of order, re-order and re-render</span>\n<span class=\"mi\">531</span>         <span class=\"kd\">var</span> <span class=\"nx\">self</span> <span class=\"o\">=</span> <span class=\"k\">this</span><span class=\"p\">;</span>\n<span class=\"mi\">532</span>         <span class=\"nx\">setTimeout</span><span class=\"p\">(</span><span class=\"kd\">function</span> <span class=\"p\">()</span> <span class=\"p\">{</span>\n<span class=\"mi\">533</span>             <span class=\"kd\">var</span> <span class=\"nx\">current_message</span> <span class=\"o\">=</span> <span class=\"nx\">self</span><span class=\"p\">.</span><span class=\"nx\">_hash</span><span class=\"p\">[</span><span class=\"nx\">new_id</span><span class=\"p\">];</span>\n<span class=\"mi\">534</span>             <span class=\"kd\">var</span> <span class=\"nx\">index</span> <span class=\"o\">=</span> <span class=\"nx\">self</span><span class=\"p\">.</span><span class=\"nx\">_items</span><span class=\"p\">.</span><span class=\"nx\">indexOf</span><span class=\"p\">(</span><span class=\"nx\">current_message</span><span class=\"p\">);</span>\n<span class=\"mi\">535</span>\n<span class=\"mi\">536</span>             <span class=\"k\">if</span> <span class=\"p\">(</span><span class=\"nx\">index</span> <span class=\"o\">===</span> <span class=\"o\">-</span><span class=\"mi\">1</span><span class=\"p\">)</span> <span class=\"p\">{</span>\n<span class=\"mi\">537</span>                 <span class=\"k\">if</span> <span class=\"p\">(</span><span class=\"o\">!</span><span class=\"nx\">self</span><span class=\"p\">.</span><span class=\"nx\">muting_enabled</span> <span class=\"o\">&amp;&amp;</span> <span class=\"nx\">opts</span><span class=\"p\">.</span><span class=\"nx\">is_current_list</span><span class=\"p\">())</span> <span class=\"p\">{</span>\n<span class=\"mi\">538</span>                     <span class=\"nx\">blueslip</span><span class=\"p\">.</span><span class=\"nx\">error</span><span class=\"p\">(</span><span class=\"s2\">&quot;Trying to re-order message but can&#39;t find message with new_id in _items!&quot;</span><span class=\"p\">);</span>\n<span class=\"mi\">539</span>                 <span class=\"p\">}</span>\n<span class=\"mi\">540</span>                 <span class=\"k\">return</span><span class=\"p\">;</span>\n<span class=\"mi\">541</span>             <span class=\"p\">}</span>\n<span class=\"mi\">542</span>\n<span class=\"mi\">543</span>             <span class=\"kd\">var</span> <span class=\"nx\">next</span> <span class=\"o\">=</span> <span class=\"nx\">self</span><span class=\"p\">.</span><span class=\"nx\">_next_nonlocal_message</span><span class=\"p\">(</span><span class=\"nx\">self</span><span class=\"p\">.</span><span class=\"nx\">_items</span><span class=\"p\">,</span> <span class=\"nx\">index</span><span class=\"p\">,</span>\n<span class=\"mi\">544</span>                                                    <span class=\"kd\">function</span> <span class=\"p\">(</span><span class=\"nx\">idx</span><span class=\"p\">)</span> <span class=\"p\">{</span> <span class=\"k\">return</span> <span class=\"nx\">idx</span> <span class=\"o\">+</span> <span class=\"mi\">1</span><span class=\"p\">;</span> <span class=\"p\">});</span>\n<span class=\"mi\">545</span>             <span class=\"kd\">var</span> <span class=\"nx\">prev</span> <span class=\"o\">=</span> <span class=\"nx\">self</span><span class=\"p\">.</span><span class=\"nx\">_next_nonlocal_message</span><span class=\"p\">(</span><span class=\"nx\">self</span><span class=\"p\">.</span><span class=\"nx\">_items</span><span class=\"p\">,</span> <span class=\"nx\">index</span><span class=\"p\">,</span>\n<span class=\"mi\">546</span>                                                    <span class=\"kd\">function</span> <span class=\"p\">(</span><span class=\"nx\">idx</span><span class=\"p\">)</span> <span class=\"p\">{</span> <span class=\"k\">return</span> <span class=\"nx\">idx</span> <span class=\"o\">-</span> <span class=\"mi\">1</span><span class=\"p\">;</span> <span class=\"p\">});</span>\n<span class=\"mi\">547</span>\n<span class=\"mi\">548</span>             <span class=\"k\">if</span> <span class=\"p\">(</span><span class=\"nx\">next</span> <span class=\"o\">!==</span> <span class=\"kc\">undefined</span> <span class=\"o\">&amp;&amp;</span> <span class=\"nx\">current_message</span><span class=\"p\">.</span><span class=\"nx\">id</span> <span class=\"o\">&gt;</span> <span class=\"nx\">next</span><span class=\"p\">.</span><span class=\"nx\">id</span> <span class=\"o\">||</span>\n<span class=\"mi\">549</span>                 <span class=\"nx\">prev</span> <span class=\"o\">!==</span> <span class=\"kc\">undefined</span> <span class=\"o\">&amp;&amp;</span> <span class=\"nx\">current_message</span><span class=\"p\">.</span><span class=\"nx\">id</span> <span class=\"o\">&lt;</span> <span class=\"nx\">prev</span><span class=\"p\">.</span><span class=\"nx\">id</span><span class=\"p\">)</span> <span class=\"p\">{</span>\n<span class=\"mi\">550</span>                 <span class=\"nx\">blueslip</span><span class=\"p\">.</span><span class=\"nx\">debug</span><span class=\"p\">(</span><span class=\"s2\">&quot;Changed message ID from server caused out-of-order list, reordering&quot;</span><span class=\"p\">);</span>\n<span class=\"mi\">551</span>                 <span class=\"nx\">self</span><span class=\"p\">.</span><span class=\"nx\">_items</span><span class=\"p\">.</span><span class=\"nx\">sort</span><span class=\"p\">(</span><span class=\"nx\">message_sort_func</span><span class=\"p\">);</span>\n<span class=\"mi\">552</span>                 <span class=\"k\">if</span> <span class=\"p\">(</span><span class=\"nx\">self</span><span class=\"p\">.</span><span class=\"nx\">muting_enabled</span><span class=\"p\">)</span> <span class=\"p\">{</span>\n<span class=\"mi\">553</span>                     <span class=\"nx\">self</span><span class=\"p\">.</span><span class=\"nx\">_all_items</span><span class=\"p\">.</span><span class=\"nx\">sort</span><span class=\"p\">(</span><span class=\"nx\">message_sort_func</span><span class=\"p\">);</span>\n<span class=\"mi\">554</span>                 <span class=\"p\">}</span>\n<span class=\"mi\">555</span>\n<span class=\"mi\">556</span>                 <span class=\"nx\">opts</span><span class=\"p\">.</span><span class=\"nx\">re_render</span><span class=\"p\">();</span>\n<span class=\"mi\">557</span>             <span class=\"p\">}</span>\n<span class=\"mi\">558</span>         <span class=\"p\">},</span> <span class=\"mi\">0</span><span class=\"p\">);</span>\n</pre></div>",
+        "id": 664898,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543347393
+    },
+    {
+        "content": "<p>In particular, it's that we do it on a zero-second timeout.</p>",
+        "id": 664899,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543347432
+    },
+    {
+        "content": "<p>I think the point of the 0-second timeout is to have it run after the rest of the current function finishes (and potentially other pending actions)</p>",
+        "id": 664905,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543347523
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Why would it be that the timeout function will be executed after the rest of the function is executed? If the functions are asynchronous they can be unpredictable</p>",
+        "id": 664914,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1543347719
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Yeah, there was obviously some intention originally to defer it, but it seems unwise to me to defer it possibly until after operations that depend on it.</p>",
+        "id": 664919,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543348184
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"5593\">@Vaibhav</span> It's possible this is completely unrelated to your issue--I haven't dug too deep.  But you could play around with making that code be synchronous and see if it changes things on your branch--that would be a really good data point to have.  I suspect there's like a 30% chance this is affecting your change, but that's just a wild guess.</p>",
+        "id": 664923,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543348255
+    },
+    {
+        "content": "<p>I need to look at the code here; I don't see clear evidence that the <code>setTimeout</code> code block is buggy.</p>",
+        "id": 664926,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543348284
+    },
+    {
+        "content": "<p>hello :)</p>",
+        "id": 664928,
+        "sender_full_name": "Blunivers",
+        "timestamp": 1543348302
+    },
+    {
+        "content": "<p>(A fairly likely possible race is just ordering between various requests to the server returning)</p>",
+        "id": 664929,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543348304
+    },
+    {
+        "content": "<p><span class=\"emoji emoji-1f642\" title=\"slight smile\">:slight_smile:</span></p>",
+        "id": 664930,
+        "sender_full_name": "Blunivers",
+        "timestamp": 1543348308
+    },
+    {
+        "content": "<p>I'm using the term \"race\" a bit loosely.  I think this might actually be causing code to run out of order basically 100% of the time.  (But it's race-like in terms of the symptoms probably being flaky, as sometimes things get fixed as soon as server responses or new messages come.)</p>",
+        "id": 664938,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543348465
+    },
+    {
+        "content": "<blockquote>\n<p><span class=\"user-mention\" data-user-id=\"5593\">@Vaibhav</span> It's possible this is completely unrelated to your issue--I haven't dug too deep.  But you could play around with making that code be synchronous and see if it changes things on your branch--that would be a really good data point to have.  I suspect there's like a 30% chance this is affecting your change, but that's just a wild guess.</p>\n</blockquote>\n<p>Yeah, I'll surely try to find the bug, even I am doubtful about the bug being related to this <span class=\"emoji emoji-1f642\" title=\"slight smile\">:slight_smile:</span></p>",
+        "id": 664942,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1543348555
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"58\">@Steve Howell</span> I figured out the bug, it was basically that there were two elements with the same <code>zid</code> and when calculating offset, it jQuery took the first one. I fixed that.</p>\n<p>There was yet another problem, when ever I checked the offset for the element before it was rendered by the server, it showed me that the element did not exist (or maybe that when checking, the element was being re-rendered). So to solve this I took the last message in <code>focused_table</code> and put the check for it. I think that would be a fine approximation to check for the second last element.</p>\n<p>Here is the Pull Request, it is ready to be reviewed. <a href=\"https://github.com/zulip/zulip/pull/10928\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/10928\">https://github.com/zulip/zulip/pull/10928</a></p>",
+        "id": 666636,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1543587984
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"5593\">@Vaibhav</span> Glad you figured out the bug.  There's an <code>.expectOne()</code> jQuery helper that we use to prevent bugs like this.  If you grep for it, you'll see examples.</p>",
+        "id": 666652,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543594725
+    },
+    {
+        "content": "<p>It's not clear to me the <code>focused_table</code> approach will work, but I'm curious what Tim thinks.</p>",
+        "id": 666653,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1543594830
+    },
+    {
+        "content": "<p>The other approach could be to get the list of messages in that current narrow and to get id from there, this seemed kind of a shortcut for the same</p>",
+        "id": 666654,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1543594984
+    },
+    {
+        "content": "<blockquote>\n<p>Here is the Pull Request, it is ready to be reviewed. <a href=\"https://github.com/zulip/zulip/pull/10928\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/10928\">https://github.com/zulip/zulip/pull/10928</a></p>\n</blockquote>\n<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  What are your thoughts on this?</p>",
+        "id": 667093,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1543680640
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> I made the required changes in this PR a few days back <a href=\"https://github.com/zulip/zulip/pull/10928\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/10928\">#10928</a>. It's ready to be merged I think. Was waiting for the review. Thanks <span class=\"emoji emoji-1f642\" title=\"slight smile\">:slight_smile:</span></p>",
+        "id": 670650,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1544537556
+    },
+    {
+        "content": "<p>Yeah, I expect to take a look at this today <span class=\"emoji emoji-1f642\" title=\"slight smile\">:slight_smile:</span></p>",
+        "id": 670743,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1544555853
+    },
+    {
+        "content": "<p>Hey <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> ! I recently worked on the issue <a href=\"https://github.com/zulip/zulip/issues/10792\" target=\"_blank\" title=\"https://github.com/zulip/zulip/issues/10792\">#10792</a>. The pull request <a href=\"https://github.com/zulip/zulip/pull/10928\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/10928\">#10928</a> regarding the issue got merged yesterday. In that you mentioned this:</p>\n<blockquote>\n<p>A useful follow-up would be moving the bit of logic for figuring out whether a message is onscreen into a reusable function in message_viewport.js, and potentially deduplicating the logic in any other places it appears in the codebase.</p>\n</blockquote>\n<p>Should I create an issue for the same first or start working straight away?</p>",
+        "id": 673272,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1545074935
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"5593\">@Vaibhav</span> if you're going to work on it in the next few days, I'd just work on it and submit a PR which can serve the role of a tracking issue for the project.</p>",
+        "id": 673283,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1545075328
+    },
+    {
+        "content": "<p>We generally create issues for anything not going to be resolved ~immediately, but for a refactor like this, it's reasonable to skip.</p>",
+        "id": 673286,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1545075352
+    },
+    {
+        "content": "<p>Sure! I don't think it would take much time, should be done in a day or so. Thanks <span class=\"emoji emoji-1f642\" title=\"slight smile\">:slight_smile:</span></p>",
+        "id": 673289,
+        "sender_full_name": "Vaibhav Rabber",
+        "timestamp": 1545075405
+    }
+]

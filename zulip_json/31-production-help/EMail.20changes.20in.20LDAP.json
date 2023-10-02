@@ -1,0 +1,80 @@
+[
+    {
+        "content": "<p>Hi.<br>\nWe have a Problem that if a users mail changes in LDAP and he then logs in a new account gets created.<br>\n<code>/home/zulip/deployments/current/manage.py sync_ldap_user_data</code> had been run in the meantime.<br>\nI looked through the code trying to find anything but didn't.<br>\nIs changing your mail in LDAP not supported?</p>",
+        "id": 998915,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1598364321
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15808\">@Felix (strifel)</span> Zulip identifies user accounts by email, so if the email changes just in LDAP, that'll be a new user from Zulip's perspective. The user could change the email address of their Zulip account (<a href=\"https://zulipchat.com/help/change-your-email-address\">https://zulipchat.com/help/change-your-email-address</a>) before it is changed in ldap - that would let you keep continuity of the account</p>",
+        "id": 999132,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1598375895
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span>  I already kind of guessed that.<br>\nBut this is a problem for us and I think it is quite hard to get all users to change their mail in Zulip first. <br>\nWouldn't there be any option to write a short script for that as the Django user is the same username as in LDAP. (So something like go over all django usernames check if mail is still correct if not change it) Or are the django user(names) not saved?</p>",
+        "id": 999155,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1598376964
+    },
+    {
+        "content": "<p>What we save as the Django username is the email, that's the problem. You could also change the <code>UserProfile</code>'s email address from the Django shell manually, when you're changing their email in ldap.</p>",
+        "id": 999190,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1598378725
+    },
+    {
+        "content": "<p>Ok...<br>\nI only saw in the update script it says Population Django user [ldap user name].<br>\nThe problem is that the users can change their mail on their own. So I would like to have an automated solution.<br>\nSo the only solution I can come up with would be to save the mail and dn (or uid/cn) in a table (or custom Attribute) and in the update script check if a mail changes.<br>\nIs there any other solution?</p>\n<p>At the moment we only had a few users with this Problem, but it might be more in the future and telling everyone to change their mail first in Zulip does not really seem like a perfect solution to me. <br>\nThis does seem like I should not be the only one with this problem, is there a github issue or something?</p>",
+        "id": 999204,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1598379518
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15808\">@Felix (strifel)</span> I don't think there's a GitHub issue for this; you're welcome to open one.  I think the only good solutions to this problem will involve adding a new field in <code>UserProfile</code> to store a unique LDAP ID for the user.</p>\n<p>That said, one automated solution would be to have a trigger after email address changes in LDAP that runs <code>manage.py change_user_email</code> on the Zulip server.  I'm not sure if you have a way to implement that kind of trigger, though.</p>",
+        "id": 999258,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1598381621
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Thanks.<br>\nI found <a href=\"https://www.openldap.org/doc/admin24/overlays.html\">this</a> for LDAP triggers.<br>\nBut this seems quite complicated to configure, especially  when running LDAP on a different  server. (As I would than have to call a script which SSHs into the Zuliphost and run the  command)<br>\nAs this seems to be an issue that a lot of people could run  into I think it would be better to have it integrated into Zulip.</p>\n<p>So I think storing a unique id (e.g. username) would be a good idea.<br>\nI saw that Social Auth has special <code>social_auth_</code> tables. <br>\nDoes SAML has the same issue with changing the mail? (I never used SAML)<br>\nMaybe there should  be a field in <code>UserProfile</code> then which saves either a LDAP or SAML uid?</p>",
+        "id": 999427,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1598385627
+    },
+    {
+        "content": "<p>Our authentication integration with SAML works the same way.</p>",
+        "id": 999471,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1598387545
+    },
+    {
+        "content": "<p>But yeah, we could try adding a mechanism to store external authentication UIDs and their mapping to Zulip user IDs, with that mechanism only used to make <code>manage.py sync_ldap_user_data</code> update a user's email address (and maybe some guard to prevent accidentally creating an account before the sync runs).</p>",
+        "id": 999472,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1598387649
+    },
+    {
+        "content": "<p>Started with <a href=\"https://github.com/zulip/zulip/pull/16208\">#16208</a>. Would like to get some help (regarding getting the mail out of ldap)</p>",
+        "id": 1000452,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1598472961
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> could you please have a look at that PR if you have some time and help me a bit?<br>\nThanks</p>",
+        "id": 1001286,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1598528662
+    },
+    {
+        "content": "<p>I thought about this issue again.<br>\nI think its a lot easier to just sync the changed mail on login instead of sycing it when running the command.<br>\nThat way it would also make it impossible for the user to log in before the account mail is changed</p>",
+        "id": 1003727,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1598793926
+    },
+    {
+        "content": "<p>That makes some sense, though we might want to support doing it both places (like we do for syncing name)</p>",
+        "id": 1004096,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1598827359
+    }
+]

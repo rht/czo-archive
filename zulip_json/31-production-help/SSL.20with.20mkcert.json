@@ -1,0 +1,104 @@
+[
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  I'm still a little rough on how the whole SSL thing works. I have initially set-up Zulip with a self-signed cert to get things rolling, but now that things are rolling, it seems wise to make it a real \"trusted\" certificate. Zulip, for my purposes, is only ever going to live on a local server with no web interactions (you and I talked about HIPAA compliance, initially). So I used a tool from github called mkcert to generate a cert and a key. mkcert dumped out two files:</p>\n<p>...local-key.pem</p>\n<p>and</p>\n<p>...local.pem</p>\n<p>In the manual install instructions in the docs, it explains where to put the key and the cert, which makes total sense. I noticed, however, that the file extensions are .key and .cert, respectively. Is it the correct procedure to rename the two files that mkcert pumped out from ...local-key.pem --&gt; zulip.key and ...local.pem ---&gt; zulip.combined-chain.cert?</p>\n<p>Finally, mkcert says that these certs are installed in the local trust store, as well as the Firefox and Chrome trust stores (on the computer which hosts the Zulip server). Does this mean that, when the other computers on the network (all of which are Win 10) log onto the Zulip server from their browsers, that their browsers will accept/like the certificate?</p>",
+        "id": 993270,
+        "sender_full_name": "Matt Hall",
+        "timestamp": 1597852350
+    },
+    {
+        "content": "<p>Answering my own question, to some extent, here:</p>\n<p>So, yeah, the .pem files are basically the same as the .key files (I had the brilliant idea to actually read the contents of the files <span aria-label=\"relieved\" class=\"emoji emoji-1f60c\" role=\"img\" title=\"relieved\">:relieved:</span> ), and so I did, in fact, rename them and use them to replace the existing cert and key. However, doing so had no change in the way the browser views the certificate (I still get the \"not secure warning, even after restarting the server and reloading the browser). This is not what I expected. I did see the instructions for creating a custom certificate, which is basically installing the cert on each workstation. I'm guessing that will work to resolve the \"not secure\" warning, but isn't this a sort of circumvention? Is there a better way to get a trusted cert for a locally hosted server, or is this the best way? Just trying to set-up things as correctly as possible. I will say that Zulip is great, so far. We're already using it to coordinate and communicate -- <strong>thanks so much!</strong></p>",
+        "id": 995775,
+        "sender_full_name": "Matt Hall",
+        "timestamp": 1598023089
+    },
+    {
+        "content": "<p>The best way I'd say is getting a valid free cert for e.g. <code>chat.example.org</code> from Let's Encrypt and setting up a local DNS server to resolve <code>chat.example.org</code> to your local Zulip server IP. With DHCP you can make new devices automatically use your local DNS server, so you don't need any setup on individual devices.</p>",
+        "id": 995797,
+        "sender_full_name": "Gittenburg",
+        "timestamp": 1598024385
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16219\">@Gittenburg</span> Thank you! So if I am already using a DNS server to resolve hosts on my network (it's a Windows Server 2012R2 server), then am I understanding correctly that I need to put the cert and key on the DNS server, and that will make Zulip trusted for all the workstations on the network? Do I have that right?</p>\n<p>From your comment on Let's Encrypt, could I use my existing domain for my practice's website and add a subdomain, like <a href=\"http://chat.myblahblahblahwebsite.com\">chat.myblahblahblahwebsite.com</a> to get the cert. And then I tell my DNS server to redirect connections to <a href=\"http://chat.myblahblahblahwebsite.com\">chat.myblahblahblahwebsite.com</a> to zulip.myserver.local (the hostname for my Zulip server)?</p>\n<p>Apologies if these are overly-basic questions <span aria-label=\"grimacing\" class=\"emoji emoji-1f62c\" role=\"img\" title=\"grimacing\">:grimacing:</span></p>",
+        "id": 995842,
+        "sender_full_name": "Matt Hall",
+        "timestamp": 1598027962
+    },
+    {
+        "content": "<blockquote>\n<p>am I understanding correctly that I need to put the cert and key on the DNS server</p>\n</blockquote>\n<p>No, the certificate is independent from your DNS server. The workstations trust Let's encrypt, which validated your domain ownership and signed your certificate. To clarify: There is no mkcert / self-signed cert involved with this approach.</p>\n<blockquote>\n<p>could I use my existing domain for my practice's website and add a subdomain</p>\n</blockquote>\n<p>Yes you can totally use a subdomain (provided that your domain registrar offers that ... most do).</p>\n<blockquote>\n<p>And then I tell my DNS server to redirect connections to <a href=\"http://chat.myblahblahblahwebsite.com\">chat.myblahblahblahwebsite.com</a> to zulip.myserver.local </p>\n</blockquote>\n<p>Yes (how you do that depends on your DNS server ... I am unfamiliar with windows servers).</p>",
+        "id": 995872,
+        "sender_full_name": "Gittenburg",
+        "timestamp": 1598028804
+    },
+    {
+        "content": "<p>The only tricky part is that for Let's encrypt to verify that you actually own your domain, you'll need the public DNS record for <a href=\"http://chat.myblahblahblahwebsite.com\">chat.myblahblahblahwebsite.com</a> to point to a public web server that you control (for <a href=\"https://letsencrypt.org/docs/challenge-types/#http-01-challenge\">the HTTP-01 challenge</a>). You'll then need to set up something to copy the Let's Encrypt cert from the public web server to your local Zulip server.</p>",
+        "id": 995883,
+        "sender_full_name": "Gittenburg",
+        "timestamp": 1598029070
+    },
+    {
+        "content": "<p>Ok, I think I've got it -- thanks so much!</p>",
+        "id": 995928,
+        "sender_full_name": "Matt Hall",
+        "timestamp": 1598031938
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16790\">@Matt Hall</span> For a server that isn’t on a public network, the DNS-01 challenge type will be more convenient. Then you only need the one server and you can have <a href=\"http://chat.myblahblahblahwebsite.com\">chat.myblahblahblahwebsite.com</a> point directly to the internal IP address without any split horizon DNS. The only tricky part is that you need to <a href=\"https://certbot.eff.org/docs/using.html#dns-plugins\">tell</a> Certbot how to create records on your DNS server.</p>",
+        "id": 995953,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1598035622
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> Hmm, it looks like, in general, I need to do more reading on this subject, to increase my background knowledge. I'm playing with things that I don't quite understand. Perhaps you or others can suggest some good articles/references? As for Certbot and the DNS server, one complication for me might be that I have Zulip running on a machine that is plugged into a network that has a server. In other words, the DNS server lives on the Windows server, and then Zulip is on a Debian computer connected to it.</p>",
+        "id": 995954,
+        "sender_full_name": "Matt Hall",
+        "timestamp": 1598036205
+    },
+    {
+        "content": "<p>With DNS-01 the local network doesn’t matter; the relevant DNS server is the one that serves the records for <a href=\"http://myblahblahblahwebsite.com\">myblahblahblahwebsite.com</a> to the public Internet.</p>",
+        "id": 995955,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1598036343
+    },
+    {
+        "content": "<p>Ok, I’ll try to get it working. I’m pretty sure my provider allows sub domains. Will having a trusted certificate from Let’s Encrypt resolve the issue with the desktop and mobile apps not being able to “find” my Zulip server?</p>",
+        "id": 996014,
+        "sender_full_name": "Matt Hall",
+        "timestamp": 1598046481
+    },
+    {
+        "content": "<p>Not sure if this is related, but I can’t get the desktop or mobile apps to accept the self signed certificate generated by the script. Well, the desktop app says it is “saved,” but it will not connect. When I try to import it into Chrome, per the instructions, I get an error stating the the file is corrupted or invalid. I found a workaround to use OpenSSL to combine the .crt file and the .key file into one file with a .p12 format. Chrome accepted that certificate when I imported it, but there was no change in behavior with the zulip desktop and the zulip-term apps. Is there a way to have the zulip server use a .p12 file for its certificate and would this solve the issue?</p>",
+        "id": 996874,
+        "sender_full_name": "Matt Hall",
+        "timestamp": 1598222859
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16790\">@Matt Hall</span> see <a href=\"https://zulipchat.com/help/custom-certificates\">https://zulipchat.com/help/custom-certificates</a></p>",
+        "id": 997635,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1598296275
+    },
+    {
+        "content": "<p>(Should we have more prominent links to that page somewhere?)</p>",
+        "id": 997638,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1598296303
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  No the links and the documentation are great. I think I must be an idiot.</p>\n<p>I've followed the steps in the custom-certs link above (and the links about SSL in the production install docs). Adding the zulip.combined-chain.crt file directly to the Linux Zulip app generates a \"saved\" response from the program, but it still won't connect. Using the certutil method also seems to work, in that it doesn't throw an error, I can check for the crt with certutil afterwards. The cert appears to be in the right place with the right trust arguments.  One interesting error is when I directly import the crt file into Chrome, as I mentioned above. I must be doing something wrong. Here are the steps I have taken:</p>\n<ul>\n<li>I generated the zulip.combined-chain.crt and zulip.key files with the script in the .../scripts/setup folder. </li>\n<li>I put the cert in /etc/ssl/certs and the key in /etc/ssl/private.</li>\n<li>I restart the server </li>\n<li>I scp'd the cert and the key to the home folder of the laptop which has Zulip desktop (Linux). </li>\n<li>\n<p>I ran certutil -d sql:$HOME/.pki/nssdb -A -t \"C,,\" -n zulip \\<br>\n  -i ~/zulip.combined-chain.crt</p>\n</li>\n<li>\n<p>I also added the .crt file to Zulip desktop</p>\n</li>\n</ul>\n<p>Anything I am missing or doing wrong?</p>",
+        "id": 997778,
+        "sender_full_name": "Matt Hall",
+        "timestamp": 1598297986
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> is probably better able to help with this question than I am; I haven't used the <code>certutil</code> flow myself.</p>",
+        "id": 998334,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1598312080
+    },
+    {
+        "content": "<p>Anders, I was hoping that getting the self-signed-cert trusted would be a little easier than the solution we discussed above, but, <em>apparently not.</em> <span aria-label=\"cold sweat\" class=\"emoji emoji-1f630\" role=\"img\" title=\"cold sweat\">:cold_sweat:</span> If you have any input about what I might be doing wrong with <em>that</em> approach (with certutil or otherwise), that would be great. </p>\n<p>As to your explanation above about the DNS-01 challenge, above. Does the internal IP address I am pointing to have to <em>stay</em> functional? I guess I am a little worried about the security end of things having Zulip connected to the internet. After getting the certificate trusted, can I block the port with my firewall and still have the trust certificate function. Apologies if this is a stupid question. T hank you very much!</p>",
+        "id": 999761,
+        "sender_full_name": "Matt Hall",
+        "timestamp": 1598403462
+    }
+]

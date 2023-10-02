@@ -1,0 +1,290 @@
+[
+    {
+        "content": "<p>Hii, I would kindly ask for some help/advice on the following issue: when message contains the URL only without any other text the message is not delivered. See issue on Github: <a href=\"https://github.com/zulip/zulip/issues/21910#issuecomment-1108956607\">https://github.com/zulip/zulip/issues/21910#issuecomment-1108956607</a></p>",
+        "id": 1373211,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650920263
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/Messages.20with.20URL.20only.20are.20not.20sent\">#issues &gt; Messages with URL only are not sent</a> by <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span>.</p>",
+        "id": 1373213,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1650920329
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24094\">@Jerry</span>: If you open the web inspector in your web client, do you see a POST request when you send the message with just the URL?  What response code does the server respond with?</p>",
+        "id": 1373220,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650920513
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span>  I see:</p>\n<ul>\n<li>GET HTTP2 404 user_avatars/2/d51fdbce0ec2669f8c04c9c28c3773e9432e0151.png</li>\n<li>GET HTTP2 304 /static/images/loader-white.svg</li>\n<li>POST HTTP2 500 /json/messages</li>\n<li>POST HTTP2 200    /json/typing</li>\n<li>POST HTTP2 403 /json/report/error </li>\n</ul>\n<p>I checked also nginx logs: I could not find any event related to /json/messages. So I started to investigate Cloudflare logs and Fortigate events since layer 7 security profiles are configured on virtual server publushed. No blocked connection.</p>\n<p>I disabled and re-enabled layer 7 inspection and messages with URL text only are delivered. Only temporaty? I'll monitor.</p>\n<p>But still there are many HTTP 500 errors for POST requests \"/json/messages\" visible on developer tools.</p>\n<p>I'll monitor the behaviour in the following hours/days and send update.</p>",
+        "id": 1373280,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650924476
+    },
+    {
+        "content": "<p>The 500 to <code>/json/messages</code> says that <code>/var/log/zulip/errors.log</code> should very definitely have something in it.</p>",
+        "id": 1373282,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650924524
+    },
+    {
+        "content": "<p>Have you checked free disk space?</p>",
+        "id": 1373283,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650924532
+    },
+    {
+        "content": "<p>87% used, 13% free</p>",
+        "id": 1373285,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650924607
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"24094\">Jerry</span> <a href=\"#narrow/stream/31-production-help/topic/Messages.20with.20URL.20only.20are.20not.20sent/near/1373280\">said</a>:</p>\n<blockquote>\n<p>I disabled and re-enabled layer 7 inspection and messages with URL text only are delivered. Only temporaty? I'll monitor.</p>\n</blockquote>\n<p>That suggests that something in your firewall is mucking with the request.</p>",
+        "id": 1373286,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650924641
+    },
+    {
+        "content": "<p>Do you see the <code>POST /messages</code> in <code>/var/log/nginx/access.log</code>?</p>",
+        "id": 1373291,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650924676
+    },
+    {
+        "content": "<p>No, there is no such event in nginx logs.</p>",
+        "id": 1373296,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650924808
+    },
+    {
+        "content": "<p>But now I can see full of error logs in Zulip logs, such as: 2022-04-25 22:11:38.837 ERR  [zerver.middleware.json_error_handler] Traceback (most recent call last):<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/base.py\", line 181, in _get_response<br>\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/lib/rest.py\", line 33, in _wrapped_view_func<br>\n    response = view_func(request, *args, **kwargs)<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/views/decorators/csrf.py\", line 54, in wrapped_view<br>\n    return view_func(*args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/lib/rest.py\", line 169, in rest_dispatch<br>\n    return target_function(request, **kwargs)<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/utils/decorators.py\", line 130, in _wrapped_view<br>\n    response = view_func(request, *args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/decorator.py\", line 790, in _wrapped_view_func<br>\n    return authenticate_log_and_execute_json(<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/decorator.py\", line 777, in authenticate_log_and_execute_json<br>\n    return limited_view_func(request, user_profile, *args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/decorator.py\", line 984, in wrapped_func<br>\n    return func(request, *args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/lib/request.py\", line 449, in _wrapped_view_func<br>\n    return view_func(request, *args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/views/message_send.py\", line 302, in send_message_backend<br>\n    ret = check_send_message(<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/lib/actions.py\", line 3059, in check_send_message<br>\n    return do_send_messages([message])[0]<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/lib/actions.py\", line 2344, in do_send_messages<br>\n    welcome_bot_id = get_system_bot(<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/lib/cache.py\", line 204, in func_with_caching<br>\n    val = func(*args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/models.py\", line 3687, in get_system_bot<br>\n    return UserProfile.objects.select_related().get(email__iexact=email.strip())<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py\", line 435, in get<br>\n    raise self.model.DoesNotExist(<br>\nzerver.models.UserProfile.DoesNotExist: UserProfile matching query does not exist.</p>",
+        "id": 1373297,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650924842
+    },
+    {
+        "content": "<p>==&gt; errors.log &lt;==<br>\n2022-04-25 22:11:38.837 ERR  [zerver.middleware.json_error_handler] Traceback (most recent call last):<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/base.py\", line 181, in _get_response<br>\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/lib/rest.py\", line 33, in _wrapped_view_func<br>\n    response = view_func(request, *args, **kwargs)<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/views/decorators/csrf.py\", line 54, in wrapped_view<br>\n    return view_func(*args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/lib/rest.py\", line 169, in rest_dispatch<br>\n    return target_function(request, **kwargs)<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/utils/decorators.py\", line 130, in _wrapped_view<br>\n    response = view_func(request, *args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/decorator.py\", line 790, in _wrapped_view_func<br>\n    return authenticate_log_and_execute_json(<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/decorator.py\", line 777, in authenticate_log_and_execute_json<br>\n    return limited_view_func(request, user_profile, *args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/decorator.py\", line 984, in wrapped_func<br>\n    return func(request, *args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/lib/request.py\", line 449, in _wrapped_view_func<br>\n    return view_func(request, *args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/views/message_send.py\", line 302, in send_message_backend<br>\n    ret = check_send_message(<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/lib/actions.py\", line 3059, in check_send_message<br>\n    return do_send_messages([message])[0]<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/lib/actions.py\", line 2344, in do_send_messages<br>\n    welcome_bot_id = get_system_bot(<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/lib/cache.py\", line 204, in func_with_caching<br>\n    val = func(*args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/./zerver/models.py\", line 3687, in get_system_bot<br>\n    return UserProfile.objects.select_related().get(email__iexact=email.strip())<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py\", line 435, in get<br>\n    raise self.model.DoesNotExist(<br>\nzerver.models.UserProfile.DoesNotExist: UserProfile matching query does not exist.</p>",
+        "id": 1373298,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650924869
+    },
+    {
+        "content": "<p>2022-04-25 22:11:38.839 ERR  [django.request] Internal Server Error: /json/messages<br>\n2022-04-25 22:11:39.299 ERR  [] Problem handling data on queue missedmessage_mobile_notifications<br>\nTraceback (most recent call last):<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/worker/queue_processors.py\", line 322, in do_consume<br>\n    consume_func(events)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/worker/queue_processors.py\", line 356, in &lt;lambda&gt;<br>\n    consume_func = lambda events: self.consume(events[0])<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/worker/queue_processors.py\", line 792, in consume<br>\n    handle_push_notification(event[\"user_profile_id\"], event)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/decorator.py\", line 873, in wrapped_func<br>\n    ret = func(*args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/lib/push_notifications.py\", line 1115, in handle_push_notification<br>\n    total_android_devices, total_apple_devices = send_notifications_to_bouncer(<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/lib/push_notifications.py\", line 501, in send_notifications_to_bouncer<br>\n    response_data = send_json_to_push_bouncer(\"POST\", \"push/notify\", post_data)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/lib/remote_server.py\", line 113, in send_json_to_push_bouncer<br>\n    return send_to_push_bouncer(<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/lib/remote_server.py\", line 97, in send_to_push_bouncer<br>\n    raise JsonableError(msg)<br>\nzerver.lib.exceptions.JsonableError: Zulip server auth failure: 1a07b2c7-489c-460d-860a-b57d886fd47a is not registered -- did you run <code>manage.py register_server</code>?<br>\nStack (most recent call last):<br>\n  File \"/home/zulip/deployments/current/manage.py\", line 157, in &lt;module&gt;<br>\n    execute_from_command_line(sys.argv)<br>\n  File \"/home/zulip/deployments/current/manage.py\", line 122, in execute_from_command_line<br>\n    utility.execute()<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/__init__.py\", line 413, in execute<br>\n    self.fetch_command(subcommand).run_from_argv(self.argv)<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py\", line 354, in run_from_argv<br>\n    self.execute(*args, **cmd_options)<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py\", line 398, in execute<br>\n    output = self.handle(*args, **options)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/management/commands/process_queue.py\", line 111, in handle<br>\n    worker.start()<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/worker/queue_processors.py\", line 776, in start<br>\n    super().start()<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/worker/queue_processors.py\", line 405, in start<br>\n    self.q.start_json_consumer(<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/lib/queue.py\", line 213, in start_json_consumer<br>\n    self.ensure_queue(queue_name, do_consume)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/lib/queue.py\", line 169, in ensure_queue<br>\n    callback(<a href=\"http://self.channel\">self.channel</a>)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/lib/queue.py\", line 203, in do_consume<br>\n    callback(events)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/worker/queue_processors.py\", line 407, in &lt;lambda&gt;<br>\n    lambda events: self.consume_single_event(events[0]),<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/worker/queue_processors.py\", line 357, in consume_single_event<br>\n    self.do_consume(consume_func, [event])<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/worker/queue_processors.py\", line 326, in do_consume<br>\n    self._handle_consume_exception(events, e)<br>\n  File \"/home/zulip/deployments/2022-04-24-12-29-58/zerver/worker/queue_processors.py\", line 383, in _handle_consume_exception<br>\n    logging.exception(</p>",
+        "id": 1373300,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650924917
+    },
+    {
+        "content": "<p>So those exceptions suggest a system bot doesn't exist on the system.</p>",
+        "id": 1373301,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1650924952
+    },
+    {
+        "content": "<p>Please use code blocks for pasting in your logs:</p>\n<div class=\"codehilite\"><pre><span></span><code>```\n...logfile goes here\n```\n</code></pre></div>",
+        "id": 1373302,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650924994
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24094\">@Jerry</span> does this server have any interesting history with using the data import/export tools and/or manual database editing?</p>",
+        "id": 1373303,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1650925008
+    },
+    {
+        "content": "<p>It should not be possible to initialize a Zulip database without system bots.</p>",
+        "id": 1373304,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1650925051
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Messages.20with.20URL.20only.20are.20not.20sent/near/1373302\">said</a>:</p>\n<blockquote>\n<p>Please use code blocks for pasting in your logs:</p>\n<p><div class=\"codehilite\"><pre><span></span><code>```\n...logfile goes here\n```\n`````\nSorry, will do next time.\n</code></pre></div><br>\n</p>\n</blockquote>",
+        "id": 1373308,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650925155
+    },
+    {
+        "content": "<p>I registered the server (manage.py register_server) and some error messages are not logged anymore.<br>\nBut HTTP/500 errors are still recorded in browser's developer tools and there are still <code>zerver.models.UserProfile.DoesNotExist: UserProfile matching query does not exist.</code> event recorded in Zulip logs.</p>",
+        "id": 1373310,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650925344
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/Messages.20with.20URL.20only.20are.20not.20sent/near/1373303\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"24094\">Jerry</span> does this server have any interesting history with using the data import/export tools and/or manual database editing?</p>\n</blockquote>\n<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  No, we haven't done any change manually in database. We deployed Zulip using docker started from 4.x version. We are running now on 5.1.</p>",
+        "id": 1373311,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650925409
+    },
+    {
+        "content": "<p>Users are authenticated to LDAP (AD) database.</p>",
+        "id": 1373313,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650925445
+    },
+    {
+        "content": "<p>When did you start having this error?  Did you see it on 4.11?</p>",
+        "id": 1373314,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650925486
+    },
+    {
+        "content": "<p>It was on 4.9 or 4.10 for sure also</p>",
+        "id": 1373316,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650925685
+    },
+    {
+        "content": "<p>I don't know if it is related but there are occasional \"not delivered\" icons displayed by the message - but such message was delivered <a href=\"/user_uploads/2/8f/sNnDM5cTWmFhowNOiXsr-Y79/Screenshot-2022-04-26-at-00.30.04.png\">Screenshot-2022-04-26-at-00.30.04.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/8f/sNnDM5cTWmFhowNOiXsr-Y79/Screenshot-2022-04-26-at-00.30.04.png\" title=\"Screenshot-2022-04-26-at-00.30.04.png\"><img src=\"/user_uploads/2/8f/sNnDM5cTWmFhowNOiXsr-Y79/Screenshot-2022-04-26-at-00.30.04.png\"></a></div>",
+        "id": 1373318,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650925888
+    },
+    {
+        "content": "<p>That's because a key piece of your database is missing or corrupt -- namely, the system bots.</p>",
+        "id": 1373319,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650925901
+    },
+    {
+        "content": "<p>I wonder a little if they managed to get deleted by the LDAP import tool ... somehow.</p>",
+        "id": 1373320,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650925947
+    },
+    {
+        "content": "<p>How could I investigate the database if something is missing? Is there any reference how it should be configured?</p>",
+        "id": 1373321,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650926012
+    },
+    {
+        "content": "<p>If you run <code>./manage.py dbshell</code> in <code>~zulip/deployments/current</code> it should get you to a PostgreSQL prompt.</p>\n<p>Then try:</p>\n<div class=\"codehilite\" data-code-language=\"PostgreSQL SQL dialect\"><pre><span></span><code><span class=\"k\">select</span><span class=\"w\"> </span><span class=\"n\">id</span><span class=\"p\">,</span><span class=\"w\"> </span><span class=\"n\">email</span><span class=\"p\">,</span><span class=\"w\"> </span><span class=\"n\">is_bot</span><span class=\"p\">,</span><span class=\"w\"> </span><span class=\"n\">is_active</span><span class=\"w\"> </span><span class=\"k\">from</span><span class=\"w\"> </span><span class=\"n\">zerver_userprofile</span><span class=\"w\"> </span><span class=\"k\">where</span><span class=\"w\"> </span><span class=\"n\">realm_id</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span><span class=\"mf\">1</span><span class=\"w\"> </span><span class=\"k\">order</span><span class=\"w\"> </span><span class=\"k\">by</span><span class=\"w\"> </span><span class=\"n\">id</span><span class=\"p\">;</span><span class=\"w\"></span>\n</code></pre></div>\n<p>Expected output:</p>\n<div class=\"codehilite\"><pre><span></span><code> id |                email                 | is_bot | is_active\n----+--------------------------------------+--------+-----------\n  1 | emailgateway@zulip.com               | t      | t\n  2 | nagios-receive-bot@zulip.com         | t      | t\n  3 | nagios-send-bot@zulip.com            | t      | t\n  4 | nagios-staging-receive-bot@zulip.com | t      | t\n  5 | nagios-staging-send-bot@zulip.com    | t      | t\n  6 | notification-bot@zulip.com           | t      | t\n  7 | welcome-bot@zulip.com                | t      | t\n(7 rows)\n</code></pre></div>",
+        "id": 1373322,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650926173
+    },
+    {
+        "content": "<p>no records</p>",
+        "id": 1373323,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650926237
+    },
+    {
+        "content": "<p>Try:</p>\n<div class=\"codehilite\" data-code-language=\"PostgreSQL SQL dialect\"><pre><span></span><code><span class=\"k\">select</span><span class=\"w\"> </span><span class=\"k\">name</span><span class=\"p\">,</span><span class=\"w\"> </span><span class=\"n\">deactivated</span><span class=\"p\">,</span><span class=\"w\"> </span><span class=\"n\">string_id</span><span class=\"w\"> </span><span class=\"k\">from</span><span class=\"w\"> </span><span class=\"n\">zerver_realm</span><span class=\"w\"> </span><span class=\"k\">where</span><span class=\"w\"> </span><span class=\"n\">id</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span><span class=\"mf\">1</span><span class=\"p\">;</span><span class=\"w\"></span>\n</code></pre></div>",
+        "id": 1373325,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650926330
+    },
+    {
+        "content": "<p>If I remove <code>WHERE realm_id=1</code> part I get full user list with <code>is_bot=f</code></p>",
+        "id": 1373326,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650926409
+    },
+    {
+        "content": "<div class=\"codehilite\" data-code-language=\"zulip\"><pre><span></span><code>       name       | deactivated |   string_id\n------------------+-------------+---------------\n System bot realm | f           | zulipinternal\n</code></pre></div>",
+        "id": 1373327,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650926455
+    },
+    {
+        "content": "<p>It's expected that you'll see your full user list if you leave off <code>WHERE realm_id = 1</code> -- the bots are all in their own internal \"realm,\" mostly for historical reasons.</p>",
+        "id": 1373329,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650926538
+    },
+    {
+        "content": "<p>OK, so somehow you managed to delete all of the internal users.  It would be nice if we could determine how that happened.</p>\n<p>Can you try this:</p>\n<div class=\"codehilite\" data-code-language=\"PostgreSQL SQL dialect\"><pre><span></span><code><span class=\"k\">select</span><span class=\"w\"> </span><span class=\"o\">*</span><span class=\"w\"> </span><span class=\"k\">from</span><span class=\"w\"> </span><span class=\"n\">zerver_realmauditlog</span><span class=\"w\"> </span><span class=\"k\">where</span><span class=\"w\"> </span><span class=\"n\">realm_id</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span><span class=\"mf\">1</span><span class=\"p\">;</span><span class=\"w\"></span>\n</code></pre></div>",
+        "id": 1373330,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650926810
+    },
+    {
+        "content": "<p>no records</p>",
+        "id": 1373331,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650926838
+    },
+    {
+        "content": "<p>How did you initially create this server?  It's missing significant pieces of the database.</p>",
+        "id": 1373332,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650926884
+    },
+    {
+        "content": "<p>I created database using docker-zulip.</p>",
+        "id": 1373333,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650926933
+    },
+    {
+        "content": "<p>I remember I ran manage.py multiple times but it was some time ago and I am not sure what all commands I ran.</p>",
+        "id": 1373336,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650926990
+    },
+    {
+        "content": "<p>But since docker is used command history is lost.</p>",
+        "id": 1373337,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650927018
+    },
+    {
+        "content": "<p>I wish I could give you more specific answer :(</p>",
+        "id": 1373338,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650927049
+    },
+    {
+        "content": "<p>The docker container doesn't require you to use <code>manage.py</code> to make the database -- it makes it for you when you first start it.</p>",
+        "id": 1373339,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650927056
+    },
+    {
+        "content": "<p>I'm not sure what to suggest for you -- reconstructing the missing pieces of the database is going to be hard, and it's very much not clear to me how they went missing in the first place, which means it's hard to know which pieces to <em>expect</em> are missing to backfill.</p>\n<p>Like, you do have an internal realm, so it's not that the whole internal realm got deleted.  But it doesn't have the audit logs for its creation, nor any audit logs for the bots which have been deleted.</p>",
+        "id": 1373340,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650927267
+    },
+    {
+        "content": "<p>Is it possible to export current realm, recreate database from scratch and import all data in new realm?</p>",
+        "id": 1373351,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650927445
+    },
+    {
+        "content": "<p>If you do the data export/import process, that will result in system bots existing, yes.</p>",
+        "id": 1373354,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1650927520
+    },
+    {
+        "content": "<p>It may or may not trigger other errors during export due to other things being missing, but it's worth a try.</p>",
+        "id": 1373355,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650927573
+    },
+    {
+        "content": "<p>Ok, I'll try this in next maintenance window. I'll send update after I finish.</p>",
+        "id": 1373360,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650927701
+    },
+    {
+        "content": "<p>Thank you very much for all help.</p>",
+        "id": 1373361,
+        "sender_full_name": "Jerry",
+        "timestamp": 1650927718
+    },
+    {
+        "content": "<p>Good luck!</p>",
+        "id": 1373368,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1650927738
+    }
+]

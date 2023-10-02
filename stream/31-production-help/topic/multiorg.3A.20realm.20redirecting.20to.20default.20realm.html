@@ -1,0 +1,328 @@
+<html>
+<head><meta charset="utf-8"><title>multiorg: realm redirecting to default realm · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html">multiorg: realm redirecting to default realm</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="568368"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568368" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568368">(Apr 23 2018 at 17:55)</a>:</h4>
+<p>Before I go down a rabbit hole even more, I figured I would ask. I installed Zulip on Ubuntu and configured my initial org/realm, with all being fine. I re-ran the <code>./manage.py generate_realm_creation_link</code> and registered with the same email account as my initial realm. Created the CNAME record, re-did my cert to include the subdomain, logged in and added a logo. Now, for some reason, when I hit my realm domain (<a href="http://coolgroup.chat.domain.com" target="_blank" title="http://coolgroup.chat.domain.com">coolgroup.chat.domain.com</a>) it redirects to my default realm (<a href="http://chat.domain.com" target="_blank" title="http://chat.domain.com">chat.domain.com</a>). I even still see the two different realms with there separate logos on my desktop app, though they both show the same content.<br>
+I do see the primary realm and the secondary realm in the <code>zulip.zerver_realm</code> PostgreSQL DB, so I am assuming something went screwy with the nginx config? <br>
+The last thing I did before I noticed it wasn't working (the next morning) was enabling <code>EMAIL_GATEWAY_PATTERN</code> and running <code>./zulip-puppet-apply -f</code> which errored out the first time as I ran it as <em>zulip</em> not <em>root</em>.<br>
+I will continue to work on it, but any pointers are appreciated!</p>
+
+
+
+<a name="568379"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568379" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568379">(Apr 23 2018 at 18:07)</a>:</h4>
+<p><span class="user-mention" data-user-id="7571">@Michael Potts</span> that's not a familiar issue</p>
+
+
+
+<a name="568380"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568380" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568380">(Apr 23 2018 at 18:07)</a>:</h4>
+<p>But I guess one thing I'd look at is the <code>ALLOWED_HOSTS</code> variable in <code>/etc/zulip/settings.py</code>.</p>
+
+
+
+<a name="568384"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568384" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568384">(Apr 23 2018 at 18:09)</a>:</h4>
+<p>figures. :/ lol</p>
+
+
+
+<a name="568386"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568386" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568386">(Apr 23 2018 at 18:10)</a>:</h4>
+<p><code>EXTERNAL_HOST = 'chat.domain.com'</code><br>
+<code>ALLOWED_HOSTS</code> is still commented out from default.</p>
+
+
+
+<a name="568388"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568388" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568388">(Apr 23 2018 at 18:11)</a>:</h4>
+<p>Yeah, so if you're using subdomains, you may need to set ALLOWED_HOSTS to allow the subdomain.</p>
+
+
+
+<a name="568391"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568391" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568391">(Apr 23 2018 at 18:16)</a>:</h4>
+<p>I'll add it and see, but I figured based on the wording of the comment that subdomains were included (<a href="https://github.com/zulip/zulip/blob/master/zproject/prod_settings_template.py#L91" target="_blank" title="https://github.com/zulip/zulip/blob/master/zproject/prod_settings_template.py#L91">https://github.com/zulip/zulip/blob/master/zproject/prod_settings_template.py#L91</a>).<br>
+Also curious as to how it worked for a bit as I tinkered with other stuff...</p>
+
+
+
+<a name="568402"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568402" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568402">(Apr 23 2018 at 18:31)</a>:</h4>
+<p>Alas, it didn't work. :/</p>
+
+
+
+<a name="568668"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568668" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568668">(Apr 23 2018 at 22:54)</a>:</h4>
+<p>Well, since that didn't work and creating a new 3rd realm didn't change anything (it instantly redirects back to the base realm), I think I will do the overkill option to just nuke and reinstall it. I haven't made any non-setup changes yet, so it's nothing lost..</p>
+
+
+
+<a name="568817"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568817" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568817">(Apr 24 2018 at 04:00)</a>:</h4>
+<p>Ok, so I have now rebuilt my entire environment. It looks like the issue is down to the fact that I am trying to sign into <code>chat.domain.com</code> and <code>org1.chat.domain.com</code> Zulip realms at the same time.</p>
+<p>If I sign into <code>org1.chat.domain.com</code>, all is fine. If I sign into <code>chat.domain.com</code>, the <code>org1.</code> site gets redirected. <br>
+I can stop it by deleting the <em>sessionid</em> cookie that has a domain of <code>.chat.domain.com</code>, leaving the <em>sessionid</em> cookie for <code>.org1.chat.domain.com</code>. It looks like the fact that the <em>sessionid</em> cookie applies to the subdomains is what causes the issue.</p>
+<p>Is this expected behavior? Should I be able to sign into the default realm and an additional realm at the same time?</p>
+
+
+
+<a name="568852"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568852" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568852">(Apr 24 2018 at 04:50)</a>:</h4>
+<p><span class="user-mention" data-user-id="7571">@Michael Potts</span> ahh, I see the problem</p>
+
+
+
+<a name="568853"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568853" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568853">(Apr 24 2018 at 04:50)</a>:</h4>
+<p>Yeah, it's generally recommended that you either host all realms on subdomains or just have the one realm on the root domain, more or less for this reason.</p>
+
+
+
+<a name="568854"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568854" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568854">(Apr 24 2018 at 04:51)</a>:</h4>
+<p>I think there isn't actually a way for us to create a cookie on the root domain that doesn't appear on the subdomains, though I'd be happy to be corrected (my memory is a bit fuzzy, but that problem with cookies feels familiar)</p>
+
+
+
+<a name="568970"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568970" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568970">(Apr 24 2018 at 13:20)</a>:</h4>
+<p>I do believe you are correct with the cookie issue. Cookies always apply to subdomain.</p>
+
+
+
+<a name="568971"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/568971" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#568971">(Apr 24 2018 at 13:20)</a>:</h4>
+<p>I'll have to think a bit more on how I engineer my solution. Initial thoughts are that I could use eliminate the <em>chat</em> part of <code>org1.chat.domain.com</code> since that may be confusing for people if they are never supposed to use that realm.</p>
+
+
+
+<a name="569124"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569124" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569124">(Apr 24 2018 at 17:03)</a>:</h4>
+<p>Yeah, you could have the domains not be subdomain-related to each other using the REALM_HOSTS setting.</p>
+
+
+
+<a name="569125"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569125" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569125">(Apr 24 2018 at 17:03)</a>:</h4>
+<p>We should probably document more clearly that having one organization on the root domain and another on a subdomain doesn't really work if there are going to be any users in common between the two organizations.</p>
+
+
+
+<a name="569252"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569252" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569252">(Apr 24 2018 at 18:02)</a>:</h4>
+<p>What is this <em>REALM_HOSTS</em> you speak of? It sounds like it would be helpful towards my end goal of having <code>org1.org.com</code> be somehow aliased to <code>org1.chat.domain.com</code>...</p>
+
+
+
+<a name="569256"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569256" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569256">(Apr 24 2018 at 18:03)</a>:</h4>
+<p>It's a not-yet-documented option (in large part because ultimately I think it should be moved to a value in the database), but basically you put into it a dictionary mapping hostnames to a subdomain that you want that hostname to act as</p>
+
+
+
+<a name="569258"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569258" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569258">(Apr 24 2018 at 18:03)</a>:</h4>
+<p>E.g. you'd put something like <code>{'org1.org.com': 'org1'}</code></p>
+
+
+
+<a name="569279"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569279" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569279">(Apr 24 2018 at 18:13)</a>:</h4>
+<p>ok this is amazing. Gonna not try to get too excited and actually get my instance working 100% before trying that.</p>
+
+
+
+<a name="569290"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569290" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569290">(Apr 24 2018 at 18:26)</a>:</h4>
+<p>My previous message was a lie.</p>
+<p>That worked perfectly. Had to add <code>org1.org.com</code> into the <em>ALLOWED_HOSTS</em>, which is obvious in hindsight.</p>
+
+
+
+<a name="569293"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569293" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569293">(Apr 24 2018 at 18:30)</a>:</h4>
+<p>Yeah, it's possible we could do something clever with the default ALLOWED_HOSTS and auto-append <code>REALM_HOSTS.keys()</code> to it or something.</p>
+
+
+
+<a name="569297"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569297" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569297">(Apr 24 2018 at 18:33)</a>:</h4>
+<blockquote>
+<p>Yeah, it's possible we could do something clever with the default ALLOWED_HOSTS and auto-append <code>REALM_HOSTS.keys()</code> to it or something.</p>
+</blockquote>
+<p>We actually do this already -- from <code>zproject/settings.py</code>:</p>
+<div class="codehilite"><pre><span></span># ... and with the hosts in REALM_HOSTS.
+ALLOWED_HOSTS += REALM_HOSTS.values()
+</pre></div>
+
+
+
+<a name="569298"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569298" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569298">(Apr 24 2018 at 18:33)</a>:</h4>
+<p>Or maybe I should just quote the documentation, not the implementation <span class="emoji emoji-1f609" title="wink">:wink:</span> </p>
+<div class="codehilite"><pre><span></span>    # Alternate hostnames to serve particular realms on, in addition to
+    # their usual subdomains.  Keys are realm string_ids (aka subdomains),
+    # and values are alternate hosts.
+    # The values will also be added to ALLOWED_HOSTS.
+    &#39;REALM_HOSTS&#39;: {},
+</pre></div>
+
+
+
+<a name="569299"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569299" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569299">(Apr 24 2018 at 18:34)</a>:</h4>
+<p>So <span class="user-mention" data-user-id="7571">@Michael Potts</span>  I'm actually a bit puzzled at the part where you had to add <code>org1.org.com</code> to the ALLOWED_HOSTS. What's your <code>REALM_HOSTS</code> setting? Does it really not work if you leave that out of your ALLOWED_HOSTS?</p>
+
+
+
+<a name="569300"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569300" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569300">(Apr 24 2018 at 18:36)</a>:</h4>
+<p><span class="user-mention" data-user-id="2187">@Greg Price</span>  Let me retest, stand by</p>
+
+
+
+<a name="569302"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569302" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569302">(Apr 24 2018 at 18:37)</a>:</h4>
+<p>Also yeah, I can confirm FTR that subdomains of EXTERNAL_HOSTS should be automatically included in ALLOWED_HOSTS.</p>
+
+
+
+<a name="569305"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569305" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569305">(Apr 24 2018 at 18:39)</a>:</h4>
+<p><span class="user-mention" data-user-id="2187">@Greg Price</span> <br>
+<a href="/user_uploads/2/6a/_fKple4QR6pOPa_mRlI8MaCw/pasted_image.png" target="_blank" title="pasted_image.png">pasted image</a><br>
+That results in a 400 Bad Request on <code>chat.bsidesjax.org</code>.</p>
+<div class="message_inline_image"><a href="/user_uploads/2/6a/_fKple4QR6pOPa_mRlI8MaCw/pasted_image.png" target="_blank" title="pasted image"><img src="/user_uploads/2/6a/_fKple4QR6pOPa_mRlI8MaCw/pasted_image.png"></a></div>
+
+
+
+<a name="569306"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569306" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569306">(Apr 24 2018 at 18:40)</a>:</h4>
+<p><a href="/user_uploads/2/69/6hb7fVmAzu7esyXdcpwOdnWp/2018-04-24-14_39_07-rootChat01_-_home_zulip_deployments.png" target="_blank" title="2018-04-24-14_39_07-rootChat01_-_home_zulip_deployments.png">2018-04-24-14_39_07-rootChat01_-_home_zulip_deployments.png</a> <br>
+That works.</p>
+<div class="message_inline_image"><a href="/user_uploads/2/69/6hb7fVmAzu7esyXdcpwOdnWp/2018-04-24-14_39_07-rootChat01_-_home_zulip_deployments.png" target="_blank" title="2018-04-24-14_39_07-rootChat01_-_home_zulip_deployments.png"><img src="/user_uploads/2/69/6hb7fVmAzu7esyXdcpwOdnWp/2018-04-24-14_39_07-rootChat01_-_home_zulip_deployments.png"></a></div>
+
+
+
+<a name="569307"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569307" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569307">(Apr 24 2018 at 18:41)</a>:</h4>
+<p>can i presume that the date of the deployment folder is analogous to the version I am running? if so, that's the version!</p>
+
+
+
+<a name="569309"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569309" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569309">(Apr 24 2018 at 18:43)</a>:</h4>
+<p>(no point in obscuring org names, so I am just gonna give up on that. lol. did it out of habit anyways)</p>
+
+
+
+<a name="569320"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569320" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569320">(Apr 24 2018 at 19:00)</a>:</h4>
+<p><span class="user-mention" data-user-id="7571">@Michael Potts</span> the date is the date you installed it, not the version number.</p>
+
+
+
+<a name="569344"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569344" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569344">(Apr 24 2018 at 19:08)</a>:</h4>
+<blockquote>
+<p><span class="user-mention" data-user-id="7571">@Michael Potts</span> the date is the date you installed it, not the version number.</p>
+</blockquote>
+<p>Yea... that makes sense now that I look at it again... :)</p>
+
+
+
+<a name="569348"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569348" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569348">(Apr 24 2018 at 19:11)</a>:</h4>
+<p>Also, evidently I lied. it's not working. It doesn't result in a 400 anymore but it takes me to the default realm not the correct realm...</p>
+
+
+
+<a name="569363"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569363" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569363">(Apr 24 2018 at 19:15)</a>:</h4>
+<p>(We definitely use the <code>REALM_HOSTS</code> setting both in production and in the development environment).  Oh, you might need to add some <code>nginx</code> config for your separate host as well.</p>
+
+
+
+<a name="569374"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569374" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569374">(Apr 24 2018 at 19:23)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span>  I glanced through there but didn't see anything referencing my existing domain (that I could then append with my own). I'll look further..</p>
+
+
+
+<a name="569375"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569375" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569375">(Apr 24 2018 at 19:24)</a>:</h4>
+<p>Oh hey look what I found. lol<br>
+<a href="/user_uploads/2/ba/gSpjCxTkSpL5lyC7aYy3IDjm/pasted_image.png" target="_blank" title="pasted_image.png">pasted image</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/ba/gSpjCxTkSpL5lyC7aYy3IDjm/pasted_image.png" target="_blank" title="pasted image"><img src="/user_uploads/2/ba/gSpjCxTkSpL5lyC7aYy3IDjm/pasted_image.png"></a></div>
+
+
+
+<a name="569423"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569423" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569423">(Apr 24 2018 at 21:04)</a>:</h4>
+<p>if anyone has any tips of where to look, do let me know! thus far I have not found anything that makes me think I am on the right track.</p>
+
+
+
+<a name="569466"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569466" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569466">(Apr 24 2018 at 21:27)</a>:</h4>
+<p><span class="user-mention" data-user-id="7571">@Michael Potts</span> what have you been trying in debugging?</p>
+
+
+
+<a name="569467"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569467" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569467">(Apr 24 2018 at 21:29)</a>:</h4>
+<p>I think you might want to start up a <code>manage.py shell</code>, use <code>get_realm</code> to access your two realms, and play with printing <code>realm.host</code> and <code>Realm.host_for_subdomain(subdomain)</code> for each.  Ideally, those should all be consistent with what you're trying to do.</p>
+
+
+
+<a name="569468"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569468" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569468">(Apr 24 2018 at 21:29)</a>:</h4>
+<p>And then the next thing would be to watch the <code>/var/log/zulip/server.log</code> and <code>/var/log/nginx/error.log</code> when accessing the problem subdomain to see what's going on.</p>
+
+
+
+<a name="569469"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569469" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569469">(Apr 24 2018 at 21:29)</a>:</h4>
+<p>Finally, make sure you cleared your browser cookies after making the changes, since old cookies from the old model could confuse things.</p>
+
+
+
+<a name="569472"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569472" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569472">(Apr 24 2018 at 21:32)</a>:</h4>
+<p><span class="user-mention" data-user-id="7571">@Michael Potts</span> I think I see the problem (or a problem): your <code>REALM_HOSTS</code> is inverted. <span class="emoji emoji-1f609" title="wink">:wink:</span> Per the doc comment I quoted above, it should look like</p>
+<div class="codehilite"><pre><span></span>REALM_HOSTS = {&#39;bsidesjax&#39;: &#39;chat.bsidesjax.org&#39;}
+</pre></div>
+
+
+
+<a name="569473"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569473" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569473">(Apr 24 2018 at 21:34)</a>:</h4>
+<p>(Tim had remembered it the other way around when mentioning the option above, which is presumably where you got that from)</p>
+
+
+
+<a name="569494"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569494" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Potts <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569494">(Apr 24 2018 at 22:03)</a>:</h4>
+<p>That worked! Let me add the others real quick.</p>
+
+
+
+<a name="569506"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/multiorg%3A%20realm%20redirecting%20to%20default%20realm/near/569506" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/multiorg.3A.20realm.20redirecting.20to.20default.20realm.html#569506">(Apr 24 2018 at 22:32)</a>:</h4>
+<p>Great :)</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

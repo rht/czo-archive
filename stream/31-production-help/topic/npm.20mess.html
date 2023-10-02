@@ -1,0 +1,550 @@
+<html>
+<head><meta charset="utf-8"><title>npm mess · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html">npm mess</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="252550"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252550" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252550">(Jul 18 2017 at 11:46)</a>:</h4>
+<p>Every time, I have been encountering errors whenever I run the <code>upgrade-zulip-from-git</code> script. One is that sometimes <code>/srv</code> is not writable by the user <code>zulip</code>, which is fixed by <code>mkdir -p /srv/zulip-npm-cache</code> as root then <code>chown -R</code> it. Then there is this error (every time! !#$@!#$!$):</p>
+<div class="codehilite"><pre><span></span>168968 error TypeError: Object.keys called on non-object
+168968 error     at Function.keys (native)
+168968 error     at installTargetsError (/usr/share/npm/lib/cache.js:708:24)
+168968 error     at /usr/share/npm/lib/cache.js:638:10
+168968 error     at saved (/usr/share/npm/node_modules/npm-registry-client/lib/get.js:142:7)
+168968 error     at /usr/lib/nodejs/graceful-fs/polyfills.js:133:7
+168968 error     at Object.oncomplete (fs.js:107:15)
+168969 error If you need help, you may report this log at:
+168969 error     &lt;http://github.com/isaacs/npm/issues&gt;
+168969 error or email it to:
+168969 error     &lt;npm-@googlegroups.com&gt;
+168970 error System Linux 4.4.0-78-generic
+168971 error command &quot;/usr/bin/nodejs&quot; &quot;/usr/bin/npm&quot; &quot;install&quot; &quot;--production&quot; &quot;--prefix&quot; &quot;/srv/zulip-npm-cache/8d1c7e825d241d0994641383a40d523135b9a342&quot;
+168972 error cwd /home/zulip/deployments/2017-07-18-10-10-04
+168973 error node -v v0.10.25
+168974 error npm -v 1.3.10
+168975 error type called_on_non_object
+</pre></div>
+
+
+<p>I suspect this is due to some chmod permission issues that I am too exhausted to figure. I side-stepped the problem by rebasing the branch I am testing on (rht:dev-py3-021) on <code>yarn</code>.</p>
+<p>Then I encountered this error (which was quickly duct-taped by purging the old version version of node/nvm -- the actual fix, I think, is to check whether the existing node has strict mode enabled?):</p>
+<div class="codehilite"><pre><span></span>2017-07-18 10:39:13,457 upgrade-zulip-stage-2: Building static assets...
+
+/srv/zulip-npm-cache/yarn/lib/v8-compile-cache.js:3
+const Module = require(&#39;module&#39;);
+^^^^^
+SyntaxError: Use of const in strict mode.
+    at Module._compile (module.js:439:25)
+    at Object.Module._extensions..js (module.js:474:10)
+    at Module.load (module.js:356:32)
+    at Function.Module._load (module.js:312:12)
+    at Module.require (module.js:364:17)
+    at require (module.js:380:17)
+    at Object.&lt;anonymous&gt; (/srv/zulip-npm-cache/yarn/bin/yarn.js:6:1)
+    at Module._compile (module.js:456:26)
+    at Object.Module._extensions..js (module.js:474:10)
+    at Module.load (module.js:356:32)
+Traceback (most recent call last):
+  File &quot;./tools/update-prod-static&quot;, line 38, in &lt;module&gt;
+    setup_node_modules(yarn_args=[&#39;--prod&#39;], stdout=fp, stderr=fp)
+  File &quot;./tools/../scripts/lib/node_cache.py&quot;, line 36, in setup_node_modules
+    sha1sum = generate_sha1sum_node_modules(yarn_args)
+  File &quot;./tools/../scripts/lib/node_cache.py&quot;, line 26, in generate_sha1sum_node_modules
+    sha1sum.update(subprocess_text_output([YARN_BIN, &#39;--version&#39;]).encode(&#39;utf8&#39;))
+  File &quot;./tools/../scripts/lib/zulip_tools.py&quot;, line 57, in subprocess_text_output
+    return subprocess.check_output(args, universal_newlines=True).strip()
+  File &quot;/usr/lib/python3.4/subprocess.py&quot;, line 620, in check_output
+    raise CalledProcessError(retcode, process.args, output=output)
+subprocess.CalledProcessError: Command &#39;[&#39;/srv/zulip-npm-cache/yarn/bin/yarn&#39;, &#39;--version&#39;]&#39; returned non-zero exit status 8
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2017-07-18-10-38-57/scripts/lib/upgrade-zulip-stage-2&quot;, line 82, in &lt;module&gt;
+    preexec_fn=su_to_zulip)
+  File &quot;/usr/lib/python3.4/subprocess.py&quot;, line 561, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;python3&#39;, &#39;./tools/update-prod-static&#39;, &#39;--authors-not-required&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/scripts/upgrade-zulip-from-git&quot;, line 81, in &lt;module&gt;
+    deploy_path, &quot;--from-git&quot;] + deploy_options)
+  File &quot;/usr/lib/python2.7/subprocess.py&quot;, line 540, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;sudo&#39;, &#39;/home/zulip/deployments/2017-07-18-10-38-57/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2017-07-18-10-38-57&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1
+</pre></div>
+
+
+<p>The action sets are either:<br>
+1. Figure out how to fix the npm permission bug.<br>
+2. Sidestep the problem with <code>yarn</code>.</p>
+<p>cc: <span class="user-mention" data-user-email="zulip@feorlen.org" data-user-id="397">@Andrea  Longo</span> <span class="user-mention" data-user-email="psniffler@gmail.com" data-user-id="656">@Paul Weaver</span></p>
+
+
+
+<a name="252652"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252652" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252652">(Jul 18 2017 at 15:58)</a>:</h4>
+<p>I guess you are also testing on another machine, as I only saw what looked like one try at upgrading on mine. I did zulip-puppet-apply and then upgrade  from your branch (as configured, and both dev-py3-021 and master.) I'm getting similar errors, although not with the yarn stuff.</p>
+
+
+
+<a name="252653"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252653" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252653">(Jul 18 2017 at 15:59)</a>:</h4>
+<p>I will look at this again this afternoon, as I need to head out for something. I'm seeing /srv/zulip-npm-cache owned by zulip:zulip</p>
+
+
+
+<a name="252657"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252657" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252657">(Jul 18 2017 at 16:00)</a>:</h4>
+<p>Here's the error I got when I tried:</p>
+<div class="codehilite"><pre><span></span>/home/zulip/deployments/current/scripts/upgrade-zulip-from-git master
+
++ npm install --production --prefix /srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922
+
+Error running a subcommand of ./tools/update-prod-static: npm install --production --prefix /srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922
+Actual error output for the subcommand is just above this.
+
+Traceback (most recent call last):
+  File &quot;./tools/update-prod-static&quot;, line 38, in &lt;module&gt;
+    setup_node_modules(npm_args=[&#39;--production&#39;], stdout=fp, stderr=fp)
+  File &quot;./tools/../scripts/lib/node_cache.py&quot;, line 43, in setup_node_modules
+    copy_modules=copy_modules)
+  File &quot;./tools/../scripts/lib/node_cache.py&quot;, line 71, in do_npm_install
+    run(cmd, stdout=stdout, stderr=stderr)
+  File &quot;./tools/../scripts/lib/zulip_tools.py&quot;, line 125, in run
+    subprocess.check_call(args, **kwargs)
+  File &quot;/usr/lib/python2.7/subprocess.py&quot;, line 540, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;npm&#39;, &#39;install&#39;, &#39;--production&#39;, &#39;--prefix&#39;, &#39;/srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922&#39;]&#39; returned non-zero exit status 1
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2017-07-18-15-42-48/scripts/lib/upgrade-zulip-stage-2&quot;, line 82, in &lt;module&gt;
+    preexec_fn=su_to_zulip)
+  File &quot;/usr/lib/python3.4/subprocess.py&quot;, line 561, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;./tools/update-prod-static&#39;, &#39;--authors-not-required&#39;, &#39;--prev-deploy&#39;, &#39;/home/zulip/deployments/current&#39;]&#39; returned non-zero exit status 1
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/scripts/upgrade-zulip-from-git&quot;, line 81, in &lt;module&gt;
+    deploy_path, &quot;--from-git&quot;] + deploy_options)
+  File &quot;/usr/lib/python3.4/subprocess.py&quot;, line 561, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;sudo&#39;, &#39;python3&#39;, &#39;/home/zulip/deployments/2017-07-18-15-42-48/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2017-07-18-15-42-48&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1
+</pre></div>
+
+
+
+<a name="252658"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252658" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252658">(Jul 18 2017 at 16:01)</a>:</h4>
+<p>I haven't looked at the version of the script from your branch yet, I'm presuming master is where you rebased? Anyway, need to run.</p>
+
+
+
+<a name="252698"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252698" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252698">(Jul 18 2017 at 17:13)</a>:</h4>
+<p><span class="user-mention" data-user-email="zulip@feorlen.org" data-user-id="397">@Andrea  Longo</span> I think you didn't actually include the real traceback; notice:<br>
+<code>Actual error output for the subcommand is just above this.</code></p>
+
+
+
+<a name="252699"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252699" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252699">(Jul 18 2017 at 17:14)</a>:</h4>
+<p><span class="user-mention" data-user-email="rhtbot@protonmail.com" data-user-id="2328">@Rein Zustand</span> can you explain more about how you're doing testing?  In production, <code>zulip-npm-cache</code> is created and its permissions set by Puppet.</p>
+
+
+
+<a name="252761"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252761" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252761">(Jul 18 2017 at 17:41)</a>:</h4>
+<p>I tested on a fresh system from scratch, and the problem still persists:</p>
+<p>1. On a fresh system, from an unpacked tarball (1.6.0) , run <code>/root/zulip/scripts/setup/install</code> (I checked the permission of <code>/srv/zulip-npm-cache</code> and found it to be zulip:zulip) and  <code>su zulip -c /home/zulip/deployments/current/scripts/setup/initialize-database</code>. <code>npm install</code> should complete just fine in this first run<br>
+2. <code>/home/zulip/deployments/current/scripts/upgrade-zulip-from-git master</code><br>
+3. ???<br>
+4. "npm install --production --prefix /srv/zulip-npm-cache/..." error <a href="https://chat.zulip.org/#narrow/stream/production.20help/subject/npm.20mess/near/252657" target="_blank" title="https://chat.zulip.org/#narrow/stream/production.20help/subject/npm.20mess/near/252657">https://chat.zulip.org/#narrow/stream/production.20help/subject/npm.20mess/near/252657</a>, which detail can be found in /home/zulip/deployments/2017-07-18-17-35-11/npm-debug.log</p>
+<div class="codehilite"><pre><span></span>165681 silly lockFile a1ff7e0f-unitbezier-0-0-0 unitbezier@0.0.0
+165682 silly lockFile 75c0545c-unassertify-2-0-4 unassertify@2.0.4
+165683 silly lockFile 75c0545c-unassertify-2-0-4 unassertify@2.0.4
+165684 verbose readDependencies using package.json deps
+165685 silly lockFile 0b0010b0-unitbezier-0-0-0 unitbezier@^0.0.0
+165686 silly lockFile 0b0010b0-unitbezier-0-0-0 unitbezier@^0.0.0
+165687 silly lockFile 31263c96-unassertify-2-0-0 unassertify@^2.0.0
+165688 silly lockFile 31263c96-unassertify-2-0-0 unassertify@^2.0.0
+165689 verbose readDependencies using package.json deps
+165690 silly resolved []
+165691 verbose about to build /srv/zulip-npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1/node_modules/plotly.js/node_modules/gl-plot2d/node_modules/gl-select-static/node_modules/cwise/node_modules/static-module/node_modules/falafel/node_modules/isarray
+165692 info build /srv/zulip-npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1/node_modules/plotly.js/node_modules/gl-plot2d/node_modules/gl-select-static/node_modules/cwise/node_modules/static-module/node_modules/falafel/node_modules/isarray
+165693 verbose linkStuff [ false,
+165693 verbose linkStuff   false,
+165693 verbose linkStuff   false,
+165693 verbose linkStuff   &#39;/srv/zulip-npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1/node_modules/plotly.js/node_modules/gl-plot2d/node_modules/gl-select-static/node_modules/cwise/node_modules/static-module/node_modules/falafel/node_modules&#39; ]
+165694 info linkStuff isarray@0.0.1
+165695 verbose linkBins isarray@0.0.1
+165696 verbose linkMans isarray@0.0.1
+165697 verbose rebuildBundles isarray@0.0.1
+165698 info install isarray@0.0.1
+165699 silly lockFile e5e6b41a-vector-tile-1-3-0 vector-tile@1.3.0
+165700 silly lockFile e5e6b41a-vector-tile-1-3-0 vector-tile@1.3.0
+165701 error TypeError: Object.keys called on non-object
+165701 error     at Function.keys (native)
+165701 error     at installTargetsError (/usr/share/npm/lib/cache.js:708:24)
+165701 error     at /usr/share/npm/lib/cache.js:638:10
+165701 error     at saved (/usr/share/npm/node_modules/npm-registry-client/lib/get.js:142:7)
+165701 error     at /usr/lib/nodejs/graceful-fs/polyfills.js:133:7
+165701 error     at Object.oncomplete (fs.js:107:15)
+165702 error If you need help, you may report this log at:
+165702 error     &lt;http://github.com/isaacs/npm/issues&gt;
+165702 error or email it to:
+165702 error     &lt;npm-@googlegroups.com&gt;
+165703 error System Linux 4.4.0-78-generic
+165704 error command &quot;/usr/bin/nodejs&quot; &quot;/usr/bin/npm&quot; &quot;install&quot; &quot;--production&quot; &quot;--prefix&quot; &quot;/srv/zulip-npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1&quot;
+165705 error cwd /home/zulip/deployments/2017-07-18-17-35-11
+165706 error node -v v0.10.25
+165707 error npm -v 1.3.10
+165708 error type called_on_non_object
+165709 verbose exit [ 1, true ]
+</pre></div>
+
+
+
+<a name="252809"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252809" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252809">(Jul 18 2017 at 18:03)</a>:</h4>
+<p>This suggests it's using a super ancient version of these packages:</p>
+<div class="codehilite"><pre><span></span>165706 error node -v v0.10.25
+165707 error npm -v 1.3.10
+</pre></div>
+
+
+
+<a name="252812"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252812" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252812">(Jul 18 2017 at 18:04)</a>:</h4>
+<p>Is <code>scripts/lib/install-node</code> not being run?  Check <code>install.log</code> and <code>upgrade.log</code>.</p>
+
+
+
+<a name="252959"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252959" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252959">(Jul 18 2017 at 19:29)</a>:</h4>
+<p>Whoops yup, thanks for catching that <span class="user-mention" data-user-email="tabbott@zulipchat.com" data-user-id="7">@Tim Abbott</span> ! It's not very exciting tho</p>
+<div class="codehilite"><pre><span></span>Cached version not found! Installing node modules.
++ rm -rf /srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922
++ mkdir -p /srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922
++ cp package.json /srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922
++ npm install --production --prefix /srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922
+
+Error running a subcommand of ./tools/update-prod-static: npm install --production --prefix /srv/zulip-npm-cache/6f5c16b56f1fbbc8fb22e2a27875032f447fd922
+</pre></div>
+
+
+
+<a name="252970"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252970" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252970">(Jul 18 2017 at 19:34)</a>:</h4>
+<p>There should be an <code>update-prod-static.log</code> file in maybe <code>var/log/</code> that has more details.</p>
+
+
+
+<a name="252973"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252973" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Paul Weaver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252973">(Jul 18 2017 at 19:36)</a>:</h4>
+<p>(deleted)</p>
+
+
+
+<a name="252975"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252975" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252975">(Jul 18 2017 at 19:37)</a>:</h4>
+<p>and in it is this:</p>
+<div class="codehilite"><pre><span></span>npm ERR! TypeError: Object.keys called on non-object
+npm ERR!     at Function.keys (native)
+npm ERR!     at installTargetsError (/usr/share/npm/lib/cache.js:708:24)
+npm ERR!     at /usr/share/npm/lib/cache.js:638:10
+npm ERR!     at saved (/usr/share/npm/node_modules/npm-registry-client/lib/get.js:142:7)
+npm ERR!     at /usr/lib/nodejs/graceful-fs/polyfills.js:133:7
+npm ERR!     at Object.oncomplete (fs.js:107:15)
+npm ERR! If you need help, you may report this log at:
+npm ERR!     &lt;http://github.com/isaacs/npm/issues&gt;
+npm ERR! or email it to:
+npm ERR!     &lt;npm-@googlegroups.com&gt;
+
+npm ERR! System Linux 4.4.0-78-generic
+npm ERR! command &quot;/usr/bin/nodejs&quot; &quot;/usr/bin/npm&quot; &quot;install&quot; &quot;--production&quot; &quot;--prefix&quot; &quot;/srv/zulip-n\
+pm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1&quot;
+npm ERR! cwd /home/zulip/deployments/2017-07-18-17-35-11
+npm ERR! node -v v0.10.25
+npm ERR! npm -v 1.3.10
+npm ERR! type called_on_non_object
+</pre></div>
+
+
+
+<a name="252977"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252977" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252977">(Jul 18 2017 at 19:37)</a>:</h4>
+<p>npm-debug.log:</p>
+<div class="codehilite"><pre><span></span>165698 info install isarray@0.0.1
+165699 silly lockFile e5e6b41a-vector-tile-1-3-0 vector-tile@1.3.0
+165700 silly lockFile e5e6b41a-vector-tile-1-3-0 vector-tile@1.3.0
+165701 error TypeError: Object.keys called on non-object
+165701 error     at Function.keys (native)
+165701 error     at installTargetsError (/usr/share/npm/lib/cache.js:708:24)
+165701 error     at /usr/share/npm/lib/cache.js:638:10
+165701 error     at saved (/usr/share/npm/node_modules/npm-registry-client/lib/get.js:142:7)
+165701 error     at /usr/lib/nodejs/graceful-fs/polyfills.js:133:7
+165701 error     at Object.oncomplete (fs.js:107:15)
+165702 error If you need help, you may report this log at:
+165702 error     &lt;http://github.com/isaacs/npm/issues&gt;
+165702 error or email it to:
+165702 error     &lt;npm-@googlegroups.com&gt;
+165703 error System Linux 4.4.0-78-generic
+165704 error command &quot;/usr/bin/nodejs&quot; &quot;/usr/bin/npm&quot; &quot;install&quot; &quot;--production&quot; &quot;--prefix&quot; &quot;/srv/zul\
+ip-npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1&quot;
+165705 error cwd /home/zulip/deployments/2017-07-18-17-35-11
+165706 error node -v v0.10.25
+165707 error npm -v 1.3.10
+165708 error type called_on_non_object
+165709 verbose exit [ 1, true ]
+</pre></div>
+
+
+
+<a name="252981"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252981" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252981">(Jul 18 2017 at 19:39)</a>:</h4>
+<p>OK, the problem here is definitely that you're not running the newer <code>node</code> and <code>npm</code> that <code>scripts/lib/install-node</code> are supposed to install for you.</p>
+
+
+
+<a name="252982"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252982" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252982">(Jul 18 2017 at 19:39)</a>:</h4>
+<p>So that's the thing to debug.  Can you look in <code>install.log</code> for where that script got run?</p>
+
+
+
+<a name="252983"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252983" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252983">(Jul 18 2017 at 19:40)</a>:</h4>
+<p>We did modify it recently, so it's possible we broke it in production somehow.</p>
+
+
+
+<a name="252985"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252985" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252985">(Jul 18 2017 at 19:41)</a>:</h4>
+<div class="codehilite"><pre><span></span>+ sudo chmod -R a+rX /srv/zulip-venv-cache/82d52a88465eb7cc794a3467a56f256631c6a311/zulip-venv
++ touch /srv/zulip-venv-cache/82d52a88465eb7cc794a3467a56f256631c6a311/zulip-venv/success-stamp
+Using cached Python venv from /srv/zulip-venv-cache/82d52a88465eb7cc794a3467a56f256631c6a311/zulip-\
+venv
++ sudo ln -nsf /srv/zulip-venv-cache/82d52a88465eb7cc794a3467a56f256631c6a311/zulip-venv /root/zuli\
+p/zulip-venv
++ ln -nsf zulip-venv /root/zulip/zulip-current-venv
++ /root/zulip/scripts/lib/install-node
+v6.6.0 is already installed.
+Now using node v6.6.0 (npm v3.10.3)
+</pre></div>
+
+
+
+<a name="252986"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252986" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252986">(Jul 18 2017 at 19:42)</a>:</h4>
+<p>Can you run <code>which node</code>?</p>
+
+
+
+<a name="252987"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252987" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252987">(Jul 18 2017 at 19:42)</a>:</h4>
+<p>I've done this before and it was fine, but if something changed recently maybe that is indeed the problem.</p>
+
+
+
+<a name="252988"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252988" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252988">(Jul 18 2017 at 19:43)</a>:</h4>
+<div class="codehilite"><pre><span></span>minmi[root]:/var/log/zulip$ which node
+/usr/local/nvm/versions/node/v6.6.0/bin/node
+</pre></div>
+
+
+<div class="codehilite"><pre><span></span>zulip@minmi:/var/log/zulip$ which node
+/usr/local/bin/node
+</pre></div>
+
+
+
+<a name="252989"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252989" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252989">(Jul 18 2017 at 19:43)</a>:</h4>
+<p>The paths are different between root and zulip users?</p>
+
+
+
+<a name="252990"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252990" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252990">(Jul 18 2017 at 19:43)</a>:</h4>
+<p>that's weird but probably not the cause of our problem</p>
+
+
+
+<a name="252991"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252991" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252991">(Jul 18 2017 at 19:44)</a>:</h4>
+<p>Run both with <code>/path/to/node --version</code>?</p>
+
+
+
+<a name="252992"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252992" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252992">(Jul 18 2017 at 19:44)</a>:</h4>
+<p>Oh!  It's running <code>/usr/bin/nodejs</code></p>
+
+
+
+<a name="252993"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252993" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252993">(Jul 18 2017 at 19:45)</a>:</h4>
+<div class="codehilite"><pre><span></span>minmi[root]:/var/log/zulip$ which node
+/usr/local/nvm/versions/node/v6.6.0/bin/node
+minmi[root]:/var/log/zulip$ /usr/local/nvm/versions/node/v6.6.0/bin/node --version
+v6.6.0
+minmi[root]:/var/log/zulip$ su zulip
+zulip@minmi:/var/log/zulip$ which node
+/usr/local/bin/node
+zulip@minmi:/var/log/zulip$ /usr/local/bin/node --version
+v6.6.0
+</pre></div>
+
+
+
+<a name="252994"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252994" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252994">(Jul 18 2017 at 19:45)</a>:</h4>
+<p>From your output:<br>
+<code>command "/usr/bin/nodejs" "/usr/bin/npm" "install" "--production" "--prefix" "/srv/zulip-npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1"</code></p>
+
+
+
+<a name="252996"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252996" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252996">(Jul 18 2017 at 19:45)</a>:</h4>
+<p>They claim to be the same version, at any rate.</p>
+
+
+
+<a name="252998"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252998" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252998">(Jul 18 2017 at 19:45)</a>:</h4>
+<p>Running <code>git grep nodejs</code>, I don't see any references to <code>/usr/bin/nodejs</code> in our codebase.</p>
+
+
+
+<a name="252999"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/252999" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#252999">(Jul 18 2017 at 19:45)</a>:</h4>
+<p>That's weird.</p>
+
+
+
+<a name="253000"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253000" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253000">(Jul 18 2017 at 19:46)</a>:</h4>
+<p>What branch are you testing?</p>
+
+
+
+<a name="253001"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253001" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253001">(Jul 18 2017 at 19:46)</a>:</h4>
+<div class="codehilite"><pre><span></span>[deployment]
+git_repo_url = https://github.com/rht/zulip.git
+</pre></div>
+
+
+
+<a name="253005"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253005" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253005">(Jul 18 2017 at 19:47)</a>:</h4>
+<p>since <span class="user-mention" data-user-email="rhtbot@protonmail.com" data-user-id="2328">@Rein Zustand</span> was working on something. I tried git upgrade to both his master and dev-py3-021 with similar results. I think his earlier post was from a different machine tho.</p>
+
+
+
+<a name="253007"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253007" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253007">(Jul 18 2017 at 19:48)</a>:</h4>
+<p>I haven't looked at his changes</p>
+
+
+
+<a name="253009"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253009" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253009">(Jul 18 2017 at 19:49)</a>:</h4>
+<p>He's been using my machine for testing while I've been away.</p>
+
+
+
+<a name="253010"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253010" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253010">(Jul 18 2017 at 19:49)</a>:</h4>
+<p>OK, my guess is that his branch makes a change that is causing <code>/usr/bin/nodejs</code> to be used incorrectly.</p>
+
+
+
+<a name="253030"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253030" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253030">(Jul 18 2017 at 19:58)</a>:</h4>
+<p>I'm not finding it right off, we'll see what <span class="user-mention" data-user-email="rhtbot@protonmail.com" data-user-id="2328">@Rein Zustand</span> thinks when he's back online. If I come across it I'll let you know.</p>
+
+
+
+<a name="253390"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253390" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253390">(Jul 19 2017 at 07:51)</a>:</h4>
+<p>The problem has been identified as the <code>NPM_BIN</code> not being <code>/usr/local/bin/npm</code> when <a href="https://github.com/zulip/zulip/blob/240f37e8c4e89384d24741a6be0184c9b457f5ef/scripts/lib/node_cache.py#L67" target="_blank" title="https://github.com/zulip/zulip/blob/240f37e8c4e89384d24741a6be0184c9b457f5ef/scripts/lib/node_cache.py#L67">https://github.com/zulip/zulip/blob/240f37e8c4e89384d24741a6be0184c9b457f5ef/scripts/lib/node_cache.py#L67</a> is invoked, as evident from</p>
+<div class="codehilite"><pre><span></span>su zulip -c &#39;which npm&#39;
+/usr/bin/npm
+</pre></div>
+
+
+<p>and<br>
+when I slipped <code>subprocess_text_output(['which', 'npm'])</code> into the else clause of <code>do_npm_install</code> in <code>scripts/lib/node_cache.py</code>, it returns <code>/usr/bin/npm</code>.</p>
+<p>The error persists even when the <code>git_repo_url</code> isn't set, when I run <code>upgrade-zulip-from-git</code> from 1.6.0 to zulip/master.</p>
+
+
+
+<a name="253391"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253391" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253391">(Jul 19 2017 at 08:04)</a>:</h4>
+<p>The fix to this particular problem is to set <a href="https://github.com/zulip/zulip/blob/240f37e8c4e89384d24741a6be0184c9b457f5ef/scripts/lib/node_cache.py#L67" target="_blank" title="https://github.com/zulip/zulip/blob/240f37e8c4e89384d24741a6be0184c9b457f5ef/scripts/lib/node_cache.py#L67">https://github.com/zulip/zulip/blob/240f37e8c4e89384d24741a6be0184c9b457f5ef/scripts/lib/node_cache.py#L67</a> as <code>NPM_BIN</code> where <code>NPM_BIN = '/usr/local/bin/npm'</code>, and when I did this, I ran into permission problem, which I had to fix by <code>chmod +rx /usr/local/bin/npm</code>, then</p>
+<div class="codehilite"><pre><span></span>2017-07-19 07:48:56,287 upgrade-zulip-stage-2: Upgrade complete!
+2017-07-19 07:48:56,329 purge-deployments: No old deployment directories to purge
+</pre></div>
+
+
+<p>.</p>
+
+
+
+<a name="253392"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253392" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253392">(Jul 19 2017 at 08:17)</a>:</h4>
+<p>The reason why this is not present in <code>yarn</code>:  npm is bundled with node, but <code>yarn</code> is not, so it defaults to the <code>/usr/local/bin/yarn</code> path  unless it is installed as a system package.</p>
+
+
+
+<a name="253501"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253501" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253501">(Jul 19 2017 at 15:52)</a>:</h4>
+<p><span class="user-mention" data-user-email="rhtbot@protonmail.com" data-user-id="2328">@Rein Zustand</span> So node was not installed correctly for the zulip user? It looks like you manually fixed it on my server and Zulip is running again.</p>
+
+
+
+<a name="253502"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253502" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253502">(Jul 19 2017 at 15:52)</a>:</h4>
+<p>Is this what fixed it? (From zulip user shell history)<br>
+<code>/usr/local/bin/npm install --production --prefix /srv/zulip-npm-cache/e5fb9b2d845bd6d05942ce86f58a0e1ce8c9ced1</code></p>
+
+
+
+<a name="253505"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253505" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea  Longo <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253505">(Jul 19 2017 at 15:54)</a>:</h4>
+<p>Note for everybody else: this is a test production system, so much of what we are talking about would not apply to a full production system with real users.</p>
+
+
+
+<a name="253727"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253727" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253727">(Jul 19 2017 at 18:16)</a>:</h4>
+<p>So, I'm not sure I follow.  We should be running <code>npm</code> from <code>PATH</code>, and <code>/usr/local/bin/npm</code> should be ahead of <code>/usr/bin/npm</code> in PATH.  </p>
+<p>For the permissions problem, I wonder whether <code>sed</code> is messing that up?</p>
+
+
+
+<a name="253735"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/253735" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#253735">(Jul 19 2017 at 18:20)</a>:</h4>
+<p>Nope, just tested that.  Yeah, I guess I don't see why <code>su zulip -c 'which npm'</code> isn't preferring the <code>/usr/local/bin/</code> version.</p>
+
+
+
+<a name="254120"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/npm%20mess/near/254120" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/npm.20mess.html#254120">(Jul 20 2017 at 07:58)</a>:</h4>
+<p>Reproduced the <code>upgrade-zulip-from-git</code> problem on Travis, which is run from rht:master branch to pweaver:yarn.<br>
+<a href="https://travis-ci.org/rht/zulip/jobs/255549494" target="_blank" title="https://travis-ci.org/rht/zulip/jobs/255549494">https://travis-ci.org/rht/zulip/jobs/255549494</a>, via <a href="https://github.com/rht/zulip/commit/85a032627c340e160d0c5796512671a2fd586708" target="_blank" title="https://github.com/rht/zulip/commit/85a032627c340e160d0c5796512671a2fd586708">https://github.com/rht/zulip/commit/85a032627c340e160d0c5796512671a2fd586708</a>.</p>
+<div class="codehilite"><pre><span></span>Jul 20 07:15:55 Error running a subcommand of ./tools/update-prod-static: mkdir -p /home/travis/zulip-npm-cache/63fea5b0dd9caee27d347841cda6b2e777e6b008
+Jul 20 07:15:55 Actual error output for the subcommand is just above this.
+Jul 20 07:15:55
+</pre></div>
+
+
+<p>This always can be fixed with manual intervention. Currently, I'm figuring a hotfix to make the <code>upgrade-zulip-from-git</code> robust.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

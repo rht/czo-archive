@@ -1,0 +1,44 @@
+[
+    {
+        "content": "<p>When I send an alert to myself, I want to see it in green, just because I might be testing that my alert words work, or maybe I like that it highlights the message a bit when I'm scanning back through my stream to find things I need to do or whatever.</p>\n<p>But it's super annoying to have notifications when I alert myself, particularly if I'm doing an alert like <code>@support</code> to notify my team members on the support team of something.</p>\n<p>So I'm trying to fix the code so that self-alerts show in green, but there are no notifications.  That part's easy enough.</p>",
+        "id": 297439,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1507836741
+    },
+    {
+        "content": "<p>And, then, <span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span>, there is indeed a local echo issue, as you hypothesized on <a href=\"https://github.com/zulip/zulip/pull/6946\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/6946\">#6946</a>.  Because we originally thought green highlights was undesired for self-alerts, the local-echo code used that simplification to basically ignore the flag when the host responded.</p>",
+        "id": 297440,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1507836865
+    },
+    {
+        "content": "<p>So I can fix the non-local-echo codepath very easily, but for local echo, I need to decide a strategy:</p>\n<ul>\n<li>We can optimistically highlight the alert words locally</li>\n<li>We can just wait for the host.</li>\n</ul>\n<p>In either situation, we need to look at the host response to make sure that either we un-highlight alert words that didn't take (for the former case) or we highlight words that the server found (for the latter case).</p>\n<p>Doing alert words locally is possible, but it's a bit expensive to parse through the message.</p>",
+        "id": 297441,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1507837063
+    },
+    {
+        "content": "<p>There's also the added twist that even if the host knows about an alert word that we don't know about, it doesn't really help us when it comes to the green highlight, since we need alert words locally to do the highlighting.  (But if the host fails to mark it as alerted, we can at least get a \"true\" negative, unless there are multiple alert words at play, which is a corner case that I think we can call negligible.)</p>",
+        "id": 297443,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1507837177
+    },
+    {
+        "content": "<p>I think my inclination is to just ignore alert words when we parse the message locally, and then if the <code>has_alert_words</code> flag is set on the host response, we'll re-render.  This will set us up to do the same kind of process for other flags, where we might not have the luxury of being able to do stuff locally.  (The main upcoming thing is self-mentions, where we <strong>do</strong> have enough info locally to decide on the pink background, so this concern may also be kind of moot.)</p>",
+        "id": 297444,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1507837368
+    },
+    {
+        "content": "<p>I think we can just wait for the host.</p>",
+        "id": 297456,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1507841075
+    },
+    {
+        "content": "<p>Yeah, I went that route.  <a href=\"https://github.com/zulip/zulip/pull/6976\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/6976\">#6976</a></p>\n<p>It turns out doing it locally would also have the added complication of needing to strip markup from <code>content</code> or having a new field like <code>pre_alerting_content</code>.</p>",
+        "id": 297458,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1507841160
+    }
+]

@@ -1,0 +1,74 @@
+[
+    {
+        "content": "<p>I'm preparing to migrate a bunch of chat history from a private self-hosted Matrix server to a working Zulip installation. I'm doing this by using Element's chat export function (painfully for each channel), feeding the resulting transcripts into a hacky script I wrote that POSTs the messages to a Zulip bot created specifically for preserving this chat history.</p>\n<p>This is all fine, but I'm worried about the scale of work involved in sorting said history. I suspect I will be moving many chunks of discussion into new appropriately titled topics. Though I see the option to \"move only this message\", \"move this and all following messages in this topic\", and \"move all messages in this topic\", I don't see one for precisely choosing multiple messages that don't continue to the end of the topic. Is there a way to accomplish this other than repeatedly moving single messages? I did check to see if dancing on hotkeys in zulip-terminal was an option but it seems moving messages is not implemented there.</p>",
+        "id": 1528114,
+        "sender_full_name": "shrizza",
+        "timestamp": 1679284976
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21236\">@shrizza</span> While this doesn't help your situation right now, just to clarify, moving messages is supported in zulip-terminal, via the previous approach the web app used of editing a message (as opposed to specifically moving them). However, this depends on the permission settings, which I believe do not reflect some recent changes in server settings, or possibly if one is an administrator.</p>",
+        "id": 1528806,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1679353912
+    },
+    {
+        "content": "<p>Thanks for the advice. I may try this if I start to feel RSI kicking in. I am the owner of the server so hopefully there's no permission issues.</p>",
+        "id": 1528842,
+        "sender_full_name": "shrizza",
+        "timestamp": 1679355677
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21236\">@shrizza</span> does Matrix have a nice data export tool covering the whole organization, not just individual channels?</p>",
+        "id": 1528882,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1679358502
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/Message.20sorting.20when.20migrating.2Fimporting.20messages.20to.20Zulip/near/1528882\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"21236\">shrizza</span> does Matrix have a nice data export tool covering the whole organization, not just individual channels?</p>\n</blockquote>\n<p>Aside from dumping the postgres/sqlite database for the purpose of transferring to another Matrix server (synapse specifically), I don't think so. The E2E encrypted nature of the Matrix protocol implies clients are required to decrypt server message data. And the export function in Element is apparently designed to only operate on individual channels. But again, I am less worried about this than the method I will need to employ to sort blocks of discussion into separate Zulip topics.</p>",
+        "id": 1529024,
+        "sender_full_name": "shrizza",
+        "timestamp": 1679379609
+    },
+    {
+        "content": "<p>This is not an existing solution, but for cross-linking purposes: <a class=\"stream-topic\" data-stream-id=\"127\" href=\"/#narrow/stream/127-integrations/topic/Al-pwrd.20auto.20topic.20rename\">#integrations &gt; Al-pwrd auto topic rename</a></p>",
+        "id": 1529031,
+        "sender_full_name": "Cyphase",
+        "timestamp": 1679380376
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"4976\">Cyphase</span> <a href=\"#narrow/stream/31-production-help/topic/Message.20sorting.20when.20migrating.2Fimporting.20messages.20to.20Zulip/near/1529031\">said</a>:</p>\n<blockquote>\n<p>This is not an existing solution, but for cross-linking purposes: <a class=\"stream-topic\" data-stream-id=\"127\" href=\"/#narrow/stream/127-integrations/topic/Al-pwrd.20auto.20topic.20rename\">#integrations &gt; Al-pwrd auto topic rename</a></p>\n</blockquote>\n<p>Right, I did notice this thread recently. I would definitely just prefer to have an efficient way to do the work manually, than to have an AI do it for me.</p>",
+        "id": 1529089,
+        "sender_full_name": "shrizza",
+        "timestamp": 1679388914
+    },
+    {
+        "content": "<p>Still working out an optimal way to do this and it got me wondering: is there a supported method of inserting rows into <code>zulip.zserver_message</code> that can fulfill the following requirements?:</p>\n<ol>\n<li><strong>Allows arbitrary entry of certain fields such as <code>sender_id</code>, <code>recipient_id</code>, and <code>date_sent</code>.</strong> Imported messages should appear as if they came from the appropriate user from the appropriate datetime (even if that datetime was technically before the server itself was installed).</li>\n<li><strong>Automatically handles population of <code>rendered_content</code>, <code>search_tsvector</code>, and any other relevant fields (in other tables even).</strong> Imported messages should be searchable and behave like organically generated messages.</li>\n<li><strong>Does not generate a notification for any user.</strong> I'd like to invite users first to get their feet wet before committing to the migration of history, but I want to avoid generating excessive notifications that would come from inserting messages the standard way.</li>\n</ol>\n<p>I notice there are these <code>manage.py</code> and <code>actions.py</code> scripts. Could those be used to satisfy the above?</p>",
+        "id": 1541495,
+        "sender_full_name": "shrizza",
+        "timestamp": 1680657902
+    },
+    {
+        "content": "<p>Zulip currently assumes that messages are chronologically ordered by <code>id</code> within each organization, so inserting new messages with arbitrary dates is not supported except when importing a new organization.</p>\n<p>Previous discussion: <a class=\"stream-topic\" data-stream-id=\"3\" href=\"/#narrow/stream/3-backend/topic/message.20sorting.20design\">#backend &gt; message sorting design</a>.</p>",
+        "id": 1541501,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1680660977
+    },
+    {
+        "content": "<p>OK, if I have no problems with emptying the table of all messages, are the points I laid out above achievable?</p>",
+        "id": 1541562,
+        "sender_full_name": "shrizza",
+        "timestamp": 1680672734
+    },
+    {
+        "content": "<p>(assuming I'm capable of sequentially ordering the entire chat history I look to import)</p>",
+        "id": 1541563,
+        "sender_full_name": "shrizza",
+        "timestamp": 1680672791
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21236\">@shrizza</span> given what you've said, if you ONLY want these special messages to exist, my recommendation for what you're trying to do is to build your system on top of the <a href=\"https://zulip.readthedocs.io/en/latest/production/export-and-import.html#data-export\">data import/export system</a>. I don't think we can provide detailed support for that.</p>",
+        "id": 1542202,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1680733848
+    }
+]

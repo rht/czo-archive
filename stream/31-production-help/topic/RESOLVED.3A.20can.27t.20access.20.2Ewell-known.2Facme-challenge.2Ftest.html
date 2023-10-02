@@ -1,0 +1,275 @@
+<html>
+<head><meta charset="utf-8"><title>RESOLVED: can&#x27;t access .well-known/acme-challenge/test · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html">RESOLVED: can&#x27;t access .well-known/acme-challenge/test</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1098570"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1098570" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Joe Corneli <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1098570">(Jan 14 2021 at 13:42)</a>:</h4>
+<p>Hi, I'm trying to access <a href="http://zulip.metameso.org/.well-known/acme-challenge/test">http://zulip.metameso.org/.well-known/acme-challenge/test</a> but I get a 404.  Zulip is running and <code>include /etc/nginx/zulip-include/certbot</code> is included in the <code>sites-available</code> <code>zulip-enterprise</code> configuration:</p>
+<div class="codehilite"><pre><span></span><code># Directory needed for certbot --webroot to work.
+location /.well-known/acme-challenge/ {
+    alias /var/lib/zulip/certbot-webroot/.well-known/acme-challenge/;
+}
+</code></pre></div>
+<p>Similarly,  <a href="http://zulip.metameso.org">http://zulip.metameso.org</a> is also 404 Not Found, whereas  <a href="https://zulip.metameso.org">https://zulip.metameso.org</a> warns of a potential security risk.</p>
+<p>Would you please help me figure out how to get past these obstacles and renew the site's certificate?</p>
+
+
+
+<a name="1098574"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1098574" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Joe Corneli <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1098574">(Jan 14 2021 at 13:51)</a>:</h4>
+<p>OK, I seem to have solved the problem now — I disabled other sites on the domain (<a href="http://metameso.org">metameso.org</a>) and I can access the test file... so I think this should work now!</p>
+
+
+
+<a name="1098578"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1098578" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Joe Corneli <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1098578">(Jan 14 2021 at 13:56)</a>:</h4>
+<p>However, this does lead to the further question:</p>
+<ul>
+<li><strong>Is it possible to set up nginx so that the directory above is accessible <em>even when</em> the main domain is switched on and running?</strong></li>
+</ul>
+<p>Here's the Nginx configuration for the main domain:</p>
+<div class="codehilite"><pre><span></span><code>server {
+
+        root /var/www/html;
+        index index.html index.htm index.nginx-debian.html;
+
+        server_name metameso.org www.metameso.org;
+
+        location / {
+                try_files $uri $uri/ =404;
+        }
+
+        location ~ ^/~(.+?)(/.*)?$ {
+        alias /home/$1/public_html$2;
+        index index.html index.htm;
+        autoindex on;
+        }
+
+    listen [::]:443 ssl ipv6only=on; # managed by Certbot
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/metameso.org/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/metameso.org/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+
+}
+server {
+    if ($host = www.metameso.org) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    if ($host = metameso.org) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+        listen 80 default_server;
+        listen [::]:80 default_server;
+
+        server_name metameso.org www.metameso.org;
+    return 404; # managed by Certbot
+
+}
+</code></pre></div>
+
+
+
+<a name="1098579"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1098579" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Joe Corneli <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1098579">(Jan 14 2021 at 13:57)</a>:</h4>
+<p>And here's the <code>/etc/nginx/sites-available/default</code></p>
+<div class="codehilite"><pre><span></span><code>##
+# You should look at the following URL&#39;s in order to grasp a solid understanding
+# of Nginx configuration files in order to fully unleash the power of Nginx.
+# https://www.nginx.com/resources/wiki/start/
+# https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/
+# https://wiki.debian.org/Nginx/DirectoryStructure
+#
+# In most cases, administrators will remove this file from sites-enabled/ and
+# leave it as reference inside of sites-available where it will continue to be
+# updated by the nginx packaging team.
+#
+# This file will automatically load configuration files provided by other
+# applications, such as Drupal or Wordpress. These applications will be made
+# available underneath a path with that package name, such as /drupal8.
+#
+# Please see /usr/share/doc/nginx-doc/examples/ for more detailed examples.
+##
+
+# Default server configuration
+#
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    # SSL configuration
+    #
+    # listen 443 ssl default_server;
+    # listen [::]:443 ssl default_server;
+    #
+    # Note: You should disable gzip for SSL traffic.
+    # See: https://bugs.debian.org/773332
+    #
+    # Read up on ssl_ciphers to ensure a secure configuration.
+    # See: https://bugs.debian.org/765782
+    #
+    # Self signed certs generated by the ssl-cert package
+    # Don&#39;t use them in a production server!
+    #
+    # include snippets/snakeoil.conf;
+
+    root /var/www/html;
+
+    # Add index.php to the list if you are using PHP
+    index index.html index.htm index.nginx-debian.html;
+
+    server_name _;
+
+    location / {
+        # First attempt to serve request as file, then
+        # as directory, then fall back to displaying a 404.
+        try_files $uri $uri/ =404;
+    }
+
+    # pass PHP scripts to FastCGI server
+    #
+    #location ~ \.php$ {
+    #   include snippets/fastcgi-php.conf;
+    #
+    #   # With php-fpm (or other unix sockets):
+    #   fastcgi_pass unix:/var/run/php/php7.4-fpm.sock;
+    #   # With php-cgi (or other tcp sockets):
+    #   fastcgi_pass 127.0.0.1:9000;
+    #}
+
+    # deny access to .htaccess files, if Apache&#39;s document root
+    # concurs with nginx&#39;s one
+    #
+    #location ~ /\.ht {
+    #   deny all;
+    #}
+}
+</code></pre></div>
+
+
+
+<a name="1098583"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1098583" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1098583">(Jan 14 2021 at 14:00)</a>:</h4>
+<p>The production install guide assumes that one is installing on a fresh server without anything else running. Maybe this requirement needs to be emphasized further.</p>
+
+
+
+<a name="1098594"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1098594" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Joe Corneli <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1098594">(Jan 14 2021 at 14:09)</a>:</h4>
+<p>I'm able to run it in the configuration above without problems, except for the certbot renewals! But, point taken, this isn't a standard setup.</p>
+
+
+
+<a name="1098597"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1098597" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1098597">(Jan 14 2021 at 14:13)</a>:</h4>
+<p>Can you try a dry run of the cert renew to see that it still works for renew?</p>
+
+
+
+<a name="1098599"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1098599" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1098599">(Jan 14 2021 at 14:14)</a>:</h4>
+<p><code>sudo certbot renew --dry-run</code></p>
+
+
+
+<a name="1098609"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1098609" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Joe Corneli <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1098609">(Jan 14 2021 at 14:39)</a>:</h4>
+<p>Yes, I can confirm that the dry run is successful (w/ the other domains turned off!)</p>
+
+
+
+<a name="1099121"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1099121" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1099121">(Jan 15 2021 at 00:33)</a>:</h4>
+<p><span class="user-mention" data-user-id="11098">@Joe Corneli</span> that looks like you have to manually turn off the other domains, and so the cron script can't do automatically by itself?</p>
+
+
+
+<a name="1099122"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1099122" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Joe Corneli <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1099122">(Jan 15 2021 at 00:37)</a>:</h4>
+<p>Yep, that's the plan!</p>
+
+
+
+<a name="1099124"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1099124" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1099124">(Jan 15 2021 at 00:41)</a>:</h4>
+<p><span class="user-mention" data-user-id="11098">@Joe Corneli</span> having to do things manually sounds painful, but looks like certbot supports wildcard subdomain ('*.domain.com'): <a href="https://certbot.eff.org/docs/using.html?highlight=wildcard">https://certbot.eff.org/docs/using.html?highlight=wildcard</a>.</p>
+
+
+
+<a name="1099125"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1099125" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1099125">(Jan 15 2021 at 00:42)</a>:</h4>
+<blockquote>
+<p>If you’d like to obtain a wildcard certificate from Let’s Encrypt or run certbot on a machine other than your target webserver, you can use one of Certbot’s DNS plugins.</p>
+</blockquote>
+
+
+
+<a name="1099126"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1099126" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1099126">(Jan 15 2021 at 00:45)</a>:</h4>
+<p><a href="https://stackoverflow.com/questions/39322112/multiple-subdomains-with-lets-encrypt">https://stackoverflow.com/questions/39322112/multiple-subdomains-with-lets-encrypt</a></p>
+
+
+
+<a name="1100092"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1100092" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1100092">(Jan 16 2021 at 22:51)</a>:</h4>
+<p>Yeah, we use <code>certbot</code>'s wildcard support.</p>
+
+
+
+<a name="1100202"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1100202" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1100202">(Jan 17 2021 at 08:27)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> the doc seems to be outdated: <a href="https://github.com/zulip/zulip/blob/08d716c74175a8b63bf8eb1080381c77f3f853c6/docs/production/ssl-certificates.md">https://github.com/zulip/zulip/blob/08d716c74175a8b63bf8eb1080381c77f3f853c6/docs/production/ssl-certificates.md</a>.</p>
+<blockquote>
+<p>We recommend most Zulip servers use Certbot. You'll want something else if:<br>
+you have an existing workflow for managing SSL certificates that you prefer;<br>
+you need wildcard certificates (support from Let's Encrypt planned for early 2018); or<br>
+your Zulip server is not on the public Internet. (In this case you can still use Certbot, but it's less convenient; and you'll want to ignore Zulip's automation.)</p>
+</blockquote>
+<p>The wildcard support has been released for a long time.</p>
+
+
+
+<a name="1100204"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1100204" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1100204">(Jan 17 2021 at 08:43)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> <a href="https://github.com/zulip/zulip/pull/17072">#17072</a></p>
+
+
+
+<a name="1100773"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1100773" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1100773">(Jan 18 2021 at 12:50)</a>:</h4>
+<p>Thanks!</p>
+
+
+
+<a name="1100775"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1100775" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1100775">(Jan 18 2021 at 12:57)</a>:</h4>
+<p>Actually, that sentence quoted says that "you'll want something else" if you need wildcard certificates. Since certbot already supports wildcard, it is possible to update the doc to recommend it.</p>
+
+
+
+<a name="1100776"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1100776" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1100776">(Jan 18 2021 at 12:59)</a>:</h4>
+<p>Do we want to update <a href="https://github.com/zulip/zulip/blob/master/scripts/setup/setup-certbot">https://github.com/zulip/zulip/blob/master/scripts/setup/setup-certbot</a> to support wildcard certs though?</p>
+
+
+
+<a name="1101583"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/RESOLVED%3A%20can%27t%20access%20.well-known/acme-challenge/test/near/1101583" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/RESOLVED.3A.20can.27t.20access.20.2Ewell-known.2Facme-challenge.2Ftest.html#1101583">(Jan 19 2021 at 05:49)</a>:</h4>
+<p><span class="user-mention" data-user-id="2328">@Rein Zustand</span> I think so.  We'd need to be thoughtful about how to do it, though -- the certbot authentication methods for wildcard certs require making DNS records, and might be a harder flow to script around?  Worth testing.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

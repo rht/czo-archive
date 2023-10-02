@@ -1,0 +1,74 @@
+[
+    {
+        "content": "<p>Hi, I'm trying to get full-text searching up on my Zulip server. To do so, I installed PGroonga as described on the PGroonga website. On the website, it seems to indicate that the pgroonga extension has to be installed in the DB via 'CREATE EXTENSION pgroonga'.</p>\n<p>In Zulip's docs, there is no mention of how installing the extension. Does this mean that this will be done automatically once we run ./manage.py migrate pgroonga?</p>",
+        "id": 229214,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1497562420
+    },
+    {
+        "content": "<p>We install the pgroonga package by default to make switching easy.</p>",
+        "id": 229220,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497562662
+    },
+    {
+        "content": "<p>Oh, but you're asking about the <code>CREATE EXTENSION</code> step.  I think you need to do that by as root, doing <code>su postgres</code>, and then <code>psql</code> to get a postgres administrative shell</p>",
+        "id": 229222,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497562767
+    },
+    {
+        "content": "<p>Really? I just did the following:</p>\n<p>% sudo apt-get install -y software-properties-common<br>\n% sudo add-apt-repository -y universe<br>\n% sudo add-apt-repository -y ppa:groonga/ppa<br>\n% sudo apt-get update<br>\n% sudo apt-get install -y -V postgresql-9.5-pgroonga</p>\n<p>Didn't get an error message to say that PGroonga was installed already...</p>",
+        "id": 229240,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1497563313
+    },
+    {
+        "content": "<blockquote>\n<p>Oh, but you're asking about the <code>CREATE EXTENSION</code> step.  I think you need to do that by as root, doing <code>su postgres</code>, and then <code>psql</code> to get a postgres administrative shell</p>\n</blockquote>\n<p>So we do have to manually create the extension in the zulip DB then?</p>",
+        "id": 229247,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1497563352
+    },
+    {
+        "content": "<p>Ahh, my memory was a bit off.  If pgroonga in your <code>/etc/zulip/zulip.conf</code>, and you run <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code>, then both the package will get installed and <code>INSTALL EXTENSION</code> will get run.</p>",
+        "id": 229257,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497563487
+    },
+    {
+        "content": "<p>Something isn't happening then... here's the traceback I see:</p>\n<div class=\"codehilite\"><pre><span></span>zulip@chat:~/deployments/2017-06-14-10-25-04$ ./manage.py migrate pgroonga\nOperations to perform:\n  Apply all migrations: pgroonga\nRunning migrations:\n  Applying pgroonga.0001_enable...Traceback (most recent call last):\n  File &quot;./manage.py&quot;, line 29, in &lt;module&gt;\n    execute_from_command_line(sys.argv)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/core/management/__init__.py&quot;, line 367, in execute_from_command_line\n    utility.execute()\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/core/management/__init__.py&quot;, line 359, in execute\n    self.fetch_command(subcommand).run_from_argv(self.argv)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/core/management/base.py&quot;, line 294, in run_from_argv\n    self.execute(*args, **cmd_options)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/core/management/base.py&quot;, line 345, in execute\n    output = self.handle(*args, **options)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/core/management/commands/migrate.py&quot;, line 204, in handle\n    fake_initial=fake_initial,\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/db/migrations/executor.py&quot;, line 115, in migrate\n    state = self._migrate_all_forwards(state, plan, full_plan, fake=fake, fake_initial=fake_initial)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/db/migrations/executor.py&quot;, line 145, in _migrate_all_forwards\n    state = self.apply_migration(state, migration, fake=fake, fake_initial=fake_initial)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/db/migrations/executor.py&quot;, line 244, in apply_migration\n    state = migration.apply(state, schema_editor)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/db/migrations/migration.py&quot;, line 129, in apply\n    operation.database_forwards(self.app_label, schema_editor, old_state, project_state)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/db/migrations/operations/special.py&quot;, line 107, in database_forwards\n    self._run_sql(schema_editor, self.sql)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/db/migrations/operations/special.py&quot;, line 132, in _run_sql\n    schema_editor.execute(statement, params=None)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/db/backends/base/schema.py&quot;, line 112, in execute\n    cursor.execute(sql, params)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/db/backends/utils.py&quot;, line 64, in execute\n    return self.cursor.execute(sql, params)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/db/utils.py&quot;, line 94, in __exit__\n    six.reraise(dj_exc_type, dj_exc_value, traceback)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zulip-venv/lib/python2.7/site-packages/django/db/backends/utils.py&quot;, line 62, in execute\n    return self.cursor.execute(sql)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zerver/lib/db.py&quot;, line 32, in execute\n    return wrapper_execute(self, super(TimeTrackingCursor, self).execute, query, vars)\n  File &quot;/home/zulip/deployments/2017-06-14-10-25-04/zerver/lib/db.py&quot;, line 19, in wrapper_execute\n    return action(sql, params)\ndjango.db.utils.ProgrammingError: access method &quot;pgroonga&quot; does not exist\n</pre></div>",
+        "id": 229387,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1497569913
+    },
+    {
+        "content": "<p>What does <code>\\dx</code> say in a <code>manage.py dbshell</code>?  That's how you can check if the extension is actually installed.</p>",
+        "id": 229441,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497576726
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>                     List of installed extensions\n      Name      | Version |   Schema   |         Description\n----------------+---------+------------+------------------------------\n plpgsql        | 1.0     | pg_catalog | PL/pgSQL procedural language\n tsearch_extras | 1.0     | zulip      |\n(2 rows)\n</pre></div>",
+        "id": 229465,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1497582054
+    },
+    {
+        "content": "<p>OK, I think that means that either your <code>zulip.conf</code> doesn't have the pgroonga setting in it, or you didn't end up running <code>zulip-puppet-apply</code> and actually applying the changes.  Can you investigate those possibilites?</p>",
+        "id": 229498,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1497586094
+    },
+    {
+        "content": "<p>Aha, that was it... re-running zulip-puppet-apply did the trick. Thought I had run it already, perhaps I forgot to hit \"y\" to apply the changes! Thank you very much!!!</p>",
+        "id": 231193,
+        "sender_full_name": "Edmund Lian",
+        "timestamp": 1497825362
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"elian-zulip@645ad.net\" data-user-id=\"2530\">@Edmund Lian</span> glad to hear it (belatedly; I was out backpacking when you replied)</p>",
+        "id": 237945,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1498512983
+    }
+]

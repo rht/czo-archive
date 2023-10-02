@@ -1,0 +1,131 @@
+<html>
+<head><meta charset="utf-8"><title>memcached auth failure while testing PR14925 · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/memcached.20auth.20failure.20while.20testing.20PR14925.html">memcached auth failure while testing PR14925</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="903642"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/memcached%20auth%20failure%20while%20testing%20PR14925/near/903642" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zack Weinberg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/memcached.20auth.20failure.20while.20testing.20PR14925.html#903642">(Jun 13 2020 at 13:00)</a>:</h4>
+<p>I was having problems with pylibmc (<a href="https://github.com/zulip/zulip/issues/14805">bug 14805</a>) and it was suggested that I test the PR switching to bmemcached (<a href="https://github.com/zulip/zulip/pull/14925">PR 14925</a>).  So I ran <code>upgrade-zulip-from-git</code> with that PR and it got most of the way through before bombing out with ... more memcached-related problems (full error spew below).  Can anyone suggest further troubleshooting steps?</p>
+<div class="codehilite"><pre><span></span><code>2020-06-13 12:51:28,591 upgrade-zulip-stage-2: Restarting Zulip...
+2020-06-13 12:51:31,108 restart-server: Filling memcached caches
+2020-06-13 12:51:33.391 INFO [] Successfully populated user cache!  Consumed 1 remote cache queries (0.02 time)
+Traceback (most recent call last):
+  File &quot;./manage.py&quot;, line 50, in &lt;module&gt;
+    execute_from_command_line(sys.argv)
+  File &quot;/home/zulip/deployments/2020-06-13-12-43-42/zulip-py3-venv/lib/python3.7/site-packages/django/core/management/__init__.py&quot;, line 381, in execute_from_command_line
+    utility.execute()
+  File &quot;/home/zulip/deployments/2020-06-13-12-43-42/zulip-py3-venv/lib/python3.7/site-packages/django/core/management/__init__.py&quot;, line 375, in execute
+    self.fetch_command(subcommand).run_from_argv(self.argv)
+  File &quot;/home/zulip/deployments/2020-06-13-12-43-42/zulip-py3-venv/lib/python3.7/site-packages/django/core/management/base.py&quot;, line 323, in run_from_argv
+    self.execute(*args, **cmd_options)
+  File &quot;/home/zulip/deployments/2020-06-13-12-43-42/zulip-py3-venv/lib/python3.7/site-packages/django/core/management/base.py&quot;, line 364, in execute
+    output = self.handle(*args, **options)
+  File &quot;/home/zulip/deployments/2020-06-13-12-43-42/zerver/management/commands/fill_memcached_caches.py&quot;, line 20, in handle
+    fill_remote_cache(cache)
+  File &quot;/home/zulip/deployments/2020-06-13-12-43-42/zerver/lib/cache_helpers.py&quot;, line 145, in fill_remote_cache
+    cache_set_many(items_for_remote_cache, timeout=3600*24*7)
+  File &quot;/home/zulip/deployments/2020-06-13-12-43-42/zerver/lib/cache.py&quot;, line 283, in cache_set_many
+    get_cache_backend(cache_name).set_many(items, timeout=timeout)
+  File &quot;/home/zulip/deployments/2020-06-13-12-43-42/zulip-py3-venv/lib/python3.7/site-packages/django/core/cache/backends/memcached.py&quot;, line 149, in set_many
+    failed_keys = self._cache.set_multi(safe_data, self.get_backend_timeout(timeout))
+  File &quot;/home/zulip/deployments/2020-06-13-12-43-42/zulip-py3-venv/lib/python3.7/site-packages/bmemcached/client/replicating.py&quot;, line 159, in set_multi
+    returns |= set(server.set_multi(mappings, time, compress_level=compress_level))
+  File &quot;/home/zulip/deployments/2020-06-13-12-43-42/zulip-py3-venv/lib/python3.7/site-packages/bmemcached/protocol.py&quot;, line 725, in set_multi
+    self._send(msg)
+  File &quot;/home/zulip/deployments/2020-06-13-12-43-42/zulip-py3-venv/lib/python3.7/site-packages/bmemcached/protocol.py&quot;, line 244, in _send
+    self._open_connection()
+  File &quot;/home/zulip/deployments/2020-06-13-12-43-42/zulip-py3-venv/lib/python3.7/site-packages/bmemcached/protocol.py&quot;, line 158, in _open_connection
+    self._send_authentication()
+  File &quot;/home/zulip/deployments/2020-06-13-12-43-42/zulip-py3-venv/lib/python3.7/site-packages/bmemcached/protocol.py&quot;, line 319, in _send_authentication
+    raise MemcachedException(&#39;Code: %d Message: %s&#39; % (status, extra_content), status)
+bmemcached.exceptions.MemcachedException: (&quot;Code: 32 Message: b&#39;Auth failure.&#39;&quot;, 32)
+Traceback (most recent call last):
+  File &quot;./scripts/restart-server&quot;, line 36, in &lt;module&gt;
+    subprocess.check_call([&quot;./manage.py&quot;, &quot;fill_memcached_caches&quot;])
+  File &quot;/usr/lib/python3.7/subprocess.py&quot;, line 347, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;./manage.py&#39;, &#39;fill_memcached_caches&#39;]&#39; returned non-zero exit status 1.
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2020-06-13-12-43-42/scripts/lib/upgrade-zulip-stage-2&quot;, line 222, in &lt;module&gt;
+    subprocess.check_output([&quot;./scripts/restart-server&quot;, &quot;--fill-cache&quot;], preexec_fn=su_to_zulip)
+  File &quot;/usr/lib/python3.7/subprocess.py&quot;, line 395, in check_output
+    **kwargs).stdout
+  File &quot;/usr/lib/python3.7/subprocess.py&quot;, line 487, in run
+    output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command &#39;[&#39;./scripts/restart-server&#39;, &#39;--fill-cache&#39;]&#39; returned non-zero exit status 1.
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-from-git&quot;, line 69, in &lt;module&gt;
+    deploy_path, &quot;--from-git&quot;] + deploy_options)
+  File &quot;/usr/lib/python3.7/subprocess.py&quot;, line 347, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2020-06-13-12-43-42/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2020-06-13-12-43-42&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1.
+</code></pre></div>
+
+
+
+<a name="903645"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/memcached%20auth%20failure%20while%20testing%20PR14925/near/903645" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zack Weinberg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/memcached.20auth.20failure.20while.20testing.20PR14925.html#903645">(Jun 13 2020 at 13:26)</a>:</h4>
+<p>I figured out how to test the authentication configuration of memcached itself, and it seems to be fine:</p>
+<div class="codehilite"><pre><span></span><code># sasldblistusers2 -f /etc/sasl2/memcached-sasldb2
+zulip@localhost: userPassword
+# memcstat --servers=127.0.0.1; echo $?
+1
+# memcstat --servers=127.0.0.1 --username=zulip@localhost --password=$(cat /etc/sasl2/memcached-zulip-password)
+Server: 127.0.0.1 (11211)
+     pid: 16533
+     uptime: 1938
+     time: 1592054605
+     version: 1.5.6
+     libevent: 2.1.8-stable
+         [etc]
+</code></pre></div>
+
+
+<p>So this must be something on the zulip side.</p>
+
+
+
+<a name="903647"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/memcached%20auth%20failure%20while%20testing%20PR14925/near/903647" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zack Weinberg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/memcached.20auth.20failure.20while.20testing.20PR14925.html#903647">(Jun 13 2020 at 13:36)</a>:</h4>
+<p>... and the new memcached client library works, too:</p>
+<div class="codehilite"><pre><span></span><code># . /srv/zulip-venv-cache/de7ab305a0da8e7e5dd9ce66e935ed5e960351c1/zulip-py3-venv/bin/activate
+(zulip-py3-venv) # python3
+Python 3.7.3 (default, Dec 20 2019, 18:57:59)
+[GCC 8.3.0] on linux
+Type &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.
+&gt;&gt;&gt; with open(&quot;/etc/sasl2/memcached-zulip-password&quot;, &quot;rt&quot;) as fp:
+...    memcache_pass = fp.read()
+...
+&gt;&gt;&gt; memcache_user = &#39;zulip@localhost&#39;
+&gt;&gt;&gt; import bmemcached
+&gt;&gt;&gt; client = bmemcached.Client((&#39;127.0.0.1&#39;, ), memcache_user, memcache_pass)
+&gt;&gt;&gt; client.set(&#39;test_bmemcached&#39;, &#39;test&#39;)
+True
+&gt;&gt;&gt; client.get(&#39;test_bmemcached&#39;)
+&#39;test&#39;
+&gt;&gt;&gt; client.delete(&#39;test_bmemcached&#39;)
+True
+</code></pre></div>
+
+
+
+<a name="903651"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/memcached%20auth%20failure%20while%20testing%20PR14925/near/903651" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Zack Weinberg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/memcached.20auth.20failure.20while.20testing.20PR14925.html#903651">(Jun 13 2020 at 14:21)</a>:</h4>
+<p>Aha! <code>manage.py</code> was trying to authenticate as user <code>zulip</code>, not user <code>zulip@localhost</code>.  I have no idea why, but I added an entry to the SASL password database for user <code>zulip</code> and now the upgrade has completed successfully.</p>
+
+
+
+<a name="903860"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/memcached%20auth%20failure%20while%20testing%20PR14925/near/903860" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/memcached.20auth.20failure.20while.20testing.20PR14925.html#903860">(Jun 13 2020 at 21:54)</a>:</h4>
+<p>The Python code is not responsible for adding the <code>@localhost</code>; that’s (expected to be) added within the memcached server and its SASL library.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

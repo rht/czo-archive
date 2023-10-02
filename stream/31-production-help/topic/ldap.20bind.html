@@ -1,0 +1,116 @@
+<html>
+<head><meta charset="utf-8"><title>ldap bind · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.html">ldap bind</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="487560"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind/near/487560" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scott Russell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.html#487560">(Feb 08 2018 at 02:54)</a>:</h4>
+<p>Using 1.7.1 The install is running with Email auth but trying to configure LDAP auth instead against AD. I have Django 1.8 LTS with LDAP auth working against this AD server in another application. My settings for Zulip are:</p>
+<div class="codehilite"><pre><span></span>AUTH_LDAP_USER_ATTR_MAP = {&#39;full_name&#39;: &#39;cn&#39;,}
+AUTH_LDAP_SERVER_URI = &#39;ldap://sjc-dc251.domain.com&#39;
+AUTH_LDAP_USER_SEARCH = LDAPSearch(&#39;DC=domain,DC=com&#39;, ldap.SCOPE_SUBTREE, &quot;(mail=%(user)s)&quot;,)
+LDAP_APPEND_DOMAIN = None
+AUTH_LDAP_CONNECTION_OPTIONS = {ldap.OPT_REFERRALS: 0, ldap.OPT_X_TLS_REQUIRE_CERT: 0,}
+AUTH_LDAP_BIND_DN = &#39;cn=ldapbind,cn=Users,dc=domain,dc=com&#39;
+AUTH_LDAP_BIND_PASSWORD = &#39;xxxxx&#39;
+</pre></div>
+
+
+<p>When testing with ./manage.py query_ldap I get an bind error:</p>
+<div class="codehilite"><pre><span></span>ldap.INVALID_CREDENTIALS: {&#39;info&#39;: &#39;80090308: LdapErr: DSID-0C0903D9, comment: AcceptSecurityContext error, data 52e, v2580&#39;, &#39;desc&#39;: &#39;Invalid credentials&#39;}
+</pre></div>
+
+
+<p>Seems pretty straight forward however the same credentials work on the same system using ldapsearch tool. Sample ldapsearch CLI is </p>
+<div class="codehilite"><pre><span></span>ldapsearch -W -H ldap://sjc-dc251.domain.com -x -D &quot;cn=ldapbind,cn=Users,dc=domain,dc=com&quot; -b &quot;dc=domain,dc=com&quot; -L &quot;sAMAccountName=srussell&quot; cn
+</pre></div>
+
+
+<p>Not sure why I'm seeing invalid auth from Zulip testing though?</p>
+
+
+
+<a name="488093"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind/near/488093" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scott Russell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.html#488093">(Feb 08 2018 at 12:25)</a>:</h4>
+<p>So I’m fairly sure this is a straight up settings config issue. Is there a way I can see the ldap bind db and password actually being used? Checking logs doesn’t show them.</p>
+
+
+
+<a name="488385"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind/near/488385" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scott Russell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.html#488385">(Feb 08 2018 at 15:09)</a>:</h4>
+<p>Apparently I needed to add auth_ldap_bind_password manually to the /etc/zulip/zulip-secrets.conf file. Once done and restarted services the query_ldap works as expected.</p>
+
+
+
+<a name="488591"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind/near/488591" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.html#488591">(Feb 08 2018 at 17:56)</a>:</h4>
+<p><span class="user-mention" data-user-email="scott@frak.ms" data-user-id="5233">@Scott Russell</span> Glad you got it working!</p>
+
+
+
+<a name="488596"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind/near/488596" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.html#488596">(Feb 08 2018 at 17:57)</a>:</h4>
+<p>The solution here is documented there in the config file, but there is kind of a lot of prose there. Here's the documentation for <code>AUTH_LDAP_BIND_DN</code>:</p>
+<div class="codehilite"><pre><span></span># This DN will be used to bind to your server. If unset, anonymous
+# binds are performed.  If set, you need to specify the password as
+# &#39;auth_ldap_bind_password&#39; in zulip-secrets.conf.
+AUTH_LDAP_BIND_DN = &quot;&quot;
+</pre></div>
+
+
+
+<a name="488603"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind/near/488603" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.html#488603">(Feb 08 2018 at 18:01)</a>:</h4>
+<p>I'm going to edit that to more like</p>
+<div class="codehilite"><pre><span></span># This DN will be used to bind to your server. If unset, anonymous
+# binds are performed.
+#
+# If set, you need to specify the password in zulip-secrets.conf ,
+# as &#39;auth_ldap_bind_password&#39;.
+AUTH_LDAP_BIND_DN = &quot;&quot;
+</pre></div>
+
+
+<p>since that seems like a good detail to highlight.</p>
+
+
+
+<a name="488604"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind/near/488604" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.html#488604">(Feb 08 2018 at 18:02)</a>:</h4>
+<p>I'm also curious: how did you originally come across <code>AUTH_LDAP_BIND_PASSWORD</code> as a thing you needed to set? That may be another spot where we should make the documentation a little clearer.</p>
+
+
+
+<a name="488608"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind/near/488608" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.html#488608">(Feb 08 2018 at 18:06)</a>:</h4>
+<p>(Edited, as <a href="https://github.com/zulip/zulip/commit/9e7002674" target="_blank" title="https://github.com/zulip/zulip/commit/9e7002674">9e7002674</a>.)</p>
+
+
+
+<a name="489480"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind/near/489480" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scott Russell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.html#489480">(Feb 08 2018 at 22:55)</a>:</h4>
+<p>Because in my troubleshooting I was looking for a way to see if the DN and PASS were set. So I loaded up ./manage.py shell and checked settings.AUTH_LDAP_* values until I noticed theAUTH_LDAP_BIND_PASSWORD. was empty. Being experienced in Django, I went looking for other settings.conf files and that is where I noticed it being set via get_secrets().</p>
+<p>It would be great that if AUTH_LDAP_BIND_DN is set to some value, that ./manage.py checkconfig would catch the missing auth_ldap_bind_password in the zulip-secrets.conf. I think that would have solved it for me quicker?</p>
+
+
+
+<a name="489481"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind/near/489481" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scott Russell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.html#489481">(Feb 08 2018 at 22:55)</a>:</h4>
+<p>And by solved it I mean I should have read the comments closer.</p>
+
+
+
+<a name="489685"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind/near/489685" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.html#489685">(Feb 09 2018 at 02:32)</a>:</h4>
+<p><span class="user-mention" data-user-email="scott@frak.ms" data-user-id="5233">@Scott Russell</span> that's a good idea and probably an easy check for us to add.  <span class="user-mention" data-user-email="greg@zulipchat.com" data-user-id="2187">@Greg Price</span> do you see a reason that wouldn't be easy to do (just crash the server if the <code>DN</code> is set and no password is?)</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

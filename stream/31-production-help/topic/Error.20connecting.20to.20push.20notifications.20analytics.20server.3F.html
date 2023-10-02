@@ -1,0 +1,816 @@
+<html>
+<head><meta charset="utf-8"><title>Error connecting to push notifications analytics server? · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html">Error connecting to push notifications analytics server?</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1498825"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1498825" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1498825">(Jan 29 2023 at 15:12)</a>:</h4>
+<ul>
+<li>I'm running a server in production for a few years now, having started at Zulip 2. I'm running the most recent production patch.</li>
+<li>My server has been intermittently freezing and restarting this week for ~30 seconds a few times a day. First time that's happened.</li>
+<li>I checked the error logs and saw the following. I do have mobile push notifications setup and they seem to be working. </li>
+<li>I looked up issues with this error mesage, and seemed to see one from 2014 but it was related to custom proxy implementation; I am not running a custom proxy</li>
+<li>Would  someone more familiar with this area of the codebase know if this is a simple config change, or whether this merits creating a github issue?</li>
+</ul>
+<p>Error traceback:</p>
+<div class="codehilite"><pre><span></span><code>root@zulip:~# tail -n 100 /var/log/zulip/errors.log
+
+Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/urllib3/connectionpool.py&quot;, line 703, in urlopen
+    httplib_response = self._make_request(
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/urllib3/connectionpool.py&quot;, line 386, in _make_request
+    self._validate_conn(conn)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/urllib3/connectionpool.py&quot;, line 1042, in _validate_conn
+    conn.connect()
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/urllib3/connection.py&quot;, line 358, in connect
+    self.sock = conn = self._new_conn()
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/urllib3/connection.py&quot;, line 186, in _new_conn
+    raise NewConnectionError(
+urllib3.exceptions.NewConnectionError: &lt;urllib3.connection.HTTPSConnection object at 0x7f8c41ef7850&gt;: Failed to establish a new connection: [Errno -3] Temporary failure in name resolution
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/requests/adapters.py&quot;, line 489, in send
+    resp = conn.urlopen(
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/urllib3/connectionpool.py&quot;, line 787, in urlopen
+    retries = retries.increment(
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/urllib3/util/retry.py&quot;, line 592, in increment
+    raise MaxRetryError(_pool, url, error or ResponseError(cause))
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host=&#39;push.zulipchat.com&#39;, port=443): Max retries exceeded with url: /api/v1/remotes/server/analytics/status (Caused by NewConnectionError(&#39;&lt;urllib3.connection.HTTPSConnection object at 0x7f8c41ef7850&gt;: Failed to establish a new connection: [Errno -3] Temporary failure in name resolution&#39;))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/remote_server.py&quot;, line 64, in send_to_push_bouncer
+    res = PushBouncerSession().request(
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/requests/sessions.py&quot;, line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/requests/sessions.py&quot;, line 701, in send
+    r = adapter.send(request, **kwargs)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/outgoing_http.py&quot;, line 41, in send
+    return super().send(*args, **kwargs)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/requests/adapters.py&quot;, line 565, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPSConnectionPool(host=&#39;push.zulipchat.com&#39;, port=443): Max retries exceeded with url: /api/v1/remotes/server/analytics/status (Caused by NewConnectionError(&#39;&lt;urllib3.connection.HTTPSConnection object at 0x7f8c41ef7850&gt;: Failed to establish a new connection: [Errno -3] Temporary failure in name resolution&#39;))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/remote_server.py&quot;, line 162, in send_analytics_to_remote_server
+    result = send_to_push_bouncer(&quot;GET&quot;, &quot;server/analytics/status&quot;, {})
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/remote_server.py&quot;, line 72, in send_to_push_bouncer
+    raise PushNotificationBouncerRetryLaterError(
+zerver.lib.remote_server.PushNotificationBouncerRetryLaterError: ConnectionError while trying to connect to push notification bouncer
+2023-01-29 06:00:51.315 ERR  [] Timed out in user_activity after 30 seconds processing 1 events
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 317, in do_consume
+    consume_func(events)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 547, in consume_batch
+    do_update_user_activity(user_profile_id, client_id, query, count, log_time)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/decorator.py&quot;, line 948, in wrapped_func
+    ret = func(*args, **kwargs)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/actions/user_activity.py&quot;, line 39, in do_update_user_activity
+    (activity, created) = UserActivity.objects.get_or_create(
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/manager.py&quot;, line 85, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 928, in get_or_create
+    return self.get(**kwargs), False
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 646, in get
+    num = len(clone)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 376, in __len__
+    self._fetch_all()
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 1867, in _fetch_all
+    if self._prefetch_related_lookups and not self._prefetch_done:
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 363, in timer_expired
+    raise WorkerTimeoutError(self.queue_name, limit, len(events))
+zerver.worker.queue_processors.WorkerTimeoutError: Timed out in user_activity after 30 seconds processing 1 events
+Stack (most recent call last):
+  File &quot;/home/zulip/deployments/current/manage.py&quot;, line 151, in &lt;module&gt;
+    execute_from_command_line(sys.argv)
+  File &quot;/home/zulip/deployments/current/manage.py&quot;, line 116, in execute_from_command_line
+    utility.execute()
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/__init__.py&quot;, line 440, in execute
+    self.fetch_command(subcommand).run_from_argv(self.argv)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 402, in run_from_argv
+    self.execute(*args, **cmd_options)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 448, in execute
+    output = self.handle(*args, **options)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/management/commands/process_queue.py&quot;, line 111, in handle
+    worker.start()
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 520, in start
+    super().start()
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 426, in start
+    self.q.start_json_consumer(
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/queue.py&quot;, line 213, in start_json_consumer
+    self.ensure_queue(queue_name, do_consume)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/queue.py&quot;, line 169, in ensure_queue
+    callback(self.channel)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/queue.py&quot;, line 203, in do_consume
+    callback(events)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 428, in &lt;lambda&gt;
+    lambda events: self.do_consume(self.consume_batch, events),
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 327, in do_consume
+    self._handle_consume_exception(events, e)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 382, in _handle_consume_exception
+    logging.exception(exception, stack_info=True)
+</code></pre></div>
+
+
+
+<a name="1499067"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499067" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499067">(Jan 30 2023 at 14:33)</a>:</h4>
+<p><span class="user-mention" data-user-id="25878">@realimpat</span> <a href="#narrow/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F/near/1498825">said</a>:</p>
+<blockquote>
+<ul>
+<li>I'm running a server in production for a few years now, having started at Zulip 2. I'm running the most recent production patch.</li>
+</ul>
+</blockquote>
+<p>Since Zulip 2 is a while!  I assume by "latest production patch" you mean Zulip 6.1?  You can check by clicking the gear icon in the top-right on your server.</p>
+<blockquote>
+<ul>
+<li>My server has been intermittently freezing and restarting this week for ~30 seconds a few times a day. First time that's happened.</li>
+<li>I checked the error logs and saw the following. I do have mobile push notifications setup and they seem to be working. </li>
+<li>I looked up issues with this error mesage, and seemed to see one from 2014 but it was related to custom proxy implementation; I am not running a custom proxy</li>
+</ul>
+</blockquote>
+<p>This looks like a DNS problem (more below).</p>
+<blockquote>
+<ul>
+<li>Would  someone more familiar with this area of the codebase know if this is a simple config change, or whether this merits creating a github issue?</li>
+</ul>
+</blockquote>
+<p>Let's start with some debugging here, and make an issue once we know what's going on and if it's likely to affect other users.</p>
+<div class="codehilite"><pre><span></span><code>Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/urllib3/connectionpool.py&quot;, line 703, in urlopen
+    httplib_response = self._make_request(
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/urllib3/connectionpool.py&quot;, line 386, in _make_request
+    self._validate_conn(conn)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/urllib3/connectionpool.py&quot;, line 1042, in _validate_conn
+    conn.connect()
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/urllib3/connection.py&quot;, line 358, in connect
+    self.sock = conn = self._new_conn()
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/urllib3/connection.py&quot;, line 186, in _new_conn
+    raise NewConnectionError(
+urllib3.exceptions.NewConnectionError: &lt;urllib3.connection.HTTPSConnection object at 0x7f8c41ef7850&gt;: Failed to establish a new connection: [Errno -3] Temporary failure in name resolution
+</code></pre></div>
+<p>Seeing <code>Temporary failure in name resolution</code> means this is some problem with DNS.  Some questions:</p>
+<ul>
+<li>Is this server on an intranet or other location which has its own local DNS server?</li>
+<li>If you run <code>host push.zulipchat.com</code> from the command line on the server, what does it output?</li>
+<li>Can you show the output of <code>resolvectl status</code>?</li>
+<li>Is there any pattern to when you see those errors?  That last one looks to be at <code>06:00:51</code>, it looks like.</li>
+</ul>
+
+
+
+<a name="1499096"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499096" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499096">(Jan 30 2023 at 15:47)</a>:</h4>
+<blockquote>
+<p>Since Zulip 2 is a while! I assume by "latest production patch" you mean Zulip 6.1? </p>
+</blockquote>
+<p>Yes. Never had a problem until now!</p>
+<blockquote>
+<p>Is this server on an intranet or other location which has its own local DNS server?</p>
+</blockquote>
+<p>No, the dns server should be provided by the domain registrar -- I didn't go out of my way to setup an intranet originally</p>
+<blockquote>
+<p>If you run host <a href="http://push.zulipchat.com">push.zulipchat.com</a> from the command line on the server, what does it output?</p>
+</blockquote>
+<p>There's a dozen lines of output of ip addresses, half of them IPV6. I'm not sure it would be wise to post all of the exact ip addresses here publicly.</p>
+<blockquote>
+<p>Here's the output. I've deleted the ip address sans the first few digits before the first decimal </p>
+</blockquote>
+<div class="codehilite"><pre><span></span><code>root@zulip:~# resolvectl status
+Global
+       LLMNR setting: no
+MulticastDNS setting: no
+  DNSOverTLS setting: no
+      DNSSEC setting: no
+    DNSSEC supported: no
+          DNSSEC NTA: 10.in-addr.arpa
+                      16.***.in-addr.arpa
+                      168.***.in-addr.arpa
+                      17.***.in-addr.arpa
+                      18.***.in-addr.arpa
+                      19.***.in-addr.arpa
+                      20.***.in-addr.arpa
+                      21.***.in-addr.arpa
+                      22.***.in-addr.arpa
+                      23.***.in-addr.arpa
+                      24.***.in-addr.arpa
+                      25.***.in-addr.arpa
+                      26.***.in-addr.arpa
+                      27.***.in-addr.arpa
+                      28.***.in-addr.arpa
+                      29.***.in-addr.arpa
+                      30.***.in-addr.arpa
+                      31.***.in-addr.arpa
+                      corp
+                      d.f.ip6.arpa
+                      home
+                      internal
+                      intranet
+                      lan
+                      local
+                      private
+                      test
+
+Link 3 (eth1)
+      Current Scopes: DNS
+DefaultRoute setting: yes
+       LLMNR setting: yes
+MulticastDNS setting: no
+  DNSOverTLS setting: no
+      DNSSEC setting: no
+    DNSSEC supported: no
+  Current DNS Server: 67.***
+         DNS Servers: 67.***
+                      67.***
+
+Link 2 (eth0)
+      Current Scopes: DNS
+DefaultRoute setting: yes
+       LLMNR setting: yes
+MulticastDNS setting: no
+  DNSOverTLS setting: no
+      DNSSEC setting: no
+    DNSSEC supported: no
+  Current DNS Server: 67.
+         DNS Servers: 67.
+                      67.***
+</code></pre></div>
+<blockquote>
+<p>Is there any pattern to when you see those errors? That last one looks to be at 06:00:51, it looks like.</p>
+</blockquote>
+<p>A few times a day, the disk i/o usage shoots through the roof and freezes up the box, causing user input to be increasingly laggy until everyon is 'unable to connect to zulip' for 30 seconds or so. then something seems to reset and performance goes back to normal. That's concurrent with when these errors are happening. </p>
+<p>I'm unsure if these errors are the root problem or a symptom of something else, but they showed up at the tail of the logs. I'll post the most recent 100 lines of tail output from today also, which seems to include a SIGUSR1 restart trigger</p>
+
+
+
+<a name="1499099"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499099" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499099">(Jan 30 2023 at 15:48)</a>:</h4>
+<p>Tali from today:</p>
+<div class="codehilite"><pre><span></span><code>root@zulip:~# tail -n 100 /var/log/zulip/errors.log
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/queue.py&quot;, line 203, in do_consume
+    callback(events)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 408, in &lt;lambda&gt;
+    lambda events: self.consume_single_event(events[0]),
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 358, in consume_single_event
+    self.do_consume(consume_func, [event])
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 327, in do_consume
+    self._handle_consume_exception(events, e)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 384, in _handle_consume_exception
+    logging.exception(
+2023-01-30 14:06:00.764 WARN [] *** Sending self SIGUSR1 to trigger a restart.
+2023-01-30 14:15:00.630 ERR  [] Problem handling data on queue email_senders
+Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/utils.py&quot;, line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/db.py&quot;, line 34, in execute
+    wrapper_execute(self, super().execute, query, vars)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/db.py&quot;, line 19, in wrapper_execute
+    action(sql, params)
+psycopg2.DatabaseError: server closed the connection unexpectedly
+    This probably means the server terminated abnormally
+    before or while processing the request.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 317, in do_consume
+    consume_func(events)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 746, in consume_batch
+    self.send_email(event)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 197, in wrapper
+    func(worker, data)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 742, in send_email
+    send_email(**copied_event, connection=self.connection)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/send_email.py&quot;, line 243, in send_email
+    mail = build_email(
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/send_email.py&quot;, line 85, in build_email
+    to_users = [get_user_profile_by_id(to_user_id) for to_user_id in to_user_ids]
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/send_email.py&quot;, line 85, in &lt;listcomp&gt;
+    to_users = [get_user_profile_by_id(to_user_id) for to_user_id in to_user_ids]
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/cache.py&quot;, line 171, in func_with_caching
+    val = func(*args, **kwargs)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/models.py&quot;, line 3698, in get_user_profile_by_id
+    return UserProfile.objects.select_related().get(id=user_profile_id)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 646, in get
+    num = len(clone)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 376, in __len__
+    self._fetch_all()
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 1866, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 87, in __iter__
+    results = compiler.execute_sql(
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/sql/compiler.py&quot;, line 1398, in execute_sql
+    cursor.execute(sql, params)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/utils.py&quot;, line 67, in execute
+    return self._execute_with_wrappers(
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/utils.py&quot;, line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/utils.py&quot;, line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/utils.py&quot;, line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/utils.py&quot;, line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/db.py&quot;, line 34, in execute
+    wrapper_execute(self, super().execute, query, vars)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/db.py&quot;, line 19, in wrapper_execute
+    action(sql, params)
+django.db.utils.DatabaseError: server closed the connection unexpectedly
+    This probably means the server terminated abnormally
+    before or while processing the request.
+Stack (most recent call last):
+  File &quot;/home/zulip/deployments/current/manage.py&quot;, line 151, in &lt;module&gt;
+    execute_from_command_line(sys.argv)
+  File &quot;/home/zulip/deployments/current/manage.py&quot;, line 116, in execute_from_command_line
+    utility.execute()
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/__init__.py&quot;, line 440, in execute
+    self.fetch_command(subcommand).run_from_argv(self.argv)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 402, in run_from_argv
+    self.execute(*args, **cmd_options)
+  File &quot;/srv/zulip-venv-cache/b2cdd20dd55ad18cd1e512082a3ec530e6b6ece9/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 448, in execute
+    output = self.handle(*args, **options)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/management/commands/process_queue.py&quot;, line 111, in handle
+    worker.start()
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 426, in start
+    self.q.start_json_consumer(
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/queue.py&quot;, line 213, in start_json_consumer
+    self.ensure_queue(queue_name, do_consume)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/queue.py&quot;, line 169, in ensure_queue
+    callback(self.channel)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/lib/queue.py&quot;, line 203, in do_consume
+    callback(events)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 428, in &lt;lambda&gt;
+    lambda events: self.do_consume(self.consume_batch, events),
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 327, in do_consume
+    self._handle_consume_exception(events, e)
+  File &quot;/home/zulip/deployments/2023-01-24-02-01-12/zerver/worker/queue_processors.py&quot;, line 384, in _handle_consume_exception
+    logging.exception(
+2023-01-30 14:15:00.745 WARN [] *** Sending self SIGUSR1 to trigger a restart.
+</code></pre></div>
+<p><span class="user-mention" data-user-id="12178">@Alex Vandiver</span></p>
+
+
+
+<a name="1499104"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499104" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499104">(Jan 30 2023 at 15:54)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="25878">realimpat</span> <a href="#narrow/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F/near/1499096">said</a>:</p>
+<blockquote>
+<blockquote>
+<p>If you run host <a href="http://push.zulipchat.com">push.zulipchat.com</a> from the command line on the server, what does it output?</p>
+</blockquote>
+<p>There's a dozen lines of output of ip addresses, half of them IPV6. I'm not sure it would be wise to post all of the exact ip addresses here publicly.</p>
+</blockquote>
+<p>Those are all our public IPs that anyone can find, so there are no secrets there. <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span>  But if you're seeing them, then this isn't currently the issue (though it seems transient).</p>
+<blockquote>
+<blockquote>
+<p>Is there any pattern to when you see those errors? That last one looks to be at 06:00:51, it looks like.</p>
+</blockquote>
+<p>A few times a day, the disk i/o usage shoots through the roof and freezes up the box, causing user input to be increasingly laggy until everyon is 'unable to connect to zulip' for 30 seconds or so. then something seems to reset and performance goes back to normal. That's concurrent with when these errors are happening. </p>
+<p>I'm unsure if these errors are the root problem or a symptom of something else, but they showed up at the tail of the logs. I'll post the most recent 150 lines of tail output from today also, which seems to include a SIGUSR1 restart trigger</p>
+</blockquote>
+<p>This seems like it's possibly OOM.  How much memory is on the box?  Do you have any swap allocated?</p>
+
+
+
+<a name="1499105"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499105" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499105">(Jan 30 2023 at 15:55)</a>:</h4>
+<p>And did you indeed restart Zulip at <time datetime="2023-01-30T14:15:00Z">2023-01-30T14:15:00-00:00</time>?</p>
+
+
+
+<a name="1499107"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499107" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499107">(Jan 30 2023 at 16:00)</a>:</h4>
+<blockquote>
+<p>This seems like it's possibly OOM. How much memory is on the box? Do you have any swap allocated?</p>
+</blockquote>
+<p>I actually just doubled the memory a few weeks ago, and moved from single to multi threaded cpu resources. It did get flustered before, but this stopping and restarting has gotten noticeably more prominent since then. There's 4g with a swap too. It doesn't use any of the swap at idle. </p>
+<blockquote>
+<p>And did you indeed restart Zulip at  Mon, Jan 30, 2023, 9:15 AM?</p>
+</blockquote>
+<p>I didn't trigger a restart, though it is certainly possible that it self-restarted and brought itself back up again.</p>
+
+
+
+<a name="1499108"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499108" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499108">(Jan 30 2023 at 16:04)</a>:</h4>
+<p>Hm, OK, those messages are the worker processes restarting because the database server has gown down.  Can you check the PostgreSQL logs?</p>
+
+
+
+<a name="1499141"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499141" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499141">(Jan 30 2023 at 17:07)</a>:</h4>
+<p>here's the last lines of output from the postgresql logs (part 1/2)</p>
+<div class="codehilite"><pre><span></span><code>root@zulip:/var/log/postgresql# tail -n 100 postgresql-2023-01-27_042905.log
+2023-01-30 16:00:58.687 UTC [63d7e775.3fc9c]: [1-1] LOG:  duration: 591.964 ms  statement: COMMIT
+2023-01-30 16:00:59.844 UTC [63d7e775.3fc9c]: [2-1] LOG:  duration: 899.264 ms  statement: SELECT &quot;analytics_usercount&quot;.&quot;id&quot;, &quot;analytics_usercount&quot;.&quot;property&quot;, &quot;analytics_usercount&quot;.&quot;subgroup&quot;, &quot;analytics_usercount&quot;.&quot;end_time&quot;, &quot;analytics_usercount&quot;.&quot;value&quot;, &quot;analytics_usercount&quot;.&quot;user_id&quot;, &quot;analytics_usercount&quot;.&quot;realm_id&quot; FROM &quot;analytics_usercount&quot; WHERE (&quot;analytics_usercount&quot;.&quot;end_time&quot; = &#39;2023-01-30T17:00:00+00:00&#39;::timestamptz AND &quot;analytics_usercount&quot;.&quot;property&quot; = &#39;messages_read_interactions::hour&#39; AND &quot;analytics_usercount&quot;.&quot;realm_id&quot; = 2 AND &quot;analytics_usercount&quot;.&quot;subgroup&quot; IS NULL AND &quot;analytics_usercount&quot;.&quot;user_id&quot; = 22) LIMIT 21
+2023-01-30 16:01:01.704 UTC [63d7cec7.3e001]: [2-1] LOG:  duration: 756.619 ms  statement: SELECT &quot;zerver_scheduledemail&quot;.&quot;id&quot;, &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot;, &quot;zerver_scheduledemail&quot;.&quot;data&quot;, &quot;zerver_scheduledemail&quot;.&quot;realm_id&quot;, &quot;zerver_scheduledemail&quot;.&quot;address&quot;, &quot;zerver_scheduledemail&quot;.&quot;type&quot; FROM &quot;zerver_scheduledemail&quot; WHERE &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot; &lt;= &#39;2023-01-30T16:01:00.614443+00:00&#39;::timestamptz ORDER BY &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot; ASC LIMIT 1 FOR UPDATE SKIP LOCKED
+2023-01-30 16:01:11.438 UTC [63d7ceb7.3dfc6]: [46-1] LOG:  checkpoint complete: wrote 178 buffers (0.3%); 0 WAL file(s) added, 0 removed, 0 recycled; write=25.476 s, sync=0.495 s, total=26.299 s; sync files=64, longest=0.263 s, average=0.007 s; distance=944 kB, estimate=1155 kB
+2023-01-30 16:05:05.569 UTC [63d7e9da.3ffe6]: [1-1] LOG:  duration: 523.992 ms  statement: SELECT &quot;zerver_client&quot;.&quot;name&quot;, &quot;zerver_userpresence&quot;.&quot;status&quot;, &quot;zerver_userpresence&quot;.&quot;timestamp&quot;, &quot;zerver_userprofile&quot;.&quot;email&quot;, &quot;zerver_userpresence&quot;.&quot;user_profile_id&quot;, &quot;zerver_userprofile&quot;.&quot;enable_offline_push_notifications&quot; FROM &quot;zerver_userpresence&quot; INNER JOIN &quot;zerver_userprofile&quot; ON (&quot;zerver_userpresence&quot;.&quot;user_profile_id&quot; = &quot;zerver_userprofile&quot;.&quot;id&quot;) INNER JOIN &quot;zerver_client&quot; ON (&quot;zerver_userpresence&quot;.&quot;client_id&quot; = &quot;zerver_client&quot;.&quot;id&quot;) WHERE (&quot;zerver_userpresence&quot;.&quot;realm_id&quot; = 2 AND &quot;zerver_userpresence&quot;.&quot;timestamp&quot; &gt;= &#39;2023-01-16T16:05:04.925908+00:00&#39;::timestamptz AND &quot;zerver_userprofile&quot;.&quot;is_active&quot; AND NOT &quot;zerver_userprofile&quot;.&quot;is_bot&quot;)
+2023-01-30 16:05:44.628 UTC [63d7ceb7.3dfc6]: [47-1] LOG:  checkpoint starting: time
+2023-01-30 16:05:45.025 UTC [63d7ead7.40109]: [1-1] LOG:  duration: 702.878 ms  statement: SELECT 1 AS &quot;a&quot; FROM &quot;zerver_realm&quot; LIMIT 1
+2023-01-30 16:05:48.192 UTC [63d7ead7.40109]: [2-1] LOG:  duration: 2527.504 ms  statement:
+        INSERT INTO analytics_usercount
+            (user_id, realm_id, value, property, subgroup, end_time)
+        SELECT
+            zerver_userprofile.id, zerver_userprofile.realm_id, count(*),
+            &#39;messages_sent:is_bot:hour&#39;, &quot;zerver_userprofile&quot;.&quot;is_bot&quot;, &#39;2023-01-30T16:00:00+00:00&#39;::timestamptz
+        FROM zerver_userprofile
+        JOIN zerver_message
+        ON
+            zerver_userprofile.id = zerver_message.sender_id
+        WHERE
+            zerver_userprofile.date_joined &lt; &#39;2023-01-30T16:00:00+00:00&#39;::timestamptz AND
+            zerver_message.date_sent &gt;= &#39;2023-01-30T15:00:00+00:00&#39;::timestamptz AND
+
+            zerver_message.date_sent &lt; &#39;2023-01-30T16:00:00+00:00&#39;::timestamptz
+        GROUP BY zerver_userprofile.id , &quot;zerver_userprofile&quot;.&quot;is_bot&quot;
+
+2023-01-30 16:05:53.185 UTC [63d7ead7.40109]: [3-1] LOG:  duration: 4335.396 ms  statement:
+                INSERT INTO analytics_realmcount
+                    (realm_id, value, property, subgroup, end_time)
+                SELECT
+                    zerver_realm.id, COALESCE(sum(&quot;analytics_usercount&quot;.value), 0), &#39;messages_sent:is_bot:hour&#39;,
+                    &quot;analytics_usercount&quot;.subgroup, &#39;2023-01-30T16:00:00+00:00&#39;::timestamptz
+                FROM zerver_realm
+                JOIN &quot;analytics_usercount&quot;
+                ON
+                    zerver_realm.id = &quot;analytics_usercount&quot;.realm_id
+                WHERE
+                    &quot;analytics_usercount&quot;.property = &#39;messages_sent:is_bot:hour&#39; AND
+                    &quot;analytics_usercount&quot;.end_time = &#39;2023-01-30T16:00:00+00:00&#39;::timestamptz
+
+                GROUP BY zerver_realm.id, &quot;analytics_usercount&quot;.subgroup
+
+2023-01-30 16:05:55.184 UTC [63d7ead7.40109]: [4-1] LOG:  duration: 1891.633 ms  statement:
+                INSERT INTO analytics_installationcount
+                    (value, property, subgroup, end_time)
+                SELECT
+                    sum(value), &#39;messages_sent:is_bot:hour&#39;, analytics_realmcount.subgroup, &#39;2023-01-30T16:00:00+00:00&#39;::timestamptz
+                FROM analytics_realmcount
+                WHERE
+                    property = &#39;messages_sent:is_bot:hour&#39; AND
+                    end_time = &#39;2023-01-30T16:00:00+00:00&#39;::timestamptz
+                GROUP BY analytics_realmcount.subgroup
+
+2023-01-30 16:05:55.226 UTC [63d7e9da.3ffe6]: [2-1] LOG:  duration: 1648.030 ms  statement: SELECT &quot;zerver_client&quot;.&quot;name&quot;, &quot;zerver_userpresence&quot;.&quot;status&quot;, &quot;zerver_userpresence&quot;.&quot;timestamp&quot;, &quot;zerver_userprofile&quot;.&quot;email&quot;, &quot;zerver_userpresence&quot;.&quot;user_profile_id&quot;, &quot;zerver_userprofile&quot;.&quot;enable_offline_push_notifications&quot; FROM &quot;zerver_userpresence&quot; INNER JOIN &quot;zerver_userprofile&quot; ON (&quot;zerver_userpresence&quot;.&quot;user_profile_id&quot; = &quot;zerver_userprofile&quot;.&quot;id&quot;) INNER JOIN &quot;zerver_client&quot; ON (&quot;zerver_userpresence&quot;.&quot;client_id&quot; = &quot;zerver_client&quot;.&quot;id&quot;) WHERE (&quot;zerver_userpresence&quot;.&quot;realm_id&quot; = 2 AND &quot;zerver_userpresence&quot;.&quot;timestamp&quot; &gt;= &#39;2023-01-16T16:05:53.297391+00:00&#39;::timestamptz AND &quot;zerver_userprofile&quot;.&quot;is_active&quot; AND NOT &quot;zerver_userprofile&quot;.&quot;is_bot&quot;)
+</code></pre></div>
+
+
+
+<a name="1499142"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499142" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499142">(Jan 30 2023 at 17:08)</a>:</h4>
+<p>part 2/2</p>
+<div class="codehilite"><pre><span></span><code>2023-01-30 16:05:56.600 UTC [63d7ead7.40109]: [5-1] LOG:  duration: 1034.191 ms  statement: UPDATE &quot;analytics_fillstate&quot; SET &quot;property&quot; = &#39;messages_sent:is_bot:hour&#39;, &quot;end_time&quot; = &#39;2023-01-30T16:00:00+00:00&#39;::timestamptz, &quot;state&quot; = 1 WHERE &quot;analytics_fillstate&quot;.&quot;id&quot; = 1
+2023-01-30 16:05:56.891 UTC [63d7ceb7.3dfc6]: [48-1] LOG:  checkpoint complete: wrote 95 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=12.112 s, sync=0.029 s, total=12.263 s; sync files=42, longest=0.009 s, average=0.001 s; distance=520 kB, estimate=1091 kB
+2023-01-30 16:05:59.436 UTC [63d7e9da.3ffe6]: [3-1] LOG:  duration: 1395.692 ms  statement: SELECT DISTINCT ON (&quot;zerver_pushdevicetoken&quot;.&quot;user_id&quot;) &quot;zerver_pushdevicetoken&quot;.&quot;user_id&quot; FROM &quot;zerver_pushdevicetoken&quot; WHERE (user_id IN (36, 39, 29, 14, 32, 36, 31, 35, 22, 37, 30, 8, 9, 33, 22, 35, 39, 30, 29, 30, 31, 37, 9, 14, 8))
+2023-01-30 16:05:59.436 UTC [63d7ead7.40109]: [6-1] LOG:  duration: 514.642 ms  statement: SELECT &quot;analytics_fillstate&quot;.&quot;id&quot;, &quot;analytics_fillstate&quot;.&quot;property&quot;, &quot;analytics_fillstate&quot;.&quot;end_time&quot;, &quot;analytics_fillstate&quot;.&quot;state&quot; FROM &quot;analytics_fillstate&quot; WHERE &quot;analytics_fillstate&quot;.&quot;property&quot; = &#39;messages_sent:message_type:day&#39; ORDER BY &quot;analytics_fillstate&quot;.&quot;id&quot; ASC LIMIT 1
+2023-01-30 16:06:06.051 UTC [63d7ead7.40109]: [7-1] LOG:  duration: 5945.422 ms  statement: SELECT &quot;analytics_fillstate&quot;.&quot;id&quot;, &quot;analytics_fillstate&quot;.&quot;property&quot;, &quot;analytics_fillstate&quot;.&quot;end_time&quot;, &quot;analytics_fillstate&quot;.&quot;state&quot; FROM &quot;analytics_fillstate&quot; WHERE &quot;analytics_fillstate&quot;.&quot;property&quot; = &#39;messages_sent:client:day&#39; ORDER BY &quot;analytics_fillstate&quot;.&quot;id&quot; ASC LIMIT 1
+2023-01-30 16:06:07.960 UTC [63d7cec7.3e001]: [3-1] LOG:  duration: 1152.118 ms  statement: COMMIT
+2023-01-30 16:06:12.632 UTC [63d7ead7.40109]: [8-1] LOG:  duration: 2242.442 ms  statement: SELECT &quot;analytics_fillstate&quot;.&quot;id&quot;, &quot;analytics_fillstate&quot;.&quot;property&quot;, &quot;analytics_fillstate&quot;.&quot;end_time&quot;, &quot;analytics_fillstate&quot;.&quot;state&quot; FROM &quot;analytics_fillstate&quot; WHERE &quot;analytics_fillstate&quot;.&quot;property&quot; = &#39;messages_in_stream:is_bot:day&#39; ORDER BY &quot;analytics_fillstate&quot;.&quot;id&quot; ASC LIMIT 1
+2023-01-30 16:06:17.646 UTC [63d7ead7.40109]: [9-1] LOG:  duration: 1684.331 ms  statement: SELECT &quot;analytics_fillstate&quot;.&quot;id&quot;, &quot;analytics_fillstate&quot;.&quot;property&quot;, &quot;analytics_fillstate&quot;.&quot;end_time&quot;, &quot;analytics_fillstate&quot;.&quot;state&quot; FROM &quot;analytics_fillstate&quot; WHERE &quot;analytics_fillstate&quot;.&quot;property&quot; = &#39;active_users_audit:is_bot:day&#39; ORDER BY &quot;analytics_fillstate&quot;.&quot;id&quot; ASC LIMIT 1
+2023-01-30 16:06:19.330 UTC [63d7cec5.3dff7]: [5-1] LOG:  duration: 1797.770 ms  statement: SELECT &quot;zerver_userpresence&quot;.&quot;id&quot;, &quot;zerver_userpresence&quot;.&quot;user_profile_id&quot;, &quot;zerver_userpresence&quot;.&quot;realm_id&quot;, &quot;zerver_userpresence&quot;.&quot;client_id&quot;, &quot;zerver_userpresence&quot;.&quot;timestamp&quot;, &quot;zerver_userpresence&quot;.&quot;status&quot; FROM &quot;zerver_userpresence&quot; WHERE (&quot;zerver_userpresence&quot;.&quot;client_id&quot; = 1 AND &quot;zerver_userpresence&quot;.&quot;user_profile_id&quot; = 14) LIMIT 21
+2023-01-30 16:06:20.819 UTC [63d7ead7.40109]: [10-1] LOG:  duration: 2165.375 ms  statement: SELECT &quot;analytics_fillstate&quot;.&quot;id&quot;, &quot;analytics_fillstate&quot;.&quot;property&quot;, &quot;analytics_fillstate&quot;.&quot;end_time&quot;, &quot;analytics_fillstate&quot;.&quot;state&quot; FROM &quot;analytics_fillstate&quot; WHERE &quot;analytics_fillstate&quot;.&quot;property&quot; = &#39;active_users_log:is_bot:day&#39; ORDER BY &quot;analytics_fillstate&quot;.&quot;id&quot; ASC LIMIT 1
+2023-01-30 16:06:31.389 UTC [63d7cecd.3e011]: [1-1] LOG:  duration: 8257.837 ms  statement: SELECT &quot;zerver_scheduledmessage&quot;.&quot;id&quot;, &quot;zerver_scheduledmessage&quot;.&quot;sender_id&quot;, &quot;zerver_scheduledmessage&quot;.&quot;recipient_id&quot;, &quot;zerver_scheduledmessage&quot;.&quot;subject&quot;, &quot;zerver_scheduledmessage&quot;.&quot;content&quot;, &quot;zerver_scheduledmessage&quot;.&quot;sending_client_id&quot;, &quot;zerver_scheduledmessage&quot;.&quot;stream_id&quot;, &quot;zerver_scheduledmessage&quot;.&quot;realm_id&quot;, &quot;zerver_scheduledmessage&quot;.&quot;scheduled_timestamp&quot;, &quot;zerver_scheduledmessage&quot;.&quot;delivered&quot;, &quot;zerver_scheduledmessage&quot;.&quot;delivery_type&quot; FROM &quot;zerver_scheduledmessage&quot; WHERE (NOT &quot;zerver_scheduledmessage&quot;.&quot;delivered&quot; AND &quot;zerver_scheduledmessage&quot;.&quot;scheduled_timestamp&quot; &lt;= &#39;2023-01-30T16:06:00.341174+00:00&#39;::timestamptz) FOR UPDATE
+2023-01-30 16:06:33.640 UTC [63d7ead7.40109]: [11-1] LOG:  duration: 5946.971 ms  statement: SELECT &quot;analytics_fillstate&quot;.&quot;id&quot;, &quot;analytics_fillstate&quot;.&quot;property&quot;, &quot;analytics_fillstate&quot;.&quot;end_time&quot;, &quot;analytics_fillstate&quot;.&quot;state&quot; FROM &quot;analytics_fillstate&quot; WHERE &quot;analytics_fillstate&quot;.&quot;property&quot; = &#39;active_users:is_bot:day&#39; ORDER BY &quot;analytics_fillstate&quot;.&quot;id&quot; ASC LIMIT 1
+2023-01-30 16:10:45.029 UTC [63d7ceb7.3dfc6]: [49-1] LOG:  checkpoint starting: time
+2023-01-30 16:10:53.341 UTC [63d7ceb7.3dfc6]: [50-1] LOG:  checkpoint complete: wrote 83 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=8.285 s, sync=0.009 s, total=8.314 s; sync files=35, longest=0.004 s, average=0.001 s; distance=442 kB, estimate=1026 kB
+2023-01-30 16:15:45.375 UTC [63d7ceb7.3dfc6]: [51-1] LOG:  checkpoint starting: time
+2023-01-30 16:15:47.838 UTC [63d7ceb7.3dfc6]: [52-1] LOG:  checkpoint complete: wrote 24 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.326 s, sync=0.018 s, total=2.464 s; sync files=13, longest=0.009 s, average=0.002 s; distance=125 kB, estimate=936 kB
+2023-01-30 16:20:45.940 UTC [63d7ceb7.3dfc6]: [53-1] LOG:  checkpoint starting: time
+2023-01-30 16:20:51.086 UTC [63d7ceb7.3dfc6]: [54-1] LOG:  checkpoint complete: wrote 51 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=5.052 s, sync=0.053 s, total=5.148 s; sync files=31, longest=0.038 s, average=0.002 s; distance=226 kB, estimate=865 kB
+2023-01-30 16:25:45.191 UTC [63d7ceb7.3dfc6]: [55-1] LOG:  checkpoint starting: time
+2023-01-30 16:26:00.765 UTC [63d7ceb7.3dfc6]: [56-1] LOG:  checkpoint complete: wrote 156 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=15.509 s, sync=0.012 s, total=15.575 s; sync files=73, longest=0.002 s, average=0.001 s; distance=757 kB, estimate=854 kB
+2023-01-30 16:30:26.071 UTC [63d7cec7.3e001]: [4-1] LOG:  duration: 1925.608 ms  statement: SELECT &quot;zerver_scheduledemail&quot;.&quot;id&quot;, &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot;, &quot;zerver_scheduledemail&quot;.&quot;data&quot;, &quot;zerver_scheduledemail&quot;.&quot;realm_id&quot;, &quot;zerver_scheduledemail&quot;.&quot;address&quot;, &quot;zerver_scheduledemail&quot;.&quot;type&quot; FROM &quot;zerver_scheduledemail&quot; WHERE &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot; &lt;= &#39;2023-01-30T16:30:21.418069+00:00&#39;::timestamptz ORDER BY &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot; ASC LIMIT 1 FOR UPDATE SKIP LOCKED
+2023-01-30 16:30:45.851 UTC [63d7ceb7.3dfc6]: [57-1] LOG:  checkpoint starting: time
+2023-01-30 16:31:03.665 UTC [63d7ceb7.3dfc6]: [58-1] LOG:  checkpoint complete: wrote 176 buffers (0.3%); 0 WAL file(s) added, 0 removed, 0 recycled; write=17.782 s, sync=0.011 s, total=17.815 s; sync files=71, longest=0.002 s, average=0.001 s; distance=911 kB, estimate=911 kB
+2023-01-30 16:35:21.602 UTC [63d7cec6.3e000]: [6-1] LOG:  duration: 858.458 ms  statement: SELECT &quot;zerver_useractivity&quot;.&quot;id&quot;, &quot;zerver_useractivity&quot;.&quot;user_profile_id&quot;, &quot;zerver_useractivity&quot;.&quot;client_id&quot;, &quot;zerver_useractivity&quot;.&quot;query&quot;, &quot;zerver_useractivity&quot;.&quot;count&quot;, &quot;zerver_useractivity&quot;.&quot;last_visit&quot; FROM &quot;zerver_useractivity&quot; WHERE (&quot;zerver_useractivity&quot;.&quot;client_id&quot; = 5 AND &quot;zerver_useractivity&quot;.&quot;query&quot; = &#39;get_events&#39; AND &quot;zerver_useractivity&quot;.&quot;user_profile_id&quot; = 30) LIMIT 21
+2023-01-30 16:35:22.802 UTC [63d7cec6.3e000]: [7-1] LOG:  duration: 689.964 ms  statement: UPDATE &quot;zerver_useractivity&quot; SET &quot;count&quot; = 372774, &quot;last_visit&quot; = &#39;2023-01-30T16:35:18+00:00&#39;::timestamptz WHERE &quot;zerver_useractivity&quot;.&quot;id&quot; = 653
+2023-01-30 16:35:26.554 UTC [63d7f021.40702]: [1-1] LOG:  duration: 1232.195 ms  statement: SELECT &quot;zerver_client&quot;.&quot;name&quot;, &quot;zerver_userpresence&quot;.&quot;status&quot;, &quot;zerver_userpresence&quot;.&quot;timestamp&quot;, &quot;zerver_userprofile&quot;.&quot;email&quot;, &quot;zerver_userpresence&quot;.&quot;user_profile_id&quot;, &quot;zerver_userprofile&quot;.&quot;enable_offline_push_notifications&quot; FROM &quot;zerver_userpresence&quot; INNER JOIN &quot;zerver_userprofile&quot; ON (&quot;zerver_userpresence&quot;.&quot;user_profile_id&quot; = &quot;zerver_userprofile&quot;.&quot;id&quot;) INNER JOIN &quot;zerver_client&quot; ON (&quot;zerver_userpresence&quot;.&quot;client_id&quot; = &quot;zerver_client&quot;.&quot;id&quot;) WHERE (&quot;zerver_userpresence&quot;.&quot;realm_id&quot; = 2 AND &quot;zerver_userpresence&quot;.&quot;timestamp&quot; &gt;= &#39;2023-01-16T16:35:25.247546+00:00&#39;::timestamptz AND &quot;zerver_userprofile&quot;.&quot;is_active&quot; AND NOT &quot;zerver_userprofile&quot;.&quot;is_bot&quot;)
+2023-01-30 16:35:27.419 UTC [63d7cec6.3e000]: [8-1] LOG:  duration: 576.304 ms  statement: SELECT &quot;zerver_useractivity&quot;.&quot;id&quot;, &quot;zerver_useractivity&quot;.&quot;user_profile_id&quot;, &quot;zerver_useractivity&quot;.&quot;client_id&quot;, &quot;zerver_useractivity&quot;.&quot;query&quot;, &quot;zerver_useractivity&quot;.&quot;count&quot;, &quot;zerver_useractivity&quot;.&quot;last_visit&quot; FROM &quot;zerver_useractivity&quot; WHERE (&quot;zerver_useractivity&quot;.&quot;client_id&quot; = 5 AND &quot;zerver_useractivity&quot;.&quot;query&quot; = &#39;get_events&#39; AND &quot;zerver_useractivity&quot;.&quot;user_profile_id&quot; = 31) LIMIT 21
+2023-01-30 16:35:28.298 UTC [63d7f1cd.4089d]: [1-1] LOG:  duration: 855.568 ms  statement: SELECT &quot;zerver_client&quot;.&quot;name&quot;, &quot;zerver_userpresence&quot;.&quot;status&quot;, &quot;zerver_userpresence&quot;.&quot;timestamp&quot;, &quot;zerver_userprofile&quot;.&quot;email&quot;, &quot;zerver_userpresence&quot;.&quot;user_profile_id&quot;, &quot;zerver_userprofile&quot;.&quot;enable_offline_push_notifications&quot; FROM &quot;zerver_userpresence&quot; INNER JOIN &quot;zerver_userprofile&quot; ON (&quot;zerver_userpresence&quot;.&quot;user_profile_id&quot; = &quot;zerver_userprofile&quot;.&quot;id&quot;) INNER JOIN &quot;zerver_client&quot; ON (&quot;zerver_userpresence&quot;.&quot;client_id&quot; = &quot;zerver_client&quot;.&quot;id&quot;) WHERE (&quot;zerver_userpresence&quot;.&quot;realm_id&quot; = 2 AND &quot;zerver_userpresence&quot;.&quot;timestamp&quot; &gt;= &#39;2023-01-16T16:35:25.256565+00:00&#39;::timestamptz AND &quot;zerver_userprofile&quot;.&quot;is_active&quot; AND NOT &quot;zerver_userprofile&quot;.&quot;is_bot&quot;)
+</code></pre></div>
+
+
+
+<a name="1499143"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499143" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499143">(Jan 30 2023 at 17:08)</a>:</h4>
+<p>part 3/2 (i was off by one in my estimation of wordcount)</p>
+<div class="codehilite"><pre><span></span><code>2023-01-30 16:35:28.298 UTC [63d7f1cd.4089e]: [1-1] LOG:  duration: 855.454 ms  statement: SELECT &quot;zerver_client&quot;.&quot;name&quot;, &quot;zerver_userpresence&quot;.&quot;status&quot;, &quot;zerver_userpresence&quot;.&quot;timestamp&quot;, &quot;zerver_userprofile&quot;.&quot;email&quot;, &quot;zerver_userpresence&quot;.&quot;user_profile_id&quot;, &quot;zerver_userprofile&quot;.&quot;enable_offline_push_notifications&quot; FROM &quot;zerver_userpresence&quot; INNER JOIN &quot;zerver_userprofile&quot; ON (&quot;zerver_userpresence&quot;.&quot;user_profile_id&quot; = &quot;zerver_userprofile&quot;.&quot;id&quot;) INNER JOIN &quot;zerver_client&quot; ON (&quot;zerver_userpresence&quot;.&quot;client_id&quot; = &quot;zerver_client&quot;.&quot;id&quot;) WHERE (&quot;zerver_userpresence&quot;.&quot;realm_id&quot; = 2 AND &quot;zerver_userpresence&quot;.&quot;timestamp&quot; &gt;= &#39;2023-01-16T16:35:25.259054+00:00&#39;::timestamptz AND &quot;zerver_userprofile&quot;.&quot;is_active&quot; AND NOT &quot;zerver_userprofile&quot;.&quot;is_bot&quot;)
+2023-01-30 16:35:30.166 UTC [63d7cec6.3e000]: [9-1] LOG:  duration: 704.854 ms  statement: SELECT &quot;zerver_useractivity&quot;.&quot;id&quot;, &quot;zerver_useractivity&quot;.&quot;user_profile_id&quot;, &quot;zerver_useractivity&quot;.&quot;client_id&quot;, &quot;zerver_useractivity&quot;.&quot;query&quot;, &quot;zerver_useractivity&quot;.&quot;count&quot;, &quot;zerver_useractivity&quot;.&quot;last_visit&quot; FROM &quot;zerver_useractivity&quot; WHERE (&quot;zerver_useractivity&quot;.&quot;client_id&quot; = 1 AND &quot;zerver_useractivity&quot;.&quot;query&quot; = &#39;get_events&#39; AND &quot;zerver_useractivity&quot;.&quot;user_profile_id&quot; = 36) LIMIT 21
+2023-01-30 16:35:30.166 UTC [63d7cec5.3dff7]: [6-1] LOG:  duration: 705.106 ms  statement: SELECT &quot;zerver_userpresence&quot;.&quot;id&quot;, &quot;zerver_userpresence&quot;.&quot;user_profile_id&quot;, &quot;zerver_userpresence&quot;.&quot;realm_id&quot;, &quot;zerver_userpresence&quot;.&quot;client_id&quot;, &quot;zerver_userpresence&quot;.&quot;timestamp&quot;, &quot;zerver_userpresence&quot;.&quot;status&quot; FROM &quot;zerver_userpresence&quot; WHERE (&quot;zerver_userpresence&quot;.&quot;client_id&quot; = 5 AND &quot;zerver_userpresence&quot;.&quot;user_profile_id&quot; = 8) LIMIT 21
+2023-01-30 16:35:30.169 UTC [63d7f1cd.4089e]: [2-1] LOG:  duration: 706.935 ms  statement: SELECT DISTINCT ON (&quot;zerver_pushdevicetoken&quot;.&quot;user_id&quot;) &quot;zerver_pushdevicetoken&quot;.&quot;user_id&quot; FROM &quot;zerver_pushdevicetoken&quot; WHERE (user_id IN (36, 39, 32, 39, 22, 37, 33, 35, 30, 29, 30, 14, 8, 36, 37, 29, 31, 31, 9, 30, 22, 35, 9, 14, 8))
+2023-01-30 16:35:30.169 UTC [63d7f1cd.4089d]: [2-1] LOG:  duration: 707.992 ms  statement: SELECT DISTINCT ON (&quot;zerver_pushdevicetoken&quot;.&quot;user_id&quot;) &quot;zerver_pushdevicetoken&quot;.&quot;user_id&quot; FROM &quot;zerver_pushdevicetoken&quot; WHERE (user_id IN (36, 39, 32, 39, 22, 37, 33, 35, 30, 29, 30, 14, 8, 36, 37, 29, 31, 31, 9, 30, 22, 35, 9, 14, 8))
+2023-01-30 16:35:30.171 UTC [63d7f018.406ff]: [1-1] LOG:  duration: 656.553 ms  statement: SELECT &quot;zerver_client&quot;.&quot;name&quot;, &quot;zerver_userpresence&quot;.&quot;status&quot;, &quot;zerver_userpresence&quot;.&quot;timestamp&quot;, &quot;zerver_userprofile&quot;.&quot;email&quot;, &quot;zerver_userpresence&quot;.&quot;user_profile_id&quot;, &quot;zerver_userprofile&quot;.&quot;enable_offline_push_notifications&quot; FROM &quot;zerver_userpresence&quot; INNER JOIN &quot;zerver_userprofile&quot; ON (&quot;zerver_userpresence&quot;.&quot;user_profile_id&quot; = &quot;zerver_userprofile&quot;.&quot;id&quot;) INNER JOIN &quot;zerver_client&quot; ON (&quot;zerver_userpresence&quot;.&quot;client_id&quot; = &quot;zerver_client&quot;.&quot;id&quot;) WHERE (&quot;zerver_userpresence&quot;.&quot;realm_id&quot; = 2 AND &quot;zerver_userpresence&quot;.&quot;timestamp&quot; &gt;= &#39;2023-01-16T16:35:29.030175+00:00&#39;::timestamptz AND &quot;zerver_userprofile&quot;.&quot;is_active&quot; AND NOT &quot;zerver_userprofile&quot;.&quot;is_bot&quot;)
+2023-01-30 16:35:45.727 UTC [63d7ceb7.3dfc6]: [59-1] LOG:  checkpoint starting: time
+2023-01-30 16:35:49.911 UTC [63d7ceb7.3dfc6]: [60-1] LOG:  checkpoint complete: wrote 42 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=4.156 s, sync=0.007 s, total=4.184 s; sync files=32, longest=0.003 s, average=0.001 s; distance=222 kB, estimate=842 kB
+2023-01-30 16:40:46.008 UTC [63d7ceb7.3dfc6]: [61-1] LOG:  checkpoint starting: time
+2023-01-30 16:40:52.792 UTC [63d7ceb7.3dfc6]: [62-1] LOG:  checkpoint complete: wrote 68 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=6.751 s, sync=0.006 s, total=6.784 s; sync files=39, longest=0.003 s, average=0.001 s; distance=356 kB, estimate=794 kB
+2023-01-30 16:45:46.859 UTC [63d7ceb7.3dfc6]: [63-1] LOG:  checkpoint starting: time
+2023-01-30 16:46:09.210 UTC [63d7ceb7.3dfc6]: [64-1] LOG:  checkpoint complete: wrote 221 buffers (0.4%); 0 WAL file(s) added, 0 removed, 0 recycled; write=22.309 s, sync=0.010 s, total=22.351 s; sync files=91, longest=0.002 s, average=0.001 s; distance=1139 kB, estimate=1139 kB
+2023-01-30 16:50:46.307 UTC [63d7ceb7.3dfc6]: [65-1] LOG:  checkpoint starting: time
+2023-01-30 16:50:58.532 UTC [63d7ceb7.3dfc6]: [66-1] LOG:  checkpoint complete: wrote 122 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=12.190 s, sync=0.006 s, total=12.225 s; sync files=55, longest=0.002 s, average=0.001 s; distance=640 kB, estimate=1089 kB
+2023-01-30 16:55:46.629 UTC [63d7ceb7.3dfc6]: [67-1] LOG:  checkpoint starting: time
+2023-01-30 16:55:53.903 UTC [63d7ceb7.3dfc6]: [68-1] LOG:  checkpoint complete: wrote 72 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=7.249 s, sync=0.010 s, total=7.274 s; sync files=38, longest=0.005 s, average=0.001 s; distance=385 kB, estimate=1019 kB
+2023-01-30 17:00:30.914 UTC [63d7cec7.3e001]: [5-1] LOG:  duration: 7886.345 ms  statement: SELECT &quot;zerver_scheduledemail&quot;.&quot;id&quot;, &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot;, &quot;zerver_scheduledemail&quot;.&quot;data&quot;, &quot;zerver_scheduledemail&quot;.&quot;realm_id&quot;, &quot;zerver_scheduledemail&quot;.&quot;address&quot;, &quot;zerver_scheduledemail&quot;.&quot;type&quot; FROM &quot;zerver_scheduledemail&quot; WHERE &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot; &lt;= &#39;2023-01-30T17:00:19.018210+00:00&#39;::timestamptz ORDER BY &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot; ASC LIMIT 1 FOR UPDATE SKIP LOCKED
+2023-01-30 17:00:47.003 UTC [63d7ceb7.3dfc6]: [69-1] LOG:  checkpoint starting: time
+2023-01-30 17:01:08.232 UTC [63d7ceb7.3dfc6]: [70-1] LOG:  checkpoint complete: wrote 210 buffers (0.3%); 0 WAL file(s) added, 0 removed, 0 recycled; write=21.173 s, sync=0.019 s, total=21.229 s; sync files=82, longest=0.004 s, average=0.001 s; distance=1090 kB, estimate=1090 kB
+2023-01-30 17:05:13.958 UTC [63d7cec7.3e001]: [6-1] LOG:  duration: 1011.881 ms  statement: COMMIT
+</code></pre></div>
+
+
+
+<a name="1499151"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499151" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499151">(Jan 30 2023 at 17:15)</a>:</h4>
+<p>Those all seem normal.  What about around when Zulip talked about the connection dropping, <time datetime="2023-01-30T14:15:00Z">2023-01-30T14:15:00-00:00</time>?</p>
+
+
+
+<a name="1499163"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499163" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499163">(Jan 30 2023 at 17:21)</a>:</h4>
+<p>sure.</p>
+
+
+
+<a name="1499164"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499164" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499164">(Jan 30 2023 at 17:21)</a>:</h4>
+<p>part 1/n (all one line of output)</p>
+<div class="codehilite"><pre><span></span><code>2023-01-30 13:00:17.406 UTC [63d7bf5f.3d26c]: [1-1] LOG:  duration: 1499.310 ms  statement: SELECT &quot;zerver_scheduledmessagenotificationemail&quot;.&quot;id&quot;, &quot;zerver_scheduledmessagenotificationemail&quot;.&quot;user_profile_id&quot;, &quot;zerver_scheduledmessagenotificationemail&quot;.&quot;message_id&quot;, &quot;zerver_scheduledmessagenotificationemail&quot;.&quot;trigger&quot;, &quot;zerver_scheduledmessagenotificationemail&quot;.&quot;mentioned_user_group_id&quot;, &quot;zerver_scheduledmessagenotificationemail&quot;.&quot;scheduled_timestamp&quot;, &quot;zerver_userprofile&quot;.&quot;id&quot;, &quot;zerver_userprofile&quot;.&quot;password&quot;, &quot;zerver_userprofile&quot;.&quot;last_login&quot;, &quot;zerver_userprofile&quot;.&quot;is_superuser&quot;, &quot;zerver_userprofile&quot;.&quot;enter_sends&quot;, &quot;zerver_userprofile&quot;.&quot;left_side_userlist&quot;, &quot;zerver_userprofile&quot;.&quot;default_language&quot;, &quot;zerver_userprofile&quot;.&quot;default_view&quot;, &quot;zerver_userprofile&quot;.&quot;escape_navigates_to_default_view&quot;, &quot;zerver_userprofile&quot;.&quot;dense_mode&quot;, &quot;zerver_userprofile&quot;.&quot;fluid_layout_width&quot;, &quot;zerver_userprofile&quot;.&quot;high_contrast_mode&quot;, &quot;zerver_userprofile&quot;.&quot;translate_emoticons&quot;, &quot;zerver_userprofile&quot;.&quot;display_emoji_reaction_users&quot;, &quot;zerver_userprofile&quot;.&quot;twenty_four_hour_time&quot;, &quot;zerver_userprofile&quot;.&quot;starred_message_counts&quot;, &quot;zerver_userprofile&quot;.&quot;color_scheme&quot;, &quot;zerver_userprofile&quot;.&quot;demote_inactive_streams&quot;, &quot;zerver_userprofile&quot;.&quot;emojiset&quot;, &quot;zerver_userprofile&quot;.&quot;user_list_style&quot;, &quot;zerver_userprofile&quot;.&quot;email_notifications_batching_period_seconds&quot;, &quot;zerver_userprofile&quot;.&quot;enable_stream_desktop_notifications&quot;, &quot;zerver_userprofile&quot;.&quot;enable_stream_email_notifications&quot;, &quot;zerver_userprofile&quot;.&quot;enable_stream_push_notifications&quot;, &quot;zerver_userprofile&quot;.&quot;enable_stream_audible_notifications&quot;, &quot;zerver_userprofile&quot;.&quot;notification_sound&quot;, &quot;zerver_userprofile&quot;.&quot;wildcard_mentions_notify&quot;, &quot;zerver_userprofile&quot;.&quot;enable_desktop_notifications&quot;, &quot;zerver_userprofile&quot;.&quot;pm_content_in_desktop_notifications&quot;, &quot;zerver_userprofile&quot;.&quot;enable_sounds&quot;, &quot;zerver_userprofile&quot;.&quot;enable_offline_email_notifications&quot;, &quot;zerver_userprofile&quot;.&quot;message_content_in_email_notifications&quot;, &quot;zerver_userprofile&quot;.&quot;enable_offline_push_notifications&quot;, &quot;zerver_userprofile&quot;.&quot;enable_online_push_notifications&quot;, &quot;zerver_userprofile&quot;.&quot;desktop_icon_count_display&quot;, &quot;zerver_userprofile&quot;.&quot;enable_digest_emails&quot;, &quot;zerver_userprofile&quot;.&quot;enable_login_emails&quot;, &quot;zerver_userprofile&quot;.&quot;enable_marketing_emails&quot;, &quot;zerver_userprofile&quot;.&quot;realm_name_in_notifications&quot;, &quot;zerver_userprofile&quot;.&quot;presence_enabled&quot;, &quot;zerver_userprofile&quot;.&quot;enable_drafts_synchronization&quot;, &quot;zerver_userprofile&quot;.&quot;send_stream_typing_notifications&quot;, &quot;zerver_userprofile&quot;.&quot;send_private_typing_notifications&quot;, &quot;zerver_userprofile&quot;.&quot;send_read_receipts&quot;, &quot;zerver_userprofile&quot;.&quot;delivery_email&quot;, &quot;zerver_userprofile&quot;.&quot;email&quot;, &quot;zerver_userprofile&quot;.&quot;realm_id&quot;, &quot;zerver_userprofile&quot;.&quot;recipient_id&quot;, &quot;zerver_userprofile&quot;.&quot;full_name&quot;, &quot;zerver_userprofile&quot;.&quot;date_joined&quot;, &quot;zerver_userprofile&quot;.&quot;tos_version&quot;, &quot;zerver_userprofile&quot;.&quot;api_key&quot;, &quot;zerver_userprofile&quot;.&quot;uuid&quot;, &quot;zerver_userprofile&quot;.&quot;is_staff&quot;, &quot;zerver_userprofile&quot;.&quot;is_active&quot;, &quot;zerver_userprofile&quot;.&quot;is_billing_admin&quot;, &quot;zerver_userprofile&quot;.&quot;is_bot&quot;, &quot;zerver_userprofile&quot;.&quot;bot_type&quot;, &quot;zerver_userprofile&quot;.&quot;bot_owner_id&quot;, &quot;zerver_userprofile&quot;.&quot;role&quot;, &quot;zerver_userprofile&quot;.&quot;long_term_idle&quot;, &quot;zerver_userprofile&quot;.&quot;last_active_message_id&quot;, &quot;zerver_userprofile&quot;.&quot;is_mirror_dummy&quot;, &quot;zerver_userprofile&quot;.&quot;can_forge_sender&quot;, &quot;zerver_userprofile&quot;.&quot;can_create_users&quot;, &quot;zerver_userprofile&quot;.&quot;last_reminder&quot;, &quot;zerver_userprofile&quot;.&quot;rate_limits&quot;, &quot;zerver_userprofile&quot;.&quot;default_sending_stream_id&quot;, &quot;zerver_userprofile&quot;.&quot;default_events_register_stream_id&quot;, &quot;zerver_userprofile&quot;.&quot;default_all_public_streams&quot;, &quot;zerver_userprofile&quot;.&quot;timezone&quot;, &quot;zerver_userprofile&quot;.&quot;avatar_source&quot;, &quot;zerver_userprofile&quot;.&quot;avatar_version&quot;, &quot;zerver_userprofile&quot;.&quot;avatar_hash&quot;, &quot;zerver_userprofile&quot;.&quot;tutorial_status&quot;, &quot;zerver_userprofile&quot;.&quot;onboarding_steps&quot;, &quot;zerver_userprofile&quot;.&quot;zoom_token&quot;, &quot;zerver_realm&quot;.&quot;id&quot;, &quot;zerver_realm&quot;.&quot;name&quot;, &quot;zerver_realm&quot;.&quot;description&quot;, &quot;zerver_realm&quot;.&quot;string_id&quot;, &quot;zerver_realm&quot;.&quot;date_created&quot;, &quot;zerver_realm&quot;.&quot;demo_organization_scheduled_deletion_date&quot;, &quot;zerver_realm&quot;.&quot;deactivated&quot;, &quot;zerver_realm&quot;.&quot;deactivated_redirect&quot;, &quot;zerver_realm&quot;.&quot;emails_restricted_to_domains&quot;, &quot;zerver_realm&quot;.&quot;invite_required&quot;, &quot;zerver_realm&quot;.&quot;max_invites&quot;, &quot;zerver_realm&quot;.&quot;disallow_disposable_email_addresses&quot;, &quot;zerver_realm&quot;.&quot;authentication_methods&quot;, &quot;zerver_realm&quot;.&quot;enable_spectator_access&quot;, &quot;zerver_realm&quot;.&quot;want_advertise_in_communities_directory&quot;, &quot;zerver_realm&quot;.&quot;inline_image_preview&quot;, &quot;zerver_realm&quot;.&quot;inline_url_embed_preview&quot;, &quot;zerver_realm&quot;.&quot;digest_emails_enabled&quot;, &quot;zerver_realm&quot;.&quot;digest_weekday&quot;, &quot;zerver_realm&quot;.&quot;send_welcome_emails&quot;, &quot;zerver_realm&quot;.&quot;message_content_allowed_in_email_notifications&quot;, &quot;zerver_realm&quot;.&quot;mandatory_topics&quot;, &quot;zerver_realm&quot;.&quot;name_changes_disabled&quot;, &quot;zerver_realm&quot;.&quot;email_changes_disabled&quot;, &quot;zerver_realm&quot;.&quot;avatar_changes_disabled&quot;, &quot;zerver_realm&quot;.&quot;add_custom_emoji_policy&quot;, &quot;zerver_realm&quot;.&quot;create_public_stream_policy&quot;, &quot;zerver_realm&quot;.&quot;create_private_stream_policy&quot;, &quot;zerver_realm&quot;.&quot;create_web_public_stream_policy&quot;, &quot;zerver_realm&quot;.&quot;delete_own_message_policy&quot;, &quot;zerver_realm&quot;.&quot;edit_topic_policy&quot;, &quot;zerver_realm&quot;.&quot;invite_to_realm_policy&quot;, &quot;zerver_realm&quot;.&quot;invite_to_stream_policy&quot;, &quot;zerver_realm&quot;.&quot;move_messages_between_streams_policy&quot;, &quot;zerver_realm&quot;.&quot;user_group_edit_policy&quot;, &quot;zerver_realm&quot;.&quot;private_message_policy&quot;, &quot;zerver_realm&quot;.&quot;wildcard_mention_policy&quot;, &quot;zerver_realm&quot;.&quot;email_address_visibility&quot;, &quot;zerver_realm&quot;.&quot;waiting_period_threshold&quot;, &quot;zerver_realm&quot;.&quot;message_content_delete_limit_seconds&quot;, &quot;zerver_realm&quot;.&quot;allow_message_editing&quot;, &quot;zerver_realm&quot;.&quot;message_content_edit_limit_seconds&quot;,
+</code></pre></div>
+
+
+
+<a name="1499166"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499166" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499166">(Jan 30 2023 at 17:21)</a>:</h4>
+<p>part 2/n</p>
+<div class="codehilite"><pre><span></span><code> &quot;zerver_realm&quot;.&quot;allow_edit_history&quot;, &quot;zerver_realm&quot;.&quot;default_language&quot;, &quot;zerver_realm&quot;.&quot;notifications_stream_id&quot;, &quot;zerver_realm&quot;.&quot;signup_notifications_stream_id&quot;, &quot;zerver_realm&quot;.&quot;message_retention_days&quot;, &quot;zerver_realm&quot;.&quot;message_visibility_limit&quot;, &quot;zerver_realm&quot;.&quot;first_visible_message_id&quot;, &quot;zerver_realm&quot;.&quot;org_type&quot;, &quot;zerver_realm&quot;.&quot;plan_type&quot;, &quot;zerver_realm&quot;.&quot;bot_creation_policy&quot;, &quot;zerver_realm&quot;.&quot;upload_quota_gb&quot;, &quot;zerver_realm&quot;.&quot;video_chat_provider&quot;, &quot;zerver_realm&quot;.&quot;giphy_rating&quot;, &quot;zerver_realm&quot;.&quot;default_code_block_language&quot;, &quot;zerver_realm&quot;.&quot;enable_read_receipts&quot;, &quot;zerver_realm&quot;.&quot;icon_source&quot;, &quot;zerver_realm&quot;.&quot;icon_version&quot;, &quot;zerver_realm&quot;.&quot;logo_source&quot;, &quot;zerver_realm&quot;.&quot;logo_version&quot;, &quot;zerver_realm&quot;.&quot;night_logo_source&quot;, &quot;zerver_realm&quot;.&quot;night_logo_version&quot;, &quot;zerver_message&quot;.&quot;id&quot;, &quot;zerver_message&quot;.&quot;sender_id&quot;, &quot;zerver_message&quot;.&quot;recipient_id&quot;, &quot;zerver_message&quot;.&quot;realm_id&quot;, &quot;zerver_message&quot;.&quot;subject&quot;, &quot;zerver_message&quot;.&quot;content&quot;, &quot;zerver_message&quot;.&quot;rendered_content&quot;, &quot;zerver_message&quot;.&quot;rendered_content_version&quot;, &quot;zerver_message&quot;.&quot;date_sent&quot;, &quot;zerver_message&quot;.&quot;sending_client_id&quot;, &quot;zerver_message&quot;.&quot;last_edit_time&quot;, &quot;zerver_message&quot;.&quot;edit_history&quot;, &quot;zerver_message&quot;.&quot;has_attachment&quot;, &quot;zerver_message&quot;.&quot;has_image&quot;, &quot;zerver_message&quot;.&quot;has_link&quot;, &quot;zerver_message&quot;.&quot;search_tsvector&quot;, T5.&quot;id&quot;, T5.&quot;password&quot;, T5.&quot;last_login&quot;, T5.&quot;is_superuser&quot;, T5.&quot;enter_sends&quot;, T5.&quot;left_side_userlist&quot;, T5.&quot;default_language&quot;, T5.&quot;default_view&quot;, T5.&quot;escape_navigates_to_default_view&quot;, T5.&quot;dense_mode&quot;, T5.&quot;fluid_layout_width&quot;, T5.&quot;high_contrast_mode&quot;, T5.&quot;translate_emoticons&quot;, T5.&quot;display_emoji_reaction_users&quot;, T5.&quot;twenty_four_hour_time&quot;, T5.&quot;starred_message_counts&quot;, T5.&quot;color_scheme&quot;, T5.&quot;demote_inactive_streams&quot;, T5.&quot;emojiset&quot;, T5.&quot;user_list_style&quot;, T5.&quot;email_notifications_batching_period_seconds&quot;, T5.&quot;enable_stream_desktop_notifications&quot;, T5.&quot;enable_stream_email_notifications&quot;, T5.&quot;enable_stream_push_notifications&quot;, T5.&quot;enable_stream_audible_notifications&quot;, T5.&quot;notification_sound&quot;, T5.&quot;wildcard_mentions_notify&quot;, T5.&quot;enable_desktop_notifications&quot;, T5.&quot;pm_content_in_desktop_notifications&quot;, T5.&quot;enable_sounds&quot;, T5.&quot;enable_offline_email_notifications&quot;, T5.&quot;message_content_in_email_notifications&quot;, T5.&quot;enable_offline_push_notifications&quot;, T5.&quot;enable_online_push_notifications&quot;, T5.&quot;desktop_icon_count_display&quot;, T5.&quot;enable_digest_emails&quot;, T5.&quot;enable_login_emails&quot;, T5.&quot;enable_marketing_emails&quot;, T5.&quot;realm_name_in_notifications&quot;, T5.&quot;presence_enabled&quot;, T5.&quot;enable_drafts_synchronization&quot;, T5.&quot;send_stream_typing_notifications&quot;, T5.&quot;send_private_typing_notifications&quot;, T5.&quot;send_read_receipts&quot;, T5.&quot;delivery_email&quot;, T5.&quot;email&quot;, T5.&quot;realm_id&quot;, T5.&quot;recipient_id&quot;, T5.&quot;full_name&quot;, T5.&quot;date_joined&quot;, T5.&quot;tos_version&quot;, T5.&quot;api_key&quot;, T5.&quot;uuid&quot;, T5.&quot;is_staff&quot;, T5.&quot;is_active&quot;, T5.&quot;is_billing_admin&quot;, T5.&quot;is_bot&quot;, T5.&quot;bot_type&quot;, T5.&quot;bot_owner_id&quot;, T5.&quot;role&quot;, T5.&quot;long_term_idle&quot;, T5.&quot;last_active_message_id&quot;, T5.&quot;is_mirror_dummy&quot;, T5.&quot;can_forge_sender&quot;, T5.&quot;can_create_users&quot;, T5.&quot;last_reminder&quot;, T5.&quot;rate_limits&quot;, T5.&quot;default_sending_stream_id&quot;, T5.&quot;default_events_register_stream_id&quot;, T5.&quot;default_all_public_streams&quot;, T5.&quot;timezone&quot;, T5.&quot;avatar_source&quot;, T5.&quot;avatar_version&quot;, T5.&quot;avatar_hash&quot;, T5.&quot;tutorial_status&quot;, T5.&quot;onboarding_steps&quot;, T5.&quot;zoom_token&quot;, T6.&quot;id&quot;, T6.&quot;name&quot;, T6.&quot;description&quot;, T6.&quot;string_id&quot;, T6.&quot;date_created&quot;, T6.&quot;demo_organization_scheduled_deletion_date&quot;, T6.&quot;deactivated&quot;, T6.&quot;deactivated_redirect&quot;, T6.&quot;emails_restricted_to_domains&quot;, T6.&quot;invite_required&quot;, T6.&quot;max_invites&quot;, T6.&quot;disallow_disposable_email_addresses&quot;, T6.&quot;authentication_methods&quot;, T6.&quot;enable_spectator_access&quot;, T6.&quot;want_advertise_in_communities_directory&quot;, T6.&quot;inline_image_preview&quot;, T6.&quot;inline_url_embed_preview&quot;, T6.&quot;digest_emails_enabled&quot;, T6.&quot;digest_weekday&quot;, T6.&quot;send_welcome_emails&quot;, T6.&quot;message_content_allowed_in_email_notifications&quot;, T6.&quot;mandatory_topics&quot;, T6.&quot;name_changes_disabled&quot;, T6.&quot;email_changes_disabled&quot;, T6.&quot;avatar_changes_disabled&quot;, T6.&quot;add_custom_emoji_policy&quot;, T6.&quot;create_public_stream_policy&quot;, T6.&quot;create_private_stream_policy&quot;, T6.&quot;create_web_public_stream_policy&quot;, T6.&quot;delete_own_message_policy&quot;, T6.&quot;edit_topic_policy&quot;, T6.&quot;invite_to_realm_policy&quot;, T6.&quot;invite_to_stream_policy&quot;, T6.&quot;move_messages_between_streams_policy&quot;, T6.&quot;user_group_edit_policy&quot;, T6.&quot;private_message_policy&quot;, T6.&quot;wildcard_mention_policy&quot;, T6.&quot;email_address_visibility&quot;, T6.&quot;waiting_period_threshold&quot;, T6.&quot;message_content_delete_limit_seconds&quot;, T6.&quot;allow_message_editing&quot;, T6.&quot;message_content_edit_limit_seconds&quot;, T6.&quot;allow_edit_history&quot;, T6.&quot;default_language&quot;, T6.&quot;notifications_stream_id&quot;, T6.&quot;signup_notifications_stream_id&quot;, T6.&quot;message_retention_days&quot;, T6.&quot;message_visibility_limit&quot;, T6.&quot;first_visible_message_id&quot;, T6.&quot;org_type&quot;, T6.&quot;plan_type&quot;, T6.&quot;bot_creation_policy&quot;, T6.&quot;upload_quota_gb&quot;, T6.&quot;video_chat_provider&quot;, T6.&quot;giphy_rating&quot;, T6.&quot;default_code_block_language&quot;, T6.&quot;enable_read_receipts&quot;, T6.&quot;icon_source&quot;, T6.&quot;icon_version&quot;, T6.&quot;logo_source&quot;, T6.&quot;logo_version&quot;, T6.&quot;night_logo_source&quot;, T6.&quot;night_logo_version&quot;, &quot;zerver_recipient&quot;.&quot;id&quot;, &quot;zerver_recipient&quot;.&quot;type_id&quot;, &quot;zerver_recipient&quot;.&quot;type&quot;, T8.&quot;id&quot;, T8.&quot;name&quot;, T8.&quot;description&quot;, T8.&quot;string_id&quot;, T8.&quot;date_created&quot;, T8.&quot;demo_organization_scheduled_deletion_date&quot;, T8.&quot;deactivated&quot;, T8.&quot;deactivated_redirect&quot;, T8.&quot;emails_restricted_to_domains&quot;, T8.&quot;invite_required&quot;, T8.&quot;max_invites&quot;, T8.&quot;disallow_disposable_email_addresses&quot;, T8.&quot;authentication_methods&quot;, T8.&quot;enable_spectator_access&quot;, T8.&quot;want_advertise_in_communities_directory&quot;, T8.&quot;inline_image_preview&quot;, T8.&quot;inline_url_embed_preview&quot;, T8.&quot;digest_emails_enabled&quot;, T8.&quot;digest_weekday&quot;, T8.&quot;send_welcome_emails&quot;, T8.&quot;message_content_allowed_in_email_notifications&quot;, T8.&quot;mandatory_topics&quot;, T8.&quot;name_changes_disabled&quot;, T8.&quot;email_changes_disabled&quot;, T8.&quot;avatar_changes_disabled&quot;, T8.&quot;add_custom_emoji_policy&quot;, T8.&quot;create_public_stream_policy&quot;, T8.&quot;create_private_stream_policy&quot;, T8.&quot;create_web_public_stream_policy&quot;, T8.&quot;delete_own_message_policy&quot;, T8.&quot;edit_topic_policy&quot;, T8.&quot;invite_to_realm_policy&quot;, T8.&quot;invite_to_stream_policy&quot;, T8.&quot;move_messages_between_streams_policy&quot;, T8.&quot;user_group_edit_policy&quot;, T8.&quot;private_message_policy&quot;, T8.&quot;wildcard_mention_policy&quot;, T8.&quot;email_address_visibility&quot;, T8.&quot;waiting_period_threshold&quot;, T8.&quot;message_content_delete_limit_seconds&quot;, T8.&quot;allow_message_editing&quot;, T8.&quot;message_content_edit_limit_seconds&quot;, T8.&quot;allow_edit_history&quot;, T8.&quot;default_language&quot;, T8.&quot;notifications_stream_id&quot;, T8.&quot;signup_notifications_stream_id&quot;, T8.&quot;message_retention_days&quot;, T8.&quot;message_visibility_limit&quot;, T8.&quot;first_visible_message_id&quot;, T8.&quot;org_type&quot;, T8.&quot;plan_type&quot;, T8.&quot;bot_creation_policy&quot;, T8.&quot;upload_quota_gb&quot;, T8.&quot;video_chat_provider&quot;, T8.&quot;giphy_rating&quot;, T8.&quot;default_code_block_language&quot;, T8.&quot;enable_read_receipts&quot;, T8.&quot;icon_source&quot;, T8.&quot;icon_version&quot;, T8.&quot;logo_source&quot;, T8.&quot;logo_version&quot;, T8.&quot;night_logo_source&quot;, T8.&quot;night_logo_version&quot;, &quot;zerver_client&quot;.&quot;id&quot;, &quot;zerver_client&quot;.&quot;name&quot; FROM &quot;zerver_scheduledmessagenotificationemail&quot; INNER JOIN &quot;zerver_userprofile&quot; ON (&quot;zerver_scheduledmessagenotificationemail&quot;.&quot;user_profile_id&quot; = &quot;zerver_userprofile&quot;.&quot;id&quot;) INNER JOIN &quot;zerver_realm&quot; ON (&quot;zerver_userprofile&quot;.&quot;realm_id&quot; = &quot;zerver_realm&quot;.&quot;id&quot;) INNER JOIN &quot;zerver_message&quot; ON (&quot;zerver_scheduledmessagenotificationemail&quot;.&quot;message_id&quot; = &quot;zerver_message&quot;.&quot;id&quot;) INNER JOIN &quot;zerver_userprofile&quot; T5 ON (&quot;zerver_message&quot;.&quot;sender_id&quot; = T5.&quot;id&quot;) INNER JOIN &quot;zerver_realm&quot; T6 ON (T5.&quot;realm_id&quot; = T6.&quot;id&quot;) INNER JOIN &quot;zerver_recipient&quot; ON (&quot;zerver_message&quot;.&quot;recipient_id&quot; = &quot;zerver_recipient&quot;.&quot;id&quot;) INNER JOIN &quot;zerver_realm&quot; T8 ON (&quot;zerver_message&quot;.&quot;realm_id&quot; = T8.&quot;id&quot;) INNER JOIN &quot;zerver_client&quot; ON (&quot;zerver_message&quot;.&quot;sending_client_id&quot; = &quot;zerver_client&quot;.&quot;id&quot;) WHERE &quot;zerver_scheduledmessagenotificationemail&quot;.&quot;scheduled_timestamp&quot; &lt;= &#39;2023-01-30T13:00:15.309866+00:00&#39;::timestamptz
+</code></pre></div>
+
+
+
+<a name="1499168"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499168" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499168">(Jan 30 2023 at 17:22)</a>:</h4>
+<p>part 3/n (now more lines)</p>
+<div class="codehilite"><pre><span></span><code>2023-01-30 13:00:48.063 UTC [63d708a5.334c9]: [263-1] LOG:  checkpoint starting: time
+2023-01-30 13:01:03.521 UTC [63d708a5.334c9]: [264-1] LOG:  checkpoint complete: wrote 153 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=15.415 s, sync=0.016 s, total=15.459 s; sync files=78, longest=0.008 s, average=0.001 s; distance=759 kB, estimate=759 kB
+2023-01-30 13:05:14.728 UTC [63d708b0.334e3]: [5-1] LOG:  duration: 701.245 ms  statement: SELECT &quot;zerver_scheduledemail&quot;.&quot;id&quot;, &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot;, &quot;zerver_scheduledemail&quot;.&quot;data&quot;, &quot;zerver_scheduledemail&quot;.&quot;realm_id&quot;, &quot;zerver_scheduledemail&quot;.&quot;address&quot;, &quot;zerver_scheduledemail&quot;.&quot;type&quot; FROM &quot;zerver_scheduledemail&quot; WHERE &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot; &lt;= &#39;2023-01-30T13:05:12.863808+00:00&#39;::timestamptz ORDER BY &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot; ASC LIMIT 1 FOR UPDATE SKIP LOCKED
+2023-01-30 13:05:48.608 UTC [63d708a5.334c9]: [265-1] LOG:  checkpoint starting: time
+2023-01-30 13:05:55.206 UTC [63d708a5.334c9]: [266-1] LOG:  checkpoint complete: wrote 66 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=6.579 s, sync=0.006 s, total=6.599 s; sync files=45, longest=0.002 s, average=0.001 s; distance=329 kB, estimate=716 kB
+2023-01-30 13:10:48.306 UTC [63d708a5.334c9]: [267-1] LOG:  checkpoint starting: time
+2023-01-30 13:10:53.192 UTC [63d708a5.334c9]: [268-1] LOG:  checkpoint complete: wrote 50 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=4.860 s, sync=0.011 s, total=4.887 s; sync files=33, longest=0.004 s, average=0.001 s; distance=224 kB, estimate=667 kB
+2023-01-30 13:20:48.359 UTC [63d708a5.334c9]: [269-1] LOG:  checkpoint starting: time
+2023-01-30 13:20:51.797 UTC [63d708a5.334c9]: [270-1] LOG:  checkpoint complete: wrote 35 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=3.424 s, sync=0.004 s, total=3.438 s; sync files=25, longest=0.002 s, average=0.001 s; distance=125 kB, estimate=612 kB
+2023-01-30 13:25:48.867 UTC [63d708a5.334c9]: [271-1] LOG:  checkpoint starting: time
+2023-01-30 13:26:04.851 UTC [63d708a5.334c9]: [272-1] LOG:  checkpoint complete: wrote 159 buffers (0.3%); 0 WAL file(s) added, 1 removed, 0 recycled; write=15.960 s, sync=0.006 s, total=15.984 s; sync files=67, longest=0.002 s, average=0.001 s; distance=819 kB, estimate=819 kB
+2023-01-30 13:30:27.696 UTC [63d708b0.334e3]: [6-1] LOG:  duration: 1602.199 ms  statement: SELECT &quot;zerver_scheduledemail&quot;.&quot;id&quot;, &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot;, &quot;zerver_scheduledemail&quot;.&quot;data&quot;, &quot;zerver_scheduledemail&quot;.&quot;realm_id&quot;, &quot;zerver_scheduledemail&quot;.&quot;address&quot;, &quot;zerver_scheduledemail&quot;.&quot;type&quot; FROM &quot;zerver_scheduledemail&quot; WHERE &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot; &lt;= &#39;2023-01-30T13:30:23.967943+00:00&#39;::timestamptz ORDER BY &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot; ASC LIMIT 1 FOR UPDATE SKIP LOCKED
+2023-01-30 13:30:42.368 UTC [63d708b0.334e4]: [1-1] LOG:  duration: 1248.824 ms  statement: SELECT &quot;zerver_useractivity&quot;.&quot;id&quot;, &quot;zerver_useractivity&quot;.&quot;user_profile_id&quot;, &quot;zerver_useractivity&quot;.&quot;client_id&quot;, &quot;zerver_useractivity&quot;.&quot;query&quot;, &quot;zerver_useractivity&quot;.&quot;count&quot;, &quot;zerver_useractivity&quot;.&quot;last_visit&quot; FROM &quot;zerver_useractivity&quot; WHERE (&quot;zerver_useractivity&quot;.&quot;client_id&quot; = 5 AND &quot;zerver_useractivity&quot;.&quot;query&quot; = &#39;get_events&#39; AND &quot;zerver_useractivity&quot;.&quot;user_profile_id&quot; = 35) LIMIT 21
+2023-01-30 13:30:45.659 UTC [63d708b0.334e3]: [7-1] LOG:  duration: 1913.307 ms  statement: SELECT &quot;zerver_scheduledemail&quot;.&quot;id&quot;, &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot;, &quot;zerver_scheduledemail&quot;.&quot;data&quot;, &quot;zerver_scheduledemail&quot;.&quot;realm_id&quot;, &quot;zerver_scheduledemail&quot;.&quot;address&quot;, &quot;zerver_scheduledemail&quot;.&quot;type&quot; FROM &quot;zerver_scheduledemail&quot; WHERE &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot; &lt;= &#39;2023-01-30T13:30:41.574542+00:00&#39;::timestamptz ORDER BY &quot;zerver_scheduledemail&quot;.&quot;scheduled_timestamp&quot; ASC LIMIT 1 FOR UPDATE SKIP LOCKED
+2023-01-30 13:30:47.678 UTC [63d708b0.334e4]: [2-1] LOG:  duration: 843.014 ms  statement: UPDATE &quot;zerver_useractivity&quot; SET &quot;count&quot; = 187588, &quot;last_visit&quot; = &#39;2023-01-30T13:30:37+00:00&#39;::timestamptz WHERE &quot;zerver_useractivity&quot;.&quot;id&quot; = 923
+2023-01-30 13:30:48.992 UTC [63d708a5.334c9]: [273-1] LOG:  checkpoint starting: time
+2023-01-30 13:30:49.538 UTC [63d708ae.334e1]: [3-1] LOG:  duration: 509.151 ms  statement: UPDATE &quot;zerver_userpresence&quot; SET &quot;timestamp&quot; = &#39;2023-01-30T13:30:48+00:00&#39;::timestamptz WHERE &quot;zerver_userpresence&quot;.&quot;id&quot; = 40
+2023-01-30 13:30:49.538 UTC [63d708b0.334e4]: [3-1] LOG:  duration: 510.757 ms  statement: UPDATE &quot;zerver_useractivity&quot; SET &quot;count&quot; = 50833, &quot;last_visit&quot; = &#39;2023-01-30T13:30:48+00:00&#39;::timestamptz WHERE &quot;zerver_useractivity&quot;.&quot;id&quot; = 53
+</code></pre></div>
+
+
+
+<a name="1499172"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499172" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499172">(Jan 30 2023 at 17:25)</a>:</h4>
+<p>actually i'll just upload the logs as a file<br>
+<a href="/user_uploads/2/38/KYRJFE9JHnVSPwnBT2H96Opv/example.txt">example.txt</a></p>
+
+
+
+<a name="1499174"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499174" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499174">(Jan 30 2023 at 17:27)</a>:</h4>
+<p>i think that's the right time period given the timezones, but let me know if i made a mistake</p>
+
+
+
+<a name="1499177"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499177" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499177">(Jan 30 2023 at 17:28)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>2023-01-30 14:05:41.367 UTC [63d35311.42c]: [32-1] LOG:  server process (PID 253511) was terminated by signal 9: Killed
+2023-01-30 14:05:41.367 UTC [63d35311.42c]: [33-1] DETAIL:  Failed process was running: COMMIT
+2023-01-30 14:05:41.746 UTC [63d35311.42c]: [34-1] LOG:  terminating any other active server processes
+2023-01-30 14:05:42.479 UTC [63d35311.42c]: [35-1] LOG:  all server processes terminated; reinitializing
+2023-01-30 14:05:42.809 UTC [63d7ceb6.3dfba]: [1-1] FATAL:  the database system is in recovery mode
+2023-01-30 14:05:42.816 UTC [63d7ceb6.3dfb9]: [1-1] LOG:  database system was interrupted; last known up at 2023-01-30 14:01:04 UTC
+2023-01-30 14:05:43.325 UTC [63d7ceb7.3dfbc]: [1-1] FATAL:  the database system is in recovery mode
+2023-01-30 14:05:43.377 UTC [63d7ceb7.3dfbf]: [1-1] FATAL:  the database system is in recovery mode
+2023-01-30 14:05:43.405 UTC [63d7ceb7.3dfc1]: [1-1] FATAL:  the database system is in recovery mode
+2023-01-30 14:05:43.421 UTC [63d7ceb6.3dfb9]: [2-1] LOG:  database system was not properly shut down; automatic recovery in progress
+</code></pre></div>
+
+
+
+<a name="1499178"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499178" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499178">(Jan 30 2023 at 17:28)</a>:</h4>
+<p>Those seem relevant. <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<a name="1499179"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499179" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499179">(Jan 30 2023 at 17:28)</a>:</h4>
+<p>So something is killing your database process.  Double-check your syslogs for OOMs?</p>
+
+
+
+<a name="1499185"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499185" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499185">(Jan 30 2023 at 17:32)</a>:</h4>
+<p>ah yeah, it is getting oomkilled</p>
+
+
+
+<a name="1499187"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499187" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499187">(Jan 30 2023 at 17:32)</a>:</h4>
+<p>more interesting is it seems to be due to some crons</p>
+
+
+
+<a name="1499189"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499189" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499189">(Jan 30 2023 at 17:34)</a>:</h4>
+<p>Zulip crons, or other ones?</p>
+
+
+
+<a name="1499193"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499193" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499193">(Jan 30 2023 at 17:35)</a>:</h4>
+<p>zulip</p>
+
+
+
+<a name="1499194"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499194" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499194">(Jan 30 2023 at 17:36)</a>:</h4>
+<p><a href="/user_uploads/2/51/5YlRTgAOWnWV8rI3PI5kF3Yc/debugging.syslog">debugging.syslog</a></p>
+
+
+
+<a name="1499198"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499198" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499198">(Jan 30 2023 at 17:40)</a>:</h4>
+<p>or maybe the crons are just failing after it goes down. </p>
+<p>does that amount of UFW blocking seem normal to you? or is that a sign I'm under a targeted attack?</p>
+
+
+
+<a name="1499199"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499199" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499199">(Jan 30 2023 at 17:42)</a>:</h4>
+<p>I don't see anything that implies the crons are implicated.  The chunky processes by rss are rabbitmq, postgresql, uwsgi, and python3, which is all pretty normal.  the OOM logs don't give anything other than "python3" which isn't helpful.  But I don't see anything which has ballooned up huge.</p>
+<p>That is just "you're on the public internet" levels of firewall logs.  We should probably quiet those down.</p>
+
+
+
+<a name="1499202"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499202" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499202">(Jan 30 2023 at 17:44)</a>:</h4>
+<p>hmm. i could bump up the ram though it does seem a little odd to me that it was working just fine for several years on 2gb ram, and the errors increased when i increased the ram allocation.</p>
+
+
+
+<a name="1499203"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499203" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499203">(Jan 30 2023 at 17:44)</a>:</h4>
+<p>Yes.  And if you do have swap enabled, you should be seeing that in use rather than an OOM.</p>
+
+
+
+<a name="1499204"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499204" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499204">(Jan 30 2023 at 17:44)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>Jan 30 14:05:41 zulip kernel: [293805.604003] Free swap  = 0kB
+Jan 30 14:05:41 zulip kernel: [293805.604004] Total swap = 0kB
+</code></pre></div>
+
+
+
+<a name="1499205"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499205" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499205">(Jan 30 2023 at 17:46)</a>:</h4>
+<p>hmm maybe when i upgraded the ram the cloud provider disabled swap</p>
+
+
+
+<a name="1499206"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499206" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499206">(Jan 30 2023 at 17:47)</a>:</h4>
+<p>Zulip does change how it does background workers based on your total memory, so it's likely that it changed to the multiprocess worker arrangement when you upgraded.</p>
+<p>Have you run <code>~zulip/deployments/current/scripts/zulip-puppet-apply</code> since bumping the memory?</p>
+
+
+
+<a name="1499209"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499209" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499209">(Jan 30 2023 at 17:48)</a>:</h4>
+<p>i only ran the default upgrade script</p>
+
+
+
+<a name="1499211"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499211" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499211">(Jan 30 2023 at 17:48)</a>:</h4>
+<p>The Zulip upgrade script?  That should have sufficed, but give <code>~zulip/deployments/current/scripts/zulip-puppet-apply</code> as root a whirl to double-check.</p>
+
+
+
+<a name="1499216"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499216" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499216">(Jan 30 2023 at 17:50)</a>:</h4>
+<p>i just added 2g swap and i'll run that now</p>
+
+
+
+<a name="1499217"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499217" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499217">(Jan 30 2023 at 17:51)</a>:</h4>
+<p>okay it applied!</p>
+
+
+
+<a name="1499218"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499218" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499218">(Jan 30 2023 at 17:52)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>Notice: /Stage[main]/Zulip::Profile::Redis/File[/run/redis]/mode: mode changed &#39;2755&#39; to &#39;0755&#39;
+Notice: Applied catalog in 1.67 seconds
+</code></pre></div>
+
+
+
+<a name="1499219"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499219" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499219">(Jan 30 2023 at 17:52)</a>:</h4>
+<p>okay now htop shows swap being used at idle</p>
+
+
+
+<a name="1499220"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499220" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499220">(Jan 30 2023 at 17:54)</a>:</h4>
+<p>seems like the change to the swap may be the real culprit here. i can let you know if that seems to be the case after a couple days of observation.</p>
+
+
+
+<a name="1499221"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499221" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499221">(Jan 30 2023 at 17:54)</a>:</h4>
+<p>That should at least prevent the OOMs, and let you use other monitoring tools to keep an eye on the process memory.  We'd be interested in if you see particular patterns of larger memory use -- we've had reports of recent Zulips taking more memory, but have yet to find a smoking gun.</p>
+
+
+
+<a name="1499222"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499222" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499222">(Jan 30 2023 at 17:55)</a>:</h4>
+<p>And in general 2GB should be fine for small installs, and 4GB should work great for medium-ish ones.</p>
+
+
+
+<a name="1499223"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499223" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499223">(Jan 30 2023 at 17:55)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F/near/1499221">said</a>:</p>
+<blockquote>
+<p>That should at least prevent the OOMs, and let you use other monitoring tools to keep an eye on the process memory.  We'd be interested in if you see particular patterns of larger memory use -- we've had reports of recent Zulips taking more memory, but have yet to find a smoking gun.</p>
+</blockquote>
+<p>sure. </p>
+<p>are there any performance monitoring/alerting features built into zulip?</p>
+
+
+
+<a name="1499224"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499224" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499224">(Jan 30 2023 at 17:56)</a>:</h4>
+<p>like sentry or something opensource?</p>
+
+
+
+<a name="1499225"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499225" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499225">(Jan 30 2023 at 17:56)</a>:</h4>
+<p>i saw some naigos configs in the docs but i'v enever used that before</p>
+
+
+
+<a name="1499226"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499226" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499226">(Jan 30 2023 at 17:57)</a>:</h4>
+<p><a href="https://zulip.readthedocs.io/en/latest/subsystems/logging.html">https://zulip.readthedocs.io/en/latest/subsystems/logging.html</a> talks about our Sentry integrations.</p>
+<p>We internally use prometheus and nagios.  We don't have any generic monitoring built in because most folks are trying to integration with a larger monitoring system, and those are all different.</p>
+
+
+
+<a name="1499228"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499228" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499228">(Jan 30 2023 at 17:58)</a>:</h4>
+<p>But Sentry isn't going to tell you anything about memory consumption.  But it will provide ways to be more aware of error logs than tailing the logfile.</p>
+
+
+
+<a name="1499230"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499230" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499230">(Jan 30 2023 at 17:58)</a>:</h4>
+<p>yes we use the sentry integration</p>
+
+
+
+<a name="1499233"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499233" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> realimpat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499233">(Jan 30 2023 at 18:00)</a>:</h4>
+<p>sounds like prometheus would help with this case?</p>
+
+
+
+<a name="1499239"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20connecting%20to%20push%20notifications%20analytics%20server%3F/near/1499239" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20connecting.20to.20push.20notifications.20analytics.20server.3F.html#1499239">(Jan 30 2023 at 18:18)</a>:</h4>
+<p>The node exporter would help with monitoring memory usage, yes.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

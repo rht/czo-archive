@@ -1,0 +1,64 @@
+<html>
+<head><meta charset="utf-8"><title>self alerts · design · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/101-design/index.html">design</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/101-design/topic/self.20alerts.html">self alerts</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="297439"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/self%20alerts/near/297439" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/self.20alerts.html#297439">(Oct 12 2017 at 19:32)</a>:</h4>
+<p>When I send an alert to myself, I want to see it in green, just because I might be testing that my alert words work, or maybe I like that it highlights the message a bit when I'm scanning back through my stream to find things I need to do or whatever.</p>
+<p>But it's super annoying to have notifications when I alert myself, particularly if I'm doing an alert like <code>@support</code> to notify my team members on the support team of something.</p>
+<p>So I'm trying to fix the code so that self-alerts show in green, but there are no notifications.  That part's easy enough.</p>
+
+
+
+<a name="297440"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/self%20alerts/near/297440" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/self.20alerts.html#297440">(Oct 12 2017 at 19:34)</a>:</h4>
+<p>And, then, <span class="user-mention" data-user-email="tabbott@zulipchat.com" data-user-id="7">@Tim Abbott</span>, there is indeed a local echo issue, as you hypothesized on <a href="https://github.com/zulip/zulip/pull/6946" target="_blank" title="https://github.com/zulip/zulip/pull/6946">#6946</a>.  Because we originally thought green highlights was undesired for self-alerts, the local-echo code used that simplification to basically ignore the flag when the host responded.</p>
+
+
+
+<a name="297441"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/self%20alerts/near/297441" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/self.20alerts.html#297441">(Oct 12 2017 at 19:37)</a>:</h4>
+<p>So I can fix the non-local-echo codepath very easily, but for local echo, I need to decide a strategy:</p>
+<ul>
+<li>We can optimistically highlight the alert words locally</li>
+<li>We can just wait for the host.</li>
+</ul>
+<p>In either situation, we need to look at the host response to make sure that either we un-highlight alert words that didn't take (for the former case) or we highlight words that the server found (for the latter case).</p>
+<p>Doing alert words locally is possible, but it's a bit expensive to parse through the message.</p>
+
+
+
+<a name="297443"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/self%20alerts/near/297443" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/self.20alerts.html#297443">(Oct 12 2017 at 19:39)</a>:</h4>
+<p>There's also the added twist that even if the host knows about an alert word that we don't know about, it doesn't really help us when it comes to the green highlight, since we need alert words locally to do the highlighting.  (But if the host fails to mark it as alerted, we can at least get a "true" negative, unless there are multiple alert words at play, which is a corner case that I think we can call negligible.)</p>
+
+
+
+<a name="297444"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/self%20alerts/near/297444" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/self.20alerts.html#297444">(Oct 12 2017 at 19:42)</a>:</h4>
+<p>I think my inclination is to just ignore alert words when we parse the message locally, and then if the <code>has_alert_words</code> flag is set on the host response, we'll re-render.  This will set us up to do the same kind of process for other flags, where we might not have the luxury of being able to do stuff locally.  (The main upcoming thing is self-mentions, where we <strong>do</strong> have enough info locally to decide on the pink background, so this concern may also be kind of moot.)</p>
+
+
+
+<a name="297456"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/self%20alerts/near/297456" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/self.20alerts.html#297456">(Oct 12 2017 at 20:44)</a>:</h4>
+<p>I think we can just wait for the host.</p>
+
+
+
+<a name="297458"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/self%20alerts/near/297458" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/self.20alerts.html#297458">(Oct 12 2017 at 20:46)</a>:</h4>
+<p>Yeah, I went that route.  <a href="https://github.com/zulip/zulip/pull/6976" target="_blank" title="https://github.com/zulip/zulip/pull/6976">#6976</a></p>
+<p>It turns out doing it locally would also have the added complication of needing to strip markup from <code>content</code> or having a new field like <code>pre_alerting_content</code>.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

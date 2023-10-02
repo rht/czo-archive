@@ -1,0 +1,38 @@
+[
+    {
+        "content": "<p>Hi,<br>\nI'm trying to upgrade my test instance of Zulip 5.6 which is installed on a VM \"Debian  11 (bullseye)\" and the Postgresql-DB (version 14.5) is installed on the same VM.<br>\nI usually follow the upgrade steps in this guide <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-to-a-release\">upgrading to a release</a><br>\nHowever, I faced an issue during the migration process with this failure message:</p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code>Running migrations:\n  Applying zerver.0420_alter_archivedmessage_realm_alter_message_realm...Traceback <span class=\"o\">(</span>most recent call last<span class=\"o\">)</span>:\n  File <span class=\"s2\">\"/srv/zulip-venv-cache/ae602e62cacf375c8e9c95291fbb2cfd2b63bed3/zulip-py3-venv/lib/python3.9/site-packages/django/db/backends/utils.py\"</span>, line <span class=\"m\">89</span>, <span class=\"k\">in</span> _execute\n    <span class=\"k\">return</span> self.cursor.execute<span class=\"o\">(</span>sql, params<span class=\"o\">)</span>\n  File <span class=\"s2\">\"/home/zulip/deployments/2022-10-20-14-16-23/zerver/lib/db.py\"</span>, line <span class=\"m\">34</span>, <span class=\"k\">in</span> execute\n    wrapper_execute<span class=\"o\">(</span>self, super<span class=\"o\">()</span>.execute, query, vars<span class=\"o\">)</span>\n  File <span class=\"s2\">\"/home/zulip/deployments/2022-10-20-14-16-23/zerver/lib/db.py\"</span>, line <span class=\"m\">19</span>, <span class=\"k\">in</span> wrapper_execute\n    action<span class=\"o\">(</span>sql, params<span class=\"o\">)</span>\npsycopg2.errors.NotNullViolation: column <span class=\"s2\">\"realm_id\"</span> of relation <span class=\"s2\">\"zerver_message\"</span> contains null values\n</code></pre></div>\n<p>After looking inside the DB I found that the \"realm_id\" column can actually have a nullable values</p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code><span class=\"nv\">zulip</span><span class=\"o\">=</span><span class=\"c1\"># SELECT column_name,data_type,is_nullable</span>\n  FROM information_schema.columns\n WHERE <span class=\"nv\">table_schema</span> <span class=\"o\">=</span> <span class=\"s1\">'zulip'</span>\n   AND <span class=\"nv\">table_name</span>   <span class=\"o\">=</span> <span class=\"s1\">'zerver_message'</span><span class=\"p\">;</span>\n       column_name        <span class=\"p\">|</span>        data_type         <span class=\"p\">|</span> is_nullable\n--------------------------+--------------------------+-------------\n realm_id                 <span class=\"p\">|</span> integer                  <span class=\"p\">|</span> YES\n</code></pre></div>\n<p>Regarding the relams: I recently had some issue with the main realm so I had to delete it and re-create it again. However, I have now only one active realm</p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code><span class=\"c1\"># su zulip -c '/home/zulip/deployments/current/manage.py list_realms'</span>\nid    string_id            name                           domain\n--    ---------            ----                           ------\n<span class=\"m\">1</span>     zulipinternal        System bot realm               https://zulipinternal.zulip-test....com\n<span class=\"m\">4</span>     <span class=\"s1\">''</span>                   testzulip               https://zulip-test....com\n</code></pre></div>\n<p>I'm not sure if this will help but I have the following values inside the \"realm_id\" column</p>\n<div class=\"codehilite\" data-code-language=\"PostgreSQL SQL dialect\"><pre><span></span><code><span class=\"n\">realm_id</span><span class=\"w\"></span>\n<span class=\"c1\">----------</span>\n\n\n\n\n<span class=\"w\">        </span><span class=\"mf\">4</span><span class=\"w\"></span>\n\n\n<span class=\"w\">        </span><span class=\"mf\">4</span><span class=\"w\"></span>\n<span class=\"w\">        </span><span class=\"mf\">4</span><span class=\"w\"></span>\n<span class=\"w\">        </span><span class=\"mf\">4</span><span class=\"w\"></span>\n\n\n\n\n\n\n<span class=\"w\">        </span><span class=\"mf\">4</span><span class=\"w\"></span>\n<span class=\"p\">(</span><span class=\"mf\">17</span><span class=\"w\"> </span><span class=\"k\">rows</span><span class=\"p\">)</span><span class=\"w\"></span>\n</code></pre></div>",
+        "id": 1452964,
+        "sender_full_name": "Kshayeb",
+        "timestamp": 1666278498
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16466\">@Kshayeb</span>: It looks like you're upgrading to <code>main</code>, not to a release.</p>\n<p>We recently merged a fix for the 0419 migration (<a href=\"https://github.com/zulip/zulip/commit/f6f7e4c53fa5ea786bd48d29c374312b42337455\">f6f7e4c53fa5ea786bd48d29c374312b42337455</a>), which will clean up lingering recipients and message objects from realm deletion.  My suggestion is for you to re-run the updated 0419 migration:</p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code><span class=\"c1\"># This will fail, but will set up `~zulip/deployments/next` as the current `main`, with the fixed 0419 migration</span>\n~zulip/deployments/current/scripts/upgrade-from-git main\n\n<span class=\"c1\"># Tell Django to migrate down to 0418, so we can run the fixed 0419</span>\n~zulip/deployments/next/manage.py migrate zerver <span class=\"m\">0418</span>\n\n<span class=\"c1\"># This should now work, since it will run the update 0419</span>\n~zulip/deployments/current/scripts/upgrade-from-git main\n</code></pre></div>",
+        "id": 1452983,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1666281722
+    },
+    {
+        "content": "<p>This did the trick. Thanks <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> <br>\nSo in the future when the official 6.0 will get released, should I do the same steps as you described?</p>",
+        "id": 1453016,
+        "sender_full_name": "Kshayeb",
+        "timestamp": 1666284892
+    },
+    {
+        "content": "<p>Nope, you're now all set.</p>",
+        "id": 1453017,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1666284906
+    },
+    {
+        "content": "<p>The reason the field was marked nullable is that the way we add a non-nullable column is in three steps -- add it as nullable, then backfill all of the values, then mark it as not nullable.  The problem is that the middle step didn't work for all rows, which meant the last step was failing.</p>\n<p>Now that you're past those three steps, you're all set.  Upgrading to 6.0 will not require re-running any of those steps, and we've fixed it such that now people upgrading from 5.x or before will not hit the same problem in the last step.</p>",
+        "id": 1453018,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1666285005
+    },
+    {
+        "content": "<p>ok, happy to hear that.<br>\nThanks again <span aria-label=\"blush\" class=\"emoji emoji-1f60a\" role=\"img\" title=\"blush\">:blush:</span></p>",
+        "id": 1453020,
+        "sender_full_name": "Kshayeb",
+        "timestamp": 1666285192
+    }
+]

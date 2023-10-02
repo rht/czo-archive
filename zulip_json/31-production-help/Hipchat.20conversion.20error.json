@@ -1,0 +1,152 @@
+[
+    {
+        "content": "<p>Hi, guys. My company wants to migrate to Zulip from Stride (Hipchat). <br>\nWhile I made conversion Stride -&gt; Zulip, I got an error.</p>\n<p>Steps:<br>\n- created clean AWS instance (t2.small, 2G RAM,  1VCPU) with Ubuntu 16.04</p>\n<p>Then I have installed latest version:<br>\n- cd $(mktemp -d)<br>\n- wget <a href=\"https://www.zulip.org/dist/releases/zulip-server-latest.tar.gz\" target=\"_blank\" title=\"https://www.zulip.org/dist/releases/zulip-server-latest.tar.gz\">https://www.zulip.org/dist/releases/zulip-server-latest.tar.gz</a><br>\n- tar -xf zulip-server-latest.tar.gz<br>\n- ./zulip-server-<em>/scripts/setup/install --certbot --email=<strong>* --hostname=</strong></em></p>\n<p>Then updated to master repo:<br>\n- /home/zulip/deployments/current/scripts/upgrade-zulip-from-git master</p>\n<p>Downloaded Stride archive and tried to convert it to Zulip format:<br>\n-  wget <a href=\"https://stride-exports.prod.atl-paas.net/***\" target=\"_blank\" title=\"https://stride-exports.prod.atl-paas.net/***\">https://stride-exports.prod.atl-paas.net/***</a><br>\n- su zulip<br>\n- cd /home/zulip/deployments/current<br>\n- openssl aes-256-cbc -d -in /home/zulip/stride-<strong><em>.tar.gz.aes -out hipchat.tar.gz -md md5 -pass pass:</em></strong><br>\n- ./manage.py convert_hipchat_data hipchat.tar.gz --output converted_hipchat_data</p>\n<p>Result:<br>\n2019-01-21 13:51:33.374 INFO [] input data was untarred to /home/zulip/deployments/2019-01-21-13-07-33/hipchat.gz<br>\n2019-01-21 13:51:33.697 INFO [] Starting to process emoticons<br>\n2019-01-21 13:51:33.724 INFO [] Done processing emoticons<br>\n2019-01-21 13:51:33.726 INFO [] Start importing message data<br>\n2019-01-21 13:51:33.767 INFO [] Skipping HipChat attachment with missing path data: IMG_6761.JPG<br>\n2019-01-21 13:51:34.485 INFO [] Skipping HipChat attachment with missing path data: digg-animation<br>\n2019-01-21 13:51:34.486 INFO [] Skipping HipChat attachment with missing path data: Photo 2019-01-16 13.46.02.jpg<br>\n......<br>\n2019-01-21 13:51:47.972 INFO [] Skipping HipChat attachment with missing path data: Screenshot_20181203-165123_Calendar.jpg<br>\n2019-01-21 13:51:48.024 INFO [] Skipping HipChat attachment with missing path data: Screenshot_20180822-175131.png<br>\nTraceback (most recent call last):<br>\n  File \"./manage.py\", line 56, in &lt;module&gt;<br>\n    execute_from_command_line(sys.argv)<br>\n  File \"/home/zulip/deployments/2019-01-21-13-07-33/zulip-py3-venv/lib/python3.5/site-packages/django/core/management/__init__.py\", line 364, in execute_from_command_line<br>\n    utility.execute()<br>\n  File \"/home/zulip/deployments/2019-01-21-13-07-33/zulip-py3-venv/lib/python3.5/site-packages/django/core/management/__init__.py\", line 356, in execute<br>\n    self.fetch_command(subcommand).run_from_argv(self.argv)<br>\n  File \"/home/zulip/deployments/2019-01-21-13-07-33/zulip-py3-venv/lib/python3.5/site-packages/django/core/management/base.py\", line 283, in run_from_argv<br>\n    self.execute(*args, **cmd_options)<br>\n  File \"/home/zulip/deployments/2019-01-21-13-07-33/zulip-py3-venv/lib/python3.5/site-packages/django/core/management/base.py\", line 330, in execute<br>\n    output = self.handle(*args, **options)<br>\n  File \"/home/zulip/deployments/2019-01-21-13-07-33/zerver/management/commands/convert_hipchat_data.py\", line 87, in handle<br>\n    api_token=options.get(\"api_token\"),<br>\n  File \"/home/zulip/deployments/2019-01-21-13-07-33/zerver/data_import/hipchat.py\", line 888, in do_convert_data<br>\n    attachment_handler=attachment_handler,<br>\n  File \"/home/zulip/deployments/2019-01-21-13-07-33/zerver/data_import/hipchat.py\", line 503, in write_message_data<br>\n    attachment_handler=attachment_handler,<br>\n  File \"/home/zulip/deployments/2019-01-21-13-07-33/zerver/data_import/hipchat.py\", line 625, in process_message_file<br>\n    raw_messages = get_raw_messages(fn)<br>\n  File \"/home/zulip/deployments/2019-01-21-13-07-33/zerver/data_import/hipchat.py\", line 619, in get_raw_messages<br>\n    raw_message = get_raw_message(d)<br>\n  File \"/home/zulip/deployments/2019-01-21-13-07-33/zerver/data_import/hipchat.py\", line 594, in get_raw_message<br>\n    if int(sender_id) != int(fn_id):<br>\nValueError: invalid literal for int() with base 10: '557058:6347c11d-596d-41bf-9cf9-55d6aa25a342'</p>\n<p>Installed version:<br>\nZULIP_VERSION = \"1.9.1+git\"</p>\n<p>Did someone have such problem while conversion? Maybe I should try another version of zulip.</p>",
+        "id": 684670,
+        "sender_full_name": "Ilya Kotlov",
+        "timestamp": 1548082722
+    },
+    {
+        "content": "<p><code>sender_id</code> is definitely always an int. Not sure what <code>fn_id</code> is, but maybe it has to be split by ':' and then takes the first element, '557058'.</p>",
+        "id": 684701,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1548093506
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11017\">@Ilya Kotlov</span> things might blow up, but you may try replacing L594 with <code>if int(sender_id) != int(fn_id.split(':')[0])</code>. The author of the conversion tool, <span class=\"user-mention\" data-user-id=\"58\">@Steve Howell</span> is not subscribed to this stream.</p>",
+        "id": 684702,
+        "sender_full_name": "Rein Zustand",
+        "timestamp": 1548094000
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2328\">@Rein Zustand</span>  Thanks!<br>\nI  tried to change this line and got this error:</p>\n<div class=\"codehilite\"><pre><span></span>Traceback (most recent call last):\n  File &quot;./manage.py&quot;, line 56, in &lt;module&gt;\n    execute_from_command_line(sys.argv)\n  File &quot;/home/zulip/deployments/2019-01-21-13-07-33/zulip-py3-venv/lib/python3.5/site-packages/django/core/management/__init__.py&quot;, line 364, in execute_from_command_line\n    utility.execute()\n  File &quot;/home/zulip/deployments/2019-01-21-13-07-33/zulip-py3-venv/lib/python3.5/site-packages/django/core/management/__init__.py&quot;, line 356, in execute\n    self.fetch_command(subcommand).run_from_argv(self.argv)\n  File &quot;/home/zulip/deployments/2019-01-21-13-07-33/zulip-py3-venv/lib/python3.5/site-packages/django/core/management/base.py&quot;, line 283, in run_from_argv\n    self.execute(*args, **cmd_options)\n  File &quot;/home/zulip/deployments/2019-01-21-13-07-33/zulip-py3-venv/lib/python3.5/site-packages/django/core/management/base.py&quot;, line 330, in execute\n    output = self.handle(*args, **options)\n  File &quot;/home/zulip/deployments/2019-01-21-13-07-33/zerver/management/commands/convert_hipchat_data.py&quot;, line 87, in handle\n    api_token=options.get(&quot;api_token&quot;),\n  File &quot;/home/zulip/deployments/2019-01-21-13-07-33/zerver/data_import/hipchat.py&quot;, line 888, in do_convert_data\n    attachment_handler=attachment_handler,\n  File &quot;/home/zulip/deployments/2019-01-21-13-07-33/zerver/data_import/hipchat.py&quot;, line 503, in write_message_data\n    attachment_handler=attachment_handler,\n  File &quot;/home/zulip/deployments/2019-01-21-13-07-33/zerver/data_import/hipchat.py&quot;, line 625, in process_message_file\n    raw_messages = get_raw_messages(fn)\n  File &quot;/home/zulip/deployments/2019-01-21-13-07-33/zerver/data_import/hipchat.py&quot;, line 619, in get_raw_messages\n    raw_message = get_raw_message(d)\n  File &quot;/home/zulip/deployments/2019-01-21-13-07-33/zerver/data_import/hipchat.py&quot;, line 594, in get_raw_message\n    if int(sender_id) != int(fn_id.split(&#39;:&#39;)[0]):\nValueError: invalid literal for int() with base 10: &#39;5baa73e703d0c07091dc2f73&#39;\n</pre></div>",
+        "id": 684805,
+        "sender_full_name": "Ilya Kotlov",
+        "timestamp": 1548097870
+    },
+    {
+        "content": "<p>How can I contact <span class=\"user-mention\" data-user-id=\"58\">@Steve Howell</span>  ?</p>",
+        "id": 684807,
+        "sender_full_name": "Ilya Kotlov",
+        "timestamp": 1548097923
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11017\">@Ilya Kotlov</span> I'm here.</p>",
+        "id": 684816,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548098278
+    },
+    {
+        "content": "<p>I think part of the problem here is that Hipchat exports aren't entirely consistent about how they represent <code>sender_id</code>.  In some versions they are truly ints, in which case we try to just use their values as ints.  But if they're more like hashes, we have some kind of mapping from their ids to our own ids.</p>",
+        "id": 684819,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548098357
+    },
+    {
+        "content": "<p>It <strong>definitely</strong> helps to be on the latest version of Zulip possible.</p>",
+        "id": 684821,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548098424
+    },
+    {
+        "content": "<p>I used this command today to get latest update<br>\n<code> /home/zulip/deployments/current/scripts/upgrade-zulip-from-git master </code></p>",
+        "id": 684825,
+        "sender_full_name": "Ilya Kotlov",
+        "timestamp": 1548098501
+    },
+    {
+        "content": "<p>Yeah, it looks like you have current code, so it's probably more an issue with the export being formatted in some way that we didn't anticipate.</p>",
+        "id": 684826,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548098548
+    },
+    {
+        "content": "<p>At line 594, you may want to add something like <code>print(d, sender_id, fn_id)</code> to get a better idea of what's going on.</p>",
+        "id": 684827,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548098579
+    },
+    {
+        "content": "<p>Okay, give me 5min</p>",
+        "id": 684828,
+        "sender_full_name": "Ilya Kotlov",
+        "timestamp": 1548098603
+    },
+    {
+        "content": "<p>Take your time.</p>",
+        "id": 684829,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548098624
+    },
+    {
+        "content": "<p>So, I replaced </p>\n<div class=\"codehilite\"><pre><span></span>if int(sender_id) != int(fn_id):\nreturn\n</pre></div>\n\n\n<p>to<br>\n<code> print(d, sender_id, fn_id) </code></p>\n<p>And got results like:<br>\n<code> {'message_attachment': None, 'message': ‘Here is message’, 'attachment': {}, 'sender': {'id': '557058:02a243cc-35dd-44f4-9870-d3dd807cd018'}, 'id': 'd91065f8-d6ca-11e8-9bee-02420aff0003', 'mentions': [], 'receiver': {'id': '5a3a359562f5f63941c6d7ff'}, 'timestamp': '2018-10-23T13:52:14.826853Z', 'type': 'private'} 9 557058:02a243cc-35dd-44f4-9870-d3dd807cd018 </code></p>",
+        "id": 684834,
+        "sender_full_name": "Ilya Kotlov",
+        "timestamp": 1548099206
+    },
+    {
+        "content": "<p>Ah, so probably the code should be more like:</p>\n<div class=\"codehilite\"><pre><span></span><span class=\"k\">if</span> <span class=\"n\">d</span><span class=\"p\">[</span><span class=\"s1\">&#39;sender&#39;</span><span class=\"p\">][</span><span class=\"s1\">&#39;id&#39;</span><span class=\"p\">]</span> <span class=\"o\">!=</span> <span class=\"n\">fn_id</span>\n</pre></div>",
+        "id": 684852,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548100305
+    },
+    {
+        "content": "<p>For context, what's happening here is that if Alice sends a message to Bob, the Hipchat export puts the same message in both Alice's file and Bob's file, instead doing the more sane approach of having a <code>messages.json</code> file.  So we have to hunt for dups.</p>",
+        "id": 684854,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548100370
+    },
+    {
+        "content": "<p>And the way we do it compare the sender id in the message to the user's file name.</p>",
+        "id": 684856,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548100397
+    },
+    {
+        "content": "<p>In the initial version of the program, I was working with exports that had integer values for user ids, not these long hashes.</p>",
+        "id": 684858,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548100510
+    },
+    {
+        "content": "<p>Got it. Replaced that line and script finished correctly, thanks a lot.<br>\nNow data is imported to server. I hope everything goes well :)</p>",
+        "id": 684860,
+        "sender_full_name": "Ilya Kotlov",
+        "timestamp": 1548100712
+    },
+    {
+        "content": "<p>Phew!  Thanks for your patience with this.</p>",
+        "id": 684873,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548101540
+    },
+    {
+        "content": "<p>Oh, all imported correctly. Thank you a lot :)</p>",
+        "id": 684890,
+        "sender_full_name": "Ilya Kotlov",
+        "timestamp": 1548102597
+    },
+    {
+        "content": "<p><span class=\"emoji emoji-1f44d\" title=\"thumbs up\">:thumbs_up:</span></p>",
+        "id": 684891,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1548102609
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"58\">@Steve Howell</span> I think we do need the <code>int()</code> cast for HipChat, see <a href=\"https://github.com/zulip/zulip/commit/c34a8f2e696fb214af6008ae0cfd0c1e550d1840\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/c34a8f2e696fb214af6008ae0cfd0c1e550d1840\">c34a8f2e696fb214af6008ae0cfd0c1e550d1840</a></p>",
+        "id": 685411,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1548190212
+    },
+    {
+        "content": "<p>So I think the fix is probably to replace that with <code>str()</code> on both sides.</p>",
+        "id": 685412,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1548190226
+    },
+    {
+        "content": "<p>I had lost track of this, but just merged <a href=\"https://github.com/zulip/zulip/commit/1e3ebd379a843075b02b30f8b860cea5c1aa9084\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/1e3ebd379a843075b02b30f8b860cea5c1aa9084\">1e3ebd379a843075b02b30f8b860cea5c1aa9084</a> to fix this properly.</p>",
+        "id": 692641,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1548967067
+    }
+]

@@ -1,0 +1,116 @@
+[
+    {
+        "content": "<p>We will be shortly merging <a href=\"https://github.com/zulip/zulip/pull/17031\">#17031</a>, which is one of the last changes for 5.0 specifically related to making \"Resolve topic\" a nicer experience, though it's a generic improvement that applies to all topic moves.</p>\n<p>Specifically, if you have muted a topic, and the topic gets moved, the destination will become muted instead. There's a few subtle details around this that I'd like feedback on, detailed in <a href=\"https://github.com/zulip/zulip/pull/21482\">#21482</a>. Specifically:</p>\n<ul>\n<li>If the person moving the topic selects that they want to move the entire topic, we move the muted topic records as well.</li>\n<li>If the person moving the topic selects they want to move just one message to another topic, we never move the muted topic record.</li>\n<li>If the person moving the topic selects that they only want to move messages after a certain point from the topic (which is the default when moving a topic given a message), we move the muted topic record as well. This is likely wrong in some situations, where you're just moving a final message that is off-topic, but the structural problem is that we're basically guessing the intent from an ambiguous situation.</li>\n</ul>",
+        "id": 1347972,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647631264
+    },
+    {
+        "content": "<p>(There's also a technical quirk where the changes don't yet apply to moving topics to another stream; hopefully we can get that resolved before 5.0 final; I've written up a plan as the first checkbox in <a href=\"https://github.com/zulip/zulip/pull/21482\">#21482</a> that hopefully <span class=\"user-mention\" data-user-id=\"5140\">@Aman Agrawal (amanagr)</span> can do a PR for. I don't think there's any real uncertainty about what's correct there so won't say more about that here.)</p>",
+        "id": 1347973,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647631270
+    },
+    {
+        "content": "<p>There's a few ways we could go about trying to improve the behavior for \"Change later messages to this topic\"; I think the best in some sense would be if we could get the person who is moving the messages to specify their intent -- are they trying to move some off-topic messages or move most/all of the topic?  </p>\n<p>We can potentially also just guess based on whether there are messages remaining in the topic after the move, or similar, though one needs to be careful with algorithms like that in streams without shared history since it could in theory create a possible information leak vulnerability.</p>",
+        "id": 1347975,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647631418
+    },
+    {
+        "content": "<p>I would be inclined to be conservative in the \"move some messages\" case. We don't want people to feel like they accidentally missed a topic. I'd propose that we move the \"muted\" status if, and only if, moving messages from a certain point moves all the messages that the user is able to see.</p>",
+        "id": 1348064,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1647638128
+    },
+    {
+        "content": "<p>Opened <a href=\"https://github.com/zulip/zulip/pull/21497\">#21497</a></p>",
+        "id": 1348936,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1647872040
+    },
+    {
+        "content": "<blockquote>\n<p>I'd propose that we move the \"muted\" status if, and only if, moving messages from a certain point moves all the messages that the user is able to see.</p>\n</blockquote>\n<p>It sounds like the correct thing to do, but this will leak information that if a topic has more messages than the user is able to see or not.</p>",
+        "id": 1348938,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1647872184
+    },
+    {
+        "content": "<p>So, this certainly need more feedback from users that if they are willing to accept the information leak for that convenience.</p>",
+        "id": 1348940,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1647872303
+    },
+    {
+        "content": "<p>I don't think that would have to leak information -- if the check was done independently for each user who had muted the topic. The cost there is just substantial complexity.</p>",
+        "id": 1349111,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647888128
+    },
+    {
+        "content": "<p>In any case, we've merged <a href=\"https://github.com/zulip/zulip/pull/21497\">#21497</a>, which is now deployed here. It fixes some subtle corner cases; probably most important is that if a topic you've muted is moved to a private stream that you can't access, we now remove the muted topic record as though the topic had been deleted.</p>",
+        "id": 1349385,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647902744
+    },
+    {
+        "content": "<p>We have not implemented any special behavior when using <code>change_later</code> to move only a portion of a topic, so there's more we can do there, but it's plausibly reasonable to take no further action until we hear from users about this experience having issues.</p>",
+        "id": 1349387,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647902795
+    },
+    {
+        "content": "<p><a class=\"stream-topic\" data-stream-id=\"2\" href=\"/#narrow/stream/2-general/topic/greetings\">#general &gt; greetings</a> got unmuted for me today when a couple of messages were moved out to a separate topic. It definitely felt like a bug to have a 150+ message thread get unmuted for no obvious reason.</p>\n<p>Perhaps the right call is to be more conservative, and only move the muted status if all messages in a thread are moved.</p>",
+        "id": 1351215,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1648073304
+    },
+    {
+        "content": "<p>Yeah, I think that's confirmation that we probably do need a check on that front. I think probably the way I'd do it for expediency might be to only do that check in streams with shared history, so that we don't need to deal with the security issues around whether you're allowed to know that all the messages in the topic were moved.</p>",
+        "id": 1351218,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1648073589
+    },
+    {
+        "content": "<p>That sounds fine as a first pass.</p>",
+        "id": 1351233,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1648075430
+    },
+    {
+        "content": "<p>Bug report: If someone has already muted both the old and new topic name, renaming a topic 500's because it tries to insert a duplicate mute</p>",
+        "id": 1351317,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648081684
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"5140\">@Aman Agrawal (amanagr)</span>: ^</p>",
+        "id": 1351320,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1648081735
+    },
+    {
+        "content": "<p>Oops, yeah!</p>",
+        "id": 1351547,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1648107431
+    },
+    {
+        "content": "<p>Opened <a href=\"https://github.com/zulip/zulip/pull/21535\">#21535</a></p>",
+        "id": 1351570,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1648109582
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/Moving.20muted.20topics/near/1351215\">said</a>:</p>\n<blockquote>\n<p><a class=\"stream-topic\" data-stream-id=\"2\" href=\"/#narrow/stream/2-general/topic/greetings\">#general &gt; greetings</a> got unmuted for me today when a couple of messages were moved out to a separate topic. It definitely felt like a bug to have a 150+ message thread get unmuted for no obvious reason.</p>\n</blockquote>\n<p>I've opened <a href=\"https://github.com/zulip/zulip/pull/21546\">#21546</a> for this issue. The new algorithm is to move the muted topic records if and only if the user who was requesting the topic moved all the message that they could access. This matches the existing logic to determine whether to report \"N messages in this topic were moved\" or \"This topic was moved\", and seems like a good simulation of what your intent was.</p>",
+        "id": 1352372,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1648165930
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/25052\">#25052</a> contains the updated algorithm.</p>\n<p><a href=\"#narrow/stream/3-backend/topic/Unmute.20Topics/near/1533009\">CZO Discussion</a></p>\n<p>(updating the thread for future readers.)</p>",
+        "id": 1556743,
+        "sender_full_name": "Prakhar Pratyush",
+        "timestamp": 1682570500
+    }
+]

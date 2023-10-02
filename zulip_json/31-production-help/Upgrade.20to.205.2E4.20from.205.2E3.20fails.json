@@ -1,0 +1,62 @@
+[
+    {
+        "content": "<p>Just tried today. Here's the resulting error output:</p>\n<p>root@TRG-Zulip:~# curl -fLO <a href=\"https://download.zulip.com/server/zulip-server-latest.tar.gz\">https://download.zulip.com/server/zulip-server-latest.tar.gz</a><br>\n  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current<br>\n                                 Dload  Upload   Total   Spent    Left  Speed<br>\n100 89.9M  100 89.9M    0     0  39.0M      0  0:00:02  0:00:02 --:--:-- 39.0M<br>\nroot@TRG-Zulip:~# /home/zulip/deployments/current/scripts/upgrade-zulip zulip-server-latest.tar.gz<br>\n2022-07-16 09:13:55,215 upgrade-zulip: Archiving the tarball under /home/zulip/archives<br>\n2022-07-16 09:13:55,548 upgrade-zulip: Unpacking the tarball<br>\n2022-07-16 09:13:57,225 upgrade-zulip-stage-2: Upgrading system packages...<br>\nHit:2 <a href=\"http://mirrors.digitalocean.com/ubuntu\">http://mirrors.digitalocean.com/ubuntu</a> focal InRelease<br>\nHit:3 <a href=\"https://repos.insights.digitalocean.com/apt/do-agent\">https://repos.insights.digitalocean.com/apt/do-agent</a> main InRelease<br>\nHit:4 <a href=\"https://repos-droplet.digitalocean.com/apt/droplet-agent\">https://repos-droplet.digitalocean.com/apt/droplet-agent</a> main InRelease<br>\nHit:5 <a href=\"http://mirrors.digitalocean.com/ubuntu\">http://mirrors.digitalocean.com/ubuntu</a> focal-updates InRelease<br>\nHit:6 <a href=\"http://mirrors.digitalocean.com/ubuntu\">http://mirrors.digitalocean.com/ubuntu</a> focal-backports InRelease<br>\nHit:7 <a href=\"http://ppa.launchpad.net/groonga/ppa/ubuntu\">http://ppa.launchpad.net/groonga/ppa/ubuntu</a> focal InRelease<br>\nHit:8 <a href=\"http://security.ubuntu.com/ubuntu\">http://security.ubuntu.com/ubuntu</a> focal-security InRelease<br>\nHit:9 <a href=\"http://apt.postgresql.org/pub/repos/apt\">http://apt.postgresql.org/pub/repos/apt</a> focal-pgdg InRelease<br>\nHit:1 <a href=\"https://apt-archive.postgresql.org/pub/repos/apt\">https://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive InRelease<br>\nHit:10 <a href=\"https://packages.groonga.org/ubuntu\">https://packages.groonga.org/ubuntu</a> bionic InRelease<br>\nReading package lists...<br>\nReading package lists...<br>\nBuilding dependency tree...<br>\nReading state information...<br>\nCalculating upgrade...<br>\nThe following packages were automatically installed and are no longer required:<br>\n  libicu60 libllvm10 libllvm6.0 libopts25 libreadline7 libtinfo5<br>\n  postgresql-client-12<br>\nUse 'apt autoremove' to remove them.<br>\nThe following NEW packages will be installed:<br>\n  libllvm9<br>\nThe following packages will be upgraded:<br>\n  apt apt-transport-https apt-utils isc-dhcp-client isc-dhcp-common kmod<br>\n  libapt-pkg6.0 libc-bin libc-dev-bin libc6 libc6-dev libkeyutils1 libkmod2<br>\n  libmbim-glib4 libmbim-proxy libmm-glib0 libnss-systemd libpam-systemd<br>\n  libpq-dev libpq5 libqmi-glib5 libqmi-proxy libsystemd0 libudev1<br>\n  linux-firmware locales locales-all login openssh-client openssh-server<br>\n  openssh-sftp-server passwd postgresql-client postgresql-client-common<br>\n  postgresql-common sbsigntool snapd systemd systemd-sysv<br>\n  ubuntu-advantage-tools udev unattended-upgrades update-notifier-common<br>\nThe following packages will be DOWNGRADED:<br>\n  postgresql-13<br>\n43 upgraded, 1 newly installed, 1 downgraded, 0 to remove and 0 not upgraded.<br>\nE: Packages were downgraded and -y was used without --allow-downgrades.<br>\nTraceback (most recent call last):<br>\n  File \"/home/zulip/deployments/2022-07-16-09-13-55/scripts/lib/upgrade-zulip-stage-2\", line 231, in &lt;module&gt;<br>\n    subprocess.check_call([\"apt-get\", \"-y\", \"--with-new-pkgs\", \"upgrade\"])<br>\n  File \"/usr/lib/python3.8/subprocess.py\", line 364, in check_call<br>\n    raise CalledProcessError(retcode, cmd)<br>\nsubprocess.CalledProcessError: Command '['apt-get', '-y', '--with-new-pkgs', 'upgrade']' returned non-zero exit status 100.</p>",
+        "id": 1405799,
+        "sender_full_name": "Lee Harris",
+        "timestamp": 1657962964
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"18378\">@Lee Harris</span> it looks like the issue here is something to do with your system's <code>apt</code> situation -- <code>apt upgrade</code> is failing. You should debug that, which is likely unrelated to Zulip, and then the upgrade tool should run fine.</p>",
+        "id": 1406410,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1658173842
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>The following packages will be DOWNGRADED:\npostgresql-13\n</code></pre></div>\n<p>This seems potentially related to the pin that we installed related to postgres -- <a href=\"https://github.com/zulip/zulip/commit/472e216cecc4538a57f2e60ee6629f57fdda6539\">472e216cecc4538a57f2e60ee6629f57fdda6539</a> / <a href=\"https://github.com/zulip/zulip/commit/9c8d2b7be39314b41f04a1e1356942afe21ab223\">9c8d2b7be39314b41f04a1e1356942afe21ab223</a>.</p>\n<p><span class=\"user-mention\" data-user-id=\"18378\">@Lee Harris</span>: Can you show <code>apt-cache policy postgresql-13</code> ?</p>",
+        "id": 1406417,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1658174092
+    },
+    {
+        "content": "<p>We run <code>apt-get upgrade</code> before we run puppet, so the apt <code>zulip.pref</code> file is still in place then.  I'm not sure how you could get that file to be in place <em>without</em> having run the <code>apt-get upgrade --allow-downgrades</code> after puppet that dropped into place, though.</p>",
+        "id": 1406420,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1658174338
+    },
+    {
+        "content": "<p>Thanks <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> </p>\n<p>Here's what I have:</p>\n<p>root@TRG-Zulip:~# apt-cache policy postgresql-13<br>\npostgresql-13:<br>\n  Installed: 13.6-1.pgdg20.04+1+b1<br>\n  Candidate: 13.5-2.pgdg20.04+1<br>\n  Version table:<br>\n     13.7-1.pgdg20.04+1 500<br>\n        500 <a href=\"http://apt.postgresql.org/pub/repos/apt\">http://apt.postgresql.org/pub/repos/apt</a> focal-pgdg/main amd64 Packages<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages<br>\n *** 13.6-1.pgdg20.04+1+b1 500<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages<br>\n        100 /var/lib/dpkg/status<br>\n     13.6-1.pgdg20.04+1 500<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages<br>\n     13.5-2.pgdg20.04+1 1000<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages<br>\n     13.5-1.pgdg20.04+1 1000<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages<br>\n     13.4-4.pgdg20.04+1 500<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages<br>\n     13.4-1.pgdg20.04+1 500<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages<br>\n     13.3-1.pgdg20.04+1 500<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages<br>\n     13.2-1.pgdg20.04+1 500<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages<br>\n     13.1-1.pgdg20.04+1 500<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages<br>\n     13.0-1.pgdg20.04+1 500<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages<br>\n     13~rc1-1.pgdg20.04+1 500<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages<br>\n     13~beta3-1.pgdg20.04+1 500<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages<br>\n     13~beta2-1.pgdg20.04+1 500<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages<br>\n     13~beta1-1.pgdg20.04+1 500<br>\n        500 <a href=\"http://apt-archive.postgresql.org/pub/repos/apt\">http://apt-archive.postgresql.org/pub/repos/apt</a> focal-pgdg-archive/main amd64 Packages</p>",
+        "id": 1406803,
+        "sender_full_name": "Lee Harris",
+        "timestamp": 1658223209
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"18378\">@Lee Harris</span>: OK, so the question is how you got into the state with the <code>zulip.pref</code> pin in place, but without <em>currently</em> having that version installed.</p>\n<p>Was this initially installed as 5.4, or did you upgrade from something else to 5.4?</p>\n<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span>, any guesses?</p>",
+        "id": 1407250,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1658275791
+    },
+    {
+        "content": "<p>Nope. The contents of <code>/var/log/apt/history.log</code>, <code>/var/log/zulip/install.log</code>, and <code>/var/log/zulip/upgrade.log</code> might have some clues.</p>",
+        "id": 1407261,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1658276631
+    },
+    {
+        "content": "<p>This was originally a 4.7(?) installation, upgraded to 5.3 and now attempting to get to 5.4. All installed on a clean Digital Ocean droplet with nothing else whatsoever in place. Droplet was provisioned just for Zulip. Logs to follow…</p>",
+        "id": 1407467,
+        "sender_full_name": "Lee Harris",
+        "timestamp": 1658316027
+    },
+    {
+        "content": "<p>following an apt upgrade, the 5.4 upgrade process worked fine.</p>",
+        "id": 1407468,
+        "sender_full_name": "Lee Harris",
+        "timestamp": 1658316761
+    },
+    {
+        "content": "<p>same problel, solved <span aria-label=\"wink\" class=\"emoji emoji-1f609\" role=\"img\" title=\"wink\">:wink:</span></p>",
+        "id": 1413674,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1659361602
+    }
+]

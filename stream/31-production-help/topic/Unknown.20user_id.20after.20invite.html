@@ -1,0 +1,121 @@
+<html>
+<head><meta charset="utf-8"><title>Unknown user_id after invite · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Unknown.20user_id.20after.20invite.html">Unknown user_id after invite</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1370663"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Unknown%20user_id%20after%20invite/near/1370663" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> James VL <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Unknown.20user_id.20after.20invite.html#1370663">(Apr 20 2022 at 16:30)</a>:</h4>
+<p>I've got another odd user registration problem...</p>
+<h2>Steps</h2>
+<ul>
+<li>user sent an invite</li>
+<li>clicked on invite</li>
+<li>tried to login via username + password (which don't exist yet)<ul>
+<li>normal / expected method is login via Google SSO (works fine for most others)</li>
+</ul>
+</li>
+<li>now, Zulip won't load at all with the following error in the browser terminal:</li>
+</ul>
+<div class="codehilite"><pre><span></span><code>Unknown user_id in get_by_user_id: 152
+Uncaught TypeError: Cannot read properties of undefined (reading &#39;date_joined&#39;)
+</code></pre></div>
+
+
+
+<a name="1370666"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Unknown%20user_id%20after%20invite/near/1370666" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> James VL <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Unknown.20user_id.20after.20invite.html#1370666">(Apr 20 2022 at 16:34)</a>:</h4>
+<p>The user no longer shows up under "Users" or "Deactivated Users" and I cannot resend the invite because it says they already exist in the system.</p>
+
+
+
+<a name="1370701"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Unknown%20user_id%20after%20invite/near/1370701" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Unknown.20user_id.20after.20invite.html#1370701">(Apr 20 2022 at 17:17)</a>:</h4>
+<p><span class="user-mention" data-user-id="19765">@James VL</span> I'd check the server logs -- it seems likely an exception was thrown while creating the user.</p>
+
+
+
+<a name="1370702"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Unknown%20user_id%20after%20invite/near/1370702" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Unknown.20user_id.20after.20invite.html#1370702">(Apr 20 2022 at 17:18)</a>:</h4>
+<p>And what that exception is will determine how to correct the situation, which seems pretty clearly a case of the user only being half-created (or something).</p>
+
+
+
+<a name="1370716"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Unknown%20user_id%20after%20invite/near/1370716" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> James VL <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Unknown.20user_id.20after.20invite.html#1370716">(Apr 20 2022 at 17:30)</a>:</h4>
+<p>The only error in my logs from yesterday (when this happened) is</p>
+<div class="codehilite"><pre><span></span><code>2022-04-19 19:57:48.637 ERR  [zerver.middleware.json_error_handler] Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/base.py&quot;, line 181, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File &quot;/home/zulip/deployments/2022-04-05-19-49-42/./zerver/lib/rest.py&quot;, line 33, in _wrapped_view_func
+    response = view_func(request, *args, **kwargs)
+  File &quot;/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/views/decorators/csrf.py&quot;, line 54, in wrapped_view
+    return view_func(*args, **kwargs)
+  File &quot;/home/zulip/deployments/2022-04-05-19-49-42/./zerver/lib/rest.py&quot;, line 169, in rest_dispatch
+    return target_function(request, **kwargs)
+  File &quot;/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/utils/decorators.py&quot;, line 130, in _wrapped_view
+    response = view_func(request, *args, **kwargs)
+  File &quot;/home/zulip/deployments/2022-04-05-19-49-42/./zerver/decorator.py&quot;, line 790, in _wrapped_view_func
+    return authenticate_log_and_execute_json(
+  File &quot;/home/zulip/deployments/2022-04-05-19-49-42/./zerver/decorator.py&quot;, line 777, in authenticate_log_and_execute_json
+    return limited_view_func(request, user_profile, *args, **kwargs)
+  File &quot;/home/zulip/deployments/2022-04-05-19-49-42/./zerver/decorator.py&quot;, line 984, in wrapped_func
+    return func(request, *args, **kwargs)
+  File &quot;/home/zulip/deployments/2022-04-05-19-49-42/./zerver/decorator.py&quot;, line 599, in _wrapped_view_func
+    return view_func(request, user_profile, *args, **kwargs)
+  File &quot;/home/zulip/deployments/2022-04-05-19-49-42/./zerver/views/invite.py&quot;, line 102, in get_user_invites
+    all_users = do_get_invites_controlled_by_user(user_profile)
+  File &quot;/home/zulip/deployments/2022-04-05-19-49-42/./zerver/lib/actions.py&quot;, line 7828, in do_get_invites_controlled_by_user
+    expiry_date=get_invitation_expiry_date(invitee.confirmation.get()),
+  File &quot;/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/manager.py&quot;, line 85, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File &quot;/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 435, in get
+    raise self.model.DoesNotExist(
+confirmation.models.Confirmation.DoesNotExist: Confirmation matching query does not exist.
+
+2022-04-19 19:57:48.708 ERR  [django.request] Internal Server Error: /json/invites
+2022-04-20 14:08:27.961 WARN [django.security.csrf:9800] Forbidden (CSRF token missing or incorrect.): /json/events
+</code></pre></div>
+
+
+
+<a name="1370719"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Unknown%20user_id%20after%20invite/near/1370719" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> James VL <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Unknown.20user_id.20after.20invite.html#1370719">(Apr 20 2022 at 17:31)</a>:</h4>
+<p>But that may have been triggered when they tried to use the same e-mail invite again after logging in w/out a password didn't work</p>
+
+
+
+<a name="1371348"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Unknown%20user_id%20after%20invite/near/1371348" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Unknown.20user_id.20after.20invite.html#1371348">(Apr 21 2022 at 19:24)</a>:</h4>
+<p>Hmm, this traceback looks like <a href="https://github.com/zulip/zulip/issues/21691">https://github.com/zulip/zulip/issues/21691</a> I think - and it's from an attempt to fetch invites, rather than a user sign in attempt</p>
+
+
+
+<a name="1371354"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Unknown%20user_id%20after%20invite/near/1371354" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Unknown.20user_id.20after.20invite.html#1371354">(Apr 21 2022 at 19:26)</a>:</h4>
+<blockquote>
+<p>The only error in my logs from yesterday (when this happened) is</p>
+</blockquote>
+<p>Are there any different errors from earlier? Perhaps the user registered earlier than the day of the error reported at the top of this thread?</p>
+
+
+
+<a name="1373258"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Unknown%20user_id%20after%20invite/near/1373258" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> James VL <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Unknown.20user_id.20after.20invite.html#1373258">(Apr 25 2022 at 21:40)</a>:</h4>
+<p>I don't think that would have been possible - I created the invite myself. I think he did try to register / create his own account after the invite was sent though.</p>
+
+
+
+<a name="1373260"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Unknown%20user_id%20after%20invite/near/1373260" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> James VL <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Unknown.20user_id.20after.20invite.html#1373260">(Apr 25 2022 at 21:42)</a>:</h4>
+<p>I finally used the zulip management commands to change the email address of the originally invited user to a dummy address, and then re-sent the invite - it worked when he used the email link.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,494 @@
+[
+    {
+        "content": "<p>After the 1.6.0 upgrade we have one user who can no longer paste or drag images into the Zulip chat window. Paste via right-click or CTRL-V does not work, and if he drags or pastes an image he gets \"Upload would exceed your maximum quota. Consider deleting some previously uploaded files.\"  <br>\nOn that subject, is there a best practice/method for pruning the Attachments folder on the server - ours is approaching 30GB. Server has been in use for almost 3 years.</p>",
+        "id": 283842,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505741554
+    },
+    {
+        "content": "<p>I think you can work around this temporarily by updating the \"quota\" field in <code>zerver_userprofile</code> for the users that are hitting their quota.  I'm curious if you would be concerned about running out of space if it weren't for Zulip's limit here.</p>",
+        "id": 283894,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505745172
+    },
+    {
+        "content": "<p>Would PGAdmin be the best tool for poking around the DB?</p>",
+        "id": 283899,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505745737
+    },
+    {
+        "content": "<p>We keep an eye on the HDD space. We hit the limit a couple times and then added some more virtual HDD room. Generally I don't think our users need to go back much more than a year. Our QA teams make heavy use of the attachments/ past images feature.</p>",
+        "id": 283900,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505745800
+    },
+    {
+        "content": "<p>I tried that myself before but you have to first create a user that has access to the zulip database and from remote machines. I used DBeaver but I was never able to do much because of triggers. But I think that most devs here would advice you to not change values or you risk data inconsistency.</p>",
+        "id": 283901,
+        "sender_full_name": "Matthias",
+        "timestamp": 1505745883
+    },
+    {
+        "content": "<p>OK - how do I modify that quota then - is it not in the PG database?</p>",
+        "id": 283902,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505745916
+    },
+    {
+        "content": "<p>sorry, I wasn't answering that question. I was still writing when you posted it and short answer: don't know.</p>",
+        "id": 283903,
+        "sender_full_name": "Matthias",
+        "timestamp": 1505745964
+    },
+    {
+        "content": "<p>but 30GB doesn't sound much to me.</p>",
+        "id": 283904,
+        "sender_full_name": "Matthias",
+        "timestamp": 1505746028
+    },
+    {
+        "content": "<p>It was when the VM was too small :-) Anyhow now trying to fix quota for one user.</p>",
+        "id": 283905,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505746066
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"m.mueller@intercultural-elements.eu\" data-user-id=\"1646\">@Matthias</span> is correct that you should be cautious about direct DB updates, since we do have things in memcached, and you can put users in inconsistent states.  I know enough this field, however, to assure <span class=\"user-mention\" data-user-email=\"dylanh@hb-studios.com\" data-user-id=\"3275\">@hb-it</span>  that it's ok to carefully modify userprofile quotas.  They may not take effect right away, however, due to memcached.  They won't screw anything up; they will just be at their old values.</p>",
+        "id": 283906,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505746086
+    },
+    {
+        "content": "<p>If you can restart the server, I believe you'll be fine.</p>",
+        "id": 283907,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505746101
+    },
+    {
+        "content": "<p>Sounds good, will try that. Thanks!</p>",
+        "id": 283908,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505746150
+    },
+    {
+        "content": "<p>That has worked, used PGAdmin IV to get connected and edit the quotas field. Thank you for the help.</p>",
+        "id": 283929,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505754534
+    },
+    {
+        "content": "<p>You're welcome!</p>",
+        "id": 283934,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505754957
+    },
+    {
+        "content": "<p>So this is an issue for several users it seems, I'm thinking of running this query on the Postgres DB:    </p>\n<p>update zerver_userprofile SET quota = 2073741824.     (default value is 1073741824)</p>\n<p>Am I asking for trouble by doing this? That would double the quota for everyone. I will snapshot the server first of course. <br>\nAlso wondering if there is somewhere I can set a higher default value for new users.</p>",
+        "id": 284208,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505831561
+    },
+    {
+        "content": "<blockquote>\n<p>Also wondering if there is somewhere I can set a higher default value for new users.</p>\n</blockquote>\n<p>There is an attribute called <code>DEFAULT_UPLOADS_QUOTA</code> in zerver/model.UserProfile. But I am not sure modifying it directly is recommended in production.</p>",
+        "id": 284211,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1505832106
+    },
+    {
+        "content": "<p>The query here is fine to run.</p>",
+        "id": 284212,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505832245
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"showell@zulipchat.com\" data-user-id=\"58\">@Steve Howell</span> Is it fine to modify the value of DEFAULT_UPLOADS_QUOTA  and create a migration for a particular production instance? Will it create problem when they have to upgrade to a newer Zulip release?</p>",
+        "id": 284216,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1505832743
+    },
+    {
+        "content": "<p>I am pretty sure they can change the settings value now, and that will persist across upgrades, and that will pre-populate all future users with a correct value.  And then to retroactively fix the current users, you can use the update statement <code>update zerver_userprofile SET quota = 2073741824</code> proposed by <span class=\"user-mention\" data-user-email=\"dylanh@hb-studios.com\" data-user-id=\"3275\">@hb-it</span>.</p>",
+        "id": 284217,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505833709
+    },
+    {
+        "content": "<p>Updating current users has worked with that query, but I'm not seeing where to edit DEFAULT_UPLOADS_QUOTA - can't find zerver/model.UserProfile. FYI we did not need to reboot the server, just getting endusers to restart Zulip enabled the new quota.</p>",
+        "id": 284218,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505834188
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"dylanh@hb-studios.com\" data-user-id=\"3275\">@hb-it</span> It might be in <code>/etc/zulip/settings.py</code>.</p>",
+        "id": 284219,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505834327
+    },
+    {
+        "content": "<p>Hmmmm, hold on.</p>",
+        "id": 284220,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505834443
+    },
+    {
+        "content": "<p>I was thinking of <code>MAX_FILE_UPLOAD_SIZE</code>, which is in settings.  The field <span class=\"user-mention\" data-user-email=\"yo@vishnuks.com\" data-user-id=\"52\">@Vishnu Ks</span> mentions is in <code>zerver/models.py</code>.</p>",
+        "id": 284221,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505834639
+    },
+    {
+        "content": "<p>Ok found it, it says 1024<em>1024</em>1024    -  If I want to double it I'm assuming 2048<em>2048</em>2048 will work?</p>",
+        "id": 284222,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505834707
+    },
+    {
+        "content": "<p>And we can modify that now, and restart the server, and that will fix the default for new users.  But you'll need to keep patching that on every upgrade (although eventually we'll bump it up or put it in settings.)</p>",
+        "id": 284223,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505834721
+    },
+    {
+        "content": "<p>Sorry this client is not showing the * asterisk</p>",
+        "id": 284224,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505834722
+    },
+    {
+        "content": "<p>Only double one of the numbers. :)</p>",
+        "id": 284225,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505834739
+    },
+    {
+        "content": "<p>Which one?</p>",
+        "id": 284226,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505834750
+    },
+    {
+        "content": "<p><code>2048 * 1024 * 1024</code>  It doesn't really matter, since multiplication is commutative. :)</p>",
+        "id": 284227,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505834772
+    },
+    {
+        "content": "<p>Ah gotcha. Thanks again!</p>",
+        "id": 284228,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505834798
+    },
+    {
+        "content": "<p>Yes an Admin option to manage quotas would be good. Just FYI this only started once we got to 1.6.0 from 1.3.5, so the quota functionality must have changed along the way?</p>",
+        "id": 284229,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505834844
+    },
+    {
+        "content": "<p>Yep, it was added early this year, before the 1.6 release.  Obviously it's important to have some limit here, but we probably should have made the default much larger.  <span class=\"user-mention\" data-user-email=\"rishig@zulipchat.com\" data-user-id=\"131\">@Rishi Gupta</span> <span class=\"user-mention\" data-user-email=\"yo@vishnuks.com\" data-user-id=\"52\">@Vishnu Ks</span> Do either of you know whether we've done anything to address this?  (Another organization also bumped up against this recently, I believe.)</p>",
+        "id": 284230,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505834997
+    },
+    {
+        "content": "<p>Our QA teams use this feature heavily, they are sending screenshots to the devs all day long. As does the Art dept.</p>",
+        "id": 284231,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505835178
+    },
+    {
+        "content": "<p>Good to know!</p>",
+        "id": 284233,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505837029
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"showell@zulipchat.com\" data-user-id=\"58\">@Steve Howell</span> I am not aware of anything related to increasing the quota/ making it a realm specific settings. Lets wait till Rishi and make an issue opened for that if it does not exist. Also <span class=\"user-mention\" data-user-email=\"dylanh@hb-studios.com\" data-user-id=\"3275\">@hb-it</span>  have to generate migrations and migrate it after modifying DEFAULT_UPLOADS_QUOTA right?</p>",
+        "id": 284234,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1505837285
+    },
+    {
+        "content": "<p>No, there's no need to create a migration here, since you're just updating data with a simple update statement against a small table.</p>",
+        "id": 284237,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505837457
+    },
+    {
+        "content": "<p>Okay. I thought he was going to modify the zerver/models.py instead of modifying tables.</p>",
+        "id": 284239,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1505837769
+    },
+    {
+        "content": "<p>I did both - updated the database to fix for current users, and edited models.py for future users - is there another step I need to complete?</p>",
+        "id": 284240,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505837929
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"dylanh@hb-studios.com\" data-user-id=\"3275\">@hb-it</span> If you changed models.py you have to generate migrations and migrate it. But I would wait for Steve to come back :)</p>",
+        "id": 284278,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1505843121
+    },
+    {
+        "content": "<p>Huh, I guess it depends on whether the defaults are managed directly by Django or by the database.  I guess <span class=\"user-mention\" data-user-email=\"yo@vishnuks.com\" data-user-id=\"52\">@Vishnu Ks</span> is suggesting it's the latter, in which case changing <code>models.py</code> doesn't have much effect.  I'm a little wary of running a migration, as that can definitely complicate future  upgrades.</p>",
+        "id": 284282,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1505843408
+    },
+    {
+        "content": "<p>No big deal, we can always rerun the update query if we need to.</p>",
+        "id": 284283,
+        "sender_full_name": "hb-it",
+        "timestamp": 1505843471
+    },
+    {
+        "content": "<p>I think Vishnu is right; this needs a migration to change the default.</p>\n<p>Probably the right way forward for zulip is to remove the default from the database field, and set UserProfile.quota in do_create_user. I also agree with Steve that running a custom migration to do this will be trouble for future upgrades.</p>",
+        "id": 284409,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1505865718
+    },
+    {
+        "content": "<p>We have a user now who appears to have hit the new limit of  2073741824 - and I am now running into \"integer out of range\" errors if I try to set quota much higher in the PostGres DB.</p>",
+        "id": 288260,
+        "sender_full_name": "hb-it",
+        "timestamp": 1506532510
+    },
+    {
+        "content": "<p>4 Byte integer can hold 2,147,483,647, I just tested that by trying to set it to 2,147,483,648</p>",
+        "id": 288267,
+        "sender_full_name": "hb-it",
+        "timestamp": 1506532719
+    },
+    {
+        "content": "<p>So I think I need to do one of:    alter the field so it holds bigger values (probably a bad idea), purge some old files based on date, or disable the quota altogether which would be my first choice.</p>",
+        "id": 288273,
+        "sender_full_name": "hb-it",
+        "timestamp": 1506532851
+    },
+    {
+        "content": "<p>Yep, I think hacking the code to bypass the check might be your best bet for the short term.</p>",
+        "id": 288295,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1506533321
+    },
+    {
+        "content": "<p>Ok - where do I do that, can it be done per user?</p>",
+        "id": 288301,
+        "sender_full_name": "hb-it",
+        "timestamp": 1506533398
+    },
+    {
+        "content": "<p>In zerver/lib/upload.py, you could change the within_upload_quota function to add an exception for a particular user.</p>\n<p>unrelatedly, probably we should change all the constants like DEFAULT_UPLOADS_QUOTA,  MAX_FILE_UPLOAD_SIZE, etc to be in megabytes rather than bytes?</p>",
+        "id": 288320,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1506534238
+    },
+    {
+        "content": "<p>something like <code>if user.email == special_user@domain.tld: return True</code> at the beginning of the function</p>",
+        "id": 288321,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1506534288
+    },
+    {
+        "content": "<p>try changing <code>within_upload_quota</code> to multiply the quote by 1024 (basically treating it as in KB)</p>",
+        "id": 288323,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506534490
+    },
+    {
+        "content": "<p>Oh, is that field an integer, in bytes?  Sigh.</p>",
+        "id": 288324,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506534490
+    },
+    {
+        "content": "<p>in <code>zerver/lib/upload.py</code></p>",
+        "id": 288325,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506534490
+    },
+    {
+        "content": "<p>That's definitely a bug, we should open an issue for it.</p>",
+        "id": 288326,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506534490
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"showell@zulipchat.com\" data-user-id=\"58\">@Steve Howell</span> do you think we want to solve this by changing units to MB or something, or by making the number 64-bit?</p>",
+        "id": 288327,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506534490
+    },
+    {
+        "content": "<p>(I lost Internet briefly, hence the second solution)</p>",
+        "id": 288330,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506534608
+    },
+    {
+        "content": "<p>I think we should make the field 64-bit.</p>",
+        "id": 288331,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1506534608
+    },
+    {
+        "content": "<p>What's your reasoning?</p>",
+        "id": 288332,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506534627
+    },
+    {
+        "content": "<p>64-bit is plenty big, whereas framing max/mins in terms of kB or MB can lead to unexpected traps</p>",
+        "id": 288334,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1506534667
+    },
+    {
+        "content": "<p>I should say 2^^64 is plenty big for future max values, and 64 bits is plenty small for storing the value.</p>",
+        "id": 288336,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1506534742
+    },
+    {
+        "content": "<p>I think I'll just put return true at the beginning to disable the whole thing for now and wait for updates in a newer version - we can manage the disk space manually as we have been.  Or just comment out the return false line.</p>",
+        "id": 288337,
+        "sender_full_name": "hb-it",
+        "timestamp": 1506535498
+    },
+    {
+        "content": "<p>Do I need to do the migrations thing to get this to stick?</p>",
+        "id": 288338,
+        "sender_full_name": "hb-it",
+        "timestamp": 1506535621
+    },
+    {
+        "content": "<p>You don't need to create any migrations if you are only changing <code>upload.py</code></p>",
+        "id": 288339,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1506535788
+    },
+    {
+        "content": "<p>Ok will try that. Thank you again everyone for the assist.</p>",
+        "id": 288340,
+        "sender_full_name": "hb-it",
+        "timestamp": 1506535927
+    },
+    {
+        "content": "<p>For reference you have to create and run migrations only if you change the database schema.(Which is usually <code>models.py</code> file)</p>",
+        "id": 288341,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1506536036
+    },
+    {
+        "content": "<p>my reason for wanting MB is that I think we'll eventually want this to become a realm or server setting, in which case MB is easier to reason about, and less prone to human mistake than bytes.</p>",
+        "id": 288342,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1506536080
+    },
+    {
+        "content": "<p>But you may be right that an absolute number of bytes is a cleaner model, since then one doesn't need to worry about where one rounds.</p>",
+        "id": 288344,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506536197
+    },
+    {
+        "content": "<p>I guess the only cost is a larger UserProfile table.</p>",
+        "id": 288345,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506536197
+    },
+    {
+        "content": "<p>Personally, I'm probably more tempted by the MB one, just because the code for checking quota is like 1 function, so not a lot of traps, and I think everyone interacting with it will want to specify their values in some large unit like MB.</p>",
+        "id": 288346,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506536197
+    },
+    {
+        "content": "<p>I'd like a few other folks' opinions, I guess.</p>",
+        "id": 288347,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506536197
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"dylanh@hb-studios.com\" data-user-id=\"3275\">@hb-it</span> I think either of the hacks we described should work for now, but we'll make sure this gets fixed in Zulip 1.7.</p>",
+        "id": 288348,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506536197
+    },
+    {
+        "content": "<p>From our end user perspective, our dev, QA and art teams use this function all day long to easily pass around and discuss screen grabs and mocks, so we don't want to limit their use of it.</p>",
+        "id": 288349,
+        "sender_full_name": "hb-it",
+        "timestamp": 1506536221
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> - much appreciated.</p>",
+        "id": 288350,
+        "sender_full_name": "hb-it",
+        "timestamp": 1506536255
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"dylanh@hb-studios.com\" data-user-id=\"3275\">@hb-it</span> just so we have the data, did someone use 1GB (going from 1GB to 2GB) in about a month in your organization?  It's helpful to have a sense for what \"a lot of file uploads\" rate is :)</p>",
+        "id": 288353,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506537163
+    },
+    {
+        "content": "<p>That is a good question  - he said he only added a few more files since we looked at this last time. So I'm wondering how it triggered myself. I can tell you the attachments directory is 28+GB</p>",
+        "id": 288364,
+        "sender_full_name": "hb-it",
+        "timestamp": 1506537548
+    },
+    {
+        "content": "<p>Is there an easy way to see which uploads belong to who?</p>",
+        "id": 288365,
+        "sender_full_name": "hb-it",
+        "timestamp": 1506537567
+    },
+    {
+        "content": "<p>He should be able to see in the <code>#settings/uploaded-files</code> page, but that doesn't have sizes yet (should have it soon though, we should merge the PR from <span class=\"user-mention\" data-user-email=\"yo@vishnuks.com\" data-user-id=\"52\">@Vishnu Ks</span> on this).</p>",
+        "id": 288370,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506537881
+    },
+    {
+        "content": "<p>Definitely possible on the <code>manage.py shell</code></p>",
+        "id": 288371,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1506537898
+    },
+    {
+        "content": "<p>A way for an admin to see file totals would be good</p>",
+        "id": 288374,
+        "sender_full_name": "hb-it",
+        "timestamp": 1506537967
+    },
+    {
+        "content": "<p>Or purge files older than a certain date</p>",
+        "id": 288377,
+        "sender_full_name": "hb-it",
+        "timestamp": 1506537993
+    },
+    {
+        "content": "<p>I still think the back end should be an absolute number of bytes, but of course any UI should allow for users to specify it in terms of Mb, Gb, etc.</p>",
+        "id": 288381,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1506538033
+    },
+    {
+        "content": "<p>If we express the value in Mb, and you want 800Gb, then we put 800,000 in the database field?  Seems funny to me, since in 2025 megabytes will be the new kilobytes.</p>",
+        "id": 288382,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1506538136
+    },
+    {
+        "content": "<p>I'd be happy with any reasonable unit -- so long as we make it clear in the name of the field. So something like \"..._bytes\" or \"..._mb\" or \"..._mib\", where if we say \"_mb\" we really do mean MB, aka 10^6 bytes. :-)</p>",
+        "id": 289392,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1506641896
+    }
+]

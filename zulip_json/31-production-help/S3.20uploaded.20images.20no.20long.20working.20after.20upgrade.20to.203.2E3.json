@@ -1,0 +1,104 @@
+[
+    {
+        "content": "<p>After upgrading to 3.3 image uploads to s3 private bucket are no longer showing. Avatars are showing fine (s3 public bucket) and the uploads are showing in the s3 private bucket, just not \"downloading.\" Rolled back via snapshot to prior and all works again. Try to redeploy upgrade and uploaded images no longer work and show a broken link.  When selecting an image via the web interface I get the following.</p>\n<p>&lt;Error&gt;<br>\n&lt;Code&gt;InvalidRequest&lt;/Code&gt;<br>\n&lt;Message&gt;The authorization mechanism you have provided is not supported. Please use AWS4-HMAC-SHA256.&lt;/Message&gt;<br>\n&lt;RequestId&gt;7KWVZHPGPDGEG5GF&lt;/RequestId&gt;<br>\n&lt;HostId&gt;CHwySrObWgElXb+bt56wIfqbHNpD/VQ9KSrU3IUvIsM6POFuKJqCoEYvmfOleT5A18XTSwS7qeU=&lt;/HostId&gt;<br>\n&lt;/Error&gt;</p>\n<p>I added the following to both /etc/boto.cfg and /etc/zulip/boto.cfg<br>\n[s3]<br>\nuse-sigv4 = True</p>\n<h1>Edit to provide your bucket's AWS region or hostname here.</h1>\n<p>host = <a href=\"http://s3.us-east-2.amazonaws.com\">s3.us-east-2.amazonaws.com</a></p>\n<p>and now am getting the following when attempting to open an image via the link<br>\n&lt;Error&gt;<br>\n&lt;Code&gt;AuthorizationQueryParametersError&lt;/Code&gt;<br>\n&lt;Message&gt;Error parsing the X-Amz-Credential parameter; the region 'us-east-1' is wrong; expecting 'us-east-2'&lt;/Message&gt;<br>\n&lt;Region&gt;us-east-2&lt;/Region&gt;<br>\n&lt;RequestId&gt;P1M8GHKRGJJ66S2F&lt;/RequestId&gt;<br>\n&lt;HostId&gt;cDFYT9tJlZHdf5sUVHPPUugRiFYq/sXEjOow0L/t7BJIJ8ISDD8U4q8ZefJO183Ly7Dbko/7kLA=&lt;/HostId&gt;<br>\n&lt;/Error&gt;</p>\n<p>here is a snippet of the url<br>\n (snipett of the url)<br>\n<a href=\"https://us-east-2-zulip-private-prod.s3.amazonaws.com/2/LmDaq51HHc68gTGhkHzu6I5u/Zulip-Gear-Menu.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=XXXXXXXXXXXXXXXXXXXXXXX%2Fus-east-1%2Fs3%2Faws4_request\">https://us-east-2-zulip-private-prod.s3.amazonaws.com/2/LmDaq51HHc68gTGhkHzu6I5u/Zulip-Gear-Menu.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=XXXXXXXXXXXXXXXXXXXXXXX%2Fus-east-1%2Fs3%2Faws4_request</a>.....</p>\n<div class=\"message_inline_image\"><a href=\"https://us-east-2-zulip-private-prod.s3.amazonaws.com/2/LmDaq51HHc68gTGhkHzu6I5u/Zulip-Gear-Menu.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=XXXXXXXXXXXXXXXXXXXXXXX%2Fus-east-1%2Fs3%2Faws4_request\"><img src=\"https://us-east-2-zulip-private-prod.s3.amazonaws.com/2/LmDaq51HHc68gTGhkHzu6I5u/Zulip-Gear-Menu.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=XXXXXXXXXXXXXXXXXXXXXXX%2Fus-east-1%2Fs3%2Faws4_request\"></a></div><p>Notice the \"us-east-1\" being passed.</p>\n<p>Thoughts?</p>",
+        "id": 1154603,
+        "sender_full_name": "James Dunn",
+        "timestamp": 1617719493
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16914\">@James Dunn</span> what version did you upgrade from?</p>",
+        "id": 1154682,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617724146
+    },
+    {
+        "content": "<p>In the soon-to-be 4.0 master branch, we've changed this interface to have <code>S3_REGION</code> and <code>S3_ENDPOINT_URL</code> settings, using the newer <code>boto3</code> library.</p>",
+        "id": 1154685,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617724369
+    },
+    {
+        "content": "<p>I'm not sure why causes what you're seeing; the code for generating those URLs on 3.3 is this, so I don't know where that <code>us-east-1</code> would be coming from:</p>\n<div class=\"codehilite\"><pre><span></span><code>def get_signed_upload_url(path: str) -&gt; str:\n    client = boto3.client(&#39;s3&#39;, aws_access_key_id=settings.S3_KEY,\n                          aws_secret_access_key=settings.S3_SECRET_KEY)\n    return client.generate_presigned_url(ClientMethod=&#39;get_object&#39;,\n                                         Params={\n                                             &#39;Bucket&#39;: settings.S3_AUTH_UPLOADS_BUCKET,\n                                             &#39;Key&#39;: path},\n                                         ExpiresIn=SIGNED_UPLOAD_URL_DURATION,\n                                         HttpMethod=&#39;GET&#39;)\n</code></pre></div>",
+        "id": 1154686,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617724407
+    },
+    {
+        "content": "<p>Oh, one question -- did you restart the server after changing those settings in <code>/etc/zulip/boto.cfg</code>?</p>",
+        "id": 1154687,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617724426
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"3\" href=\"/#narrow/stream/3-backend/topic/S3.20uploaded.20images.20no.20long.20working.20after.20upgrade.20to.203.2E3\">#backend &gt; S3 uploaded images no long working after upgrade to 3.3</a> by <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span></p>",
+        "id": 1154688,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1617724457
+    },
+    {
+        "content": "<p>Is commit <a href=\"https://github.com/zulip/zulip/commit/dfa7ce5637eb6e29f21298aaa33bac1783423dd3\">dfa7ce56</a> included in the 3.3 version ?</p>\n<p>If so,<br>\nWe no longer use the <code>/etc/zulip/boto.cfg</code> file. <br>\n<code>us-east-1</code> is the default region. So is the expected <code>S3_REGION</code> set in the <code>settings.py</code> file ?</p>",
+        "id": 1154703,
+        "sender_full_name": "Ryan Rehman",
+        "timestamp": 1617724998
+    },
+    {
+        "content": "<p>It is not -- 3.3 was about 3 months before that change.</p>",
+        "id": 1154711,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617725334
+    },
+    {
+        "content": "<p>So certainly one possible fix is for them to upgrade to the 4.0 branch and use those settings, which should definitely work.</p>",
+        "id": 1154712,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617725369
+    },
+    {
+        "content": "<p>Certainly it's only marginally useful to debug the behavior of 3.3 at this point.  </p>\n<p>I guess we could also look at backporting that commit to the 3.x branch.</p>",
+        "id": 1154713,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617725445
+    },
+    {
+        "content": "<p>Yes, even rebooted</p>",
+        "id": 1154820,
+        "sender_full_name": "James Dunn",
+        "timestamp": 1617728032
+    },
+    {
+        "content": "<p>Initial install was 2.1.1 and upgraded from that to 3.3</p>",
+        "id": 1154822,
+        "sender_full_name": "James Dunn",
+        "timestamp": 1617728059
+    },
+    {
+        "content": "<p>I've determined it will not be super fun to backport, just because of various previous migrations to <code>uploads.py</code>.</p>",
+        "id": 1154855,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617728868
+    },
+    {
+        "content": "<p>So <span class=\"user-mention\" data-user-id=\"16914\">@James Dunn</span> my recommendation for this issue is to upgrade to 3.3 and then to master (or wait for the 4.0 release planned for late this month, if you want to be cautious).  See <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-from-a-git-repository\">https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-from-a-git-repository</a>.</p>",
+        "id": 1154856,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1617728972
+    },
+    {
+        "content": "<p>fyi, in settings I changed S3_REGION = \"<a href=\"http://s3.us-east-2.amazonaws.com\">s3.us-east-2.amazonaws.com</a>\" (from prior config) to S3_REGION = \"us-east-2\" No effect after restarting.</p>",
+        "id": 1154866,
+        "sender_full_name": "James Dunn",
+        "timestamp": 1617729327
+    },
+    {
+        "content": "<p>/etc/zulip/settings.py to be specific.</p>",
+        "id": 1154869,
+        "sender_full_name": "James Dunn",
+        "timestamp": 1617729374
+    },
+    {
+        "content": "<p>Thank you for your help. Will talk with my end users to see if they wish to wait for 4 release or go with current beta 4.</p>",
+        "id": 1154875,
+        "sender_full_name": "James Dunn",
+        "timestamp": 1617729547
+    }
+]

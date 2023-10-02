@@ -1,0 +1,68 @@
+[
+    {
+        "content": "<p>With 2.0.4 there is a hourly working cron-job /home/zulip/deployments/current/manage.py update_analytics_counts. It's called via /etc/cron.d. I have no idea what it does. How ever I get every how a new mail about a failure.</p>\n<div class=\"codehilite\"><pre><span></span>Traceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/manage.py&quot;, line 46, in &lt;module&gt;\n    execute_from_command_line(sys.argv)\n  File &quot;/export/home/zulip/deployments/2019-08-29-19-05-09/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/__init__.py&quot;, line 364, in execute_from_command_line\n    utility.execute()\n  File &quot;/export/home/zulip/deployments/2019-08-29-19-05-09/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/__init__.py&quot;, line 356, in execute\n    self.fetch_command(subcommand).run_from_argv(self.argv)\n  File &quot;/export/home/zulip/deployments/2019-08-29-19-05-09/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py&quot;, line 283, in run_from_argv\n    self.execute(*args, **cmd_options)\n  File &quot;/export/home/zulip/deployments/2019-08-29-19-05-09/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py&quot;, line 330, in execute\n    output = self.handle(*args, **options)\n  File &quot;/export/home/zulip/deployments/2019-08-29-19-05-09/analytics/management/commands/update_analytics_counts.py&quot;, line 49, in handle\n    self.run_update_analytics_counts(options)\n  File &quot;/export/home/zulip/deployments/2019-08-29-19-05-09/analytics/management/commands/update_analytics_counts.py&quot;, line 90, in run_update_analytics_counts\n    send_analytics_to_remote_server()\n  File &quot;/export/home/zulip/deployments/2019-08-29-19-05-09/zerver/lib/remote_server.py&quot;, line 138, in send_analytics_to_remote_server\n    send_to_push_bouncer(&quot;POST&quot;, &quot;server/analytics&quot;, request)\n  File &quot;/export/home/zulip/deployments/2019-08-29-19-05-09/zerver/lib/remote_server.py&quot;, line 75, in send_to_push_bouncer\n    raise JsonableError(msg)\nzerver.lib.exceptions.JsonableError: Invalid data.\n</pre></div>\n\n\n<p>Any suggestions?</p>",
+        "id": 784460,
+        "sender_full_name": "niels",
+        "timestamp": 1567416730
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11001\">@niels</span> that's definitely a bug.  I'll just do a quick fix for it.</p>",
+        "id": 784520,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1567474735
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/commit/70c513a64007c7339cce23ec05a99e9e46400574\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/70c513a64007c7339cce23ec05a99e9e46400574\">70c513a64007c7339cce23ec05a99e9e46400574</a>; you should just need the code change (not the test).</p>",
+        "id": 784525,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1567475320
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Thanks for the quick response, but can you explain, what the function does? What data was sent to the pushserver and why?<br>\nSometimes the push-notification fails, is it possible that it is the same issue?</p>",
+        "id": 784558,
+        "sender_full_name": "niels",
+        "timestamp": 1567494917
+    },
+    {
+        "content": "<p>I patched the file. How ever I still get an email:</p>\n<div class=\"codehilite\"><pre><span></span>2019-09-03 09:05:07.556 WARN [] Invalid data.\n</pre></div>",
+        "id": 784572,
+        "sender_full_name": "niels",
+        "timestamp": 1567501898
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11001\">@niels</span> do you get an email, or just log entries?  Zulip's default configuration should only send emails on ERROR, not WARN.</p>",
+        "id": 784654,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1567530855
+    },
+    {
+        "content": "<p>The program logs to stdout and  cron sends email if a program writes to stdout. So I get an email.</p>",
+        "id": 784711,
+        "sender_full_name": "niels",
+        "timestamp": 1567540042
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11001\">@niels</span> ahh, OK, I see.  Try doing <code>logging.debug</code> instead?</p>",
+        "id": 784712,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1567541983
+    },
+    {
+        "content": "<p>I'll do a more involved fix when I have a bit more time.</p>",
+        "id": 784713,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1567541999
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> With debug it seems to work. Can you explain, what this cron job does? And why it's important to run? The send always fail, so it could be only have a good site effect.</p>",
+        "id": 784751,
+        "sender_full_name": "niels",
+        "timestamp": 1567577824
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11001\">@niels</span> this is <a href=\"https://zulip.readthedocs.io/en/latest/production/mobile-push-notifications.html#submitting-statistics\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/mobile-push-notifications.html#submitting-statistics\">https://zulip.readthedocs.io/en/latest/production/mobile-push-notifications.html#submitting-statistics</a>.  There's a (as yet not understood) bug that's causing your server's submission to be invalid, which is why it's failing.</p>",
+        "id": 784884,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1567625770
+    }
+]

@@ -1,0 +1,338 @@
+[
+    {
+        "content": "<p>There seems to be an issue with owner permissions and symlinks for the <code>uploads</code> file.</p>\n<p>I am currently running a self-hosting deployment of Zulip v5.9.5 running by itself on a miniPC as a server (Ubuntu 22.04.2 LTS).  The drive that Zulip is running from is a 512 GB drive.  It works fine on that drive but I need to expand storage.  I have another drive installed (2TB) on that same computer that I would like to use as storage for uploads. Zulip will be the only software running on this machine. </p>\n<p>The documentation (in <code>settings.py</code>, line 718) states that if you change the path of the <code>uploads</code> file (<code>LOCAL_UPLOADS_DIR</code>), you have to manually change Zulip's nginx configuration to use this new path.  So, it recommends using a symlink instead.</p>\n<p>I successfully created the symlink to the <code>uploads</code> file using the following command:<br>\n<code>ln -s /media/zulipserver/Sirius/Zulip/Vault /home/zulip/uploads</code></p>\n<p>where <code>zulipserver</code> is the user/owner name of the miniPC and <code>Vault</code> is the new target storage folder on the 2TB hard drive. (Here, <code>Sirius</code> is the hard drive name and <code>Zulip</code> is just a folder for organization)  This command created a working symlink folder called <code>uploads</code> at the path <code>/home/zulip/uploads</code>.  I populated the symlink <code>uploads</code> folder with the <code>avatar</code> and <code>files</code> folders from the original <code>uploads</code> folder that I renamed <code>uploadsOLD</code> and the folders and files populated the <code>Vault</code> folder as expected.</p>\n<p>I restarted the zulip server and <code>Zulip restarted successfully!</code>.  Now, messaging still works on zulip until you try uploading a file which now returns a 404 error. As a symlink, the folders were working as expected until trying to upload a file which apparently calls on an <code>os.makedir</code> function that generates the error due to ownership permissions and inherent symlink behavior.</p>\n<p>Upon further examination, the issue at hand is that a symlink file (<code>uploads</code>) inherits ownership of the target file (in this case 'Vault') which has the owner <code>zulipserver</code> while the original <code>uploads</code> file had the owner:group as <code>zulip:zulip</code> that is generated when starting up the zulip server.</p>\n<p>As such, when trying to upload a file, the <code>404 Internal Server Error</code> is returned and the error message sent by the Django email states (at the end):</p>\n<div class=\"codehilite\"><pre><span></span><code>  File &quot;/home/zulip/deployments/2023-02-27-21-38-04/./zerver/lib/upload.py&quot;, line 798, in write_local_file\n    os.makedirs(os.path.dirname(file_path), exist_ok=True)\n  File &quot;/usr/lib/python3.10/os.py&quot;, line 215, in makedirs\n    makedirs(head, exist_ok=exist_ok)\n  File &quot;/usr/lib/python3.10/os.py&quot;, line 215, in makedirs\n    makedirs(head, exist_ok=exist_ok)\n  File &quot;/usr/lib/python3.10/os.py&quot;, line 215, in makedirs\n    makedirs(head, exist_ok=exist_ok)\n  File &quot;/usr/lib/python3.10/os.py&quot;, line 225, in makedirs\n    mkdir(name, mode)\nPermissionError: [Errno 13] Permission denied: &#39;/home/zulip/uploads/files&#39;\n</code></pre></div>\n<p>I've tried a number of fixes...but I cannot seem to change the ownership of the symlink <code>uploads</code> folder away from <code>zulipserver</code> to <code>zulip:zulip</code> so that the symlink <code>uploads</code> folder can be used with the correct owner permission.</p>\n<p>Even<br>\n<code>chown -h zulip:zulip /home/zulip/uploads</code><br>\ndid nothing as permission is denied to change the owner of the folder to <code>zulip</code> upon creation of the symlink.</p>\n<p>Also, if I break the symlink and recreate an <code>uploads</code> folder in that <code>/home/zulip</code> directory which takes on the <code>zulip</code> ownership, even without restarting the zulip server, I can upload files immediately and the <code>uploads</code> folder works again.</p>\n<p>So, the question is what needs to be changed so that Zulip can use a symlink <code>uploads</code> folder when the owner of the other 2TB storage drive is the user on the miniPC and not <code>uid=zulip</code> as defined in the <code>uwsgi.ini</code> file when the zulip server is started/restarted?  Is there some way to expand permissions so that zulip can use a symlink storage folder that has a different owner and group?</p>\n<hr>\n<p>Alternatively, if a symlink will not work for the <code>uploads</code> folder because of the ownership issue and how symlinks inherit the owner of the target, can you explain in detail the steps needed to manually edit Zulip's nginx configuration instead of using a symlink as I also had tried that and got a permission denied error as well:<br>\n<code>PermissionError: [Errno 13] Permission denied: '/media/zulipserver/Sirius</code></p>\n<p>(In this case, I had edited the uploads path of <code>LOCAL_UPLOADS_DIR</code> in the <code>etc/zulip/settings.py</code> file and both the <code>avatar</code> and <code>files</code> <code>alias</code> paths in the <code>etc/nginx/zulip-include/app.d/uploads-internal.conf</code> file and restarted the server to no effect for uploads.  (messaging worked, just uploads returned the same <code>404 Internal Server Error</code>)</p>\n<hr>\n<p>Thanks in advance for any help!!!  I appreciate it.</p>",
+        "id": 1517503,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1677822160
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"49\" href=\"/#narrow/stream/49-development-help/topic/Symlink.20LOCAL_UPLOADS_DIR\">#development help &gt; Symlink LOCAL_UPLOADS_DIR</a> by <span class=\"user-mention silent\" data-user-id=\"21836\">Lauryn Menard</span>.</p>",
+        "id": 1517630,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1677845280
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26265\">@Jeffrey Smigelski</span> - Just a heads up that I moved you're message to the <a class=\"stream\" data-stream-id=\"31\" href=\"/#narrow/stream/31-production-help\">#production help</a> stream since it was about a self-hosted deployment of Zulip and folks who will be able to help will be more likely to see the conversation here.</p>",
+        "id": 1517631,
+        "sender_full_name": "Lauryn Menard",
+        "timestamp": 1677845401
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26265\">@Jeffrey Smigelski</span>: What filesystem is the external drive?</p>\n<div class=\"codehilite\"><pre><span></span><code>mount | grep Sirius\n</code></pre></div>",
+        "id": 1517683,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677854189
+    },
+    {
+        "content": "<p>Your problem is likely that the drive is formatted fat32 or some other format which doesn't understand individual file ownership or file permissions -- so the owner of everything on the drive is fixed at <code>mount</code> time to one user, and one set of permissions.</p>",
+        "id": 1517684,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677854242
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> <br>\nThat could be it.<br>\nThe format of the hard drive  is <code>exFAT</code>.<br>\nThere is nothing on the drive so I can format it to anything...what file system would you recommend?</p>",
+        "id": 1517724,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1677857807
+    },
+    {
+        "content": "<p>Whatever your main filesystem is formatted -- probably ext4.</p>",
+        "id": 1517725,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677858008
+    },
+    {
+        "content": "<p>I'll give it a try and see if that solves it.</p>",
+        "id": 1517726,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1677858095
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"26265\">Jeffrey Smigelski</span> <a href=\"#narrow/stream/31-production-help/topic/Symlink.20LOCAL_UPLOADS_DIR/near/1517503\">said</a>:</p>\n<blockquote>\n<p>I am currently running a self-hosting deployment of Zulip v5.9.5 running by itself on a miniPC as a server (Ubuntu 22.04.2 LTS).</p>\n</blockquote>\n<p>For reference, 5.9.5 is the version of your <em>desktop app</em>, not the server.  Clicking the gear icon in the top-right will show what version the server is.</p>",
+        "id": 1517727,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677858187
+    },
+    {
+        "content": "<p>I stand corrected, it is in fact Zulip Server 6.1.</p>\n<p>I reformatted the extra drive (Sirius) to <code>ext4</code> and that did allow me to use <code>chown</code> and <code>chgrp</code> to change the symlink <code>uploads</code> folder and the <code>Vault</code> folder owner and group to<code>zulip:zulip</code>.</p>\n<p>However, it still did not work.  I am getting the same error (from the Django email) :</p>\n<div class=\"codehilite\"><pre><span></span><code>  File &quot;/home/zulip/deployments/2023-02-27-21-38-04/./zerver/lib/upload.py&quot;, line 798, in write_local_file\n    os.makedirs(os.path.dirname(file_path), exist_ok=True)\n  File &quot;/usr/lib/python3.10/os.py&quot;, line 215, in makedirs\n    makedirs(head, exist_ok=exist_ok)\n  File &quot;/usr/lib/python3.10/os.py&quot;, line 225, in makedirs\n    mkdir(name, mode)\nPermissionError: [Errno 13] Permission denied: &#39;/home/zulip/uploads/files/2/0&#39;\n</code></pre></div>\n<p>The actual symlink <code>uploads</code> folder is working as if I place any file manually in the <code>uploads</code> folder, it automatically appears in the <code>Vault</code> folder.<br>\nThe owner and permissions on the symlink <code>uploads</code> file (and the <code>avatars</code> and <code>files</code> files contained within) are as follows:</p>\n<blockquote>\n<p>Owner: zulip<br>\nAccess: Create and delete files<br>\nGroup: zulip<br>\nAccess: Access files<br>\nOthers: [none]<br>\nAccess: Access files</p>\n</blockquote>\n<p>However, something is still interfering with permissions for the uploads symlink file on a second drive to make a directory when a file is uploaded to the server. </p>\n<p>(After formating to <code>ext4</code>, I also tried the manual changes again to zulip <code>setting.py</code> and the nginx <code>uploads-internal.conf</code> and that also did not work returning the same permissions error with making a directory.)</p>\n<p>When the zulip server starts, I do notice that a new user named <code>zulip</code> appears (if I open up users in the Settings).  Since I give ownership and group access to <code>zulip</code> for the symlink folder (through <code>chown</code> and <code>chgrp</code>), shouldn't that allow it to run os.makedirs and create a directory to store any new upload?</p>",
+        "id": 1518178,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1677897768
+    },
+    {
+        "content": "<hr>\n<p>Slight Update:<br>\nJust for fun, I created a symlink <code>uploads</code> folder on the same drive, but different location, that the zulip server is running from...the symlink command automatically used <code>zulip</code> as the owner and <code>root</code> as the group.</p>\n<div class=\"codehilite\"><pre><span></span><code>sudo ln -s /home/testfolder /home/zulip/uploads\n</code></pre></div>\n<p>That symlink folder worked and allows uploads.</p>\n<p>So, if the symlink folder exists on the same drive, then performing the same exact steps works for uploads. </p>\n<p>Thus, it appears that the issue is when the symlink is crossing over to another drive, the zulip server cannot make the directory on the other drive even though the symlink definitely works since you can manually drop in files on the main drive and see them appear on the other drive.  </p>\n<p>Is there perhaps some additional path needed to be defined somewhere so that the zulip server knows it is a different drive than the drive from which the server is running?</p>\n<p>Especially since the main reason someone might want to change the <code>LOCAL_UPLOADS_DIR</code> or create a symlink is to expand storage across another drive or even on a NAS drive on the network.</p>",
+        "id": 1518188,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1677899204
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26265\">@Jeffrey Smigelski</span>: This is still something about your filesystem and mount permissions, not anything specifically related to Zulip.</p>\n<p>Can you show:</p>\n<div class=\"codehilite\"><pre><span></span><code>ls -ld /home/zulip/uploads{,/}\nfindmnt --output-all --target /home/zulip/uploads/\n</code></pre></div>",
+        "id": 1518618,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1677989848
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> </p>\n<p>Thanks for the additional help.</p>\n<p>So, one of the requested commands generated an error so I modified it dropping the <code>--output-all</code> and ran it just with the target.  If there is something specific that <code>findmnt</code> was looking for, let me know and I will rerun it.</p>\n<div class=\"codehilite\"><pre><span></span><code>root@comms-server:/home# findmnt --output-all --target /home/zulip/uploads\nfindmnt: ACTION column is requested, but --poll is not enabled\n</code></pre></div>\n<p>Below are the results with just target...</p>\n<hr>\n<p>Zulip Working Server (Before Symlink Attempt to Extra Drive, uploads working)</p>\n<hr>\n<div class=\"codehilite\"><pre><span></span><code>root@comms-server:/home# ls -ld /home/zulip/uploads{,/}\ndrwxr-sr-x 4 zulip zulip 4096 Mar  3 21:53 /home/zulip/uploads\ndrwxr-sr-x 4 zulip zulip 4096 Mar  3 21:53 /home/zulip/uploads/\n</code></pre></div>\n<hr>\n<div class=\"codehilite\"><pre><span></span><code>root@comms-server:/home# findmnt -T /home/zulip/uploads\nTARGET SOURCE    FSTYPE OPTIONS\n/      /dev/sdb5 ext4   rw,relatime,errors=remount-ro\n</code></pre></div>\n<hr>\n<p>Zulip After Symlink (uploads return 404 error)</p>\n<hr>\n<div class=\"codehilite\"><pre><span></span><code>root@comms-server:/home# ls -ld /home/zulip/uploads{,/}\nlrwxrwxrwx 1 zulip zulip   41 Mar  5 01:41 /home/zulip/uploads -&gt; /media/zulipserver/Sirius/ZulipStorage\ndrwxrwxr-x 5 zulip zulip 4096 Mar  5 01:43 /home/zulip/uploads/\n</code></pre></div>\n<hr>\n<div class=\"codehilite\"><pre><span></span><code>root@comms-server:/home# findmnt -T /home/zulip/uploads\nTARGET                       SOURCE    FSTYPE OPTIONS\n/media/zulipserver/Sirius /dev/sda1 ext4   rw,nosuid,nodev,relatime,errors=remount-ro\n</code></pre></div>\n<hr>\n<p>Noticed that the read/write/execute was not exactly the same even though the owner and group was the same so I used <code>chmod</code> to change the permissions as follows:<br>\n<code>chmod u=rwx,g=rx+s,o=rx /home/zulip/uploads</code><br>\nwhich generates the following:</p>\n<div class=\"codehilite\"><pre><span></span><code>root@comms-server:/home# ls -ld /home/zulip/uploads{,/}\nlrwxrwxrwx 1 zulip zulip   41 Mar  5 01:41 /home/zulip/uploads -&gt; /media/zulipserver/Sirius/ZulipStorage\ndrwxr-sr-x 5 zulip zulip 4096 Mar  5 01:43 /home/zulip/uploads/\n</code></pre></div>\n<p>That chmod command though did not change the permission of the symlink folder on the other drive even if I targeted it directly.</p>\n<p>However, even with the matching permissions of the symlinked <code>uploads</code> folder the 404 error still appears preventing me from uploading anything once I created the symlink even though all other functionality of zulip seems to remain intact and work fine.</p>",
+        "id": 1518662,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678003797
+    },
+    {
+        "content": "<ul>\n<li>The permission attributes of <code>lrwxrwxrwx</code> are always adopted by symlinks so this behavior of the target symlink folder is expected.</li>\n</ul>",
+        "id": 1518728,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678042002
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26265\">@Jeffrey Smigelski</span>: Correct, symlinks themselves do not have permissions.</p>\n<p>The permissions of your target directory are <code>rwxr-sr-x</code> -- that is, the setgid bit is set, which is not expected.  I suspect the durectory contents may also have the wrong owners  or permissions.</p>\n<p>Give this a shot (and the trailing slashes are important here, so it doesn't try to operate on the symlink, but on its target):</p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code>chown<span class=\"w\"> </span>-R<span class=\"w\"> </span>zulip:zulip<span class=\"w\"> </span>/home/zulip/downloads/\nchmod<span class=\"w\"> </span>-R<span class=\"w\"> </span><span class=\"m\">755</span><span class=\"w\"> </span>/home/zulip/downloads/\n</code></pre></div>",
+        "id": 1519086,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678114509
+    },
+    {
+        "content": "<p>Quick question, is that <br>\n<code>.../downloads/</code> or is it meant to be <code>../uploads/</code> as I don't see a downloads folder.</p>",
+        "id": 1519092,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678114830
+    },
+    {
+        "content": "<p>Whoops, typo -- <code>uploads/</code></p>",
+        "id": 1519103,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678115275
+    },
+    {
+        "content": "<p>Did that and restarted the server.<br>\nHere's the result...</p>\n<div class=\"codehilite\"><pre><span></span><code>root@comms-server:/home# sudo chown -R zulip:zulip /home/zulip/uploads/\nroot@comms-server:/home# sudo chmod -R 755 /home/zulip/uploads/\nroot@comms-server:/home# ls -ld /home/zulip/uploads{,/}\nlrwxrwxrwx 1 zulip zulip   41 Mar  5 01:41 /home/zulip/uploads -&gt; /media/snrltech-comms/Sirius/ZulipStorage\ndrwxr-sr-x 5 zulip zulip 4096 Mar  5 01:43 /home/zulip/uploads/\n</code></pre></div>\n<p>No joy....still a 404 error on uploads.</p>\n<p>Was <code>drwxr-sr-x 5</code> supposed to change?<br>\nOut of curiosity, what's the <code>5</code> mean?  The original working <code>uploads</code>, non-symlinked folder was <code>4</code> as in <code>drwxr-sr-x 4</code>.</p>",
+        "id": 1519116,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678116039
+    },
+    {
+        "content": "<p><code>s</code> in the group section is the \"setguid\" bit.  For directories, this means <a href=\"http://Setting%20the%20setgid%20permission%20on%20a%20directory%20causes%20files%20and%20subdirectories%20created%20within%20to%20inherit%20its%20group%20ownership,%20rather%20than%20the%20primary%20group%20of%20the%20file-creating%20process\">files created in them inherits its group ownership</a> -- which is this case should be fine, just extraneous.</p>",
+        "id": 1519120,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678116228
+    },
+    {
+        "content": "<p>good to know.  What about the #5 whereas the original file had a #4 after the permissions labels?</p>",
+        "id": 1519121,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678116332
+    },
+    {
+        "content": "<p>The <code>5</code> vs <code>4</code> is the reference count.  Files and directories in most Unix filesystems are reference counted.  This is 2 + the number of subdirectories in it -- because each subdirectory has to have a <code>..</code> which links up to its parent, the directory has a <code>.</code> which links to itself, and it's contained within a directory which links down into it:</p>\n<div class=\"codehilite\"><pre><span></span><code>(zulip-py3-venv) alexmv ~ $ mkdir test\n(zulip-py3-venv) alexmv ~ $ cd test\n(zulip-py3-venv) alexmv ~/test $ ls -ld .\ndrwxrwxr-x 2 zulipdev zulipdev 4096 Mar  6 15:26 .\n(zulip-py3-venv) alexmv ~/test $ mkdir bar\n(zulip-py3-venv) alexmv ~/test $ ls -ld .\ndrwxrwxr-x 3 zulipdev zulipdev 4096 Mar  6 15:27 .\n</code></pre></div>",
+        "id": 1519122,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678116492
+    },
+    {
+        "content": "<p>\"symbolic links\" are \"symbolic\" because they don't affect the reference count.</p>",
+        "id": 1519123,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678116517
+    },
+    {
+        "content": "<p>\"hard links\" <em>do</em> affect the reference count -- in the filesystem, they're a different name for the same file contents, and they <em>do</em> change the link count:</p>\n<div class=\"codehilite\"><pre><span></span><code>(zulip-py3-venv) alexmv ~/test $ echo thingy &gt; test-file\n(zulip-py3-venv) alexmv ~/test $ ls -l test-file\n-rw-rw-r-- 1 zulipdev zulipdev 7 Mar  6 15:29 test-file\n(zulip-py3-venv) alexmv ~/test $ ln -s test-file test-symlink\n(zulip-py3-venv) alexmv ~/test $ ls -l test-*\n-rw-rw-r-- 1 zulipdev zulipdev 7 Mar  6 15:29 test-file\nlrwxrwxrwx 1 zulipdev zulipdev 9 Mar  6 15:29 test-symlink -&gt; test-file\n(zulip-py3-venv) alexmv ~/test $ ln test-file test-hardlink\n(zulip-py3-venv) alexmv ~/test $ ls -l test-*\n-rw-rw-r-- 2 zulipdev zulipdev 7 Mar  6 15:29 test-file\n-rw-rw-r-- 2 zulipdev zulipdev 7 Mar  6 15:29 test-hardlink\nlrwxrwxrwx 1 zulipdev zulipdev 9 Mar  6 15:29 test-symlink -&gt; test-file\n</code></pre></div>",
+        "id": 1519127,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678116629
+    },
+    {
+        "content": "<p>However, hardlinks / symlinks is tangential -- you can't hardlink directories.</p>",
+        "id": 1519129,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678116702
+    },
+    {
+        "content": "<p>Good to know.  I had an extra test folder in the <code>uploads</code> to make sure the symlink was working that I could drop a file in and see it appear in the target folder.  I just removed it and it went back to #4.</p>\n<p>However, even though the symlink folder works manually, for some reason, it still does not for zulip uploads....still gives that error ...</p>\n<div class=\"codehilite\"><pre><span></span><code>File &quot;/home/zulip/deployments/2023-02-27-21-38-04/./zerver/lib/upload.py&quot;, line 798, in write_local_file\n    os.makedirs(os.path.dirname(file_path), exist_ok=True)\n  File &quot;/usr/lib/python3.10/os.py&quot;, line 215, in makedirs\n    makedirs(head, exist_ok=exist_ok)\n  File &quot;/usr/lib/python3.10/os.py&quot;, line 215, in makedirs\n    makedirs(head, exist_ok=exist_ok)\n  File &quot;/usr/lib/python3.10/os.py&quot;, line 215, in makedirs\n    makedirs(head, exist_ok=exist_ok)\n  File &quot;/usr/lib/python3.10/os.py&quot;, line 225, in makedirs\n    mkdir(name, mode)\nPermissionError: [Errno 13] Permission denied: &#39;/home/zulip/uploads/files&#39;\n</code></pre></div>",
+        "id": 1519131,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678116767
+    },
+    {
+        "content": "<p>And, to be explicit, this all works:</p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code>sudo<span class=\"w\"> </span>-i<span class=\"w\"> </span>-u<span class=\"w\"> </span>zulip\n\nmkdir<span class=\"w\"> </span>-p<span class=\"w\"> </span>/home/zulip/uploads/files/test/here\ntouch<span class=\"w\"> </span>/home/zulip/uploads/files/test/here/file\nrm<span class=\"w\"> </span>/home/zulip/uploads/files/test<span class=\"w\"> </span>-r\n</code></pre></div>",
+        "id": 1519133,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678117098
+    },
+    {
+        "content": "<p>My other guess is that the <code>zulip</code> user doesn't have permissions to see <code>/media/snrltech-comms/Sirius/ZulipStorage</code> despite owning it, due to permissions above it.</p>",
+        "id": 1519135,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678117192
+    },
+    {
+        "content": "<p>Which we can check via:</p>\n<div class=\"codehilite\"><pre><span></span><code>ls -dl /media/snrltech-comms/Sirius/ZulipStorage /media/snrltech-comms/Sirius /media/snrltech-comms /media\n</code></pre></div>",
+        "id": 1519136,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678117224
+    },
+    {
+        "content": "<p>So, after running the sudo change user to zulip, that actually did not work...</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip@comms-server:~$ mkdir -p /home/zulip/uploads/files/test/here\nmkdir: cannot create directory ‘/home/zulip/uploads’: Permission denied\nzulip@comms-server:~$ touch /home/zulip/uploads/files/test/here/file\ntouch: cannot touch &#39;/home/zulip/uploads/files/test/here/file&#39;: Permission denied\nzulip@comms-server:~$ rm /home/zulip/uploads/files/test -r\nrm: cannot remove &#39;/home/zulip/uploads/files/test&#39;: Permission denied\n</code></pre></div>",
+        "id": 1519139,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678117392
+    },
+    {
+        "content": "<p>OK -- can you show the <code>ls -dl</code> I put in above?</p>\n<p>For my reference, what did you mean by \"even though the symlink folder works manually\" earlier?</p>",
+        "id": 1519140,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678117462
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>zulip@comms-server:~$ ls -dl /media/snrltech-comms/Sirius/ZulipStorage /media/snrltech-comms/Sirius /media/snrltech-comms /media\nls: cannot access &#39;/media/snrltech-comms/Sirius/ZulipStorage&#39;: Permission denied\nls: cannot access &#39;/media/snrltech-comms/Sirius&#39;: Permission denied\ndrwxr-xr-x  3 root root 4096 Feb 27 03:23 /media\ndrwxr-x---+ 4 root root 4096 Mar  4 21:19 /media/snrltech-comms\n</code></pre></div>",
+        "id": 1519144,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678117755
+    },
+    {
+        "content": "<p>OK, so here's your problem:</p>\n<div class=\"codehilite\"><pre><span></span><code>drwxr-x---+ 4 root root 4096 Mar  4 21:19 /media/snrltech-comms\n</code></pre></div>\n<p>That external drive is marked only readably by <code>root</code>.  Which is going to cause some problems. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1519145,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678117822
+    },
+    {
+        "content": "<p>As <code>root</code>:</p>\n<div class=\"codehilite\"><pre><span></span><code>chmod 755 /media/snrltech-comms /media/snrltech-comms/Sirius\n</code></pre></div>",
+        "id": 1519147,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678117858
+    },
+    {
+        "content": "<p>And, I mean, after creating the symlink folder using <code>sudo ln -s /media/snrltech-comms/Sirius/ZulipStorage /home/zulip/uploads</code>. I could place file in the folder on the server drive running zulip and it would appear in the target folder on the external drive.</p>\n<p>When I initially ran the '<code>ln -s...</code>, I did it under root.  Should I have done it under the zulip as user?</p>",
+        "id": 1519149,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678117993
+    },
+    {
+        "content": "<blockquote>\n<p>I could place file in the folder on the server drive running zulip and it would appear in the target folder on the external drive</p>\n</blockquote>\n<p>Sounds like you were running as <code>root</code> when you did that.  Whenever you're debugging anything related to \"permission denied\" running as <code>root</code> is going to moot any attempt at debugging -- the OS just shrugs and says \"whatever you say, boss\" because you're <code>root</code>.  For that reason, it's a good idea to <em>never</em> run things as <code>root</code> unless specifically necessary.  It also sounds like from your use of \"place [a] file\" that you're using some sort of GUI -- note that if you're doing that as root, you're exposing yourself to as lot of risk -- both from random programs being run with permissions to break everything, as well as accidentally from yourself!</p>\n<p><em>Creating</em> the symlink only requires permissions where it's made <em>from</em>.  I can run <code>ln -s /some/secret/file /place/I/can/write/to</code> and the symlink willi happily be made (because it's \"symbolic,\" so the end destination is just wherever I say it is).  It's only on <em>accessing</em> it that it matters the status of the other end.</p>\n<p>The place this problem started was in how you set up the external drive, and how you made the directory in it.  That had to be done initially as root (because it was created with very restrictive permissions) but then you needed to tell the filesystem that <code>zulip</code> could access those freshly-created directories.  Which is what that <code>chmod</code> has just done.</p>",
+        "id": 1519157,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678118502
+    },
+    {
+        "content": "<p>That seems to have worked!!!</p>\n<p>I am able to upload files and seeing them appear under files on the external drive...</p>",
+        "id": 1519159,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678118527
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>zulip@comms-server:~$ sudo -i -u root\nroot@comms-server:~# chmod 755 /media/snrltech-comms /media/snrltech-comms/Sirius\nroot@comms-server:~# ls -dl /media/snrltech-comms/Sirius/ZulipStorage /media/snrltech-comms/Sirius /media/snrltech-comms /media\ndrwxr-xr-x  3 root           root           4096 Feb 27 03:23 /media\ndrwxr-xr-x+ 4 root           root           4096 Mar  4 21:19 /media/snrltech-comms\ndrwxr-xr-x  6 snrltech-comms snrltech-comms 4096 Mar  5 01:37 /media/snrltech-comms/Sirius\ndrwxr-sr-x  4 zulip          zulip          4096 Mar  6 10:29 /media/snrltech-comms/Sirius/ZulipStorage\n</code></pre></div>",
+        "id": 1519162,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678118572
+    },
+    {
+        "content": "<p>So, if I had created the symbolic link under the user zulip, would it have worked from the start?</p>\n<p>Or would I have to create the symbolic link and then run the above command that fixed it?</p>\n<p>Just trying to better understand as this would be helpful as a step by step guide as my next challenge is to get this working on a NAS drive, although the external can hold a lot and this is pretty much an internal communications network for a science lab.</p>",
+        "id": 1519163,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678118795
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span>   I also appreciate your help on all this...</p>\n<p>Not only is Zulip running again, but I learned a lot in the process so thank you!!!</p>",
+        "id": 1519166,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678118983
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"26265\">Jeffrey Smigelski</span> <a href=\"#narrow/stream/31-production-help/topic/Symlink.20LOCAL_UPLOADS_DIR/near/1519163\">said</a>:</p>\n<blockquote>\n<p>So, if I had created the symbolic link under the user zulip, would it have worked from the start?</p>\n</blockquote>\n<p>No, that's not the issue.  Please re-read my paragraph above, specifically \"The place this problem started was...\"</p>",
+        "id": 1519168,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678119596
+    },
+    {
+        "content": "<p>Ok...</p>\n<p>so, the command<br>\n<code>chmod 755 /media/snrltech-comms /media/snrltech-comms/Sirius</code><br>\ntold the file system that both those paths were to be given the 755 permissions?</p>\n<p>Then, by setting these to 755, it is then implied that zulip could access these freshly created directories.</p>\n<p>And, do we use two paths in that statement as we have to define them individually?  As one is the path of the media directory associated with user and the other is the path of the specific external drive for that user within the media directory?</p>",
+        "id": 1519282,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678125658
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"26265\">Jeffrey Smigelski</span> <a href=\"#narrow/stream/31-production-help/topic/Symlink.20LOCAL_UPLOADS_DIR/near/1519282\">said</a>:</p>\n<blockquote>\n<p>so, the command<br>\n<code>chmod 755 /media/snrltech-comms /media/snrltech-comms/Sirius</code><br>\ntold the file system that both those paths were to be given the 755 permissions?</p>\n</blockquote>\n<p>Yup!</p>\n<blockquote>\n<p>Then, by setting these to 755, it is then implied that zulip could access these freshly created directories.</p>\n</blockquote>\n<p>Yes.  The <code>755</code> means <code>rwxr-xr-x</code> which means \"owner (<code>root</code> in this case) can read-write-execute, group (<code>root</code> in this case) can read-execute, and everyone else (including <code>zulip</code>) can read-execute.</p>\n<p>\"execute\" in the context of a directory means \"can <code>cd</code> into it and access any of its contents.\"  The \"read\" bit for a directory is \"can list the contents of the directory.\"</p>\n<p>So given these four directories, each with a file named <code>some-file</code> in them which is world-readable:</p>\n<div class=\"codehilite\"><pre><span></span><code>$ ls -ld /tmp/is-75*\ndrwxr-x--- 2 root root 4096 Mar  6 19:03 /tmp/is-750\ndrwxr-x--x 2 root root 4096 Mar  6 19:03 /tmp/is-751\ndrwxr-xr-- 2 root root 4096 Mar  6 19:03 /tmp/is-754\ndrwxr-xr-x 2 root root 4096 Mar  6 19:03 /tmp/is-755\n</code></pre></div>\n<p>I can't see anything about <code>is-750</code>, nor the contents:</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip@alexmv-prod:~$ ls -l /tmp/is-750\nls: cannot open directory &#39;/tmp/is-750&#39;: Permission denied\nzulip@alexmv-prod:~$ cat /tmp/is-750/some-file\ncat: /tmp/is-750/some-file: Permission denied\n</code></pre></div>\n<p>I can's list the contents of the 751 directory, but I can access the contents if I know the filename:</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip@alexmv-prod:~$ ls -l /tmp/is-751\nls: cannot open directory &#39;/tmp/is-751&#39;: Permission denied\nzulip@alexmv-prod:~$ cat /tmp/is-751/some-file\nyay\n</code></pre></div>\n<p>For 754, I can see the file exists, but nothing about it or its contents:</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip@alexmv-prod:~$ ls -l /tmp/is-754\nls: cannot access &#39;/tmp/is-754/some-file&#39;: Permission denied\ntotal 0\n-????????? ? ? ? ?            ? some-file\nzulip@alexmv-prod:~$ cat /tmp/is-754/some-file\ncat: /tmp/is-754/some-file: Permission denied\n</code></pre></div>\n<p>And 755 lets me see the files and their contents:</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip@alexmv-prod:~$ ls -l /tmp/is-755\ntotal 4\n-rw-r--r-- 1 root root 4 Mar  6 19:11 some-file\nzulip@alexmv-prod:~$ cat /tmp/is-755/some-file\nyay\n</code></pre></div>\n<blockquote>\n<p>And, do we use two paths in that statement as we have to define them individually?  As one is the path of the media directory associated with user and the other is the path of the specific external drive for that user within the media directory?</p>\n</blockquote>\n<p>Those two paths are inside each other.  We need to be able to read the contents of each directory, starting at <code>/</code>, to get to the path we want to be able to read.</p>",
+        "id": 1519404,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678129940
+    },
+    {
+        "content": "<p>Further instruction about how to administer UNIX filesystems is probably outside the scope here, so if you have further questions about it, <a href=\"https://unix.stackexchange.com/\">https://unix.stackexchange.com/</a> or similar sites may be helpful.</p>",
+        "id": 1519408,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678130191
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> Thanks and I appreciate this explanation as it helps myself and others to better understand and also troubleshoot using symlinks with zulip.</p>\n<p>A final question...so we don't need to use 777 and can use 755 because in terms of uploading and writing the file, zulip relies on the behavior of the symbolic link (for writing) and it just needs to access and read the <code>uploads</code> directory?</p>",
+        "id": 1519451,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678131917
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"26265\">Jeffrey Smigelski</span> <a href=\"#narrow/stream/31-production-help/topic/Symlink.20LOCAL_UPLOADS_DIR/near/1519451\">said</a>:</p>\n<blockquote>\n<p>A final question...so we don't need to use 777 and can use 755 because in terms of uploading and writing the file, zulip relies on the behavior of the symbolic link (for writing) and it just needs to access and read the <code>uploads</code> directory?</p>\n</blockquote>\n<p>No, it relies on <code>/media/snrltech-comms/Sirius/ZulipStorage</code> being owned by <code>zulip</code> -- from <a href=\"#narrow/stream/31-production-help/topic/Symlink.20LOCAL_UPLOADS_DIR/near/1519162\">your message above</a>:</p>\n<div class=\"codehilite\"><pre><span></span><code>root@comms-server:~# ls -dl /media/snrltech-comms/Sirius/ZulipStorage /media/snrltech-comms/Sirius /media/snrltech-comms /media\ndrwxr-xr-x  3 root           root           4096 Feb 27 03:23 /media\ndrwxr-xr-x+ 4 root           root           4096 Mar  4 21:19 /media/snrltech-comms\ndrwxr-xr-x  6 snrltech-comms snrltech-comms 4096 Mar  5 01:37 /media/snrltech-comms/Sirius\ndrwxr-sr-x  4 zulip          zulip          4096 Mar  6 10:29 /media/snrltech-comms/Sirius/ZulipStorage\n</code></pre></div>",
+        "id": 1519454,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678131994
+    },
+    {
+        "content": "<p>Fixing the permissions on <code>/media/snrltech-comms</code> and <code>/media/snrltech-comms/Sirius</code> let the <code>zulip</code> user see the <code>/media/snrltech-comms/Sirius/ZulipStorage</code> which it owned and had write permissions on.</p>",
+        "id": 1519462,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678132080
+    },
+    {
+        "content": "<p>Symbolics links don't do any access control -- that's why you can't <code>chmod</code> them.  They're just a \"go look over there instead.\"</p>",
+        "id": 1519463,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678132114
+    },
+    {
+        "content": "<p>Zulip says \"go make <code>/home/zulip/uploads/foo</code>\".  The OS says:</p>\n<ol>\n<li>OK, can I read <code>/</code>?</li>\n<li>Can I read <code>/home</code> ?</li>\n<li>Can I read <code>/home/zulip</code> ?</li>\n<li>Can I read <code>/home/zulip/uploads</code>?</li>\n<li>Oh, that's a symlink.  Where to -- oh <code>/media/snrltech-comms/Sirius/ZulipStorage</code>.  So I'm now trying to make <code>/media/snrltech-comms/Sirius/ZulipStorage/foo</code></li>\n<li>Start at the top!  Can I read <code>/</code>?</li>\n<li>Can I read <code>/media</code> ?</li>\n<li>Can I read <code>/media/snrltech-comms</code> ?</li>\n<li>Can I read <code>/media/snrltech-comms/Sirius</code> ?</li>\n<li>Can I read <code>/media/snrltech-comms/Sirius/ZulipStorage</code> ?</li>\n<li>Can I make a directory named <code>foo</code> in <code>/media/snrltech-comms/Sirius/ZulipStorage</code> ?</li>\n</ol>\n<p>Chmod'ing fixed steps 8 and 9.  Making the directory owned by <code>zulip</code> fixes step 11.</p>",
+        "id": 1519468,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678132315
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> Excellent explanation and very clear now.  Hopefully this can help many more than just me.  </p>\n<p>I also have a better idea of what's going on when I attempt to set up up on a NAS as well.</p>\n<p>Really appreciate your time on this and the clarity of the explanations.  Thanks!!!</p>\n<p>I can also mark this as resolved.</p>",
+        "id": 1519481,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678133372
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"26265\">Jeffrey Smigelski</span> has marked this topic as resolved.</p>",
+        "id": 1519482,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1678133507
+    },
+    {
+        "content": "<p>Is there a documentation update we should make to mention what permissions are needed when doing this symlink?</p>",
+        "id": 1519551,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1678139183
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>     It definitely could be helpful for others...for those that may use the storage of a local external drive or NAS storage over the cloud.</p>\n<p>In my case, it was a simple build from the start, had a miniPC running Ubuntu that was dedicated to running Zulip and nothing else and I added an extra external hard drive for more storage of uploads so that nothing would be stored on the internal drive with the OS.  However, since the miniPC was dual boot, I had initially formatted the external drive as <code>exFAT</code> which interfered with individual file ownership and file permissions.  Upon creating the symlink to the <code>uploads</code> folder, the target folder on the external drive was stuck with the user ownership instead of zulip and <code>chown</code> could not fix it because of the <code>exFAT</code> format.</p>\n<p>Thankfully, I was guided to reformat the external drive to <code>ext4</code>.  This allowed me to change the ownership and group of the symlink target on the external drive using <code>chown</code> and <code>chgrp</code> to <code>zulip:zulip</code> (which fixed Step 11 above).</p>\n<p>However, I still did not have the permissions right because I was thinking that zulip interacted with the symlinked <code>uploads</code> folder.  I did not realize that the permissions needed to be set for each directory on the path to the target of the symlink folder on the external drive as well.</p>\n<p>Using <code>ls -dl /media/user /media/user/harddrive</code> definitely helped to troubleshoot and <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span>  was able to diagnose the problem as being tied to the readability of the external drive by <code>root</code> only (due to my initial set up of the hard drive) and not by <code>zulip</code>.</p>\n<p>This led to a change of permissions on the external drive containing the symlink target folder using:<br>\n<code>chmod 755 /media/user /media/user/harddrive</code><br>\nUploads now worked!!!<br>\nThis fixed steps 8 and 9 since my target of the symlink <code>uploads</code> folder, <code>ZulipStorage</code>, was on this hard drive and already had the owner and group as zulip:zulip from before.</p>\n<p>Again, I appreciate the help.  Normally, I'm coding up science and math algorithms in MATLAB and Python...so this is one of my first ventures into the world of Linux and I decided to build a zulip server for the lab so I was literally learning how to swim after I already jumped in the deep water.</p>",
+        "id": 1519709,
+        "sender_full_name": "Jeffrey Smigelski",
+        "timestamp": 1678157278
+    },
+    {
+        "content": "<p>I don't know there's much that's well-generalizable for our documentation besides \"check that Zulip can write to the <code>uploads</code> directory.\"</p>",
+        "id": 1519714,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678157571
+    },
+    {
+        "content": "<p>Depending how flexible a system is, I'd imagine one could also mount an exfat drive with appropriate mount options that set permissions and user/group. That is, if the drive is dedicated to zulip while mounted on that computer.</p>",
+        "id": 1519722,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1678158842
+    },
+    {
+        "content": "<p>I think \"check that the zulip user can write to the uploads directory\" seems like a fine thing to add if not already there.</p>",
+        "id": 1519760,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1678173158
+    },
+    {
+        "content": "<p>Agreed that more detail than that is not necessarily helpful, though one could imagine writing a little \"symlink this uploads directory\" tool or something.</p>",
+        "id": 1519761,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1678173196
+    }
+]

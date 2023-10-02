@@ -1,0 +1,80 @@
+[
+    {
+        "content": "<p>I've been hit by <a href=\"https://github.com/zulip/zulip/issues/19539\">issue #19539</a>. Can you suggest a way to stop the export process? I restarted the server, but it is not enough: it keeps producing the temporary folders.</p>",
+        "id": 1568928,
+        "sender_full_name": "Mattia Monga",
+        "timestamp": 1684047169
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17955\">@Mattia Monga</span> thanks for the report! It'd be amazing if you can help us figure out what causes this -- the report in <a href=\"https://github.com/zulip/zulip/pull/19539\">#19539</a> is all the information we'd had about this before your report.</p>",
+        "id": 1569137,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684117863
+    },
+    {
+        "content": "<p>If you run <code>rabbitmqctl list_queues</code>, you'll see there's an entry in the <code>deferred_work</code> queue; you can use <code>./manage.py purge_queue</code> in order to clear the job to export it.</p>",
+        "id": 1569138,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684117928
+    },
+    {
+        "content": "<p>However, before you do that, please send us what the traceback is in <code>/var/log/zulip/events_deferred_work.log</code>; that's what we need in order to fix this bug for everyone.</p>",
+        "id": 1569139,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684117979
+    },
+    {
+        "content": "<p>Thank you! I'm not able to find any <code>/var/log/zulip/events_deferred_work.log</code>... that filename does not exist in my system. I saved all the other logs for inspection.</p>",
+        "id": 1569237,
+        "sender_full_name": "Mattia Monga",
+        "timestamp": 1684153988
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17955\">@Mattia Monga</span> try just <code>events.log</code>; the logging filename is different on smaller systems.</p>",
+        "id": 1569426,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1684167517
+    },
+    {
+        "content": "<p>Ok, I found it. <br>\n<a href=\"/user_uploads/2/d3/esIjCNOvnPgYa16d4RAruqU_/events-anon.log\">events-anon.log</a><br>\nPlease note that the name of the server was changed in <a href=\"http://zulip.example.com\">zulip.example.com</a>. Let me know if you need anything else.</p>",
+        "id": 1569991,
+        "sender_full_name": "Mattia Monga",
+        "timestamp": 1684215183
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17955\">@Mattia Monga</span>: How much memory does the server have?</p>\n<p>If you look at <code>/var/log/syslog</code> for OOMs, I expect you'll find some:</p>\n<div class=\"codehilite\"><pre><span></span><code>grep &quot;Killed process&quot; /var/log/syslog\n</code></pre></div>",
+        "id": 1570043,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1684230588
+    },
+    {
+        "content": "<p>We hardcode <code>threads=6</code> in the queue processor, which is probably wrong for low-memory environments, particularly when we could know already that's going to be a problem because we're in the multithreaded queue worker.</p>",
+        "id": 1570045,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1684230831
+    },
+    {
+        "content": "<p>Pushed <a href=\"https://github.com/zulip/zulip/pull/25625\">#25625</a> to lower the threads in single-threaded mode, and also avoid head-of-queue failures like this.</p>",
+        "id": 1570276,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1684258712
+    },
+    {
+        "content": "<p>Yes, is a virtual machine with 2GB of memory. And you are right, syslog is full of OOM killings.</p>",
+        "id": 1570954,
+        "sender_full_name": "Mattia Monga",
+        "timestamp": 1684299716
+    },
+    {
+        "content": "<p>You can try upgrading to <code>main</code> and see if that resolves it for you.</p>",
+        "id": 1570955,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1684299786
+    },
+    {
+        "content": "<p>It should at very least now fail once and them stop retrying.  It may also succeed, depending on how tight memory is.</p>",
+        "id": 1570956,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1684299825
+    }
+]

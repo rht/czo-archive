@@ -1,0 +1,50 @@
+[
+    {
+        "content": "<p>Filed as a GitHub issue; posting here for visibility: <a href=\"https://github.com/zulip/zulip/pull/20564\">#20564</a></p>",
+        "id": 1297430,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1639504937
+    },
+    {
+        "content": "<p>I don't have an obvious thing to ask the user without reading some code; I'd always feel free to encourage the user to visit this thread and provide more detail.</p>",
+        "id": 1297566,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1639523309
+    },
+    {
+        "content": "<p>The fact that they're getting a redirect to /accounts/find seems like it should determine the code path that's happening, since that's not something we do in many places.</p>",
+        "id": 1297567,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1639523332
+    },
+    {
+        "content": "<p>Redirect to that page happens in the <code>invalid_realm</code> condition which is established here:</p>\n<div class=\"codehilite\"><pre><span></span><code>def social_associate_user_helper(\n    backend: BaseAuth, return_data: Dict[str, Any], *args: Any, **kwargs: Any\n) -&gt; Union[HttpResponse, Optional[UserProfile]]:\n    &quot;&quot;&quot;Responsible for doing the Zulip account lookup and validation parts\n    of the Zulip social auth pipeline (similar to the authenticate()\n    methods in most other auth backends in this file).\n\n    Returns a UserProfile object for successful authentication, and None otherwise.\n    &quot;&quot;&quot;\n    subdomain = backend.strategy.session_get(&quot;subdomain&quot;)\n    try:\n        realm = get_realm(subdomain)\n    except Realm.DoesNotExist:\n        return_data[&quot;invalid_realm&quot;] = True\n        return None\n</code></pre></div>\n<p>and redirected a bit later in the codepath here:</p>\n<div class=\"codehilite\"><pre><span></span><code>    if invalid_realm:\n        # User has passed an invalid subdomain param - this shouldn&#39;t happen in the normal flow,\n        # unless the user manually edits the param. In any case, it&#39;s most appropriate to just take\n        # them to find_account, as there isn&#39;t even an appropriate subdomain to take them to the login\n        # form on.\n        return HttpResponseRedirect(reverse(&quot;find_account&quot;))\n</code></pre></div>\n<p>but I'm failing to see how this would be triggered under natural conditions by going through the \"Login in with ...\" button. I posted on the issue for more information</p>",
+        "id": 1297851,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1639577256
+    },
+    {
+        "content": "<p>The issue was no realm existing on the subdomain after all</p>",
+        "id": 1299327,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1639764368
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> has marked this topic as resolved.</p>",
+        "id": 1299328,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1639764372
+    },
+    {
+        "content": "<p>Hmm, would it be better to take them to a generic \"There's no realm here\" 404 page instead, with a link to \"find account\", given that context?</p>",
+        "id": 1299329,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1639764464
+    },
+    {
+        "content": "<p>I think this is another case of the bug where we show the login page on the root subdomain even if there's no realm there, that's addressed by <code>auth: Adjust behavior of /login/ on the root subdomain. </code> <a href=\"https://github.com/zulip/zulip/pull/13924\">https://github.com/zulip/zulip/pull/13924</a>. This has been blocked on some decision being made regarding the complicated conditional logic in <code>should_redirect_away_from_login_page</code> iirc</p>",
+        "id": 1299331,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1639764757
+    }
+]

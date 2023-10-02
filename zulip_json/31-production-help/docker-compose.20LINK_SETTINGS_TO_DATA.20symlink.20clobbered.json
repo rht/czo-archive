@@ -1,0 +1,152 @@
+[
+    {
+        "content": "<p>I'm upgrading my docker-zulip server from an older git version (<code>1a1d199</code> to <code>a1ff393</code>), and I'm running into a problem with the <code>LINK_SETTINGS_TO_DATA</code> option. The symlink command definitely executes and <a href=\"https://github.com/galexrt/docker-zulip/blob/master/entrypoint.sh#L69\" target=\"_blank\" title=\"https://github.com/galexrt/docker-zulip/blob/master/entrypoint.sh#L69\">links correctly here</a>, but later <a href=\"https://github.com/galexrt/docker-zulip/blob/master/entrypoint.sh#L126\" target=\"_blank\" title=\"https://github.com/galexrt/docker-zulip/blob/master/entrypoint.sh#L126\">a call to <code>zulip-puppet-apply</code></a> clobbers that link. I end up with the <code>ImportError: No module named 'zproject.dev_settings'</code> error.</p>\n<p>I can see it happening too, this is in the logs:</p>\n<div class=\"codehilite\"><pre><span></span>zulip_1      | Notice: Compiled catalog for XXXXX.com in environment production in 0.87 seconds\nzulip_1      | Notice: /Stage[main]/Zulip::Base/File[/etc/zulip]/ensure: ensure changed &#39;link&#39; to &#39;directory&#39;\nzulip_1      | Notice: /Stage[main]/Zulip::Base/File[/etc/zulip/zulip-secrets.conf]/ensure: created\nzulip_1      | Notice: /Stage[main]/Zulip::Base/File[/etc/zulip/settings.py]/ensure: created\nzulip_1      | Notice: /Stage[main]/Zulip::Base/File[/etc/zulip/zulip.conf]/ensure: created\nzulip_1      | Notice: /Stage[main]/Zulip::App_frontend_base/File[/etc/zulip/uwsgi.ini]/ensure: defined content as &#39;{md5}f671486b4a6092ed71c3ec9c065d4b3b&#39;\nzulip_1      | Notice: /Stage[main]/Zulip::Supervisor/Service[supervisor]: Triggered &#39;refresh&#39; from 1 events\nzulip_1      | Notice: /Stage[main]/Zulip::App_frontend/File[/etc/nginx/sites-available/zulip-enterprise]/content: content changed &#39;{md5}68f22096b428d0a377117a635fbc361f&#39; to &#39;{md5}e9f006bebbdfb139093d060bdcf0143a&#39;\nzulip_1      | Notice: /Stage[main]/Zulip::Nginx/Service[nginx]: Triggered &#39;refresh&#39; from 1 events\nzulip_1      | Notice: Finished catalog run in 0.31 seconds\n</pre></div>\n\n\n<p>I guess I'm wondering if anyone has seen this before, or if I'm missing something obvious</p>",
+        "id": 702796,
+        "sender_full_name": "Whitney",
+        "timestamp": 1550523848
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11360\">@Whitney</span> oh, interesting, thanks for the report!</p>",
+        "id": 702829,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1550527278
+    },
+    {
+        "content": "<p>I think the conflict is with this block in <code>puppet/zulip/manifests/base.pp</code></p>\n<div class=\"codehilite\"><pre><span></span>  file { &#39;/etc/zulip&#39;:\n    ensure =&gt; &#39;directory&#39;,\n    mode   =&gt; &#39;0644&#39;,\n    owner  =&gt; &#39;zulip&#39;,\n    group  =&gt; &#39;zulip&#39;,\n  }\n</pre></div>\n\n\n<p>You can try changing that to remove the <code>ensure =&gt; 'directory'</code> part; that may be the right fix for this.</p>",
+        "id": 702832,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1550527373
+    },
+    {
+        "content": "<p>Or maybe change <code>directory</code> to <code>present</code> there.</p>",
+        "id": 702837,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1550527603
+    },
+    {
+        "content": "<p>I expect we'll want to make that last change as described; I'm testing a commit that does precisely that.</p>",
+        "id": 702839,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1550527645
+    },
+    {
+        "content": "<p>Also seeing this issue when I try to use <code>MANUAL_CONFIGURATION</code> and <code>LINK_SETTINGS_TO_DATA</code> with <code>DISABLE_HTTPS</code> on docker. I tried removing the <code>DISABLE_HTTPS</code> and it starts up OK. I then tried to enter the zulip container and follow the <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy\" title=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy\">instructions</a> to disable HTTPS. You're right, it clobbers the symlink:<br>\nbefore:</p>\n<div class=\"codehilite\"><pre><span></span><span class=\"gp\">root@e7ff3dcdd7ba:/#</span> ll /etc <span class=\"p\">|</span> grep zulip\n<span class=\"go\">lrwxrwxrwx 1 root root      24 Apr 17 18:24 zulip -&gt; /data/settings/etc-zulip/</span>\n</pre></div>\n\n\n<p>after:</p>\n<div class=\"codehilite\"><pre><span></span><span class=\"gp\">root@e7ff3dcdd7ba:/#</span> ll /etc <span class=\"p\">|</span> grep zulip\n<span class=\"go\">drwxr-xr-x 2 zulip zulip     86 Apr 17 18:30 zulip/</span>\n</pre></div>\n\n\n<p>So it seems currently <code>LINK_SETTINGS_TO_DATA</code> is not compatible with <code>DISABLE_HTTPS</code>.  The script shows puppet alerting the directory and wiping the contents <span aria-label=\"sad\" class=\"emoji emoji-2639\" role=\"img\" title=\"sad\">:sad:</span></p>\n<div class=\"codehilite\"><pre><span></span><span class=\"go\">Apply changes? [y/N] y</span>\n<span class=\"go\">Notice: Compiled catalog for e7ff3dcdd7ba.e-secure.com.au in environment production in 1.53 seconds</span>\n<span class=\"go\">Info: Applying configuration version &#39;1587148235&#39;</span>\n<span class=\"go\">Notice: /Stage[main]/Zulip::Base/File[/etc/zulip]/ensure: ensure changed &#39;link&#39; to &#39;directory&#39;</span>\n<span class=\"go\">Notice: /Stage[main]/Zulip::Base/File[/etc/zulip/zulip.conf]/ensure: created</span>\n<span class=\"go\">Notice: /Stage[main]/Zulip::Base/File[/etc/zulip/settings.py]/ensure: created</span>\n<span class=\"go\">Notice: /Stage[main]/Zulip::Base/File[/etc/zulip/zulip-secrets.conf]/ensure: created</span>\n</pre></div>\n\n\n<p>Now to dive into how puppet works</p>",
+        "id": 855866,
+        "sender_full_name": "pemontto",
+        "timestamp": 1587148362
+    },
+    {
+        "content": "<p>Interesting, thanks for the debugging!</p>",
+        "id": 855872,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1587148609
+    },
+    {
+        "content": "<p>We definitely want puppet to be runnable in the container, so I think it makes sense to fix this by adjusting the puppet logic to accept a link there.</p>",
+        "id": 855873,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1587148646
+    },
+    {
+        "content": "<p>Structurally, we need to expose the <code>LINK_SETTINGS_TO_DATA</code> state to puppet so that it can know to keep ensure that file is a link.</p>",
+        "id": 855874,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1587148732
+    },
+    {
+        "content": "<p><a href=\"https://puppet.com/docs/puppet/latest/types/file.html#file-attribute-links\" title=\"https://puppet.com/docs/puppet/latest/types/file.html#file-attribute-links\">https://puppet.com/docs/puppet/latest/types/file.html#file-attribute-links</a></p>",
+        "id": 855875,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1587148804
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15691\">@pemontto</span> maybe `links =&gt; 'follow'`` on this declaration?</p>\n<div class=\"codehilite\"><pre><span></span>  file { &#39;/etc/zulip&#39;:\n    ensure =&gt; &#39;directory&#39;,\n    mode   =&gt; &#39;0644&#39;,\n    owner  =&gt; &#39;zulip&#39;,\n    group  =&gt; &#39;zulip&#39;,\n  }\n</pre></div>",
+        "id": 855876,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1587148844
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> one step ahead! Just testing now how this can be done, thanks for the pointer!</p>",
+        "id": 855878,
+        "sender_full_name": "pemontto",
+        "timestamp": 1587148881
+    },
+    {
+        "content": "<p>One way would be to add it to your fork of zulip/zulip, and then build the image off that.</p>\n<p>But you can perhaps hack it faster by just editing code in your container and rebooting in a way that doesn't lose the image's disk.</p>",
+        "id": 855889,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1587149274
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855889\" title=\"#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855889\">said</a>:</p>\n<blockquote>\n<p>One way would be to add it to your fork of zulip/zulip, and then build the image off that.</p>\n<p>But you can perhaps hack it faster by just editing code in your container and rebooting in a way that doesn't lose the image's disk.</p>\n</blockquote>\n<p>Yeah look at the best way... it appears</p>",
+        "id": 855890,
+        "sender_full_name": "pemontto",
+        "timestamp": 1587149293
+    },
+    {
+        "content": "<p>Or even just running <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code> to see if it does that change.</p>",
+        "id": 855891,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1587149296
+    },
+    {
+        "content": "<p>it appears both these work independently. Will there ever be a circumstance where it'll need to create the directory? As far as I can tell /etc/zulip needs to exist for the script to run, so really it's just checking the permissions and ownership and should be fine with either</p>\n<div class=\"codehilite\"><pre><span></span>links =&gt; &#39;follow&#39;\n</pre></div>\n\n\n<p>and</p>\n<div class=\"codehilite\"><pre><span></span>ensure =&gt; &#39;present&#39;\n</pre></div>",
+        "id": 855892,
+        "sender_full_name": "pemontto",
+        "timestamp": 1587149422
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855891\" title=\"#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855891\">said</a>:</p>\n<blockquote>\n<p>Or even just running <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code> to see if it does that change.</p>\n</blockquote>\n<p>A couple of ways, fixing the puppet script or rerunning <code>prepareDirectories</code> in <a href=\"http://entrypoint.sh\" title=\"http://entrypoint.sh\">entrypoint.sh</a> after <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply -f</code> runs</p>",
+        "id": 855893,
+        "sender_full_name": "pemontto",
+        "timestamp": 1587149495
+    },
+    {
+        "content": "<p>Yes, the intent of that puppet rule is just to make sure the permissions are correct.</p>",
+        "id": 855898,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1587149876
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"15691\">pemontto</span> <a href=\"#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855892\" title=\"#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855892\">said</a>:</p>\n<blockquote>\n<p>it appears both these work independently. Will there ever be a circumstance where it'll need to create the directory? As far as I can tell /etc/zulip needs to exist for the script to run, so really it's just checking the permissions and ownership and should be fine with either</p>\n</blockquote>\n<p>The pupper script running it requires the directory exist, I'll submit a PR to with links =&gt; 'follow'.<br>\n<code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code></p>\n<div class=\"codehilite\"><pre><span></span><span class=\"n\">config</span> <span class=\"o\">=</span> <span class=\"n\">configparser</span><span class=\"o\">.</span><span class=\"n\">RawConfigParser</span><span class=\"p\">()</span>\n<span class=\"n\">config</span><span class=\"o\">.</span><span class=\"n\">read</span><span class=\"p\">(</span><span class=\"s2\">&quot;/etc/zulip/zulip.conf&quot;</span><span class=\"p\">)</span>\n</pre></div>",
+        "id": 855899,
+        "sender_full_name": "pemontto",
+        "timestamp": 1587149889
+    },
+    {
+        "content": "<p>Yeah, that PR sounds great.</p>",
+        "id": 855900,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1587149909
+    },
+    {
+        "content": "<p>I can backport it to the 2.1.x branch so that it's easily runnable before our next release.</p>",
+        "id": 855901,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1587149939
+    },
+    {
+        "content": "<p>But again, huge thanks for debugging this!  The reason <code>docker-zulip</code> is still market as experimental is because of a half-dozen bugs like this one that just need a proper investigation.</p>",
+        "id": 855904,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1587150003
+    },
+    {
+        "content": "<p>PR <a href=\"https://github.com/zulip/zulip/pull/14613\" title=\"https://github.com/zulip/zulip/pull/14613\">https://github.com/zulip/zulip/pull/14613</a></p>",
+        "id": 855921,
+        "sender_full_name": "pemontto",
+        "timestamp": 1587150707
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"15691\">pemontto</span> <a href=\"#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855921\" title=\"#narrow/stream/31-production-help/topic/docker-compose.20LINK_SETTINGS_TO_DATA.20symlink.20clobbered/near/855921\">said</a>:</p>\n<blockquote>\n<p>PR <a href=\"https://github.com/zulip/zulip/pull/14613\" title=\"https://github.com/zulip/zulip/pull/14613\">https://github.com/zulip/zulip/pull/14613</a></p>\n</blockquote>\n<p>Fixed the spacing issue. Have a good weekend!</p>",
+        "id": 855962,
+        "sender_full_name": "pemontto",
+        "timestamp": 1587152392
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15691\">@pemontto</span> merged.  If you run into other problems with that setting bundle, we'd love to hear about it.</p>",
+        "id": 855972,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1587152790
+    }
+]

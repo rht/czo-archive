@@ -1,0 +1,44 @@
+[
+    {
+        "content": "<p>The upgrade to 7.0 broke our deployment today, because of the changes made in the nginx include files for S3 integration.</p>\n<p>In detail: the file /etc/nginx/zulip-include/app.d/uploads-internal.conf contains options for S3 AND local storage uploads, but even when S3 is not activated [1], nginx still fails and cannot find variables like s3_disposition_cache_key, because they're referenced in this file, but are of course not initialised and thus produce only errors.</p>\n<p>Solution: comment out the whole S3 block in this file, check nginx again and restart it, worked like a charm. IMO the options for S3 and local storage should not be in the same config file in this manner, since they only break the upgrade process.</p>\n<p>details about setup<br>\nDebian 11.7<br>\nnginx 1.18.0</p>\n<p>[1] <a href=\"https://github.com/zulip/zulip/blob/7.x/docs/production/upload-backends.md#migrating-from-local-uploads-to-amazon-s3-backend\">https://github.com/zulip/zulip/blob/7.x/docs/production/upload-backends.md#migrating-from-local-uploads-to-amazon-s3-backend</a></p>",
+        "id": 1585227,
+        "sender_full_name": "Wurzelmann",
+        "timestamp": 1685970150
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16782\">@Wurzelmann</span>: <code>/etc/nginx/zulip-include/s3-cache</code> should be written even if the s3 backend is not in use, and that defines the variables.  That file is included by <code>/etc/nginx/sites-available/zulip-enterprise</code>, also regardless of if the S3 backend is in use.</p>\n<p>Are you using a custom nginx deployment in any way?</p>",
+        "id": 1585289,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1685980978
+    },
+    {
+        "content": "<p>For context, the reason we include the S3 configuration regardless is twofold:</p>\n<ul>\n<li>nginx variables do not have any overhead unless they are <em>used</em>.  So having arbitrarily complicated variables is zero-cost if the request paths that use them are not accessed.  Since the request paths for S3 and internal-file storage are <code>internal</code> paths, they can only be accessed via internal redirects generated from Django, so we fully control if and when they are accessed.</li>\n<li>Having the configs and variables pre-existing (but unused, at no cost) means that only a <em>Django</em> restart is necessary to update the backend -- not a puppet application, nginx config change, and nginx restart.  This significantly reduces the complexity.</li>\n</ul>",
+        "id": 1585290,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1685981183
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/6.2E2-.3E7.2E0.20fails.20if.20S3.20not.20activated.20.28nginx.20includes.29/near/1585290\">said</a>:</p>\n<blockquote>\n<p>For context, the reason we include the S3 configuration regardless is twofold:</p>\n<ul>\n<li>nginx variables do not have any overhead unless they are <em>used</em>.  So having arbitrarily complicated variables is zero-cost if the request paths that use them are not accessed.  Since the request paths for S3 and internal-file storage are <code>internal</code> paths, they can only be accessed via internal redirects generated from Django, so we fully control if and when they are accessed.</li>\n<li>Having the configs and variables pre-existing (but unused, at no cost) means that only a <em>Django</em> restart is necessary to update the backend -- not a puppet application, nginx config change, and nginx restart.  This significantly reduces the complexity.</li>\n</ul>\n</blockquote>\n<p>Thank you for the detailed explanation! It makes total sense from Zulip's point of view to deploy it in this manner and I now can fully understand the reasons why. The thing is, we use a custom nginx config (as you suspected) and we do not like to include \"bloated\" includes, so the second I saw the S3 include, I removed it in order to keep the config slim and easier to maintain. I just tested it with the include and of course it works too, thanks again for pointing it out.</p>\n<p>Still, I'd love to see changes like that reflected in the changelog in more detail, if possible, since it was not instantly apparent what this include statement would do for non-S3 users. I looked at the changelogs, saw the added S3 integration and immediately removed the include statement from the nginx config, since I was sure we won't need it all.</p>\n<p>To sum it up: thanks for clearing it up, makes total sense now, but could have been better documented IMO.</p>",
+        "id": 1585300,
+        "sender_full_name": "Wurzelmann",
+        "timestamp": 1685982121
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"16782\">Wurzelmann</span> has marked this topic as resolved.</p>",
+        "id": 1585301,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1685982126
+    },
+    {
+        "content": "<p>As you note, we did document the change in the Changelog.  We generally assume that the nginx configuration is owned by our Puppet -- and any local edits to those files mean that administrators should test and vet those local change themselves.</p>\n<p>I hear you that the broken deployment was painful for you, but unfortunately I don't think it's very practical for the Changelog to go further into depth about the technical details of each change in support of arbitrary local changes.</p>\n<p>I'm also not clear on your goal of removing chunks of the config in the name of trimming \"bloated\" configs, since we undertake the curation of the nginx files ourselves.  Those \"extra\" includes are not additional maintenance burden (much less any notable performance impact) for you -- unless you make it so by removing some of them. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1585303,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1685982603
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/.E2.9C.94.206.2E2-.3E7.2E0.20fails.20if.20S3.20not.20activated.20.28nginx.20includes.29/near/1585303\">said</a>:</p>\n<blockquote>\n<p>Those \"extra\" includes are not additional maintenance burden (much less any notable performance impact) for you -- unless you make it so by removing some of them. :)</p>\n</blockquote>\n<p>Ouch that hurt, but I deserve it, I guess. <span aria-label=\"grimacing\" class=\"emoji emoji-1f62c\" role=\"img\" title=\"grimacing\">:grimacing:</span> Again, thanks for the in-depth explanation and I did not want to complain so much as give guidance for other users who might face the same problems in a similar setup.</p>",
+        "id": 1594306,
+        "sender_full_name": "Wurzelmann",
+        "timestamp": 1686913660
+    }
+]

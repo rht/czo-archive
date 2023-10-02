@@ -1,0 +1,80 @@
+[
+    {
+        "content": "<p>Hello, on a small Zulip install (15 users, &lt;200 messages a day) I've noticed a CPU spike occurring every minute or so and tracked it down to <code>rabbitmq-numconsumers</code> and <code>rabbitmq-queuesize</code> being executed every minute via <code>/etc/cron.d</code>. I've tried looking at the docs to figure out what purpose these script are being run when I don't have a Nagios agent configured on this host to monitor Zulip. Does it serve some sort of self-monitoring purpose? Can I disable them, as I'm worried about the overall load this system is generating compared to the very low level of user generated activity it's seeing.</p>",
+        "id": 1027063,
+        "sender_full_name": "Jerome Charaoui",
+        "timestamp": 1601340082
+    },
+    {
+        "content": "<p>They seem to be installed by the rabbitmq Puppet manifest in <a href=\"https://github.com/zulip/zulip/blob/cfa62700809584003468a982605ef724204a5f21/puppet/zulip/manifests/rabbit.pp#L12-L26\">https://github.com/zulip/zulip/blob/cfa62700809584003468a982605ef724204a5f21/puppet/zulip/manifests/rabbit.pp#L12-L26</a></p>",
+        "id": 1027065,
+        "sender_full_name": "Jerome Charaoui",
+        "timestamp": 1601340406
+    },
+    {
+        "content": "<p>I understand the value of making these scripts available but from what I gather these checks are being executed for nothing as I can't see which other parts of Zulip actually consume these checks' results.</p>",
+        "id": 1027066,
+        "sender_full_name": "Jerome Charaoui",
+        "timestamp": 1601340582
+    },
+    {
+        "content": "<p>I don't see any of those other Nagios checks configured \"stock\" in <code>/etc/cron.d</code> <a href=\"https://zulip.readthedocs.io/en/latest/production/troubleshooting.html#nagios-configuration\">https://zulip.readthedocs.io/en/latest/production/troubleshooting.html#nagios-configuration</a></p>",
+        "id": 1027067,
+        "sender_full_name": "Jerome Charaoui",
+        "timestamp": 1601340707
+    },
+    {
+        "content": "<p>Just wanted to say: I also see <a href=\"/user_uploads/2/df/dz9Oz6iRMJttyMkdzG935Wqg/image.png\">the spikes</a> occurring in my Zulip installation.</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/df/dz9Oz6iRMJttyMkdzG935Wqg/image.png\" title=\"the spikes\"><img src=\"/user_uploads/2/df/dz9Oz6iRMJttyMkdzG935Wqg/image.png\"></a></div>",
+        "id": 1027164,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1601360484
+    },
+    {
+        "content": "<p>Those checks can certainly be turned off if you're not using nagios; and we should certainly look at not installing them if nagios is not in use.</p>\n<p>But I'm also curious about the cause of the spikes, since I'm not seeing them myself.  What version of Zulip?  What does <code>time /home/zulip/deployments/current/scripts/nagios/check-rabbitmq-queue</code> say?  What about <code>time /home/zulip/deployments/current/scripts/nagios/check-rabbitmq-consumers</code>?</p>",
+        "id": 1027436,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1601407599
+    },
+    {
+        "content": "<p>I'm assuming that we do this run-in-cron, then read-in-nagios trick because rabbitmqctl must be run as root or rabbitmq?</p>",
+        "id": 1027487,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1601410172
+    },
+    {
+        "content": "<p>One potential fix is to enable <a href=\"https://www.rabbitmq.com/prometheus.html\">the prometheus plugin</a>, which makes the consumer and queue list available via HTTP, and is much more performant than <code>rabbitmqctl</code>.  This <a href=\"https://www.rabbitmq.com/prometheus.html#overview-prometheus\">requires upgrading to Rabbitmq 3.8</a>, though, which would mean <a href=\"https://www.rabbitmq.com/install-debian.html\">pinning to the rabbitmq apt repos</a>, since <a href=\"https://packages.ubuntu.com/bionic-backports/net/rabbitmq-server\">while it is in bionic-backports</a>, <a href=\"https://packages.debian.org/search?keywords=rabbitmq-server\">I don't see it in buster-backports</a>.</p>\n<p>We do want Prometheus exports for better monitoring in general, though, so that may be the way forward.  Short-term, of course, we can remove the cron jobs for folks not using nagios.</p>",
+        "id": 1027508,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1601411301
+    },
+    {
+        "content": "<p>I agree it'd be reasonable to disable those monitoring scripts by default; <code>rabbitmqctl</code> is indeed quite slow though I'd not have expected such a visible CPU spike.  Alex is correct for why we use that cron+nagios strategy.  Potentially it's simplest to just move the code to run them into the <code>zulip_ops</code> manifests.</p>",
+        "id": 1027648,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601422342
+    },
+    {
+        "content": "<p>Yeah, I'm testing that move (and a perf improvement to them) right now; PR once I get them tested.</p>",
+        "id": 1027663,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1601422771
+    },
+    {
+        "content": "<p>Awesome!</p>",
+        "id": 1027735,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601424632
+    },
+    {
+        "content": "<p>Closing the loop: <span class=\"user-mention\" data-user-id=\"15241\">@Jerome Charaoui</span>, <span class=\"user-mention\" data-user-id=\"15808\">@Felix (strifel)</span>, merged as <a href=\"https://github.com/zulip/zulip/pull/16439\">https://github.com/zulip/zulip/pull/16439</a> (primarily <a href=\"https://github.com/zulip/zulip/commit/57d88eedd80771f28d05746f4d7fe84e2424bff5\">57d88eedd80771f28d05746f4d7fe84e2424bff5</a>)</p>",
+        "id": 1028300,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1601505262
+    },
+    {
+        "content": "<p>Whoa, excellent, thanks for the quick turnaround!</p>",
+        "id": 1028364,
+        "sender_full_name": "Jerome Charaoui",
+        "timestamp": 1601509137
+    }
+]

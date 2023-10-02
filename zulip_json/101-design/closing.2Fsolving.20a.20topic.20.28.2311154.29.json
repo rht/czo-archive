@@ -1,0 +1,1472 @@
+[
+    {
+        "content": "<p>There's a long-standing request from users (with 23 upvotes in GitHub) for a way to \"close/solve\" a topic. I was thinking a relatively simple initial implementation of this could be adding an option to prepend a checkmark to the topic name. It would then look like this in the list of topics:</p>\n<p><a href=\"/user_uploads/2/e2/dkl0buZpWKjKXc05A5n-9zZc/Screen-Shot-2021-06-07-at-1.35.40-PM.png\">Screen-Shot-2021-06-07-at-1.35.40-PM.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/e2/dkl0buZpWKjKXc05A5n-9zZc/Screen-Shot-2021-06-07-at-1.35.40-PM.png\" title=\"Screen-Shot-2021-06-07-at-1.35.40-PM.png\"><img src=\"/user_uploads/2/e2/dkl0buZpWKjKXc05A5n-9zZc/Screen-Shot-2021-06-07-at-1.35.40-PM.png\"></a></div><p>Specifically, anyone who has permission to edit the name of a topic (admins/moderators) would also have an option in the three-dot menu for topics (in the left sidebar) to:</p>\n<ol>\n<li>If a topic is open, <strong>Mark topic as closed</strong>, which prepends a checkmark to the name of the topic.</li>\n<li>If a topic is closed, <strong>Reopen topic</strong>, which removes the checkmark.</li>\n</ol>\n<p>It's somewhat more complicated than just changing the name of the topic, since the checkmark should not be part of the <em>name</em> of the topic for things like typeahead and search.</p>\n<p>Making closing/reopening a topic change its location in the list of topics or its read status would be outside of the scope of this initial implementation.</p>\n<p>Thoughts?</p>",
+        "id": 1203125,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623098713
+    },
+    {
+        "content": "<p>would it possible to designate a topic as not closable? (or, more likely, a topic being closable requires some pre-designation as \"in need of an answer\")</p>",
+        "id": 1203127,
+        "sender_full_name": "Ken Clary",
+        "timestamp": 1623098792
+    },
+    {
+        "content": "<p>I'm envisioning some org finding a feature like this and requiring (as org policy) that topics be closed when they are \"done\" and said policy annoying the hell out of people using topics for ongoing discussions</p>",
+        "id": 1203128,
+        "sender_full_name": "Ken Clary",
+        "timestamp": 1623098899
+    },
+    {
+        "content": "<p>I kinda like the idea of being able to associate a emoji with a topic in general (sort of like Dropbox Paper favicons). Could also use the same codepath to make pinned topics have a <span aria-label=\"push pin\" class=\"emoji emoji-1f4cc\" role=\"img\" title=\"push pin\">:push_pin:</span>, for instance.</p>",
+        "id": 1203130,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1623098908
+    },
+    {
+        "content": "<p>I was imagining that, at least for the initial implementation, the admins/moderators would be responsible for closing topics when appropriate and not otherwise. Also, maybe \"closed\" is a bad term, since it wouldn't actually prevent anyone from continuing to post on it.</p>",
+        "id": 1203132,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623098951
+    },
+    {
+        "content": "<p>Pehaps \"resolved\" is better.</p>",
+        "id": 1203133,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623098967
+    },
+    {
+        "content": "<p>Interesting idea! I like a prefixed emoji partly for being so short -- it doesn't much reduce the space for the rest of the topic.</p>\n<p>Also for being language-independent.</p>",
+        "id": 1203134,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1623099044
+    },
+    {
+        "content": "<p>I'd be inclined to try to make the guts of this just be that the topic gets edited -- exactly the same as if an admin/moderator used the normal edit-topic UI to add that emoji (and a space) at the start. That would simplify the work a lot -- among other things it'd provide answers for how it behaves in edge cases, and it'd ensure it works smoothly (or at least degrades smoothly) for clients that don't know about the feature.</p>",
+        "id": 1203137,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1623099224
+    },
+    {
+        "content": "<p>presumably, the emoji doesn't actually show in the topic name (when composing)? and \"<span aria-label=\"check\" class=\"emoji emoji-2705\" role=\"img\" title=\"check\">:check:</span> thingo\" is the same topic as \"thingo\" as far as threading is concerned?</p>",
+        "id": 1203141,
+        "sender_full_name": "Ken Clary",
+        "timestamp": 1623099436
+    },
+    {
+        "content": "<p>That'd mean that this:</p>\n<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1203125\">said</a>:</p>\n<blockquote>\n<p>It's somewhat more complicated than just changing the name of the topic, since the checkmark should not be part of the <em>name</em> of the topic for things like typeahead and search.</p>\n</blockquote>\n<p>becomes a matter of having typeahead and search be aware of the concept of an emoji prefix. I think mostly it just means that in places where we use the notion of \"matching at the start of the topic\", the query \"completed\" should be treated as matching \"at the start of\" the topic \"<span aria-label=\"check\" class=\"emoji emoji-2705\" role=\"img\" title=\"check\">:check:</span> completed task\".</p>",
+        "id": 1203142,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1623099437
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19444\">Ken Clary</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1203141\">said</a>:</p>\n<blockquote>\n<p>presumably, the emoji doesn't actually show in the topic name (when composing)?</p>\n</blockquote>\n<p>I think it's probably actually better if it does show up there, for a couple of reasons:</p>\n<ul>\n<li>It helps keep the model simple to understand: it's just part of the topic name.</li>\n<li>It means when you're writing to that topic, you're aware that you're writing to a topic that's already resolved -- which seems helpful for the goals of this feature.</li>\n</ul>",
+        "id": 1203143,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1623099556
+    },
+    {
+        "content": "<p>Mm, yeah maybe I'm overthinking it -- playing a bit with typeahead/search for \"<span aria-label=\"check\" class=\"emoji emoji-2705\" role=\"img\" title=\"check\">:check:</span> completed task \", it actually seems to work OK.</p>",
+        "id": 1203144,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623099565
+    },
+    {
+        "content": "<p>Just fyi: This feature (mark something as \"solved\") is something we use, too. My bot has an own implementation of such a feature: <a href=\"https://github.com/ro-i/tumcsbot/blob/main/src/tumcsbot/plugins/solved.py\">tumcsbot -&gt; plugins -&gt; solved.py</a> The Workflow is as follows:</p>\n<ul>\n<li>A user can react on any message in a topic with <span aria-label=\"check\" class=\"emoji emoji-2705\" role=\"img\" title=\"check\">:check:</span> </li>\n<li>The bot listens to those reactions and adds a message to the topic:</li>\n</ul>\n<blockquote>\n<p><a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1203134\">This answer ↑1203134</a> has been marked as solution by <span class=\"user-mention silent\" data-user-id=\"17322\">Robert (ro-i)</span> </p>\n</blockquote>\n<ul>\n<li>If other users add <span aria-label=\"check\" class=\"emoji emoji-2705\" role=\"img\" title=\"check\">:check:</span> to the same message as the first person, the bot adds their names to the list in the message.</li>\n</ul>\n<blockquote>\n<p><a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1203134\">This answer ↑1203134</a> has been marked as solution by <span class=\"user-mention silent\" data-user-id=\"17322\">Robert (ro-i)</span>, <span class=\"user-mention silent\" data-user-id=\"2187\">Greg Price</span>, <span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> </p>\n</blockquote>\n<p>Of course, this does not prevent the topic from being continued. Additionally, multiple messages can be marked as \"solutions\".</p>",
+        "id": 1203145,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1623099577
+    },
+    {
+        "content": "<p>ok, but are \"completed task\" and \"<span aria-label=\"check\" class=\"emoji emoji-2705\" role=\"img\" title=\"check\">:check:</span> completed task\" the same topic?</p>",
+        "id": 1203146,
+        "sender_full_name": "Ken Clary",
+        "timestamp": 1623099606
+    },
+    {
+        "content": "<blockquote>\n<p>and \"<span aria-label=\"check\" class=\"emoji emoji-2705\" role=\"img\" title=\"check\">:check:</span> thingo\" is the same topic as \"thingo\" as far as threading is concerned?</p>\n</blockquote>\n<p>On the \"it's just part of the topic name\" plan, these would be different. That'd be a bit annoying if/when it comes up. But I'd expect that to be uncommon -- after all, generally people just reply, so they're sending to the same topic as the previous messages.</p>",
+        "id": 1203147,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1623099622
+    },
+    {
+        "content": "<p>In particular I think we rarely to never experience this issue with ordinary topic renames like we have today.</p>",
+        "id": 1203148,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1623099651
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17322\">Robert (ro-i)</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1203145\">said</a>:</p>\n<blockquote>\n<p>Just fyi: This feature (mark something as \"solved\") is something we use, too. My bot has an own implementation of such a feature: <a href=\"https://github.com/ro-i/tumcsbot/blob/main/src/tumcsbot/plugins/solved.py\">tumcsbot -&gt; plugins -&gt; solved.py</a> The Workflow is as follows:</p>\n</blockquote>\n<p>Interesting, thanks for that experience report!</p>",
+        "id": 1203150,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1623099718
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"2187\">Greg Price</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1203148\">said</a>:</p>\n<blockquote>\n<p>In particular I think we rarely to never experience this issue with ordinary topic renames like we have today.</p>\n</blockquote>\n<p>I think this is because we've thoughtfully implemented it so that compose box and current narrowed view state live-updates when the topic you're looking at or sending to gets renamed, so it's essentially invisible.</p>",
+        "id": 1203315,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623108811
+    },
+    {
+        "content": "<p>If we implement this feature as a simple renaming, we'd still get the same benefits, right?</p>",
+        "id": 1203319,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623108907
+    },
+    {
+        "content": "<p>The main downside of this implementation approach will be that any \"Copy link to message\" links to the topic may break once it gets marked as resolved this way.  I think we had a plan for how to <a href=\"https://github.com/zulip/zulip/issues/15290\">address that general problem</a> with modest effort, though, so I don't think we should block this idea on that.  But if we implement this design, I'm sure there will be strong demand for <a href=\"https://github.com/zulip/zulip/pull/15290\">#15290</a> from folks using the new feature.</p>",
+        "id": 1203321,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623108957
+    },
+    {
+        "content": "<p>my concern isn't with topic renames, it's with topic re-use.<br>\nSay you start a \"questions about thing\" topic, that later gets marked as resolved, turning into \"<span aria-label=\"check\" class=\"emoji emoji-2705\" role=\"img\" title=\"check\">:check:</span> questions about thing\"<br>\nyou later have more questions about thing, so you now (re)start the original topic, which becomes a distinct topic. but when it (also) later gets marked as resolved, it re-merges with the original, since now it matches, checkbox and all.</p>",
+        "id": 1203322,
+        "sender_full_name": "Ken Clary",
+        "timestamp": 1623109003
+    },
+    {
+        "content": "<p>Oh, the other thing that's problematic with actually renaming the topic is that if the topic was started by a bot (and the bot might send additional messages), you could end up with any follow-up messages from the bot going to the pre-resolution topic.</p>",
+        "id": 1203323,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623109010
+    },
+    {
+        "content": "<p>(So for example, if you were to try to use this for threads in your \"Sentry alerts\" stream, you'd be kinda sad)</p>",
+        "id": 1203326,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623109049
+    },
+    {
+        "content": "<p>basically, if \"status\" is something special, it probably shouldn't be actually folded into the topic name, since status changes and name changes are, perhaps, different kinds of actions, with different consequences.</p>",
+        "id": 1203329,
+        "sender_full_name": "Ken Clary",
+        "timestamp": 1623109090
+    },
+    {
+        "content": "<p>(I think we could still consider the same \"leading check\" visual design for metadata that's in its own independent database table.  And we could also still consider the \"topic rename\" approach as a prototype implementation even if it's not what we want to do longer-term)</p>",
+        "id": 1203330,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623109095
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1203321\">said</a>:</p>\n<blockquote>\n<p>The main downside of this implementation approach will be that any \"Copy link to message\" links to the topic may break once it gets marked as resolved this way.  I think we had a plan for how to <a href=\"https://github.com/zulip/zulip/issues/15290\">address that general problem</a> with modest effort, though, so I don't think we should block this idea on that.  But if we implement this design, I'm sure there will be strong demand for <a href=\"https://github.com/zulip/zulip/pull/15290\">#15290</a> from folks using the new feature.</p>\n</blockquote>\n<p>This is certainly something I've wanted already for normal topic renames <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span> </p>\n<p>(For example, <a class=\"stream-topic\" data-stream-id=\"137\" href=\"/#narrow/stream/137-feedback/topic/Status.20Evidence\">#feedback &gt; Status Evidence</a> confuses me almost every time I see it, and I've held back from giving it a reasonable name only because it's been running for a while and there are probably links to it in various places.)</p>",
+        "id": 1203333,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1623109145
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1203323\">said</a>:</p>\n<blockquote>\n<p>Oh, the other thing that's problematic with actually renaming the topic is that if the topic was started by a bot (and the bot might send additional messages), you could end up with any follow-up messages from the bot going to the pre-resolution topic.</p>\n</blockquote>\n<p>Hmm, true!</p>",
+        "id": 1203334,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1623109180
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19444\">Ken Clary</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1203322\">said</a>:</p>\n<blockquote>\n<p>my concern isn't with topic renames, it's with topic re-use.<br>\nSay you start a \"questions about thing\" topic, that later gets marked as resolved, turning into \"<span aria-label=\"check\" class=\"emoji emoji-2705\" role=\"img\" title=\"check\">:check:</span> questions about thing\"<br>\nyou later have more questions about thing, so you now (re)start the original topic, which becomes a distinct topic. but when it (also) later gets marked as resolved, it re-merges with the original, since now it matches, checkbox and all.</p>\n</blockquote>\n<p>That is a bit awkward… but I think it'd actually be <em>more</em> awkward under the alternative. That would mean that when you/someone comes later and starts sending messages to \"questions about thing\", their question is automatically treated as pre-resolved because they sent it to a resolved topic.</p>",
+        "id": 1203338,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1623109314
+    },
+    {
+        "content": "<p>I think there are some topics that never want a resolution. like, I expect there are many topics that get used without any expectation of such. (as in, they're topics, not tickets)</p>",
+        "id": 1203342,
+        "sender_full_name": "Ken Clary",
+        "timestamp": 1623109383
+    },
+    {
+        "content": "<p>Of course; I wouldn't expect this to be the natural conclusion for every topic or anything.</p>",
+        "id": 1203347,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623109416
+    },
+    {
+        "content": "<p>But folks have requested this feature for, e.g., customer support streams.</p>",
+        "id": 1203348,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623109443
+    },
+    {
+        "content": "<p>so, could it be added as an optional feature? as in, when you create a new topic (or perhaps edit an old one), you can add a \"can be resolved\" state or something, which might visually look like an unchecked box.</p>",
+        "id": 1203350,
+        "sender_full_name": "Ken Clary",
+        "timestamp": 1623109521
+    },
+    {
+        "content": "<p>(this would not change the topic name at all)</p>",
+        "id": 1203352,
+        "sender_full_name": "Ken Clary",
+        "timestamp": 1623109538
+    },
+    {
+        "content": "<p>(even if editing it required a similar UX)</p>",
+        "id": 1203353,
+        "sender_full_name": "Ken Clary",
+        "timestamp": 1623109551
+    },
+    {
+        "content": "<p>I can already anticipate the eventual request for \"can we have a full suite of ticket statuses/resolutions, with custom workflows\" ;)  (in effect treating a stream topic like the comment thread on a jira ticket)</p>",
+        "id": 1203354,
+        "sender_full_name": "Ken Clary",
+        "timestamp": 1623109641
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1203323\">said</a>:</p>\n<blockquote>\n<p>Oh, the other thing that's problematic with actually renaming the topic is that if the topic was started by a bot (and the bot might send additional messages), you could end up with any follow-up messages from the bot going to the pre-resolution topic.</p>\n</blockquote>\n<p>Are you thinking of a situation where the issue is actually resolved, or it's not resolved after all? Could you move one of the topics to the other as needed?</p>",
+        "id": 1203359,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623109814
+    },
+    {
+        "content": "<p>I was thinking that if a topic doesn't need to be resolved, the admins/moderators just wouldn't resolve it. I don't think we need to specifically make it a permissions thing. After all, those same admins/moderators would be the ones who'd be able to change those permissions.</p>",
+        "id": 1203361,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623109936
+    },
+    {
+        "content": "<p>Another usecase for emoji as topic prefixes, if we do it well, is <a class=\"stream-topic\" data-stream-id=\"6\" href=\"/#narrow/stream/6-frontend/topic/per-stream.20AV.20links\">#frontend &gt; per-stream AV links</a> (and integrations more generally)</p>",
+        "id": 1204045,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1623176435
+    },
+    {
+        "content": "<p>If we go that route, I suppose we should think about making the implementation robust to having multiple emoji. E.g. a resolved pinned topic, etc.</p>",
+        "id": 1204077,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623177277
+    },
+    {
+        "content": "<p>Chatting with <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> a bit more offline, it sounds like a renaming implementation + fixing <a href=\"https://github.com/zulip/zulip/pull/15290\">#15290</a> should be a fine starting point for imlementing this. It won't be too much wasted effort to rework the backend if we decide it's not good enough after playing with it, or if we want to make it more robust down the line. I'll write up an issue.</p>",
+        "id": 1204412,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623190720
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/18751\">#18751</a>. <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> please add technical details as needed.</p>",
+        "id": 1204443,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623193220
+    },
+    {
+        "content": "<p>This is an excellent writeup. <span aria-label=\"grinning\" class=\"emoji emoji-1f600\" role=\"img\" title=\"grinning\">:grinning:</span>. I have to admit that I have always blown off this use case even though it is obviously plausible.</p>",
+        "id": 1204494,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1623195258
+    },
+    {
+        "content": "<p>Yeah, this is great; added some quick comments on implementation details.  <span class=\"user-mention\" data-user-id=\"5140\">@Aman Agrawal (amanagr)</span> <span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span> do one of you want to take this one?  I think it'll definitely benefit from someone who has read the message edit plumbing.</p>",
+        "id": 1204506,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623195822
+    },
+    {
+        "content": "<p>wow finally</p>",
+        "id": 1204799,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1623228200
+    },
+    {
+        "content": "<p>I had lost hope</p>",
+        "id": 1204801,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1623228218
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1203315\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"2187\">Greg Price</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1203148\">said</a>:</p>\n<blockquote>\n<p>In particular I think we rarely to never experience this issue with ordinary topic renames like we have today.</p>\n</blockquote>\n<p>I think this is because we've thoughtfully implemented it so that compose box and current narrowed view state live-updates when the topic you're looking at or sending to gets renamed, so it's essentially invisible.</p>\n</blockquote>\n<p>This is a slick bit of polish that I think we don't currently do in the mobile app, and the importance of it will grow with this resolving-a-topic feature.</p>\n<p>How is that behavior's semantics defined? Is it something like, when the one/last remaining message in the view gets edited so it would no longer appear there, follow it to where it went?</p>",
+        "id": 1205696,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1623286652
+    },
+    {
+        "content": "<p>this is the old discussion <a href=\"#narrow/stream/137-feedback/topic/Solved.2Fclosed.20topic\">https://chat.zulip.org/#narrow/stream/137-feedback/topic/Solved.2Fclosed.20topic</a></p>",
+        "id": 1205819,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1623322571
+    },
+    {
+        "content": "<p>and this was my IDEA</p>",
+        "id": 1205820,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1623322606
+    },
+    {
+        "content": "<p>Topics are used for a variety of things but could be summarized in these types:</p>\n<p>Issue (with status: Open and Closed / resolved)<br>\nTask (with status: Open with percentage indication of status, Closed)<br>\nDiscussion (with state Open and Closed / resolved) or only the function of closed so no one can write to us anymore and a little order is made to the real discussions that maybe repeat.</p>",
+        "id": 1205821,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1623322612
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"2187\">Greg Price</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1205696\">said</a>:</p>\n<blockquote>\n<p>This is a slick bit of polish that I think we don't currently do in the mobile app, and the importance of it will grow with this resolving-a-topic feature.</p>\n<p>How is that behavior's semantics defined? Is it something like, when the one/last remaining message in the view gets edited so it would no longer appear there, follow it to where it went?</p>\n</blockquote>\n<p><span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span> it's documented in <a href=\"https://zulip.com/api/get-events\">https://zulip.com/api/get-events</a>; search for <code>propagate_mode</code>.</p>",
+        "id": 1206511,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623358522
+    },
+    {
+        "content": "<p>Basically, this corresponds to whether the person who was doing the edit selected one of \"Change later messages\" or \"Change all messages\".</p>",
+        "id": 1206512,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623358571
+    },
+    {
+        "content": "<p>mix?</p>",
+        "id": 1206514,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1623358605
+    },
+    {
+        "content": "<blockquote>\n<p>mix? </p>\n</blockquote>\n<p>No, this is replying to Greg's last message here.  Let me edit to make more clear.</p>",
+        "id": 1206516,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623358648
+    },
+    {
+        "content": "<p>Yesterday, I prototyped this in <a href=\"https://github.com/zulip/zulip/pull/18808\">#18808</a> and have test-deployed it here so folks can play with it.</p>",
+        "id": 1207851,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623511357
+    },
+    {
+        "content": "<p><a href=\"#narrow/stream/7-test-here/topic/.E2.9C.94.EF.B8.8F.20test.20resolve.20topic/near/1207853\">Here's an example thread</a> to see what it looks like as currently prototyped.</p>",
+        "id": 1207861,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623511534
+    },
+    {
+        "content": "<p>We can of course do fancier visuals styling in clients that choose to by parsing the topic and displaying something special where desired.</p>",
+        "id": 1207863,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623511556
+    },
+    {
+        "content": "<p>How do we use it?</p>",
+        "id": 1207867,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1623511672
+    },
+    {
+        "content": "<p>Would it be better to keep color(of icon) to green. Icon is barely visible if topic in dark mode and almost goes unnoticed if stream/topic is muted.</p>",
+        "id": 1207870,
+        "sender_full_name": "Purushottam Tiwari",
+        "timestamp": 1623511811
+    },
+    {
+        "content": "<p>Back/forward navigation doesn't work so well with this?</p>",
+        "id": 1207906,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1623516608
+    },
+    {
+        "content": "<p>With my ZT hat on I'd prefer a more \"basic\" unicode codepoint to avoid output issues, but we can always substitute that manually.<br>\nIn general though, for a topic that <em>might</em> be marked as resolved I'd prefer a placeholder box, like I've trialled in <a class=\"stream\" data-stream-id=\"7\" href=\"/#narrow/stream/7-test-here\">#test here</a> in nearby topics.</p>",
+        "id": 1207919,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1623517022
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17546\">Purushottam Tiwari</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1207870\">said</a>:</p>\n<blockquote>\n<p>Would it be better to keep color(of icon) to green. Icon is barely visible if topic in dark mode and almost goes unnoticed if stream/topic is muted.</p>\n</blockquote>\n<p>agree with you</p>",
+        "id": 1208528,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1623681589
+    },
+    {
+        "content": "<p><span aria-label=\"locked\" class=\"emoji emoji-1f512\" role=\"img\" title=\"locked\">:locked:</span>  red</p>",
+        "id": 1208529,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1623681706
+    },
+    {
+        "content": "<p>for close topic</p>",
+        "id": 1208530,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1623681716
+    },
+    {
+        "content": "<blockquote>\n<p>Tim Abbott: We can of course do fancier visuals styling in clients that choose to by parsing the topic and displaying something special where desired.</p>\n</blockquote>\n<p>Yeah, I agree that we want a more visible icon for the left sidebar. Are folks happy with the checkmark in other places where it shows up (e.g. topic bar in the main window, topic name in the compose box)?</p>",
+        "id": 1208721,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623689381
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"58\">Steve Howell (showell)</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1207867\">said</a>:</p>\n<blockquote>\n<p>How do we use it?</p>\n</blockquote>\n<p>You can resolve/unresolve a topic via the three-dot topic menu in the left sidebar.</p>",
+        "id": 1208723,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623689408
+    },
+    {
+        "content": "<p>If you have permission to rename topics.</p>",
+        "id": 1208725,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623689439
+    },
+    {
+        "content": "<p>Since not everyone can resolve/unresolve, let's keep at least one topic resolved for demo purposes (<a class=\"stream-topic\" data-stream-id=\"7\" href=\"/#narrow/stream/7-test-here/topic/.E2.9C.94.EF.B8.8F.20resolved.20topic\">#test here &gt; ✔️ resolved topic</a> ).</p>",
+        "id": 1208733,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623689655
+    },
+    {
+        "content": "<p>Any thoughts on placeholder boxes?</p>",
+        "id": 1208922,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1623698639
+    },
+    {
+        "content": "<p>Hm, it's interesting, but I think we wouldn't want to clutter <em>all</em> topics with placeholder boxes, and I'm not sure there's a coherent way to only display them sometimes. In the current design, any topic could potentially be resolved.</p>",
+        "id": 1208925,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623698956
+    },
+    {
+        "content": "<p>I agree about it being challenging, but the alignment differences between resolved and other topics are not great.</p>",
+        "id": 1208947,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1623700722
+    },
+    {
+        "content": "<p>Do folks think it would look better to have the \"resolved\" icon aligned to the left of where topic names start? We should be able to play with the alignment rather than adding an icon to all the unresolved topics.</p>",
+        "id": 1209175,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1623707328
+    },
+    {
+        "content": "<p>yes on the left</p>",
+        "id": 1212131,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1623913543
+    },
+    {
+        "content": "<p>Yeah, so to back up a bit, my theory for this is that we'd encode resolved topics in the topic name starting with the checkmark, but clients that wanted to be fancy could strip the checkmark and display a fancier indication in the gutter to the left of the topic name instead.  (And I imagine the webapp would do so).  The nice thing about this encoding is that it works nicely for contexts where we just have plain-text, like the placeholder and input box here:</p>\n<p><a href=\"/user_uploads/2/b8/HQ_zeeejcAITcbSumfaVkOTa/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/b8/HQ_zeeejcAITcbSumfaVkOTa/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/b8/HQ_zeeejcAITcbSumfaVkOTa/image.png\"></a></div>",
+        "id": 1212401,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623947926
+    },
+    {
+        "content": "<p>And then full-featured clients can do <code>topic.startswith(RESOLVED_PREFIX)</code> checks to determine whether to do custom logic that would result in nicer formatting (e.g. putting the checkmark in its own column), while still having simple clients (or just older versions of clients that predate this feature) able to display resolved topics in a way that will be perfectly intelligible to humans, if a bit imperfectly designed.</p>",
+        "id": 1212402,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623948253
+    },
+    {
+        "content": "<p>Thoughts on merging this implementation as written and then opening follow-up issues for each of the clients to do fancier formatting for the \"resolved topic\" feature in the left sidebar equivalents, narrow support for an <code>is:resolved</code> keyword, etc.?  </p>\n<p>The other nice thing about this architecture is that it's very cheap to undo if we decide it's wrong; the only backend code is the logic for sending the \"has marked this topic as resolved\" notifications, so the rest is just the convention of <code>unicode checkmark, space</code> at the start of a message's topic.  So if we removed the feature or replaced its design, there wouldn't be any messy database migrations required.</p>",
+        "id": 1212403,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1623948412
+    },
+    {
+        "content": "<p>That plan makes a lot of sense to me.</p>",
+        "id": 1213878,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1624039548
+    },
+    {
+        "content": "<p>One thing we should discuss at least briefly here and decide explicitly, because it'll be effectively part of the API, is <em>which</em> Unicode check mark we're using. There are at least four of them:</p>\n<div class=\"codehilite\"><pre><span></span><code>$ unicode --brief -r &#39;check mark&#39;\n✅ U+2705 WHITE HEAVY CHECK MARK\n✓ U+2713 CHECK MARK\n✔ U+2714 HEAVY CHECK MARK\n🗸 U+1F5F8 LIGHT CHECK MARK\n…\n</code></pre></div>",
+        "id": 1213880,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1624039781
+    },
+    {
+        "content": "<p>In the ZT UI we currently use <code>CHECK_MARK = \"✓\"</code> which I assume is the 2nd of those. The 3rd looks good, but if it's the current one in the prototype then it's not ideal as it breaks our rendering.<br>\n(the other two cause rendering issues too, and the last one doesn't show for me)</p>",
+        "id": 1213909,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624041308
+    },
+    {
+        "content": "<p>I think the third one (<code>✔</code> U+2714 HEAVY CHECK MARK) is indeed the one the current prototype is using.</p>",
+        "id": 1214045,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1624045214
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"2406\">Neil Pilgrim (neiljp)</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1213909\">said</a>:</p>\n<blockquote>\n<p>the last one doesn't show for me</p>\n</blockquote>\n<p>Sorry, my message may have been ambiguous -- there's only four of them, and the last line is an ellipsis. (The actual command I quoted has some other output, like <code>⍻</code> U+237B NOT CHECK MARK, which wouldn't be helpful <span aria-label=\"upside down\" class=\"emoji emoji-1f643\" role=\"img\" title=\"upside down\">:upside_down:</span> and I edited out.)</p>\n<p>Did you mean the ellipsis, or the fourth check mark <code>🗸</code> U+1F5F8 LIGHT CHECK MARK?</p>",
+        "id": 1214048,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1624045320
+    },
+    {
+        "content": "<p>A few more:</p>\n<div class=\"codehilite\"><pre><span></span><code>☑ U+2611 BALLOT BOX WITH CHECK\n🗹 U+1F5F9 BALLOT BOX WITH BOLD CHECK\n</code></pre></div>",
+        "id": 1214060,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1624045534
+    },
+    {
+        "content": "<p>Yeah. I filtered those out initially, because the \"ballot box\" thing doesn't seem apropos. But their glyphs do come with those nice square boxes, which suggest a checked-off item on a todo list.</p>",
+        "id": 1214094,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1624045996
+    },
+    {
+        "content": "<p>We might consider having the web app use a non-unicode icon for this, to make it seem a little more like a \"native\" feature (along with alignment tweaks, etc). We'll still need to choose which codepoint to use, and that'll show up in clients that don't have explicit support for the feature, but we shouldn't feel too boxed in by the exact set of icons available, IMO.</p>",
+        "id": 1214139,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1624046821
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/16/lAHBmJi0L0y9XEqZCsRKGw-4/0000-recent.png\">definitely this icon should be something more in line with the other stuff in that UI</a> (although that's sort of orthogonal)</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/16/lAHBmJi0L0y9XEqZCsRKGw-4/0000-recent.png\" title=\"definitely this icon should be something more in line with the other stuff in that UI\"><img src=\"/user_uploads/2/16/lAHBmJi0L0y9XEqZCsRKGw-4/0000-recent.png\"></a></div>",
+        "id": 1214184,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1624046881
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17945\">@Wesley Aptekar-Cassels</span> that icon is already changed in master, let me deploy <a href=\"http://chat.zulip.org\">chat.zulip.org</a>.</p>",
+        "id": 1214217,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624049526
+    },
+    {
+        "content": "<p>I think we should exclude the ballot box versions from further consideration, because I think they'll not look great in the full range of additional contexts for this feature (E.g. in an email notification, compose box placeholders, etc.)</p>",
+        "id": 1214219,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624049624
+    },
+    {
+        "content": "<p>And also they're suggestive of the idea that there'd be a box sans-checkmark somewhere, and that's not currently envisioned.</p>",
+        "id": 1214221,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624049689
+    },
+    {
+        "content": "<ul>\n<li>I seem to recall \"WHITE HEAVY CHECK MARK\" isn't a good choice because it has a color encoded, and thus does the wrong thing on the day theme?</li>\n</ul>",
+        "id": 1214222,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624049934
+    },
+    {
+        "content": "<ul>\n<li>And the fourth checkmark doesn't render for me, which makes me worry that it's a less implemented character:</li>\n</ul>\n<p><a href=\"/user_uploads/2/b0/XDsvXP6YZQXXI6gyCkaIRcnU/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/b0/XDsvXP6YZQXXI6gyCkaIRcnU/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/b0/XDsvXP6YZQXXI6gyCkaIRcnU/image.png\"></a></div>",
+        "id": 1214224,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624050026
+    },
+    {
+        "content": "<p>So I think the main question is whether we want U+2713 CHECK MARK or U+2714 HEAVY CHECK MARK?</p>",
+        "id": 1214225,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624050060
+    },
+    {
+        "content": "<p>I think I originally tried ✓ CHECK MARK, and found it didn't seem visible enough, which is why I originally picked ✔ HEAVY CHECK MARK.  I guess I'm not sure if that will vary by OS, so it may be worth folks on various platforms posting screenshots of this messge.</p>",
+        "id": 1214230,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624050484
+    },
+    {
+        "content": "<p>(The screenshot I took above is from Greg's code block and thus in our code block font, which isn't where this will normally appear, so should be ignored for thinking about the visuals).</p>",
+        "id": 1214234,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624050539
+    },
+    {
+        "content": "<p>Here's my Linux screenshot:<br>\n<a href=\"/user_uploads/2/19/-dVoThnBb_hP6bNRD_LcIZz_/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/19/-dVoThnBb_hP6bNRD_LcIZz_/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/19/-dVoThnBb_hP6bNRD_LcIZz_/image.png\"></a></div>",
+        "id": 1214237,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624050570
+    },
+    {
+        "content": "<p>[Mentioning ✓ to intentionally trigger a Zulip rendering bug to make the following characters display how I intended.] The current prototype is using U+2714 HEAVY CHECK MARK with U+FE0F VARIATION SELECTOR-16 (✔️). The variation selector causes it to render as an emoji that varies by OS. A plain U+2714 HEAVY CHECK MARK (✔) would be displayed from our Source Sans 3 web font.</p>",
+        "id": 1214238,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1624050663
+    },
+    {
+        "content": "<p>On my system the emoji variant actually displays in a dark grey that’s hard to make out in night mode.</p>",
+        "id": 1214243,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1624050798
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> ahh, I see, I think I agree we should remove that selector and just use U+2714.</p>",
+        "id": 1214336,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624058868
+    },
+    {
+        "content": "<p>We can change that now and then do a little hand-migration on <a href=\"http://chat.zulip.org\">chat.zulip.org</a> to remove the <code>U+FE0F</code> from topics we've already marked as resolved in this server (I don't think it likely anyone else has done so yet, unless they upgraded from Git in the last 24 hours).</p>",
+        "id": 1214337,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624058907
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1214234\">said</a>:</p>\n<blockquote>\n<p>(The screenshot I took above is from Greg's code block and thus in our code block font, which isn't where this will normally appear, so should be ignored for thinking about the visuals).</p>\n</blockquote>\n<p>Ah, the reason I used a code block there is to prevent Zulip from taking the characters and re-interpreting them as Zulip emoji. I'm not sure how to write a Zulip message that renders such a character as the plain character but in the non-code font.</p>\n<p>I think in the current design that's basically intended to be impossible -- which is inconvenient for discussions <em>about</em> emoji like this one -- though there are bugs like <a href=\"https://github.com/zulip/zulip/pull/11767\">#11767</a>, and I guess the bug that Anders used in his message. (I think I may not know about that one.)</p>",
+        "id": 1214405,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1624063121
+    },
+    {
+        "content": "<p>Any objection to my changing the character to remove the <code>VARIATION SELECTOR</code>?</p>",
+        "id": 1214407,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624063325
+    },
+    {
+        "content": "<p>For thinking about the visuals, I think it's actually about equally important to see how the emoji look in a font designed for code as in one designed for prose. The code-style fonts are the ones that appear in a terminal. If the web/desktop app and the mobile app end up with some fancier indication for resolved topics in the most common places they appear, then uses in a terminal (perhaps ZT, but also where someone's interacting over the API, or looking in the database, etc.) will likely be a large fraction of the remaining places the character itself appears.</p>",
+        "id": 1214409,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1624063387
+    },
+    {
+        "content": "<p>Removing the variation selector is probably good. In contexts where we know we can make the fancier emoji show up well, we're likely to do something fancier than that anyway.</p>",
+        "id": 1214410,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1624063447
+    },
+    {
+        "content": "<p>I think it's potentially pretty hard for us to do something fancier in places like the compose box placeholder and in the subject lines of missed-message emails.</p>",
+        "id": 1214411,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624063466
+    },
+    {
+        "content": "<p>Those contexts, as well as tools like zulip-archive, are likely much more common than terminal clients.</p>",
+        "id": 1214412,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624063500
+    },
+    {
+        "content": "<p>True, the missed-message subject lines are pretty far out of our control for how they're displayed.</p>",
+        "id": 1214414,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1624063576
+    },
+    {
+        "content": "<p>zulip-archive I'd include in the category where we can control the styling however we want. It's just HTML and CSS, generated by some code.</p>",
+        "id": 1214415,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1624063610
+    },
+    {
+        "content": "<p>Yeah, that's fair.  There's probably also a bunch of other API contexts that we can control but might not be excited to.</p>",
+        "id": 1214416,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624063675
+    },
+    {
+        "content": "<p>OK, merged the two commits ending with <a href=\"https://github.com/zulip/zulip/commit/10dcc4ac98277b505ca3ddbcd4feed6b8b1af261\">10dcc4ac98277b505ca3ddbcd4feed6b8b1af261</a>.</p>",
+        "id": 1214418,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624063714
+    },
+    {
+        "content": "<p>(I had not intended to have that extra character there, so given nobody arguing for it, we should remove it quickly to avoid creating more data with the incorrect style)</p>",
+        "id": 1214421,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624063785
+    },
+    {
+        "content": "<p>I'm doing a <a href=\"http://chat.zulip.org\">chat.zulip.org</a> deployment now, and also updating the database for existing topics that have been resolved, so that \"unresolve\" works correctly here.</p>",
+        "id": 1214422,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624063810
+    },
+    {
+        "content": "<p>This looks fine on ZT now <span aria-label=\"tada\" class=\"emoji emoji-1f389\" role=\"img\" title=\"tada\">:tada:</span></p>",
+        "id": 1214434,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624064484
+    },
+    {
+        "content": "<p>Thanks for flagging this!</p>",
+        "id": 1214436,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624064619
+    },
+    {
+        "content": "<p>Bug with resolved topics?<br>\nI was in <a class=\"stream-topic\" data-stream-id=\"7\" href=\"/#narrow/stream/7-test-here/topic/html.20elements.20in.20code.20blocks\">#test here &gt; html elements in code blocks</a>  and was in ZT testing something. When I was trying to edit a previous message not knowing I had crossed the edit time, I got the \"marked as  unresolved\" message from Notification Bot (when I sent the message). Is this due to ZT or the server?</p>",
+        "id": 1214851,
+        "sender_full_name": "Sai Rohitth Chiluka",
+        "timestamp": 1624200222
+    },
+    {
+        "content": "<p>I can confirm that I had this behavior without obviously touching the resolution menus - see <a class=\"stream-topic\" data-stream-id=\"7\" href=\"/#narrow/stream/7-test-here/topic/ZT.2065\">#test here &gt; ZT 65</a></p>",
+        "id": 1214891,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624211897
+    },
+    {
+        "content": "<p>Perhaps unrelated, but it should be noted that renaming a resolved topic to remove the checkmark unresolves it; you don't have to go through the resolution menu, specifically.</p>",
+        "id": 1215030,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1624259044
+    },
+    {
+        "content": "<p>Do those topics have a resolved state? I've not checked and currently on mobile so not sure if I can.</p>",
+        "id": 1215032,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624259668
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1215030\">said</a>:</p>\n<blockquote>\n<p>Perhaps unrelated, but it should be noted that renaming a resolved topic to remove the checkmark unresolves it; you don't have to go through the resolution menu, specifically.</p>\n</blockquote>\n<p>It might be related to this, maybe ZT has to do some checks before a name change?</p>",
+        "id": 1215033,
+        "sender_full_name": "Sai Rohitth Chiluka",
+        "timestamp": 1624259738
+    },
+    {
+        "content": "<p>The names of these topics don't start with checkmarks, so they are currently not resolved. There is no database record of the state -- it's just about the name. So what you see on mobile is accurate.</p>",
+        "id": 1215038,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1624260395
+    },
+    {
+        "content": "<blockquote>\n<p>Perhaps unrelated, but it should be noted that renaming a resolved topic to remove the checkmark unresolves it; you don't have to go through the resolution menu, specifically.</p>\n</blockquote>\n<p>It seems that a no-op topic edit (with a topic that does not have a check-mark) also triggers a \"marked as unresolved\" notification, is this behavior intended?</p>",
+        "id": 1215042,
+        "sender_full_name": "Hari Prashant",
+        "timestamp": 1624261842
+    },
+    {
+        "content": "<p>Even if the topic was marked as resolved, this doesn't seem to unresolve the topic ( remove the check mark ) but shows the bot message.<br>\nSee <a class=\"stream-topic\" data-stream-id=\"7\" href=\"/#narrow/stream/7-test-here/topic/.E2.9C.94.20resolved.20topic\">#test here &gt; ✔ resolved topic</a></p>",
+        "id": 1215044,
+        "sender_full_name": "Sai Rohitth Chiluka",
+        "timestamp": 1624262166
+    },
+    {
+        "content": "<blockquote>\n<p>Even if the topic was marked as resolved, this doesn't seem to unresolve the topic ( remove the check mark ) but show the bot message.</p>\n</blockquote>\n<p>I don't believe a no-op topic edit is meant to change the state to resolved/unresolved. The possible bug here is notifications being triggered on no-op topic edits without a change of state.</p>",
+        "id": 1215051,
+        "sender_full_name": "Hari Prashant",
+        "timestamp": 1624263267
+    },
+    {
+        "content": "<p>Hmm, here's the logic, maybe someone can spot the bug:</p>\n<div class=\"codehilite\"><pre><span></span><code>    if (\n        topic_name is not None\n        and new_stream is None\n        and content is None\n        and len(changed_messages) &gt; 0\n    ):\n        assert stream_being_edited is not None\n        maybe_send_resolve_topic_notifications(\n            user_profile=user_profile,\n            stream=stream_being_edited,\n            old_topic=orig_topic_name,\n            new_topic=topic_name,\n        )\n</code></pre></div>\n<div class=\"codehilite\"><pre><span></span><code>RESOLVED_TOPIC_PREFIX = &quot;✔ &quot;\n\ndef maybe_send_resolve_topic_notifications(\n    *,\n    user_profile: UserProfile,\n    stream: Stream,\n    old_topic: str,\n    new_topic: str,\n) -&gt; None:\n    if old_topic.lstrip(RESOLVED_TOPIC_PREFIX) != new_topic.lstrip(RESOLVED_TOPIC_PREFIX):\n        return\n     ... # Will send the notification if we didn&#39;t return above\n</code></pre></div>",
+        "id": 1215265,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624302011
+    },
+    {
+        "content": "<p>Yeah, this is buggy.</p>",
+        "id": 1215268,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624302052
+    },
+    {
+        "content": "<p>We would need a situation where we requested a topic-only edit of the server, and the topics only differ in having a prefix of <code>check space</code> added or removed.</p>",
+        "id": 1215269,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624302078
+    },
+    {
+        "content": "<p>I suspect (but have not checked) that we strip leading whitespace before getting here -- we should confirm that theory.</p>",
+        "id": 1215270,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624302100
+    },
+    {
+        "content": "<p>But even with that, I think if you send an API request to the server to change topic <code>foo</code> to <code>foo</code>, this logic at least will treat that as an \"unresolve topic\" request.  (I would have expected such situations to have been determined to be a noop earlier, so that may be the bug in fact)</p>",
+        "id": 1215272,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624302184
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16383\">@Hari Prashant</span> <span class=\"user-mention\" data-user-id=\"19275\">@Sai Rohitth Chiluka</span> I assume there is also a client bug, that Zulip Terminal is incorrectly sending a \"topic edit\" request to the server that would be a noop.</p>",
+        "id": 1215274,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624302257
+    },
+    {
+        "content": "<p>I don't think I can get the webapp to actually send such a request to the server without deleting code <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1215275,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624302297
+    },
+    {
+        "content": "<p>OK, I've confirmed that topics have <code>.strip()</code> called on them before being passed to this logic.</p>",
+        "id": 1215276,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624302355
+    },
+    {
+        "content": "<p>I suspect this is the right fix for the server.  Needs testing.</p>\n<div class=\"codehilite\"><pre><span></span><code>diff --git a/zerver/lib/actions.py b/zerver/lib/actions.py\nindex fed1e2073f..c29b163768 100644\n--- a/zerver/lib/actions.py\n+++ b/zerver/lib/actions.py\n@@ -2852,6 +2852,9 @@ def check_update_message(\n     # use REQ_topic as well (or otherwise are guaranteed to strip input).\n     if topic_name is not None:\n         topic_name = topic_name.strip()\n+        if topic_name == message.topic_name():\n+            topic_name = None\n+\n     validate_message_edit_payload(message, stream_id, topic_name, propagate_mode, content)\n\n     is_no_topic_msg = message.topic_name() == &quot;(no topic)&quot;\n</code></pre></div>\n<p>Would one of the terminal folks be up for confirming this fixes your issue?</p>",
+        "id": 1215278,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624302507
+    },
+    {
+        "content": "<p>As a sidenote, we should probably extend the API documentation to cover \"resolve topic\", in addition to writing a /help/ article for it.</p>",
+        "id": 1215279,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624302536
+    },
+    {
+        "content": "<p>ZT doesn't make that distinction right now, and we should make that change. However, at some level I'd consider that's an optimization, and we were influenced by the presence and intent of <span class=\"user-mention\" data-user-id=\"4976\">@Cyphase</span>'s PRs (<a href=\"https://github.com/zulip/zulip/pull/16317\">#16317</a> for one) which I understand would clean things up at the server end instead.</p>",
+        "id": 1215282,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624302954
+    },
+    {
+        "content": "<p>It would be really nice to see that rebased and merged; I think I may have just fixed on of the bugs it addressed in response to this report.</p>",
+        "id": 1215283,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624302995
+    },
+    {
+        "content": "<p>It's possible someone else should pick that up, since <span class=\"user-mention\" data-user-id=\"4976\">@Cyphase</span> seems to have been busy for some time.  Anyone interested in addressing the comments on it and resubmitting it?</p>",
+        "id": 1215284,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624303086
+    },
+    {
+        "content": "<p>This is <a href=\"https://github.com/zulip/zulip-terminal/pull/1014\">#T1014</a>, if anyone from <span class=\"user-group-mention\" data-user-group-id=\"105\">@terminal</span> wants to take this up.</p>",
+        "id": 1215285,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624303218
+    },
+    {
+        "content": "<p>In any case, with this change it will now be a client error to send a noop topic edit, so you'll need to fix it client side.</p>",
+        "id": 1215286,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624303248
+    },
+    {
+        "content": "<p>You mean there'll be a non-success response? That kind of response should actually be handled at a lower level already in ZT, so that shouldn't break the client.</p>",
+        "id": 1215295,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624303494
+    },
+    {
+        "content": "<p>Correct.  (And sounds good)</p>",
+        "id": 1215297,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624303503
+    },
+    {
+        "content": "<p>I merged <a href=\"https://github.com/zulip/zulip/commit/e231a03eff6cce62243284ebcf7f06f798715a78\">e231a03eff6cce62243284ebcf7f06f798715a78</a> and its parent to cover these issues.</p>",
+        "id": 1215305,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624304740
+    },
+    {
+        "content": "<p>One corner case worth highlighting: We currently never trigger resolve/unresolve notifications when changing a topic in any way other than adding/remove <code>RESOLVED_TOPIC_PREFIX</code>.  I think that's probably reasonable because your intent is kinda unclear when you change <code>foo</code> to <code>{RESOLVED_TOPIC_PREFIX} bar</code>, e.g. you could be trying to merge topics or something after having resolved one copy of a set of duplicates?  Hard to say, so seems best not to do anything special.</p>",
+        "id": 1215306,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624304825
+    },
+    {
+        "content": "<p>Will validate this on next deploy <span aria-label=\"+1\" class=\"emoji emoji-1f44d\" role=\"img\" title=\"+1\">:+1:</span></p>",
+        "id": 1215336,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624306412
+    },
+    {
+        "content": "<p>I sort of appreciate the resolving messages, but it's a little spammy - hopefully less so now :)</p>",
+        "id": 1215337,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624306453
+    },
+    {
+        "content": "<p>Ah, I remember how I felt it was spammy - not necessarily the extra messages, but that they are considered as extra unreads, so if a number of topics are marked as resolved then there's a set of older topics with just one unread from the resolution.</p>",
+        "id": 1215340,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624306715
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"2406\">Neil Pilgrim (neiljp)</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1215282\">said</a>:</p>\n<blockquote>\n<p>ZT doesn't make that distinction right now, and we should make that change. However, at some level I'd consider that's an optimization, and we were influenced by the presence and intent of <span class=\"user-mention silent\" data-user-id=\"4976\">Cyphase</span>'s PRs (<a href=\"https://github.com/zulip/zulip/pull/16317\">#16317</a> for one) which I understand would clean things up at the server end instead.</p>\n</blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1215284\">said</a>:</p>\n<blockquote>\n<p>It's possible someone else should pick that up, since <span class=\"user-mention silent\" data-user-id=\"4976\">Cyphase</span> seems to have been busy for some time.  Anyone interested in addressing the comments on it and resubmitting it?</p>\n</blockquote>\n<p>I just saw a bunch of emails. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span> Sorry for my absence. I have some unpushed changes for those two PRs, including the Black migration, so let me at least push those by tomorrow, and then we can see about moving forward.</p>",
+        "id": 1215356,
+        "sender_full_name": "Cyphase",
+        "timestamp": 1624307384
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"4976\">@Cyphase</span> sounds great!</p>",
+        "id": 1215577,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624318947
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"2406\">Neil Pilgrim (neiljp)</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1215340\">said</a>:</p>\n<blockquote>\n<p>Ah, I remember how I felt it was spammy - not necessarily the extra messages, but that they are considered as extra unreads, so if a number of topics are marked as resolved then there's a set of older topics with just one unread from the resolution.</p>\n</blockquote>\n<p>Yeah, I think this is a problem that comes with marking topics as resolved some time after the last actual message to the topic.</p>",
+        "id": 1215579,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624318982
+    },
+    {
+        "content": "<p>We could certainly consider an option to allow having a \"marked as resolved\" messages be automatically marked as unread for everyone, but it'd be extra UI, could be somewhat confusing to folks who don't know about that option, etc.</p>",
+        "id": 1215580,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624319030
+    },
+    {
+        "content": "<p>One option might be akin to issue-tracking systems which have a \"comment and close\" option, so we'd have a \"send this message [X] also mark resolved\" or similar.</p>",
+        "id": 1215626,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624324367
+    },
+    {
+        "content": "<p>That would make it easier to ensure the \"closing\" message occurs with a notification too.</p>",
+        "id": 1215627,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624324473
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"2406\">Neil Pilgrim (neiljp)</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1215627\">said</a>:</p>\n<blockquote>\n<p>That would make it easier to ensure the \"closing\" message occurs with a notification too.</p>\n</blockquote>\n<p>Sorry, what do you mean by \"with a notification\"?</p>",
+        "id": 1215707,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624336937
+    },
+    {
+        "content": "<p>But yeah, I think one of the handful of UI extensions we may want to consider is a \"Send and mark resolved\" option.</p>",
+        "id": 1215708,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624336957
+    },
+    {
+        "content": "<p>Yeah, though I think with some frequency one wants to close the topic after whoever asked the question confirms that their issue is resolved.</p>",
+        "id": 1215744,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1624343721
+    },
+    {
+        "content": "<p>Yeah, it kinda depends on the situation what you want; the same being true for ticket tracker tools in general.</p>",
+        "id": 1216024,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624382017
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1215707\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"2406\">Neil Pilgrim (neiljp)</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1215627\">said</a>:</p>\n<blockquote>\n<p>That would make it easier to ensure the \"closing\" message occurs with a notification too.</p>\n</blockquote>\n<p>Sorry, what do you mean by \"with a notification\"?</p>\n</blockquote>\n<p>Basically what you inferred I think - there's a message and you mark it resolved at the same time (which causes an extra message from... notification bot? I'm not on web right now).</p>",
+        "id": 1216217,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624390048
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"2406\">Neil Pilgrim (neiljp)</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1215336\">said</a>:</p>\n<blockquote>\n<p>Will validate this on next deploy <span aria-label=\"+1\" class=\"emoji emoji-1f44d\" role=\"img\" title=\"+1\">:+1:</span></p>\n</blockquote>\n<p>It seems this is not so simple, as based on ZT behavior the server now rejects not just <code>old_topic==new_topic</code>, but also <code>old_topic==new_topic and old_content!=new_content</code> (due to the first part). There's no harm from the first case, since we didn't change the topic :) However, the second case feels like maybe what we'd ideally have, but is too strict compared to the previous implementation, and not backwards-compatible.<br>\nPossibly <span class=\"user-mention silent\" data-user-id=\"4976\">Cyphase</span>'s PR(s) were more forgiving?<br>\nWe can fixup ZT to make the optimization, but right now editing appears broken - unless I edit the topic every time ;)</p>",
+        "id": 1216238,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624390745
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2406\">@Neil Pilgrim (neiljp)</span> hmm, what is the error you get for that case?  I would not expect that based on the server change I made.</p>",
+        "id": 1217122,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624475717
+    },
+    {
+        "content": "<p>(I believe what I did is repace <code>old_topic=new_topic</code> with <code>new_topic=None</code> i.e. no topic change requested, and that combining with the existing \"new_topic=None, new_content=None, new_stream=None =&gt; error\" logic)</p>",
+        "id": 1217124,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624475754
+    },
+    {
+        "content": "<p>I'll need to check, but I believe the ZT code always sends the topic when updating, not necessarily always the content.</p>",
+        "id": 1217184,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624481260
+    },
+    {
+        "content": "<p>The message is ~\"Invalid propagate mode without topic edit\" when I send a messge content update but happen to send a topic no-op update too (as we do right now).<br>\n(approximate error since we have a message timeout)</p>",
+        "id": 1217188,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624481427
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2406\">@Neil Pilgrim (neiljp)</span> that sounds to me like you sent <code>propagate_mode</code> incorrectly as <code>change_all</code>, when it should be <code>change_one</code> if you're only editing one message.</p>",
+        "id": 1217199,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624482302
+    },
+    {
+        "content": "<p>I suspect we have it set to <code>change_later</code> by default, which I expect could trigger a similar issue. That said, shouldn't <code>propagate_mode</code> be tied to the topic-change decision? So if it is determined that it's unchanged then the mode is not relevant?</p>",
+        "id": 1217208,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624482710
+    },
+    {
+        "content": "<p>It's perhaps just how it's presented in the UI, but <code>change_one</code> &lt;=&gt; \"change only this message topic\", so that's confusing too - ie. it's topic-related, not \"I'm not making a topic change\".</p>",
+        "id": 1217213,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624482928
+    },
+    {
+        "content": "<p>Here's the check in the codebase:</p>\n<div class=\"codehilite\"><pre><span></span><code>    if propagate_mode != &quot;change_one&quot; and topic_name is None and stream_id is None:\n        raise JsonableError(_(&quot;Invalid propagate_mode without topic edit&quot;))\n</code></pre></div>\n<p>I stand by that as being reasonable -- the client is specifying detailed configuration for how to do a topic/stream edit, when not requesting one, and that suggests a client bug.</p>",
+        "id": 1217270,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624485219
+    },
+    {
+        "content": "<p>I'm happy to consider it a client bug; I suppose it depends how lenient the server wants to be with interpreting the endpoint, and how users have interpreted the docs to date wrt <code>propagate_mode</code>, eg</p>\n<ul>\n<li><a href=\"https://zulip.com/api/update-message#parameter-propagate_mode\">https://zulip.com/api/update-message#parameter-propagate_mode</a> - ambiguous; could indicate that <code>change_one</code> is required (if supplied, since optional) for just content edits (<code>Which message(s) should be edited;...</code>), but also suggests it's only related to topic changes (<code>This parameter determines both which messages get moved and also...</code>)</li>\n<li><a href=\"https://zulip.com/api/get-events#update_message\">https://zulip.com/api/get-events#update_message</a> - strongly indicates it's topics only (<code>The choice the editing user made about which messages should be affected by a stream/topic edit:...</code>)</li>\n</ul>\n<p>Ultimately, what does it mean to have <code>change_later</code> or <code>change_all</code> when the topic is unchanged?</p>\n<p>Given the complex multi-faceted nature of this endpoint (update one message content and/or a set of message topics) I can both understand the desire to be strict (simpler cleaner server implementation), but also to be lenient (cue Postel's law?).</p>",
+        "id": 1217289,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624487861
+    },
+    {
+        "content": "<p>I think the intent is that <code>propagate_mode</code> is required when changing the topic or stream, and otherwise optional (but the only valid value is the only valid value for a content-only edit, <code>propagate_one</code>).</p>",
+        "id": 1217326,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624494820
+    },
+    {
+        "content": "<p>The intent seems very clear now with your notes and the stricter code; I'm mainly querying whether this was previously sufficiently clear and the server might benefit from being more lenient on input for existing client code - plus that the API docs also need synchronizing (between the two above) and improving to reflect the intent to avoid future confusion :)<br>\n(I plan to investigate a ZT update in any case, but the point is independent of that)</p>",
+        "id": 1217340,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1624495407
+    },
+    {
+        "content": "<p>I think it's worth clarifying the API docs, certainly.  Let me take a pass at that.</p>",
+        "id": 1217862,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624553573
+    },
+    {
+        "content": "<p>Merged <a href=\"https://github.com/zulip/zulip/commit/6b67b18c4bee0f5253906cd25b46247a8a8d626e\">6b67b18c4bee0f5253906cd25b46247a8a8d626e</a> to address that.</p>",
+        "id": 1217868,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624553853
+    },
+    {
+        "content": "<p>I've opened issues for the various follow-ups that have been discussed for completing this feature:</p>\n<ul>\n<li><a href=\"https://github.com/zulip/zulip/pull/18988\">#18988</a> (UI for resolving topics in recipient bars).</li>\n<li><a href=\"https://github.com/zulip/zulip/pull/18989\">#18989</a> (fancier left sidebar display).</li>\n<li><a href=\"https://github.com/zulip/zulip/pull/18990\">#18990</a> (search support for <code>is:resolved</code> keyword)</li>\n</ul>",
+        "id": 1218049,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624565349
+    },
+    {
+        "content": "<p>We also need to document the feature.  I added a first pass at this here: <a href=\"https://github.com/zulip/zulip/commit/8aa05620d23db3acd517fff8797a1d9942157e6d\">8aa05620d23db3acd517fff8797a1d9942157e6d</a>.</p>\n<p>I think we should also advertise it in places like /features and a guide on \"Support workflows in Zulip\", but have not thought about where and how to do so.  <span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span> can I assume you'll track that less well-specified work?</p>",
+        "id": 1218083,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624568324
+    },
+    {
+        "content": "<p>I'll take an edit pass on the documentation.</p>",
+        "id": 1218209,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1624574464
+    },
+    {
+        "content": "<p>Want some feedback about which icon to choose (issue <a href=\"https://github.com/zulip/zulip/pull/18988\">#18988</a>):<br>\n<a href=\"/user_uploads/2/dd/lk87_yWNJ0G5x-Ivw-_2nigd/Screenshot-from-2021-06-25-04-09-35.png\">fa-check</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/dd/lk87_yWNJ0G5x-Ivw-_2nigd/Screenshot-from-2021-06-25-04-09-35.png\" title=\"fa-check\"><img src=\"/user_uploads/2/dd/lk87_yWNJ0G5x-Ivw-_2nigd/Screenshot-from-2021-06-25-04-09-35.png\"></a></div><p>OR</p>\n<p><a href=\"/user_uploads/2/68/W8gUsb9su0cRs4Tz_3VnyPbh/Screenshot-from-2021-06-25-04-10-07.png\">fa-check-circle</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/68/W8gUsb9su0cRs4Tz_3VnyPbh/Screenshot-from-2021-06-25-04-10-07.png\" title=\"fa-check-circle\"><img src=\"/user_uploads/2/68/W8gUsb9su0cRs4Tz_3VnyPbh/Screenshot-from-2021-06-25-04-10-07.png\"></a></div><p>For consistency, I believe <code>fa-check</code>?</p>\n<hr>\n<p>I've just skimmed this topic and want to ask why don't we just prepend the topic name with the \"resolved icon\"? (i.e. the icon should not be part of the topic name)</p>",
+        "id": 1218215,
+        "sender_full_name": "Akshat",
+        "timestamp": 1624575044
+    },
+    {
+        "content": "<p>Yeah, <code>fa-check</code> seems right to me.</p>",
+        "id": 1218259,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624576106
+    },
+    {
+        "content": "<blockquote>\n<p>I've just skimmed this topic and want to ask why don't we just prepend the topic name with the \"resolved icon\"? (i.e. the icon should not be part of the topic name)</p>\n</blockquote>\n<p>We want the checkmark to show up everywhere, e.g. the name of the topic when you're sending to it.</p>",
+        "id": 1218285,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1624577964
+    },
+    {
+        "content": "<p>Can we have a story for not breaking topic links before we release this widely? Even if it's just a hack like redirecting to the resolved/unresolved version if the topic you got linked to doesn't exist.</p>",
+        "id": 1218288,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1624578059
+    },
+    {
+        "content": "<p>I think basically the plan is that we'll do the proposal I described in <a href=\"https://github.com/zulip/zulip/issues/15290\">https://github.com/zulip/zulip/issues/15290</a>, which will address permanent links to a message in context.</p>\n<p>I'm not sure if we want to use that exact plan for links to resolved topics, but something like it should work.</p>",
+        "id": 1218325,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624580665
+    },
+    {
+        "content": "<p>I do not at present consider that to be a blocker for having \"Resolve topic\" available in Zulip Cloud, since I don't think any options under discussion for addressing that involve changing the data model.</p>",
+        "id": 1218326,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624580775
+    },
+    {
+        "content": "<p>But I do think <a href=\"https://github.com/zulip/zulip/pull/15290\">#15290</a> (including specifically thinking about \"Resolve topic\") is a blocker for 5.0.</p>",
+        "id": 1218327,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624580816
+    },
+    {
+        "content": "<p>that issue doesn't describe a solution for the usecase of someone copying a topic URL from the URL bar, does it?</p>",
+        "id": 1218328,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1624580835
+    },
+    {
+        "content": "<p>I just added a reference to that situation; feel free to add a more extended comment. (I'm in a bit of a hurry right now).</p>",
+        "id": 1218329,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624580929
+    },
+    {
+        "content": "<p>Basically, I think that it's acceptable (although still pretty bad) to have a link break when someone renames a topic, in a way that it isn't acceptable for a link to break when someone clicks on a \"resolve topic\" button. How was the person who clicked that button supposed to know that it was going to break the links?</p>\n<p>One of the really strong selling points of Zulip is that you can look back through your message history and have chat be an actual knowledge base, since topics let things stay organized. Given that, giving users a easy button to break links to topics seems like a bad plan.</p>",
+        "id": 1218333,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1624581316
+    },
+    {
+        "content": "<p>Yeah, I agree, and thus we should consider <a href=\"https://github.com/zulip/zulip/pull/15290\">#15290</a> to be a timely priority.</p>",
+        "id": 1218336,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624581397
+    },
+    {
+        "content": "<p>I'll see if I can find time to work on it tomorrow.</p>",
+        "id": 1218337,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624581415
+    },
+    {
+        "content": "<p><a href=\"#narrow/stream/137-feedback/topic/Solved.2Fclosed.20topic/near/722253\">https://chat.zulip.org/#narrow/stream/137-feedback/topic/Solved.2Fclosed.20topic/near/722253</a></p>",
+        "id": 1218969,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1624604193
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17026\">Akshat (akshatdalton)</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1218215\">said</a>:</p>\n<blockquote>\n<p>Want some feedback about which icon to choose (issue <a href=\"https://github.com/zulip/zulip/pull/18988\">#18988</a>):<br>\n<a href=\"/user_uploads/2/dd/lk87_yWNJ0G5x-Ivw-_2nigd/Screenshot-from-2021-06-25-04-09-35.png\">fa-check</a> </p>\n<p>OR</p>\n<p><a href=\"/user_uploads/2/68/W8gUsb9su0cRs4Tz_3VnyPbh/Screenshot-from-2021-06-25-04-10-07.png\">fa-check-circle</a> </p>\n<p>For consistency, I believe <code>fa-check</code>?</p>\n<hr>\n<p>I've just skimmed this topic and want to ask why don't we just prepend the topic name with the \"resolved icon\"? (i.e. the icon should not be part of the topic name)</p>\n</blockquote>\n<p>like my idea <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span> <a href=\"#narrow/stream/137-feedback/topic/Solved.2Fclosed.20topic/near/722253\">https://chat.zulip.org/#narrow/stream/137-feedback/topic/Solved.2Fclosed.20topic/near/722253</a></p>",
+        "id": 1218970,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1624604220
+    },
+    {
+        "content": "<p>I think this message and the next few after it are the answer to your question:</p>\n<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1212401\">said</a>:</p>\n<blockquote>\n<p>Yeah, so to back up a bit, my theory for this is that we'd encode resolved topics in the topic name starting with the checkmark, but clients that wanted to be fancy could strip the checkmark and display a fancier indication in the gutter to the left of the topic name instead.  (And I imagine the webapp would do so).  The nice thing about this encoding is that it works nicely for contexts where we just have plain-text, like the placeholder and input box here:</p>\n<p><a href=\"/user_uploads/2/b8/HQ_zeeejcAITcbSumfaVkOTa/image.png\">image.png</a></p>\n</blockquote>",
+        "id": 1220899,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1624916063
+    },
+    {
+        "content": "<p>(There has been quite a lot of discussion on this thread -- so, perfectly reasonable to have missed that when scanning through)</p>",
+        "id": 1220901,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1624916104
+    },
+    {
+        "content": "<p>Yeah, <a href=\"https://github.com/zulip/zulip/pull/18988\">#18988</a> and <a href=\"https://github.com/zulip/zulip/pull/18989\">#18989</a> cover those items <span class=\"user-mention\" data-user-id=\"10544\">@Andrea Soc 🏂</span> and are being worked on.</p>",
+        "id": 1222504,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624992914
+    },
+    {
+        "content": "<p>I'd be surprised if we did a major release without both of them included.</p>",
+        "id": 1222505,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1624992923
+    },
+    {
+        "content": "<p>I didn't read the entire thread here but am I right in assuming that this would include/provide the ability to \"lock\" topics?  We occasionally have topics that begin to get heated or inappropriate and while I could just delete them, as an admin/moderator I would generally prefer to lock them where needed so that people can see how others behave.  Is locking topics coming soon?</p>",
+        "id": 1222699,
+        "sender_full_name": "Jonathan van Clute",
+        "timestamp": 1624999800
+    },
+    {
+        "content": "<p>No, I don't think that's in the current design for this feature.</p>\n<p>I think the implementation of that feature idea would be fairly separate from this one. Want to start a new thread to discuss your use case there?</p>",
+        "id": 1222706,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1625000146
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"18203\">@Jonathan van Clute</span> this feature will not prevent posting, but we do plan to have a warning before posting to a topic marked as resolved.  I suspect that, combined with a post from a moderator, may work for many situations one would want to lock a thread in practice.</p>\n<p>But I agree with Greg that locking a topic would need to be a separate feature.</p>",
+        "id": 1222726,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625001382
+    },
+    {
+        "content": "<p>We have an issue in our tracker for locking topics: <a href=\"https://github.com/zulip/zulip/pull/8041\">#8041</a>. Please feel free to comment there as well.</p>",
+        "id": 1222745,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1625002554
+    },
+    {
+        "content": "<p>Regarding <a href=\"https://github.com/zulip/zulip/pull/18989\">#18989</a>, I have some work but it has some issues with long topic name which I am trying to resolve. I have used fa-check icon just for trying things out.<br>\n<a href=\"/user_uploads/2/f2/8iCKQu3KNNHEsE4vT2tPruJZ/Peek-2021-06-30-23-30.gif\">Peek-2021-06-30-23-30.gif</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/f2/8iCKQu3KNNHEsE4vT2tPruJZ/Peek-2021-06-30-23-30.gif\" title=\"Peek-2021-06-30-23-30.gif\"><img src=\"/user_uploads/2/f2/8iCKQu3KNNHEsE4vT2tPruJZ/Peek-2021-06-30-23-30.gif\"></a></div>",
+        "id": 1223274,
+        "sender_full_name": "Gaurav Pandey (ligmitz)",
+        "timestamp": 1625076290
+    },
+    {
+        "content": "<p>it also seems like it subtly adjusts the vertical spacing, which looks like a bug</p>",
+        "id": 1223279,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1625076847
+    },
+    {
+        "content": "<p>Yeah, I guess it maybe due to the excess height of the icon which we will replace with a check character anyways.</p>",
+        "id": 1223281,
+        "sender_full_name": "Gaurav Pandey (ligmitz)",
+        "timestamp": 1625077287
+    },
+    {
+        "content": "<p>Here's an updated GIF:<br>\n<a href=\"/user_uploads/2/14/dexn2CDaMaVIINO0jq8D-LM7/Peek-2021-07-01-13-49.gif\">Peek-2021-07-01-13-49.gif</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/14/dexn2CDaMaVIINO0jq8D-LM7/Peek-2021-07-01-13-49.gif\" title=\"Peek-2021-07-01-13-49.gif\"><img src=\"/user_uploads/2/14/dexn2CDaMaVIINO0jq8D-LM7/Peek-2021-07-01-13-49.gif\"></a></div><p>I'll open a PR if it looks good.</p>",
+        "id": 1223573,
+        "sender_full_name": "Gaurav Pandey (ligmitz)",
+        "timestamp": 1625127773
+    },
+    {
+        "content": "<p>Created <a href=\"https://github.com/zulip/zulip/pull/19080\">#19080</a> if anybody wants to test :)</p>",
+        "id": 1223584,
+        "sender_full_name": "Gaurav Pandey (ligmitz)",
+        "timestamp": 1625132107
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17516\">Gaurav Pandey (ligmitz)</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1223584\">said</a>:</p>\n<blockquote>\n<p>Created <a href=\"https://github.com/zulip/zulip/pull/19080\">#19080</a> if anybody wants to test <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>\n</blockquote>\n<p>how to for test it?? <span class=\"user-mention\" data-user-id=\"17516\">@Gaurav Pandey (ligmitz)</span></p>",
+        "id": 1223625,
+        "sender_full_name": "Andrea Soc",
+        "timestamp": 1625151706
+    },
+    {
+        "content": "<p>This can be done by checking out pull request locally in dev environment. Steps are described at <a href=\"https://zulip.readthedocs.io/en/latest/git/collaborate.html?highlight=pull%20request%20locally#check-out-a-pull-request-locally\">https://zulip.readthedocs.io/en/latest/git/collaborate.html?highlight=pull%20request%20locally#check-out-a-pull-request-locally</a></p>",
+        "id": 1223626,
+        "sender_full_name": "Purushottam Tiwari",
+        "timestamp": 1625151932
+    },
+    {
+        "content": "<p>I don't think this is the right approach — the width will depend on the font, right?</p>",
+        "id": 1223645,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1625157278
+    },
+    {
+        "content": "<p>The width is set so that the topic name starts at the same vertical margin as before.</p>",
+        "id": 1223654,
+        "sender_full_name": "Gaurav Pandey (ligmitz)",
+        "timestamp": 1625158315
+    },
+    {
+        "content": "<p>Yes, but does that work on all fonts? Not everyone will be using the same font as you.</p>",
+        "id": 1223656,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1625158407
+    },
+    {
+        "content": "<p>Yeah, but we are using a min-width property. So if font-size does increase the width, it will affect all the characters by equal amount and we should be able to retain the vertical alignment. The font thing was mentioned in the issue by Tim so I have added that property specifically.</p>",
+        "id": 1223670,
+        "sender_full_name": "Gaurav Pandey (ligmitz)",
+        "timestamp": 1625159202
+    },
+    {
+        "content": "<p>It looks good when I play with the PR with <code>CTRL-+</code>.</p>",
+        "id": 1223706,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1625165098
+    },
+    {
+        "content": "<p>I think we should align the checkmarks higher:</p>\n<p><a href=\"/user_uploads/2/1e/dxTueLWNer8j89hdTsaGcymM/Screen-Shot-2021-07-01-at-12.03.49-PM.png\">Screen-Shot-2021-07-01-at-12.03.49-PM.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/1e/dxTueLWNer8j89hdTsaGcymM/Screen-Shot-2021-07-01-at-12.03.49-PM.png\" title=\"Screen-Shot-2021-07-01-at-12.03.49-PM.png\"><img src=\"/user_uploads/2/1e/dxTueLWNer8j89hdTsaGcymM/Screen-Shot-2021-07-01-at-12.03.49-PM.png\"></a></div>",
+        "id": 1223717,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1625166266
+    },
+    {
+        "content": "<p>Agreed on vertical alignment; I think that character just happens to by vertically structured kinda like a <code>g</code> where it naturally sits below the center.</p>",
+        "id": 1223723,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625167287
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17516\">Gaurav Pandey (ligmitz)</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1223670\">said</a>:</p>\n<blockquote>\n<p>Yeah, but we are using a min-width property. So if font-size does increase the width, it will affect all the characters by equal amount and we should be able to retain the vertical alignment. The font thing was mentioned in the issue by Tim so I have added that property specifically.</p>\n</blockquote>\n<p>Even if this CSS works, it's not obvious from reading it that it works.  While we could address that with a comment, I think we'd be better off with something that declared what we mean (E.g. a <code>float: right</code> element positioned to the left of the topic name field).</p>",
+        "id": 1223725,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625167359
+    },
+    {
+        "content": "<blockquote>\n<p>Agreed on vertical alignment; I think that character just happens to by vertically structured kinda like a <code>g</code> where it naturally sits below the center.</p>\n</blockquote>\n<p>No, the character is aligned very close to the baseline, as you can see on CZO today. The CSS in this PR just declares the wrong baseline.</p>",
+        "id": 1223954,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1625188043
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1223725\">said</a>:</p>\n<blockquote>\n<p>a <code>float: right</code> element positioned to the left of the topic name field</p>\n</blockquote>\n<p>Can you expain this a bit more? Addressed the rest of the feedback for <a href=\"https://github.com/zulip/zulip/pull/19080\">#19080</a>.</p>",
+        "id": 1224586,
+        "sender_full_name": "Gaurav Pandey (ligmitz)",
+        "timestamp": 1625330995
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17516\">@Gaurav Pandey (ligmitz)</span> it's the same way we position the <code>.unread_count</code> class.</p>",
+        "id": 1225576,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625532105
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> said:</p>\n<blockquote>\n<p>Though having thought about this a bit more, I think the logic of .replace() is still wrong, because it'll replace all copies. I think what you want is just to remove the first len(RESOLVED_TOPIC_PREFIX) characters. Can you fix that and add a test for a weird topic that contains RESOLVED_TOPIC_PREFIX twice?</p>\n</blockquote>\n<p>Yeah, so the current behaviour doesn't respect the fact that the rest of the prefixes are a part of the topic name during unresolving:<br>\n<a href=\"/user_uploads/2/20/ASLugKkesHS7ff_ejj6IACM9/Peek-2021-07-06-22-51.gif\">Peek-2021-07-06-22-51.gif</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/20/ASLugKkesHS7ff_ejj6IACM9/Peek-2021-07-06-22-51.gif\" title=\"Peek-2021-07-06-22-51.gif\"><img src=\"/user_uploads/2/20/ASLugKkesHS7ff_ejj6IACM9/Peek-2021-07-06-22-51.gif\"></a></div><p>Though I am not sure how a person would end up with multiple prefixes if they start with the prefix in the name in the first place (since the topic starts as resolved) other than renaming again.</p>",
+        "id": 1225897,
+        "sender_full_name": "Gaurav Pandey (ligmitz)",
+        "timestamp": 1625593492
+    },
+    {
+        "content": "<p>Also, <code>.replace()</code> only replaces the first instance of the character while <code>.replaceAll()</code> replaces all the instances.</p>",
+        "id": 1225904,
+        "sender_full_name": "Gaurav Pandey (ligmitz)",
+        "timestamp": 1625594033
+    },
+    {
+        "content": "<p>Oh, OK, <code>.replace</code> is correct then.</p>",
+        "id": 1226073,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625606615
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17516\">@Gaurav Pandey (ligmitz)</span> you can get into weird situations of any sort with manual topic editing; so we're just thinking about error handling here.</p>",
+        "id": 1226074,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625606642
+    },
+    {
+        "content": "<p>I think the current situation with all the prefixes being removed while marking as unresolved is the use of <code>_.trimStart</code> in the logic.</p>",
+        "id": 1226583,
+        "sender_full_name": "Gaurav Pandey (ligmitz)",
+        "timestamp": 1625634203
+    },
+    {
+        "content": "<p>I think it would be a nice addition to show a confirmation popup when resolving a topic, because:</p>\n<ul>\n<li>Resolving a topic leads to some irreversible consequences (the notification bot message)</li>\n<li>It is not too difficult to resolve a topic accidentally, especially through the recipient bar (for example, accidentally clicking on the <span aria-label=\"check mark\" class=\"emoji emoji-2714\" role=\"img\" title=\"check mark\">:check_mark:</span> when one instead wanted to click on a topic link. Those buttons are pretty close)<br>\n<a href=\"/user_uploads/2/64/nPxruSz5RyXeL44bVg4fxk5E/image.png\">image.png</a><div class=\"message_inline_image\"><a href=\"/user_uploads/2/64/nPxruSz5RyXeL44bVg4fxk5E/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/64/nPxruSz5RyXeL44bVg4fxk5E/image.png\"></a></div></li>\n</ul>",
+        "id": 1226788,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1625674876
+    },
+    {
+        "content": "<p>We could move the checkmark to the right of the other icons, to avoid misclicks more effectively.</p>",
+        "id": 1226810,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1625676191
+    },
+    {
+        "content": "<p>Well, currently it sits next to the \"edit message\" icon, which is similar in being an administrative action; whareas the \"mute topic\" icon is not.</p>",
+        "id": 1226966,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625684081
+    },
+    {
+        "content": "<p>So I think semantically it's a bit weird to move it.  I think I'd be pretty OK with having a confirm_dialog; that way it'd be 2 clicks to do either via the left sidebar or via that widget, which is consistent with our other message editing features.</p>",
+        "id": 1226967,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625684105
+    },
+    {
+        "content": "<p>Hmm, I kind of like having resolving a topic feel lightweight (no confirmation), and it's not <em>so</em> bad to immediately unresolve it if you misclick.</p>",
+        "id": 1226986,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1625684571
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span> did you bring this up because you actually misclicked?</p>",
+        "id": 1227049,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625688921
+    },
+    {
+        "content": "<p>(That seems like useful context for whether this is likely to be common)</p>",
+        "id": 1227050,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625688932
+    },
+    {
+        "content": "<p>I didn't actually misclick, but found myself to be super conscious when hovering over the recipient bar before clicking the topic link.</p>",
+        "id": 1227308,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1625714775
+    },
+    {
+        "content": "<p>We could also have the notification bot just delete the message if it's resolved and then unresolved within some number of seconds/minutes (and with no messages in between).</p>",
+        "id": 1227311,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1625714859
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1226986\">said</a>:</p>\n<blockquote>\n<p>Hmm, I kind of like having resolving a topic feel lightweight (no confirmation), and it's not <em>so</em> bad to immediately unresolve it if you misclick.</p>\n</blockquote>\n<p>This feels right to me.</p>\n<p>One point of comparison, in a UI I use all the time: if you misclick and close an issue when you only meant to leave a comment, that's irreversible in basically the same way as here. But it's basically fine -- you reopen it, and maybe add a comment saying \"oops, misclicked\".</p>\n<p>(And live with the fact that the issue thread has the big red \"closed\" line and then the big green \"reopened\" line, with your name on them.)</p>",
+        "id": 1227312,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1625714935
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17945\">Wesley Aptekar-Cassels</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1227311\">said</a>:</p>\n<blockquote>\n<p>We could also have the notification bot just delete the message if it's resolved and then unresolved within some number of seconds/minutes (and with no messages in between).</p>\n</blockquote>\n<p>This wouldn't completely reverse things, because some people may have gotten email notifications (or even mobile push notifications, if they love getting lots of notifications / if it's a super low-traffic stream.)</p>",
+        "id": 1227313,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1625715000
+    },
+    {
+        "content": "<p>Definitely it's good to be conscious of how easy it is to misclick when thinking about the design of the buttons. It'd feel annoying if one found oneself misclicking on it all the time.</p>\n<p>But I think having a confirmation dialog each time would be more annoying on net, for anyone who actually uses this feature.</p>",
+        "id": 1227316,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1625715128
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"16839\">Abhijeet Bodas</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1226788\">said</a>:</p>\n<blockquote>\n<ul>\n<li>It is not too difficult to resolve a topic accidentally, especially through the recipient bar (for example, accidentally clicking on the <span aria-label=\"check mark\" class=\"emoji emoji-2714\" role=\"img\" title=\"check mark\">:check_mark:</span> when one instead wanted to click on a topic link. Those buttons are pretty close)<br>\n<a href=\"/user_uploads/2/64/nPxruSz5RyXeL44bVg4fxk5E/image.png\">image.png</a></li>\n</ul>\n</blockquote>\n<p>One thing I see looking at this screenshot is that the spacing between the link and the next button is awfully close. That could probably use a few more pixels of space -- like at least to make that space equally wide as we currently have between the \"resolve\" and \"mute\" icons.</p>",
+        "id": 1227319,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1625715214
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"2187\">Greg Price</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1227312\">said</a>:</p>\n<blockquote>\n<p>One point of comparison, in a UI I use all the time: if you misclick and close an issue when you only meant to leave a comment, that's irreversible in basically the same way as here. But it's basically fine -- you reopen it, and maybe add a comment saying \"oops, misclicked\".</p>\n<p>(And live with the fact that the issue thread has the big red \"closed\" line and then the big green \"reopened\" line, with your name on them.)</p>\n</blockquote>\n<p>I think this is a little different, in that it's much clearer what closing an issue will do on GitHub, whereas I could see someone clicking on the checkmark on a random topic just because they were curious what it did. \"Close issue\" in GitHub is a much more common action than I expect resolving a topic to be in Zulip (for most orgs), and I think our button is less clear.</p>",
+        "id": 1227895,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1625768419
+    },
+    {
+        "content": "<p>Given that, I think it'd be worth having a grace period where the bot deletes the message, instead of adding a new one.</p>",
+        "id": 1227897,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1625768531
+    },
+    {
+        "content": "<p>I do agree that resolving should feel lightweight, and that a confirmation modal is not the right thing here.</p>",
+        "id": 1227898,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1625768561
+    },
+    {
+        "content": "<p>Thinking about the design for a grace period feature: </p>\n<ul>\n<li>If the last message is a notification bot \"marked as resolved\" message (so there's no conversation that might be made confusing).</li>\n<li>And that message's timestamp is within the last minute, say.</li>\n</ul>\n<p>Then we'd delete the \"marked as resolved\" notice rather than adding a new one that says the opposite?</p>\n<p>(And presumably the opposite for if you accidentally toggled in the other direction).</p>",
+        "id": 1227920,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625769602
+    },
+    {
+        "content": "<p>I think that'd be a very reasonable feature, and would avoid our having to make compromises in the UI here.</p>",
+        "id": 1227921,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625769802
+    },
+    {
+        "content": "<p>I think 1 minute balances the \"chance that a bunch of people read it\" vs \"how long could it take to try to undo, if there's some network lag or whatever\".</p>",
+        "id": 1227922,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625769829
+    },
+    {
+        "content": "<p>While still being less than the 2 minute mark at which email notifications (which we can't revoke) get sent.</p>",
+        "id": 1227923,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625769845
+    },
+    {
+        "content": "<p>Opened <a href=\"https://github.com/zulip/zulip/issues/19181\">https://github.com/zulip/zulip/issues/19181</a> with this design.  </p>\n<p>I proposed that we make the grace period 5 seconds in <code>zproject/dev_settings.py</code>, so that it's convenient to get resolved topics in the development environment.  </p>\n<p><span class=\"user-mention\" data-user-id=\"17516\">@Gaurav Pandey (ligmitz)</span> want to take this one?</p>",
+        "id": 1227930,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625770179
+    },
+    {
+        "content": "<p>Thinking about the development UX side of things, maybe we should also change <code>populate_db</code> to make 90% of messages in Denmark that it generates have <code>RESOLVED_TOPIC_PREFIX</code> in their name, so that one sees these in a development environment?</p>",
+        "id": 1227931,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625770212
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1227930\">said</a>:</p>\n<blockquote>\n<p>Opened <a href=\"https://github.com/zulip/zulip/issues/19181\">https://github.com/zulip/zulip/issues/19181</a> with this design.  </p>\n<p>I proposed that we make the grace period 5 seconds in <code>zproject/dev_settings.py</code>, so that it's convenient to get resolved topics in the development environment.  </p>\n<p><span class=\"user-mention silent\" data-user-id=\"17516\">Gaurav Pandey (ligmitz)</span> want to take this one?</p>\n</blockquote>\n<p>Okay, sure.</p>",
+        "id": 1227951,
+        "sender_full_name": "Gaurav Pandey (ligmitz)",
+        "timestamp": 1625770714
+    },
+    {
+        "content": "<p>Created <a href=\"https://github.com/zulip/zulip/pull/19199\">#19199</a>.</p>",
+        "id": 1228861,
+        "sender_full_name": "Gaurav Pandey (ligmitz)",
+        "timestamp": 1625860240
+    },
+    {
+        "content": "<p>This looks a little odd to me:</p>\n<p><a href=\"/user_uploads/2/80/J5-4JDiSWe46AbU4B4imHDMJ/0000-recent.png\">.</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/80/J5-4JDiSWe46AbU4B4imHDMJ/0000-recent.png\" title=\".\"><img src=\"/user_uploads/2/80/J5-4JDiSWe46AbU4B4imHDMJ/0000-recent.png\"></a></div><p>The checkmark on the right is very visually distinct, but I'm actually less likely to want to unresolve a topic than to want to resolve it.</p>\n<p>IMO, this button should look the same whether or not the topic is resolved.</p>",
+        "id": 1228906,
+        "sender_full_name": "Wesley Aptekar-Cassels",
+        "timestamp": 1625864284
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17945\">@Wesley Aptekar-Cassels</span> hmm, yeah, I think I agree with that; I think we copied the logic from the \"muted topics\" bell next to it, but that is likely the wrong design.</p>",
+        "id": 1228908,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625864516
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17026\">@Akshat (akshatdalton)</span> want to do that change?</p>",
+        "id": 1228909,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625864521
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17945\">@Wesley Aptekar-Cassels</span> <a href=\"#narrow/stream/101-design/topic/closing.2Fsolving.20a.20topic.20.28.2311154.29/near/1228906\">said</a>:</p>\n<blockquote>\n<p>This looks a little odd to me:</p>\n<p><a href=\"/user_uploads/2/80/J5-4JDiSWe46AbU4B4imHDMJ/0000-recent.png\">.</a> </p>\n<p>The checkmark on the right is very visually distinct, but I'm actually less likely to want to unresolve a topic than to want to resolve it.</p>\n<p>IMO, this button should look the same whether or not the topic is resolved.</p>\n</blockquote>\n<p>In your message, I can see two images, and both are the same. One is the smaller, and the other is the larger version of the same image. Did you put 2 images in your message?</p>",
+        "id": 1228925,
+        "sender_full_name": "Akshat",
+        "timestamp": 1625867373
+    },
+    {
+        "content": "<p>Ah, my bad. The other one is just a period.</p>",
+        "id": 1228926,
+        "sender_full_name": "Akshat",
+        "timestamp": 1625867550
+    },
+    {
+        "content": "<p>On inspecting it, I found two urls, and that's why I was confused.</p>",
+        "id": 1228927,
+        "sender_full_name": "Akshat",
+        "timestamp": 1625867611
+    }
+]

@@ -1,0 +1,621 @@
+<html>
+<head><meta charset="utf-8"><title>unmuting in muted streams · design · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/101-design/index.html">design</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html">unmuting in muted streams</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1232339"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1232339" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1232339">(Jul 16 2021 at 00:24)</a>:</h4>
+<p>I'd like to start a conversation about the user experience we want for <a href="https://github.com/zulip/zulip/pull/2517">#2517</a> (the ability to unmute a topic in a muted stream).</p>
+
+
+
+<a name="1232341"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1232341" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1232341">(Jul 16 2021 at 00:25)</a>:</h4>
+<p>The core UI question is how to display the information.</p>
+<p>For context, we currently display muted streams in the right sidebar with both the stream name and the total number of unread messages in the stream faded, like so: <a href="/user_uploads/2/80/snnNg7iHhYtHAwh5d09aWBC-/image.png">image.png</a>.</p>
+<div class="message_inline_image"><a href="/user_uploads/2/80/snnNg7iHhYtHAwh5d09aWBC-/image.png" title="image.png"><img src="/user_uploads/2/80/snnNg7iHhYtHAwh5d09aWBC-/image.png"></a></div>
+
+
+
+<a name="1232343"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1232343" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1232343">(Jul 16 2021 at 00:33)</a>:</h4>
+<p>Here's a potential visual/UI design for what happens in the left sidebar with one of these topics:</p>
+<ul>
+<li>If there are any unmuted topics in the stream with unread messages, then we display using the normal styling the "unmuted unreads" count, and don't display the grand total at all.</li>
+<li>Unmuted topics within a stream are shown with priority over all muted topics, i.e. you'll see them at the top regardless of age in the default view before you click "more topics", even if muted topics have unreads.  This would match what happens if you have some muted topics in a stream where topics are by default "not muted", and thus seems like the right design.</li>
+<li>We do something to address the overkill fading of everything we have when clicked into a muted stream right now.  Presumably these unmuted topics would display with normal styling.  It's probably worth forking a thread on preparatory changes we want to make to the "muted stream/topic" styling after this.</li>
+</ul>
+<p>Presumably we'd also override all the special logic for muted streams for messages in such topics, both in the server and apps, but those are all invisible and probably not worth a discussion in this stream.</p>
+
+
+
+<a name="1232349"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1232349" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1232349">(Jul 16 2021 at 00:54)</a>:</h4>
+<p>I hinted at this a bit in <a class="stream-topic" data-stream-id="3" href="/#narrow/stream/3-backend/topic/MutedTopic.20table">#backend &gt; MutedTopic table</a>, but longer term we may feel the need to let you pick one of ~4 options for how to handle a topic:</p>
+<ul>
+<li>"topic is explicitly muted": Treat the message as muted: Doesn't count in unread counts, etc.  Note that you can mute a topic within a muted stream, and it does something.</li>
+<li>"topic has no special configuration": The current behavior for a non-muted topic.</li>
+<li>"default notifications": Treat the topic as not muted even if the stream is muted.</li>
+<li>"followed topic": Trigger notifications on all new messages, aka the "<a href="https://github.com/zulip/zulip/issues/12309">Follow topic</a>" feature.  It'd treat any message to the topic as notifiable like the "always notify on messages in this stream" setting, and use new notification settings for "topics I follow" to decide what types of notifications to send.</li>
+</ul>
+<p>The "no special configuration" value would likely only need to appear in the UI in weird scenarios (E.g. when you have an explicitly muted topic in a muted stream, and you want to make it just a topic in a muted stream).</p>
+
+
+
+<a name="1235254"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1235254" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1235254">(Jul 21 2021 at 01:19)</a>:</h4>
+<p>That potential visual/UI design sounds good. The one wrinkle I'd be a bit concerned about is: if you have 3000 or whatever unreads in the muted stream, it feels a little odd for <em>un</em>muting a piece of that stream to cause that information to go away.</p>
+<p>Hmm, and a variation on that: when you're caught up, and then a new message arrives in the unmuted topic, the big wide grayed-out "3000" will go away, replaced by a small "1".</p>
+<p>Then you go read that message, and the unread indicator gets bigger again: a grayed-out "3000".</p>
+
+
+
+<a name="1236946"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1236946" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1236946">(Jul 22 2021 at 23:44)</a>:</h4>
+<p>Yes, but it will change from the "unmuted style" to the "muted style", so it's at least clear what happened.  I'm not sure we can really do better in a way that's visually appearing, but there is the option of showing 2 numbers.</p>
+
+
+
+<a name="1537167"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1537167" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Brijmohan Siyag <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1537167">(Mar 30 2023 at 08:23)</a>:</h4>
+<p>The design plan above sounds cool.<br>
+One more thing, what will be ordering for streams? currently, we show muted streams at last.</p>
+
+
+
+<a name="1537289"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1537289" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1537289">(Mar 30 2023 at 13:18)</a>:</h4>
+<p>I don't think we should change the stream ordering.</p>
+
+
+
+<a name="1537291"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1537291" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1537291">(Mar 30 2023 at 13:20)</a>:</h4>
+<p><a href="https://github.com/zulip/zulip/pull/24243">#24243</a> is the current plan for the UI. I had totally forgotten about this thread when I was writing up the issue a year and a half later, but it seems to be in line with what was discussed.</p>
+
+
+
+<a name="1537293"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1537293" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1537293">(Mar 30 2023 at 13:24)</a>:</h4>
+<p>There are a couple of points that aren't addressed in the issue, though:</p>
+<ol>
+<li>
+<p>Unmuted topics within a stream are shown with priority over all muted topics, i.e. you'll see them at the top regardless of age in the default view before you click "more topics", even if muted topics have unreads. This would match what happens if you have some muted topics in a stream where topics are by default "not muted", and thus seems like the right design.</p>
+</li>
+<li>
+<p>We do something to address the overkill fading of everything we have when clicked into a muted stream right now. Presumably these unmuted topics would display with normal styling. It's probably worth forking a thread on preparatory changes we want to make to the "muted stream/topic" styling after this.</p>
+</li>
+</ol>
+<p>Should we add these to the issue? (2) definitely seems right -- do we need to do work to make that happen?</p>
+
+
+
+<a name="1537317"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1537317" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Palash Baderia <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1537317">(Mar 30 2023 at 14:05)</a>:</h4>
+<p>Sounds like a great plan, and maybe it should be included in the issue description. Since these two points are not too different from the issue, and they are easy to implement while implementing the UI for unmuted topics.</p>
+
+
+
+<a name="1537971"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1537971" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Brijmohan Siyag <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1537971">(Mar 30 2023 at 23:30)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="19257">Alya Abbott</span> <a href="#narrow/stream/101-design/topic/unmuting.20in.20muted.20streams/near/1537293">said</a>:</p>
+<blockquote>
+<p>Should we add these to the issue?</p>
+</blockquote>
+<p>It would be helpful to list down tasks at one place.</p>
+
+
+
+<a name="1538009"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1538009" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1538009">(Mar 31 2023 at 01:06)</a>:</h4>
+<p>Yes, of course, in terms of the logistics, we'll keep track of everything in that issue. My questions here are:</p>
+<ul>
+<li>Do we still like the idea of implementing (1)?</li>
+<li>Is work required to make (2) happen, or have there, e.g., been changes in the code since the prior discussion that would make it happen without us doing anything?</li>
+</ul>
+
+
+
+<a name="1538011"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1538011" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1538011">(Mar 31 2023 at 01:08)</a>:</h4>
+<p>This reasoning for (1) seems compelling to me:</p>
+<blockquote>
+<p>This would match what happens if you have some muted topics in a stream where topics are by default "not muted", and thus seems like the right design.</p>
+</blockquote>
+
+
+
+<a name="1542061"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1542061" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hardik Dharmani <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1542061">(Apr 05 2023 at 20:00)</a>:</h4>
+<p>I would like to append another discussion point to the above list by Prakhar:</p>
+<ol start="7">
+<li>for the New topic sidebar action sheet should we add a new SVG icon for unmute topics something similar to <a href="https://commons.wikimedia.org/wiki/File:Speaker_Icon.svg">this SVG</a>?</li>
+</ol>
+<p><a href="/user_uploads/2/15/MAxELBOhoaPj0VMjQo1ox0Nk/image.png">New topic sidebar action sheet</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/15/MAxELBOhoaPj0VMjQo1ox0Nk/image.png" title="New topic sidebar action sheet"><img src="/user_uploads/2/15/MAxELBOhoaPj0VMjQo1ox0Nk/image.png"></a></div>
+
+
+
+<a name="1543230"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1543230" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1543230">(Apr 07 2023 at 18:09)</a>:</h4>
+<p><span class="user-mention" data-user-id="26051">@Hardik Dharmani</span> for that last point, I think the intent would be that we only ever display one of those two items directly in the popover, depending on whether the topic is currently in a muted stream (or itself muted) or not.</p>
+
+
+
+<a name="1543231"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1543231" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1543231">(Apr 07 2023 at 18:11)</a>:</h4>
+<p>For the settings panels, I'm not really sure what the best plan is; <span class="user-mention silent" data-user-id="19257">Alya Abbott</span> gets back from her trip Monday, so maybe it's best to wait for her input.</p>
+
+
+
+<a name="1543336"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1543336" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hardik Dharmani <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1543336">(Apr 07 2023 at 20:40)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/101-design/topic/unmuting.20in.20muted.20streams/near/1543230">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="26051">Hardik Dharmani</span> for that last point, I think the intent would be that we only ever display one of those two items directly in the popover, depending on whether the topic is currently in a muted stream (or itself muted) or not.</p>
+</blockquote>
+<p>is this the expected behavior:<br>
+inherit topic in unmuted stream -&gt; show mute topic option.<br>
+muted topic in unmuted stream -&gt; show inherit(remove mute) topic option.<br>
+inherit topic in muted stream -&gt; show unmute topic option.<br>
+unmuted topic in muted stream -&gt; show inherit(remove unmute) topic option.</p>
+<p>Then what if for an inherited topic in a muted stream, the user wants to explicitly mute the topic within the stream?</p>
+
+
+
+<a name="1543337"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1543337" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hardik Dharmani <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1543337">(Apr 07 2023 at 20:42)</a>:</h4>
+<p>I think the possible solution is what's implemented in <a href="https://github.com/zulip/zulip/pull/24989">#24989</a>, which shows only one option in an unmuted stream. However, for a muted stream, both the "Unmute Topic" option and the "Mute Topic" option should be shown for an topic in a muted stream.</p>
+
+
+
+<a name="1543359"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1543359" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1543359">(Apr 07 2023 at 21:32)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="26051">Hardik Dharmani</span> <a href="#narrow/stream/101-design/topic/unmuting.20in.20muted.20streams/near/1543337">said</a>:</p>
+<blockquote>
+<p>I think the possible solution is what's implemented in <a href="https://github.com/zulip/zulip/pull/24989">#24989</a>, which shows only one option in an unmuted stream. However, for a muted stream, both the "Unmute Topic" option and the "Mute Topic" option should be shown for an topic in a muted stream.</p>
+</blockquote>
+<p>There's already an answer to this question in the spec in <a href="https://github.com/zulip/zulip/pull/24243">#24243</a>:</p>
+<blockquote>
+<p>For topics in muted streams, replace the "Mute topic" option in the three-dot topic menu with an "Unmute topic" option, which should make the topic unmuted. For <strong>unmuted</strong> topics in muted streams, show the regular "Mute topic" option, which should specifically mark the topic as muted, as usual.</p>
+</blockquote>
+
+
+
+<a name="1543360"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1543360" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1543360">(Apr 07 2023 at 21:32)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="26051">Hardik Dharmani</span> <a href="#narrow/stream/101-design/topic/unmuting.20in.20muted.20streams/near/1543336">said</a>:</p>
+<blockquote>
+<p>Then what if for an inherited topic in a muted stream, the user wants to explicitly mute the topic within the stream?</p>
+</blockquote>
+<p>I think this is likely to be an uncommon desire. The only effect of that muting would be on what happens when you're reading specifically through the stream.</p>
+
+
+
+<a name="1543443"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1543443" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1543443">(Apr 07 2023 at 23:39)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="2187">Greg Price</span> <a href="#narrow/stream/101-design/topic/unmuting.20in.20muted.20streams/near/1543359">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="26051">Hardik Dharmani</span> <a href="#narrow/stream/101-design/topic/unmuting.20in.20muted.20streams/near/1543337">said</a>:<br>
+There's already an answer to this question in the spec in <a href="https://github.com/zulip/zulip/pull/24243">#24243</a>:</p>
+</blockquote>
+<p>In general, it's very helpful if folks take the time to carefully read the spec before asking questions like this -- it's pretty distracting to reopen a discussion that was already had.</p>
+
+
+
+<a name="1543529"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1543529" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hardik Dharmani <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1543529">(Apr 08 2023 at 04:47)</a>:</h4>
+<p>I was clear about the spec in <a href="https://github.com/zulip/zulip/pull/24243">#24243</a> and have gone through the previous discussions on this topic. However, I was uncertain about the case of muting a topic in a stream that is already muted and wanted to clarify it before proceeding. I apologize for reopening this discussion if this case was already addressed and I missed it. <br>
+In the future, I will take greater care to ensure that I have thoroughly reviewed all relevant information before initiating a new discussion. :)</p>
+
+
+
+<a name="1543530"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1543530" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hardik Dharmani <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1543530">(Apr 08 2023 at 04:50)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="2187">Greg Price</span> <a href="#narrow/stream/101-design/topic/unmuting.20in.20muted.20streams/near/1543359">said</a>:</p>
+<blockquote>
+<p>For topics in muted streams, replace the "Mute topic" option in the three-dot topic menu with an "Unmute topic" option, which should make the topic unmuted. For <strong>unmuted</strong> topics in muted streams, show the regular "Mute topic" option, which should specifically mark the topic as muted, as usual.</p>
+</blockquote>
+<p>I will implement this as the first PR for <a href="https://github.com/zulip/zulip/pull/24243">#24243</a> once <a href="https://github.com/zulip/zulip/pull/24989">#24989</a> gets merged.</p>
+
+
+
+<a name="1545512"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1545512" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hardik Dharmani <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1545512">(Apr 11 2023 at 19:02)</a>:</h4>
+<p><a href="https://github.com/zulip/zulip/pull/24989">#24989</a> got merged <span aria-label="tada" class="emoji emoji-1f389" role="img" title="tada">:tada:</span> Here is the First PR for <a href="https://github.com/zulip/zulip/pull/24243">#24243</a>: <a href="https://github.com/zulip/zulip/pull/25082">#25082</a>.<br>
+Need feedback on the naming of new options:</p>
+<ul>
+<li>Option 1:<code>Mute topic&lt;-&gt;Remove mute</code> for topics in <code>Unmuted stream</code> and <code>Unmute Topic&lt;-&gt;Remove Unmute</code> for topics in the <code>Muted stream</code>.</li>
+<li>Option 2: Use the same option <code>Mute topic&lt;-&gt;Unmute topic</code> for all topics irrespective of the stream and explain the behavior in Unmuted and Muted streams respectively in some way(Maybe in the documentation).</li>
+</ul>
+<p>Any other feedback or suggestions are much appreciated.</p>
+
+
+
+<a name="1545547"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1545547" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1545547">(Apr 11 2023 at 19:35)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="26051">Hardik Dharmani</span> Unless there is specific cause for concern, you should just follow the issue description,  which answers this question.</p>
+
+
+
+<a name="1545584"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1545584" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hardik Dharmani <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1545584">(Apr 11 2023 at 19:59)</a>:</h4>
+<p>I apologize for the confusion on my side<span aria-label="pensive" class="emoji emoji-1f614" role="img" title="pensive">:pensive:</span> . Here is the updated PR: <a href="https://github.com/zulip/zulip/pull/25082">#25082</a>.</p>
+
+
+
+<a name="1546911"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1546911" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1546911">(Apr 13 2023 at 16:47)</a>:</h4>
+<p>While working on <a href="https://github.com/zulip/zulip/pull/24246">#24246</a>, I noticed that the <code>mute_or_unmute_topic</code> altered in PR <a href="https://github.com/zulip/zulip/pull/24989">#24989</a>, does not unmute a topic in a muted stream, it only works for specifically muted topics in unmuted streams. I haven't been keeping up with the conversation in this thread but I think this is a bug?</p>
+
+
+
+<a name="1546932"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1546932" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hardik Dharmani <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1546932">(Apr 13 2023 at 17:03)</a>:</h4>
+<p>Currently, it is only for muting or inheriting a topic. But, As commented <a href="https://github.com/zulip/zulip/pull/24989/files#r1158536846">here</a>. It should be generalized in a follow-up PR. I will create a follow-up PR for this soon.</p>
+
+
+
+<a name="1547037"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1547037" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hardik Dharmani <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1547037">(Apr 13 2023 at 17:56)</a>:</h4>
+<p>Currently, <code>the mute_or_unmute_topic</code> function is used to mute/inherit a topic by clicking on the mute icon in <br>
+<a href="/user_uploads/2/e/qgsCwQZqFgi4RWT6o7nKaOfS/image.png"> recent conversations</a> and <a href="/user_uploads/2/2d/W0Ct4t8S6APIm53zA6i8r6lK/image.png">recipient rows</a>. <br>
+What should we do with this icon once <a href="https://github.com/zulip/zulip/pull/24243">#24243</a> is resolved, as we won't have an option to mute a topic in a muted stream, but this icon will still be visible for a topic in a muted stream?</p>
+<div class="message_inline_image"><a href="/user_uploads/2/e/qgsCwQZqFgi4RWT6o7nKaOfS/image.png" title=" recent conversations"><img src="/user_uploads/2/e/qgsCwQZqFgi4RWT6o7nKaOfS/image.png"></a></div><div class="message_inline_image"><a href="/user_uploads/2/2d/W0Ct4t8S6APIm53zA6i8r6lK/image.png" title="recipient rows"><img src="/user_uploads/2/2d/W0Ct4t8S6APIm53zA6i8r6lK/image.png"></a></div>
+
+
+
+<a name="1547553"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1547553" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1547553">(Apr 13 2023 at 23:06)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="26051">Hardik Dharmani</span> <a href="#narrow/stream/101-design/topic/unmuting.20in.20muted.20streams/near/1547037">said</a>:</p>
+<blockquote>
+<p>Currently, <code>the mute_or_unmute_topic</code> function is used to mute/inherit a topic by clicking on the mute icon in <br>
+<a href="/user_uploads/2/e/qgsCwQZqFgi4RWT6o7nKaOfS/image.png"> recent conversations</a> and <a href="/user_uploads/2/2d/W0Ct4t8S6APIm53zA6i8r6lK/image.png">recipient rows</a>. <br>
+What should we do with this icon once <a href="https://github.com/zulip/zulip/pull/24243">#24243</a> is resolved, as we won't have an option to mute a topic in a muted stream, but this icon will still be visible for a topic in a muted stream?</p>
+</blockquote>
+<p>We should probably show an "unmute" icon instead of a "mute" icon on topics in muted streams, and have clicking on it unmute the topic. <span class="user-mention" data-user-id="22433">@Vlad Korobov</span> would you be up for providing one?</p>
+
+
+
+<a name="1547615"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1547615" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vlad Korobov <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1547615">(Apr 13 2023 at 23:44)</a>:</h4>
+<p><a href="/user_uploads/2/22/nqTfxhCCQBfURpWmpy6VO5p7/unmute.svg">unmute.svg</a><br>
+here you go</p>
+
+
+
+<a name="1548003"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1548003" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1548003">(Apr 14 2023 at 16:04)</a>:</h4>
+<p>Filed release goal issue: <strong>Unmute topic from Recent conversations</strong> <a href="https://github.com/zulip/zulip/pull/25124">#25124</a>.</p>
+
+
+
+<a name="1548010"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1548010" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1548010">(Apr 14 2023 at 16:37)</a>:</h4>
+<p>Updated the issue to cover the topic header bar as well, which requires the same changes.</p>
+
+
+
+<a name="1549451"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1549451" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hardik Dharmani <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1549451">(Apr 17 2023 at 20:25)</a>:</h4>
+<p>Here is the PR for <a href="https://github.com/zulip/zulip/pull/25124">#25124</a>: <a href="https://github.com/zulip/zulip/pull/25140">#25140</a>. I have seen that for SVGs used in Zulip, we mention the copyright and source of the icon. where can I find these for unmute.svg?</p>
+
+
+
+<a name="1549490"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1549490" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1549490">(Apr 17 2023 at 20:56)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="26051">Hardik Dharmani</span> <a href="#narrow/stream/101-design/topic/unmuting.20in.20muted.20streams/near/1549451">said</a>:</p>
+<blockquote>
+<p>Here is the PR for <a href="https://github.com/zulip/zulip/pull/25124">#25124</a>: <a href="https://github.com/zulip/zulip/pull/25140">#25140</a>. I have seen that for SVGs used in Zulip, we mention the copyright and source of the icon. where can I find these for unmute.svg?</p>
+</blockquote>
+<p><span class="user-mention" data-user-id="22433">@Vlad Korobov</span></p>
+
+
+
+<a name="1550122"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1550122" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vlad Korobov <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1550122">(Apr 18 2023 at 15:04)</a>:</h4>
+<p>unmute/mute is a Google Icons icon</p>
+
+
+
+<a name="1553046"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1553046" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1553046">(Apr 21 2023 at 20:31)</a>:</h4>
+<p>I've been working through integrating all the changes in <a href="https://github.com/zulip/zulip/pull/24243">#24243</a>; all of the individual changes have proven more subtle/complicated than one might hope, but once we've gotten more of the parts integrated, we'll be able to test-deploy the full feature here.</p>
+
+
+
+<a name="1553245"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1553245" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1553245">(Apr 22 2023 at 00:08)</a>:</h4>
+<p>So I think here's the status of this project:</p>
+<ul>
+<li>Display logic for showing unmuted topics when not including muted stuff in Recent Conversations, with live update, is merging shortly. (<a href="https://github.com/zulip/zulip/pull/25151">#25151</a>)</li>
+<li>Display logic for including unmuted topics in "All messages", with live update, is merged. (<a href="https://github.com/zulip/zulip/pull/25120">#25120</a>)</li>
+<li>Display logic for whether to include unmuted topics in the left sidebar is merged. (<a href="https://github.com/zulip/zulip/pull/25105">#25105</a>)</li>
+</ul>
+<p>Changes to have Unmuted topics work as expected:</p>
+<ul>
+<li><a href="https://github.com/zulip/zulip/pull/25103">#25103</a> is display logic for the fading in the left sidebar, awaiting an update from <span class="user-mention" data-user-id="26051">@Hardik Dharmani</span>, but I think I've given it a direction that should make it fairly readable and not too messy to merge once he does that.</li>
+</ul>
+<p>Once the above , I think that will complete support for unmuted topics actually working, and can start merging the pieces that let you make them:</p>
+<ul>
+<li><a href="https://github.com/zulip/zulip/pull/25082">#25082</a> (final left sidebar menu labels).</li>
+<li><a href="https://github.com/zulip/zulip/pull/25140">#25140</a> adds UI in recipient bars and message feed recipient bars for being able to control this state. It has a lot of code bugs I just commented on but probably mostly works.</li>
+<li><a href="https://github.com/zulip/zulip/pull/25127">#25127</a> updates the "Muted topics" settings UI to support unmuted topics.</li>
+</ul>
+<p>And then we can integrate the follow-up PRs:</p>
+<ul>
+<li><a href="https://github.com/zulip/zulip/pull/24246">#24246</a> (compose banners advertising unmute topic)</li>
+<li><a href="https://github.com/zulip/zulip/pull/25216">#25216</a> (documentation)</li>
+</ul>
+<p>I think that's everything?</p>
+
+
+
+<a name="1554415"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554415" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554415">(Apr 24 2023 at 20:59)</a>:</h4>
+<p>I updated my main with upstream today, and now the function <code>is_topic_unmuted</code> returns true for a (default) topic inside a muted stream. 95 commits back, it returned false in this case... Is this a regression or intentional?</p>
+
+
+
+<a name="1554418"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554418" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554418">(Apr 24 2023 at 21:01)</a>:</h4>
+<p>Also, I no longer get the option to unmute a topic in a muted stream in the left sidebar UI. Here's how the menu looks instead:<br>
+<a href="/user_uploads/2/4/TwjyDYtobjY4nA17GwVWTgQ0/image.png">default topic in muted stream</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/4/TwjyDYtobjY4nA17GwVWTgQ0/image.png" title="default topic in muted stream"><img src="/user_uploads/2/4/TwjyDYtobjY4nA17GwVWTgQ0/image.png"></a></div>
+
+
+
+<a name="1554434"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554434" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554434">(Apr 24 2023 at 21:09)</a>:</h4>
+<blockquote>
+<p>Also, I no longer get the option to unmute a topic in a muted stream in the left sidebar UI. Here's how the menu looks instead:</p>
+</blockquote>
+<p>For this part, note that this is just the dev environment UI, not something end users will see.</p>
+
+
+
+<a name="1554436"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554436" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554436">(Apr 24 2023 at 21:12)</a>:</h4>
+<p>Gotcha. But that makes me wonder how exactly a user will unmute a topic within a muted stream? And for now, (if and) how can I take this action?</p>
+<p>Also I dug around the codebase and realise that the change in how topic visibility policy works (and hence in the function mentioned) is intentional(?) and was made in this PR: <a href="https://github.com/zulip/zulip/pull/25128">#25128</a></p>
+
+
+
+<a name="1554437"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554437" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554437">(Apr 24 2023 at 21:13)</a>:</h4>
+<p><span class="user-mention" data-user-id="26051">@Hardik Dharmani</span> FYI (bringing to your notice that <code>is_topic_unmuted</code> works differently now)</p>
+
+
+
+<a name="1554440"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554440" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554440">(Apr 24 2023 at 21:15)</a>:</h4>
+<blockquote>
+<p>Gotcha. But that makes me wonder how exactly a user will unmute a topic within a muted stream? And for now, (if and) how can I take this action?</p>
+</blockquote>
+<p>Your screenshot looks like the topic is already unmuted.</p>
+
+
+
+<a name="1554442"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554442" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554442">(Apr 24 2023 at 21:17)</a>:</h4>
+<p>Yeah, that's what looks wrong to me. I get this UI on only muting the stream and not fiddling with it's topics at all</p>
+
+
+
+<a name="1554444"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554444" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554444">(Apr 24 2023 at 21:17)</a>:</h4>
+<p>For what we'll have in production:</p>
+<blockquote>
+<p>For topics in muted streams, replace the "Mute topic" option in the three-dot topic menu with an "Unmute topic" option, which should make the topic unmuted. For unmuted topics in muted streams, show the regular "Mute topic" option, which should specifically mark the topic as muted, as usual.</p>
+</blockquote>
+<p><a href="https://github.com/zulip/zulip/pull/25082">#25082</a></p>
+
+
+
+<a name="1554447"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554447" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554447">(Apr 24 2023 at 21:19)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="18948">Nehal Sharma</span> <a href="#narrow/stream/101-design/topic/unmuting.20in.20muted.20streams/near/1554442">said</a>:</p>
+<blockquote>
+<p>Yeah, that's what looks wrong to me. I get this UI on only muting the stream and not fiddling with it's topics at all</p>
+</blockquote>
+<p>I am fairly confident this is an unintended side effect (bug) from <a href="https://github.com/zulip/zulip/pull/25083">#25083</a></p>
+
+
+
+<a name="1554452"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554452" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554452">(Apr 24 2023 at 21:26)</a>:</h4>
+<p>I'm speculating, but the issue might be that we are not clear on the semantics of <code>is_topic_muted</code> and <code>is_topic_unmuted</code>. Do they tell the overall state of a topic (bconsidering it's stream state as well), or do they tell if a topic individually has been explicitly muted / unmuted?</p>
+<p>Before <a href="https://github.com/zulip/zulip/pull/25083">#25083</a>, it was the latter, but now it seems to be the former <span aria-label="thinking" class="emoji emoji-1f914" role="img" title="thinking">:thinking:</span></p>
+
+
+
+<a name="1554458"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554458" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hardik Dharmani <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554458">(Apr 24 2023 at 21:45)</a>:</h4>
+<p><code>is_topic_muted</code> and <code>is_topic_unmuted</code> function only check topic's visibility_policy and do not consider its stream. so it's the latter case.</p>
+<blockquote>
+<p>Before <a href="https://github.com/zulip/zulip/pull/25083">#25083</a>, it was the latter, but now it seems to be the former</p>
+</blockquote>
+<p><a href="https://github.com/zulip/zulip/pull/25082">#25082</a> is not merged yet, and it is the latter case since the "Unmute" option was introduced in the development environment in <a href="https://github.com/zulip/zulip/pull/24989">#24989</a>.</p>
+
+
+
+<a name="1554459"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554459" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hardik Dharmani <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554459">(Apr 24 2023 at 21:46)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="18948">Nehal Sharma</span> <a href="#narrow/stream/101-design/topic/unmuting.20in.20muted.20streams/near/1554447">said</a>:</p>
+<blockquote>
+<blockquote>
+<p>Yeah, that's what looks wrong to me. I get this UI on only muting the stream and not fiddling with it's topics at all</p>
+</blockquote>
+<p>I am fairly confident this is an unintended side effect (bug) from <a href="https://github.com/zulip/zulip/pull/25083">#25083</a></p>
+</blockquote>
+<p>It is possible to get this UI (i.e., the topic being unmuted when only muting the stream and not fiddling with it's topics at all). In your case, this might have happened because the topic was unmuted before muting the stream.</p>
+<p>After <a href="https://github.com/zulip/zulip/pull/25082">#25082</a>, A muted stream can have muted topic or an unmuted stream can have unmuted topic although we don't have the option to do so. Steps to reproduce this behavior: mute a topic in unmuted stream -&gt; mute the stream, and the topic will stay muted in a muted stream.</p>
+<p>And this behavior is intended and is kept as is after discussing with <span class="user-mention" data-user-id="19257">@Alya Abbott</span> .</p>
+
+
+
+<a name="1554471"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554471" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554471">(Apr 24 2023 at 21:59)</a>:</h4>
+<p>That UI was for topics that hadn't been muted prior to muting the stream though <span aria-label="confused" class="emoji emoji-1f615" role="img" title="confused">:confused:</span></p>
+
+
+
+<a name="1554493"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554493" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554493">(Apr 24 2023 at 22:00)</a>:</h4>
+<p>huh, now when I tried to replicate this with another stream, it works as expected</p>
+
+
+
+<a name="1554496"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554496" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554496">(Apr 24 2023 at 22:03)</a>:</h4>
+<p>Okay, so I tried with multiple streams, and the bug only seems to be occuring with #core team</p>
+
+
+
+<a name="1554498"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554498" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554498">(Apr 24 2023 at 22:05)</a>:</h4>
+<p>The only thing that jumps out at me, differentiating it from the other streams, is that it is a private stream</p>
+
+
+
+<a name="1554504"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554504" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554504">(Apr 24 2023 at 22:12)</a>:</h4>
+<p>I tried creating new public and private streams, but both their behavior is fine, it is only #core team that has this bug</p>
+
+
+
+<a name="1554505"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554505" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554505">(Apr 24 2023 at 22:14)</a>:</h4>
+<p>And so sorry, all along I've been meaning PR <a href="https://github.com/zulip/zulip/pull/25128">#25128</a> not <a href="https://github.com/zulip/zulip/pull/25083">#25083</a> <span aria-label="grimacing" class="emoji emoji-1f62c" role="img" title="grimacing">:grimacing:</span></p>
+
+
+
+<a name="1554512"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554512" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Nehal Sharma <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554512">(Apr 24 2023 at 22:20)</a>:</h4>
+<p>Oh I think I know what happened here, I had unmuted all the topics in core team last week, and that state persisted till now through all the updates and provisioning... Sorry for the false alarm!</p>
+
+
+
+<a name="1554528"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554528" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hardik Dharmani <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554528">(Apr 24 2023 at 22:35)</a>:</h4>
+<p>No problem. Even I got confused when I started working on the unmute topic feature and initiated two bad discussions. That reminds me, <span class="user-mention" data-user-id="19257">@Alya Abbott</span> , there are only three PRs left to be merged in the unmute topic project, which should be done soon. should we start working on the documentation of this new feature to prevent confusion to users.</p>
+
+
+
+<a name="1554529"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1554529" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1554529">(Apr 24 2023 at 22:36)</a>:</h4>
+<p>We have -- that's <a href="https://github.com/zulip/zulip/pull/25242">#25242</a>.</p>
+
+
+
+<a name="1555713"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1555713" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1555713">(Apr 25 2023 at 22:16)</a>:</h4>
+<p>OK, the full unmute topic feature for the web app at least is now merged; I expect it to be available here later today when I next do a <a href="http://chat.zulip.org">chat.zulip.org</a> deployment.</p>
+
+
+
+<a name="1555715"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1555715" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1555715">(Apr 25 2023 at 22:17)</a>:</h4>
+<p>There's some details that will probably need feedback or adjustment, but it should work as advertised, live-update properly, etc.</p>
+
+
+
+<a name="1555830"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1555830" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1555830">(Apr 26 2023 at 01:02)</a>:</h4>
+<p>This is now deployed here for folks to test.</p>
+<p>I added <a href="https://github.com/zulip/zulip/commit/5c528f164c364369943fa1f929dba2a5a429e42b">5c528f164c364369943fa1f929dba2a5a429e42b</a> and <a href="https://github.com/zulip/zulip/commit/9886cd1488c0476f04c4b01573afa8409fd771a5">9886cd1488c0476f04c4b01573afa8409fd771a5</a> just now, but those tweaks were not included in this deployment.</p>
+
+
+
+<a name="1556846"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1556846" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Prakhar Pratyush <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1556846">(Apr 27 2023 at 10:56)</a>:</h4>
+<p>UNMUTED topics in muted streams obey stream-specific notification settings and global notification settings<br>
+as fallback.</p>
+<p>A user receives or not receives, email or push notifications for messages in UNMUTED topics if the muted stream has email or push stream-specific settings configured or global notification settings configured as a fallback.</p>
+<p>But we don't receive desktop notifications (visual/audible) on a similar basis. -- This is a bug, right?</p>
+
+
+
+<a name="1556847"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1556847" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Prakhar Pratyush <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1556847">(Apr 27 2023 at 11:08)</a>:</h4>
+<p>Working on it!</p>
+
+
+
+<a name="1556848"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1556848" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vlad Korobov <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1556848">(Apr 27 2023 at 11:08)</a>:</h4>
+<p>Mute and unmute topic tooltip should be corrected <br>
+<a href="/user_uploads/2/94/xjVk2D8n1mlApa4oVKBXRmUd/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/94/xjVk2D8n1mlApa4oVKBXRmUd/image.png" title="image.png"><img src="/user_uploads/2/94/xjVk2D8n1mlApa4oVKBXRmUd/image.png"></a></div>
+
+
+
+<a name="1556873"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1556873" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Prakhar Pratyush <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1556873">(Apr 27 2023 at 13:58)</a>:</h4>
+<p>Here's PR <a href="https://github.com/zulip/zulip/pull/25308">#25308</a> to fix the desktop notifications bug.</p>
+
+
+
+<a name="1556922"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1556922" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1556922">(Apr 27 2023 at 15:51)</a>:</h4>
+<p><span class="user-mention" data-user-id="22433">@Vlad Korobov</span> It looks to me like that's an unmuted topic in a muted stream, so clicking that button will mute it again.</p>
+
+
+
+<a name="1557104"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1557104" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vlad Korobov <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1557104">(Apr 27 2023 at 18:13)</a>:</h4>
+<p>But in another icon the tooltip is the same</p>
+
+
+
+<a name="1557114"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1557114" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alya Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1557114">(Apr 27 2023 at 18:15)</a>:</h4>
+<p>Yes, the current logic for those icons is:</p>
+<ul>
+<li>The icon represents the non-default configuration for the stream, so "mute" icon in unmuted streams, and "unmute" icon in muted streams.</li>
+<li>If a topic is configured to be in the non-default state, the icon is highlighted.</li>
+</ul>
+<p>The tooltip just tells you what clicking the button will actually do given the current stream &amp; topic configuration.</p>
+
+
+
+<a name="1557159"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1557159" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Hardik Dharmani <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1557159">(Apr 27 2023 at 18:51)</a>:</h4>
+<p>Should we show the icons as per their actions? (i.e. for normal topics in unmuted streams show a mute icon that has a tooltip that reads " Mute topic"(same behavior as before) but for a muted topic in an unmuted stream we show unmute icon(different behavior)) and do the same for a muted stream? </p>
+<p>This is already done for the 3-dot topic sidebar menu by <span class="user-mention" data-user-id="7">@Tim Abbott</span>  in <a href="https://github.com/zulip/zulip/commit/9886cd1488c0476f04c4b01573afa8409fd771a5">9886cd1488c0476f04c4b01573afa8409fd771a5</a></p>
+
+
+
+<a name="1557163"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1557163" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1557163">(Apr 27 2023 at 18:53)</a>:</h4>
+<p>The 3-dot menu context is a bit different, because it doesn't attempt to display the current state of the topic -- it just shows an icon for what you can change it to.</p>
+
+
+
+<a name="1557164"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1557164" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1557164">(Apr 27 2023 at 18:53)</a>:</h4>
+<p>The recipient bars and recent topic rows have the extra design challenge that they want to kinda both indicate the current state and offer a way to change it.</p>
+
+
+
+<a name="1557166"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1557166" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1557166">(Apr 27 2023 at 18:54)</a>:</h4>
+<p>I think in practice this will be a temporary state; when we add follow topic, I think both the recipient bar and recent topics locations will move to just having an icon showing the current state, and clicking it will give you a little menu to pick one of the 3-4 available options. </p>
+<p>But right now I don't think it'd feel nice to move to such a UI, since there are only 3 options but usually only 2 that are of any interest to the user, and so a toggle feels much more natural.</p>
+
+
+
+<a name="1614770"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/unmuting%20in%20muted%20streams/near/1614770" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Topic Bridge Bot <a href="https://rht.github.io/czo-archive/stream/101-design/topic/unmuting.20in.20muted.20streams.html#1614770">(Jul 24 2023 at 16:19)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="22341">Prakhar Pratyush</span> mentioned this topic in <strong><a href="#narrow/stream/101-design/topic/Follow.20Topics.20UI/near/1614769">#design &gt; Follow Topics UI</a></strong>.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

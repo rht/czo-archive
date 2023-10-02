@@ -1,0 +1,81 @@
+<html>
+<head><meta charset="utf-8"><title>API rate limiting · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20rate.20limiting.html">API rate limiting</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="789404"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20rate%20limiting/near/789404" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20rate.20limiting.html#789404">(Sep 30 2019 at 15:47)</a>:</h4>
+<p>API is rate limited (which seems completely reasonable) which is causing a bot to not send out all its messages<br>
+But I can't find documentation about what the limit is and I haven't been able to trace it through the code<br>
+Would anybody be able to point me in the right direction?</p>
+
+
+
+<a name="789406"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20rate%20limiting/near/789406" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20rate.20limiting.html#789406">(Sep 30 2019 at 16:00)</a>:</h4>
+<p>Most I found is code in bot_lib.py that sets a rate limit of 20 messages in 5 time units (seconds?)</p>
+<div class="codehilite"><pre><span></span>zerver/lib/bot_lib.py:        self._rate_limit = RateLimit(20, 5)
+</pre></div>
+
+
+<p>Would API calls have the same limit?</p>
+
+
+
+<a name="789433"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20rate%20limiting/near/789433" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20rate.20limiting.html#789433">(Sep 30 2019 at 21:31)</a>:</h4>
+<p><span class="user-mention" data-user-id="9893">@Mike Ray</span> I think <code>RATE_LIMITING_RULES</code> in <code>zproject/settings.py</code> should be what you're looking for. I'm not sure what this bot_lib rate limit applies to exactly, but <code>RATE_LIMITING_RULES</code>  is the general setting, that hopefully should be enough.</p>
+
+
+
+<a name="789435"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20rate%20limiting/near/789435" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20rate.20limiting.html#789435">(Sep 30 2019 at 21:38)</a>:</h4>
+<p>Thanks <span class="user-mention" data-user-id="10349">@Mateusz Mandera</span>  for the help!</p>
+
+
+
+<a name="789436"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20rate%20limiting/near/789436" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20rate.20limiting.html#789436">(Sep 30 2019 at 21:43)</a>:</h4>
+<p>A small issue is that when you upgrade zulip in the future, this will get overriden back to our defaults, so you'll have to change it again to whatever you need. <span class="user-mention" data-user-id="9893">@Mike Ray</span> </p>
+<p>Hmm, shouldn't we make this setting overridable in <code>/etc/zulip/settings.py</code>? <span class="user-mention" data-user-id="7">@Tim Abbott</span></p>
+
+
+
+<a name="789451"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20rate%20limiting/near/789451" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Neil Pilgrim (neiljp) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20rate.20limiting.html#789451">(Oct 01 2019 at 00:53)</a>:</h4>
+<p><span class="user-mention" data-user-id="9893">@Mike Ray</span> That line you found is for bots running within the server; there is something similar for bots running externally, via the zulip_bots package. My recollection is that the (server) API itself is rate-limited, but that this bot library provides a secondary (stricter?) level of checks from the client side, though this was mainly from a conversation/chat some time ago now.</p>
+
+
+
+<a name="789486"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20rate%20limiting/near/789486" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20rate.20limiting.html#789486">(Oct 01 2019 at 13:41)</a>:</h4>
+<p><span class="user-mention" data-user-id="2406">@Neil Pilgrim</span> what abotu what <span class="user-mention" data-user-id="10349">@Mateusz Mandera</span>  found? Is that the stricter API rate limiting?</p>
+
+
+
+<a name="789530"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20rate%20limiting/near/789530" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20rate.20limiting.html#789530">(Oct 01 2019 at 20:04)</a>:</h4>
+<p><span class="user-mention" data-user-id="9893">@Mike Ray</span> <code>RATE_LIMITING_RULES</code> is the main server api rate limiting.</p>
+
+
+
+<a name="789531"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20rate%20limiting/near/789531" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20rate.20limiting.html#789531">(Oct 01 2019 at 20:08)</a>:</h4>
+<p>OK - thanks for confirming. I appreciate it</p>
+
+
+
+<a name="789566"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/API%20rate%20limiting/near/789566" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/API.20rate.20limiting.html#789566">(Oct 01 2019 at 21:11)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> I think it's possible to set an override on a per-user basis somewhere.  But it should definitely be in <code>DEFAULT_SETTINGS</code> (i.e. something easily overridden)</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

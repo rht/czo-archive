@@ -1,0 +1,615 @@
+<html>
+<head><meta charset="utf-8"><title>overriding RATE_LIMITING_RULES · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html">overriding RATE_LIMITING_RULES</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1458919"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458919" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458919">(Nov 03 2022 at 16:26)</a>:</h4>
+<p>I need to overwrite <code>RATE_LIMITING_RULES </code> set in <code>computed_settings.py</code>, can I just add the <code>dict</code> to <code>/etc/zulip/settings.py</code>? The docs weren't clear (<a href="https://zulip.readthedocs.io/en/latest/subsystems/settings.html">https://zulip.readthedocs.io/en/latest/subsystems/settings.html</a>).</p>
+
+
+
+<a name="1458921"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458921" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458921">(Nov 03 2022 at 16:27)</a>:</h4>
+<p>(i'm getting users with API limit exceed having just the client open)</p>
+
+
+
+<a name="1458922"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458922" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458922">(Nov 03 2022 at 16:29)</a>:</h4>
+<p>It's very much not expected that clients that are logged in are hitting those limits.  Do you know what requests are causing them?  In the access logs, they should be status code 429.</p>
+
+
+
+<a name="1458923"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458923" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458923">(Nov 03 2022 at 16:30)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>2022-11-03 14:39:23.209 INFO [zr] x.x.x.x    POST    429   5ms (+start: 7ms) /json/users/me/presence (15@root via ZulipElectron/5.9.3)
+2022-11-03 14:39:23.209 INFO [zr] status=429, data=b&#39;{&quot;result&quot;:&quot;error&quot;,&quot;msg&quot;:&quot;API usage exceeded rate limit&quot;,&quot;code&quot;:&quot;RATE_LIMIT_HIT&quot;,&quot;retry-after&quot;:59.04740309715271}\n&#39;, uid=15@root
+</code></pre></div>
+
+
+
+<a name="1458924"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458924" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458924">(Nov 03 2022 at 16:30)</a>:</h4>
+<p>And then it appears the client isn't adhering to the retry because it just spams the endpoint</p>
+
+
+
+<a name="1458925"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458925" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458925">(Nov 03 2022 at 16:31)</a>:</h4>
+<p>Since those settings are in <code>computed_settings.py</code>, there's no way to adjust them without changing that file.  This is probably a bug (ref earlier discussion in <a href="#narrow/stream/31-production-help/topic/new.20user.20rate.20limit/near/1434214">https://chat.zulip.org/#narrow/stream/31-production-help/topic/new.20user.20rate.20limit/near/1434214</a>).</p>
+
+
+
+<a name="1458926"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458926" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458926">(Nov 03 2022 at 16:32)</a>:</h4>
+<p>That looks like a client bug of some sort -- upping the limit is just going to hose your server.  The rate-limit is protecting you. <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<a name="1458927"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458927" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458927">(Nov 03 2022 at 16:33)</a>:</h4>
+<p>What version of Zulip?</p>
+
+
+
+<a name="1458928"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458928" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458928">(Nov 03 2022 at 16:36)</a>:</h4>
+<p>And is this just one client, or more than one?</p>
+
+
+
+<a name="1458930"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458930" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458930">(Nov 03 2022 at 16:37)</a>:</h4>
+<p>We don't do any retries on presence submission:</p>
+<div class="codehilite" data-code-language="JavaScript"><pre><span></span><code><span class="w">    </span><span class="nx">channel</span><span class="p">.</span><span class="nx">post</span><span class="p">({</span><span class="w"></span>
+<span class="w">        </span><span class="nx">url</span><span class="o">:</span><span class="w"> </span><span class="s2">"/json/users/me/presence"</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nx">data</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nx">status</span><span class="o">:</span><span class="w"> </span><span class="nx">compute_active_status</span><span class="p">(),</span><span class="w"></span>
+<span class="w">            </span><span class="nx">ping_only</span><span class="o">:</span><span class="w"> </span><span class="o">!</span><span class="nx">want_redraw</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nx">new_user_input</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nx">slim_presence</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="nx">success</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="c1">// ...</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="p">});</span><span class="w"></span>
+</code></pre></div>
+
+
+
+<a name="1458931"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458931" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458931">(Nov 03 2022 at 16:39)</a>:</h4>
+<p>The only route to this sort of behaviour I can potentially see is if something decides to play catch-up with <code>setInterval</code>s that it missed?</p>
+<div class="codehilite" data-code-language="JavaScript"><pre><span></span><code><span class="cm">/* Time between keep-alive pings */</span><span class="w"></span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">ACTIVE_PING_INTERVAL_MS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">50</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1000</span><span class="p">;</span><span class="w"></span>
+
+<span class="k">export</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">initialize</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ...</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// Let the server know we're here, but pass "false" for</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// want_redraw, since we just got all this info in page_params.</span><span class="w"></span>
+<span class="w">    </span><span class="nx">send_presence_to_server</span><span class="p">(</span><span class="kc">false</span><span class="p">);</span><span class="w"></span>
+
+<span class="w">    </span><span class="kd">function</span><span class="w"> </span><span class="nx">get_full_presence_list_update</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">send_presence_to_server</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="nx">setInterval</span><span class="p">(</span><span class="nx">get_full_presence_list_update</span><span class="p">,</span><span class="w"> </span><span class="nx">ACTIVE_PING_INTERVAL_MS</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+
+
+
+<a name="1458932"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458932" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458932">(Nov 03 2022 at 16:43)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="25152">Peter Kieser</span> <a href="#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1458924">said</a>:</p>
+<blockquote>
+<p>And then it appears the client isn't adhering to the retry because it just spams the endpoint</p>
+</blockquote>
+<p>As a side note, I wonder if there's any generic backoff code we could put in <code>channel.js</code>' <code>call</code> function when it sees a 429.  I don't know that there's one reasonable behaviour to have -- I guess it could cache the 429 for the <code>retry-after</code> seconds, and return a synthetic 429 to its caller?  Maybe caching the 429 data on a per-request-path basis?</p>
+
+
+
+<a name="1458933"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458933" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458933">(Nov 03 2022 at 16:47)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1458927">said</a>:</p>
+<blockquote>
+<p>What version of Zulip?<br>
+And is this just one client, or more than one?</p>
+</blockquote>
+<p><span class="user-mention" data-user-id="25152">@Peter Kieser</span>: In case you didn't see my questions above.</p>
+<p>(I moved a couple messages here from you which got mis-placed into <a class="stream-topic" data-stream-id="31" href="/#narrow/stream/31-production-help/topic/users.20removed.20from.20LDAP.20and.20sync">#production help &gt; users removed from LDAP and sync</a>)</p>
+
+
+
+<a name="1458969"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458969" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458969">(Nov 03 2022 at 17:33)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1458928">said</a>:</p>
+<blockquote>
+<p>And is this just one client, or more than one?</p>
+</blockquote>
+<p>One client, so far. </p>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1458927">said</a>:</p>
+<blockquote>
+<p>What version of Zulip?</p>
+</blockquote>
+<p>5.6</p>
+
+
+
+<a name="1458970"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458970" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458970">(Nov 03 2022 at 17:34)</a>:</h4>
+<p>Sorry for the delayed response, was in a meeting.</p>
+
+
+
+<a name="1458973"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458973" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458973">(Nov 03 2022 at 17:35)</a>:</h4>
+<p>RE: Hosing the server, it looks like there was 1024 requests that returned a rate limit error from the one client. I'd rather the client not get any rate limiting messages.</p>
+
+
+
+<a name="1458987"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458987" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458987">(Nov 03 2022 at 18:12)</a>:</h4>
+<p>Could this be possible if the person suspended their laptop or switched from to WiFi or to wired?</p>
+
+
+
+<a name="1458995"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458995" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458995">(Nov 03 2022 at 18:20)</a>:</h4>
+<p>This occurred when the person brought their MacBook out of sleep. They would have been connected to a VPN as well. Wonder if rapid interface changes could cause this?</p>
+
+
+
+<a name="1458998"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458998" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matt <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458998">(Nov 03 2022 at 18:26)</a>:</h4>
+<p>I have definitely experienced client anomalies when coming out of sleep or hibernation with Zulip, and other "connected" applications.</p>
+
+
+
+<a name="1458999"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1458999" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1458999">(Nov 03 2022 at 18:26)</a>:</h4>
+<p>Browsers do <em>weird</em> stuff around suspend.  The <code>setInterval</code> theory I had above is consistent with that.</p>
+
+
+
+<a name="1459001"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459001" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459001">(Nov 03 2022 at 18:27)</a>:</h4>
+<p>This is via the Electron app, FWIW. (Not that that changes anything.)</p>
+
+
+
+<a name="1459002"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459002" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459002">(Nov 03 2022 at 18:28)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="25152">Peter Kieser</span> <a href="#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1458973">said</a>:</p>
+<blockquote>
+<p>RE: Hosing the server, it looks like there was 1024 requests that returned a rate limit error from the one client. I'd rather the client not get any rate limiting messages.</p>
+</blockquote>
+<p>I'm not clear how sending 1024 requests at the ~same time saying "hi, I'm active" is helping the server or the client in this context -- the 429's seem perfectly reasonable as a way for the server to protect itself against a client which isn't actually being helpful.</p>
+<p>Were there any user-visible signs that they were getting throttled?</p>
+
+
+
+<a name="1459003"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459003" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459003">(Nov 03 2022 at 18:29)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1459002">said</a>:</p>
+<div class="codehilite"><pre><span></span><code>Were there any user-visible signs that they were getting throttled?
+</code></pre></div>
+<p>Yes, they received an error. (Attached)<br>
+<a href="/user_uploads/2/6a/CbOTxFiyZHHIX1Y0Ut9NR621/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/6a/CbOTxFiyZHHIX1Y0Ut9NR621/image.png" title="image.png"><img src="/user_uploads/2/6a/CbOTxFiyZHHIX1Y0Ut9NR621/image.png"></a></div>
+
+
+
+<a name="1459004"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459004" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459004">(Nov 03 2022 at 18:30)</a>:</h4>
+<p>Hm!  OK, understood that you want to prevent <em>that</em>.</p>
+
+
+
+<a name="1459005"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459005" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459005">(Nov 03 2022 at 18:32)</a>:</h4>
+<p>OK, so my guess:</p>
+<ol>
+<li>Client is connected</li>
+<li>Laptop suspends</li>
+<li>Laptop unsuspends</li>
+<li>Client fires off a slew of presence POSTS</li>
+<li>Meanwhile, our logic to detect suspends fires, which forces a full-page reload</li>
+<li>The full-page reload happens, and gets 429'd.</li>
+</ol>
+
+
+
+<a name="1459007"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459007" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459007">(Nov 03 2022 at 18:35)</a>:</h4>
+<p>Can you look in the access logs and show the history of all of the request from the client -- ideally starting with a couple before they suspended?  Feel free to redact IPs, etc -- I think we mostly care about the URLs they hit, in what order.</p>
+
+
+
+<a name="1459013"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459013" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459013">(Nov 03 2022 at 18:41)</a>:</h4>
+<p>Do you need the rate limit messages (seems theres no way to correlate them with a particular client) or is the 429 enough?</p>
+
+
+
+<a name="1459014"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459014" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459014">(Nov 03 2022 at 18:42)</a>:</h4>
+<p>Just the access lines is enough</p>
+
+
+
+<a name="1459016"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459016" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459016">(Nov 03 2022 at 18:44)</a>:</h4>
+<p><a href="https://crash.pfak.org/~peter/server-2022-11-03-ratelimit.log">https://crash.pfak.org/~peter/server-2022-11-03-ratelimit.log</a></p>
+
+
+
+<a name="1459017"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459017" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459017">(Nov 03 2022 at 18:45)</a>:</h4>
+<p>I checked all of 14:xx timetamp for the IP, that's all the results.</p>
+
+
+
+<a name="1459019"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459019" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459019">(Nov 03 2022 at 18:53)</a>:</h4>
+<p>Great, thanks!</p>
+<p>Can you also show the final couple requests from the user before they suspended?  You should be able to grep for <code>15@root</code> to find all requests from that user.</p>
+
+
+
+<a name="1459021"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459021" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459021">(Nov 03 2022 at 18:56)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1459019">said</a>:</p>
+<blockquote>
+<p>Can you also show the final couple requests from the user before they suspended?  You should be able to grep for <code>15@root</code> to find all requests from that user.</p>
+</blockquote>
+<p>Just from <code>server.log</code>?</p>
+
+
+
+<a name="1459023"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459023" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459023">(Nov 03 2022 at 18:57)</a>:</h4>
+<p>Yup!  We don't need all of them, I'm just curious to verify that the client behaviour looks reasonable before the suspend and IP change</p>
+
+
+
+<a name="1459027"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459027" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459027">(Nov 03 2022 at 18:59)</a>:</h4>
+<p>But this does look like bad <code>setInterval</code> behaviour:</p>
+<div class="codehilite"><pre><span></span><code>2022-11-03 14:39:22.276 INFO [zr] x.x.x.76    POST    200  23ms (db: 10ms/2q) /json/users/me/presence (15@root via ZulipElectron/5.9.3)
+2022-11-03 14:39:22.285 INFO [zr] x.x.x.76    POST    200  18ms (db: 7ms/2q) (+start: 12ms) /json/users/me/presence (15@root via ZulipElectron/5.9.3)
+</code></pre></div>
+<p>We took 18ms to serve the second request, so that started at 14:39:22.267, <em>before</em> the first request had finished.  So the browser is clearly just triggering these calls as fast as it could, in parallel.</p>
+
+
+
+<a name="1459028"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459028" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459028">(Nov 03 2022 at 18:59)</a>:</h4>
+<p><a href="https://crash.pfak.org/~peter/server-2022-11-02-ratelimit.log">https://crash.pfak.org/~peter/server-2022-11-02-ratelimit.log</a></p>
+
+
+
+<a name="1459031"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459031" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459031">(Nov 03 2022 at 19:00)</a>:</h4>
+<p>Those are the last calls prior, nothing for 14 hours.</p>
+
+
+
+<a name="1459032"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459032" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459032">(Nov 03 2022 at 19:00)</a>:</h4>
+<p>OK, that all looks perfectly reasonable.</p>
+
+
+
+<a name="1459033"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459033" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459033">(Nov 03 2022 at 19:01)</a>:</h4>
+<p>(odd for this particular user to be offline for 14 hours, TBH)</p>
+
+
+
+<a name="1459034"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459034" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459034">(Nov 03 2022 at 19:02)</a>:</h4>
+<p>Does this not include mobile clients? is <code>15@root</code> associated with a particular session?</p>
+
+
+
+<a name="1459035"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459035" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459035">(Nov 03 2022 at 19:02)</a>:</h4>
+<p>(Sorry this is my second week using Zulip.)</p>
+
+
+
+<a name="1459036"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459036" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459036">(Nov 03 2022 at 19:02)</a>:</h4>
+<p><code>15@root</code> is their user-id, so that's across all devices.</p>
+
+
+
+<a name="1459038"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459038" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459038">(Nov 03 2022 at 19:03)</a>:</h4>
+<p>Huh. Gonna ask them if they have it on their phone.</p>
+
+
+
+<a name="1459039"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459039" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459039">(Nov 03 2022 at 19:03)</a>:</h4>
+<p>I don't think that's relevant here -- these all show ZulipElectron as their user-agent.</p>
+
+
+
+<a name="1459040"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459040" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459040">(Nov 03 2022 at 19:04)</a>:</h4>
+<p>Okay.</p>
+
+
+
+<a name="1459043"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459043" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459043">(Nov 03 2022 at 19:06)</a>:</h4>
+<p>Yeah, they were offline for those hours.</p>
+
+
+
+<a name="1459046"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459046" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459046">(Nov 03 2022 at 19:08)</a>:</h4>
+<p>To answer your original question -- I wouldn't suggest raising your rate-limit thresholds in response to this.  This is a weird race condition I've never seen before and a misbehaving browser, and the server being able to do some push-back to a misbehaving client, generally, is good for your bottom-line availability.</p>
+<p>If you do want to change the rate limits, it is unfortunately not entirely straightforward, since they're in <code>computed_settings.py</code>.  Your best bet would be to <a href="https://zulip.readthedocs.io/en/stable/production/upgrade-or-modify.html#modifying-zulip">make a fork</a> with a change to that file -- or we'd certainly take a patch to move those settings to <code>default_settings.py</code> as long as we <a href="#narrow/stream/31-production-help/topic/new.20user.20rate.20limit/near/1434214">can override parts of them reasonably</a>.</p>
+<p>And we'll dig more into if we can address the browser-going-haywire aspect of this -- thank you for that bug report!</p>
+
+
+
+<a name="1459048"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459048" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459048">(Nov 03 2022 at 19:10)</a>:</h4>
+<p>Agreed re: misbehaving client. Is there any response I can do? Because the two avenues I see to resolve this: 1. Up the rate limit, or 2. Ditch Zulip.</p>
+
+
+
+<a name="1459057"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459057" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459057">(Nov 03 2022 at 19:12)</a>:</h4>
+<p>We do have a change adjacent to this codepath in <code>main</code>, or in <code>5.x</code>.  I'm not 100% convinced that it affects the behaviour here, but it does adjust the un-suspend behaviour in a way that <em>may</em> help.  You get that code by following our instructions to <a href="https://zulip.readthedocs.io/en/stable/production/upgrade-or-modify.html#upgrading-from-a-git-repository">upgrade to git</a> and pass either <code>5.x</code> (if you want minimal changes) or <code>main</code> (if you want what will be released as 6.0 in a week or so).</p>
+
+
+
+<a name="1459061"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459061" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459061">(Nov 03 2022 at 19:13)</a>:</h4>
+<p>The instructions for how to up the rate limit were in my previous message, if you want to go that route.</p>
+
+
+
+<a name="1459065"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459065" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459065">(Nov 03 2022 at 19:14)</a>:</h4>
+<p>Okay, I can give that a go (and i see I can just edit the file if I want to just adjust the rate limit.)<br>
+Based on what you just said: It sounds like the client is served by the server and wrapped in an electron app? Anything I can do to help fix the unsuspend behaviour?</p>
+
+
+
+<a name="1459069"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459069" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459069">(Nov 03 2022 at 19:16)</a>:</h4>
+<p>Yup, you can just edit the file, and then run <code>~zulip/deployments/current/scripts/restart-server</code> to pick up that change.  However, that change will be lost on your next upgrade.</p>
+
+
+
+<a name="1459079"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459079" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459079">(Nov 03 2022 at 19:23)</a>:</h4>
+<p>(Should I open a Github issue?)</p>
+
+
+
+<a name="1459081"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459081" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459081">(Nov 03 2022 at 19:24)</a>:</h4>
+<p>The electron app is just the same JS and HTML that we serve for all web clients.</p>
+<p>The relevant code here is in <code>static/js/activity.js</code>, which is what does the <code>setInterval</code> which the browser is mistakenly triggering to catch-up for all of the suspended time, and <code>static/js/watchdog.js</code> which is what controls the unsuspend detection.</p>
+<p>I'm not 100% sure I follow why we call <code> watchdog.check_for_unsuspend()</code> in there, but don't appear to care about <code>watchdog.suspects_user_is_offline</code>, its output.</p>
+
+
+
+<a name="1459082"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459082" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459082">(Nov 03 2022 at 19:24)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="25152">Peter Kieser</span> <a href="#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1459079">said</a>:</p>
+<blockquote>
+<p>(Should I open a Github issue?)</p>
+</blockquote>
+<p>Please do!</p>
+
+
+
+<a name="1459085"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459085" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matt <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459085">(Nov 03 2022 at 19:28)</a>:</h4>
+<p>I'll note that Electron has a <a href="https://www.electronjs.org/docs/latest/api/power-monitor/">whole API dedicated</a> to dealing with power...</p>
+
+
+
+<a name="1459129"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459129" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459129">(Nov 03 2022 at 20:28)</a>:</h4>
+<p>Yeah.  But that won't help us on plain Chrome, which doubtless has the same potential problem.</p>
+
+
+
+<a name="1459136"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459136" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459136">(Nov 03 2022 at 20:32)</a>:</h4>
+<p>We should use <code>setTimeout</code> instead—don’t enqueue the next ping until the current ping is finished or at least started.</p>
+
+
+
+<a name="1459152"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459152" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459152">(Nov 03 2022 at 21:02)</a>:</h4>
+<p>I wonder if that also may explain some of the <code>/</code> fetch storms we've seen, from:</p>
+<div class="codehilite" data-code-language="JavaScript"><pre><span></span><code><span class="w">    </span><span class="nx">setInterval</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nx">blueslip</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"Retrying page reload due to 30s timer"</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="nb">window</span><span class="p">.</span><span class="nx">location</span><span class="p">.</span><span class="nx">reload</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"> </span><span class="mf">30000</span><span class="p">);</span><span class="w"></span>
+</code></pre></div>
+<p>...where we start down the "please reload" path, get suspended a second time, and come out with thousands of <code>window.location.reload(true)</code>s enqueued.</p>
+
+
+
+<a name="1459180"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459180" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459180">(Nov 03 2022 at 21:36)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1459082">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="25152">Peter Kieser</span> <a href="#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1459079">said</a>:</p>
+<blockquote>
+<p>(Should I open a Github issue?)</p>
+</blockquote>
+<p>Please do!</p>
+</blockquote>
+<p><a href="https://github.com/zulip/zulip/issues/23438">https://github.com/zulip/zulip/issues/23438</a></p>
+
+
+
+<a name="1459237"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459237" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459237">(Nov 03 2022 at 23:07)</a>:</h4>
+<p>I think it might be wise to audit all use of setInterval in the app following this investigation...</p>
+
+
+
+<a name="1459362"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459362" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459362">(Nov 04 2022 at 12:04)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES/near/1458925">said</a>:</p>
+<blockquote>
+<p>Since those settings are in <code>computed_settings.py</code>, there's no way to adjust them without changing that file.  This is probably a bug (ref earlier discussion in <a href="#narrow/stream/31-production-help/topic/new.20user.20rate.20limit/near/1434214">https://chat.zulip.org/#narrow/stream/31-production-help/topic/new.20user.20rate.20limit/near/1434214</a>).</p>
+</blockquote>
+<p>I ended up opening <a href="https://github.com/zulip/zulip/pull/22956">https://github.com/zulip/zulip/pull/22956</a> for that back then, perhaps it'd make sense to try to get it merged for 6.0?</p>
+
+
+
+<a name="1459373"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459373" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459373">(Nov 04 2022 at 14:17)</a>:</h4>
+<p>Oooh, nice.  Left a couple comments, but that'd be a great fix to sneak into 6.0.</p>
+
+
+
+<a name="1459410"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459410" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Peter Kieser <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459410">(Nov 04 2022 at 16:23)</a>:</h4>
+<p>I was looking over the code, it doesn't look like I can set a specific override for presence, can i? (i.e. i'm at the mercy of a fix going in for the suspend issue client-side.)</p>
+
+
+
+<a name="1459412"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1459412" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1459412">(Nov 04 2022 at 16:31)</a>:</h4>
+<p>That's controlled by <code>api_by_user</code>.  There's one bucket for each user's authenticated traffic, which is why hammering on presence means they get 429'd on a request to <code>/</code></p>
+
+
+
+<a name="1461036"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1461036" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1461036">(Nov 08 2022 at 17:20)</a>:</h4>
+<p>I've tagged <a href="https://github.com/zulip/zulip/pull/23438">#23438</a> as a release goal; <span class="user-mention" data-user-id="10242">@Sahil Batra</span> do you perhaps have time to work removing the <code>setInterval</code> in favor of <code>setTimeout</code> here?</p>
+
+
+
+<a name="1461058"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1461058" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sahil Batra <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1461058">(Nov 08 2022 at 17:43)</a>:</h4>
+<p>Yeah sure. Will do it.</p>
+
+
+
+<a name="1461103"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1461103" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1461103">(Nov 08 2022 at 18:47)</a>:</h4>
+<p>I guess given this analysis, all of our <code>setInterval</code> calls are probably things we should consider switching to a <code>setTimeout</code> approach.</p>
+<div class="codehilite"><pre><span></span><code>static/js/activity.js:    setInterval(get_full_presence_list_update, ACTIVE_PING_INTERVAL_MS);
+static/js/message_edit.js:        const countdown_timer = setInterval(() =&gt; {
+static/js/reload.js:    setInterval(() =&gt; {
+static/js/timerender.ts:setInterval(update_timestamps, 60 * 1000);
+static/js/watchdog.ts:setInterval(check_for_unsuspend, 5000);
+</code></pre></div>
+
+
+
+<a name="1461107"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1461107" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1461107">(Nov 08 2022 at 18:50)</a>:</h4>
+<p>Back to the main topic here, <a href="https://github.com/zulip/zulip/pull/22956">#22956</a> was merged, so in Zulip 6.0 there will be a documented interface for overriding rate-limiting rules.</p>
+
+
+
+<a name="1462475"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1462475" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1462475">(Nov 10 2022 at 20:40)</a>:</h4>
+<p>I'd appreciate additional reviews/feedback on this <code>setInterval</code> replacement PR: <a href="https://github.com/zulip/zulip/pull/23508">#23508</a></p>
+
+
+
+<a name="1463644"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1463644" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1463644">(Nov 14 2022 at 19:37)</a>:</h4>
+<p><span class="user-mention" data-user-id="12178">@Alex Vandiver</span> <span class="user-mention" data-user-id="699">@Anders Kaseorg</span> can you both review <a href="https://github.com/zulip/zulip/pull/23508">#23508</a>? I think I'm happy with this implementation, though probably want to rename the variable and add a block comment; but it's a particularly sensitive code path, so I'd like extra eyes on it.</p>
+
+
+
+<a name="1463651"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1463651" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1463651">(Nov 14 2022 at 19:43)</a>:</h4>
+<p>I pushed an update with comments/variable name changes.</p>
+
+
+
+<a name="1463659"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1463659" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1463659">(Nov 14 2022 at 19:45)</a>:</h4>
+<p>I'm not clear why this isn't more like (totally untested):</p>
+<div class="codehilite" data-code-language="Diff"><pre><span></span><code><span class="gh">diff --git static/js/activity.js static/js/activity.js</span><span class="w"></span>
+<span class="gh">index 99154c169e..a29ab7d98a 100644</span><span class="w"></span>
+<span class="gd">--- static/js/activity.js</span><span class="w"></span>
+<span class="gi">+++ static/js/activity.js</span><span class="w"></span>
+<span class="gu">@@ -247,9 +247,10 @@ export function initialize() {</span><span class="w"></span>
+
+<span class="w"> </span>    function get_full_presence_list_update() {<span class="w"></span>
+<span class="w"> </span>        send_presence_to_server(true);<span class="w"></span>
+<span class="gi">+        setTimeout(get_full_presence_list_update, ACTIVE_PING_INTERVAL_MS);</span><span class="w"></span>
+<span class="w"> </span>    }<span class="w"></span>
+
+<span class="gd">-    setInterval(get_full_presence_list_update, ACTIVE_PING_INTERVAL_MS);</span><span class="w"></span>
+<span class="gi">+    setTimeout(get_full_presence_list_update, ACTIVE_PING_INTERVAL_MS);</span><span class="w"></span>
+<span class="w"> </span>}<span class="w"></span>
+
+<span class="w"> </span>export function update_presence_info(user_id, info, server_time) {<span class="w"></span>
+</code></pre></div>
+
+
+
+<a name="1463660"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1463660" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1463660">(Nov 14 2022 at 19:45)</a>:</h4>
+<p>Which seems cleaner than another parameter</p>
+
+
+
+<a name="1463668"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1463668" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1463668">(Nov 14 2022 at 19:50)</a>:</h4>
+<p>Hmm.</p>
+
+
+
+<a name="1463672"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1463672" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1463672">(Nov 14 2022 at 19:52)</a>:</h4>
+<p>I think that would work (Though I'd do the <code>setTimeout</code> first, so we don't need to think about an exception in <code>send_presence_to_server</code> killing your presernce feed), and might be more readable.</p>
+
+
+
+<a name="1463680"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1463680" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1463680">(Nov 14 2022 at 19:56)</a>:</h4>
+<p>Yeah, that version works and passes the test written for this; I'll try pushing that up.</p>
+
+
+
+<a name="1463690"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1463690" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1463690">(Nov 14 2022 at 20:01)</a>:</h4>
+<p>Done.</p>
+
+
+
+<a name="1463702"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1463702" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1463702">(Nov 14 2022 at 20:07)</a>:</h4>
+<p>LGTM.</p>
+
+
+
+<a name="1463714"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/overriding%20RATE_LIMITING_RULES/near/1463714" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/overriding.20RATE_LIMITING_RULES.html#1463714">(Nov 14 2022 at 20:12)</a>:</h4>
+<p>OK, I feel pretty good about the risk associated with this change to the preexisting code; will proceed with merging it.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,964 @@
+<html>
+<head><meta charset="utf-8"><title>✔ Zullip git upgrade fails · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html">✔ Zullip git upgrade fails</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1449510"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449510" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449510">(Oct 14 2022 at 01:10)</a>:</h4>
+<p>Here is the full log: <a href="https://pastebin.com/pbu1Umnj">https://pastebin.com/pbu1Umnj</a> . Tried several times, same results.</p>
+
+
+
+<a name="1449516"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449516" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449516">(Oct 14 2022 at 01:30)</a>:</h4>
+<p>To save folks a click, the relevant section is:</p>
+<div class="codehilite"><pre><span></span><code>Running migrations:
+  Applying zerver.0420_alter_archivedmessage_realm_alter_message_realm...Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/4cb7e7f76b9747af6e3d88a027e730e8d0dedf5d/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/utils.py&quot;, line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File &quot;/home/zulip/deployments/2022-10-14-00-56-27/zerver/lib/db.py&quot;, line 34, in execute
+    wrapper_execute(self, super().execute, query, vars)
+  File &quot;/home/zulip/deployments/2022-10-14-00-56-27/zerver/lib/db.py&quot;, line 19, in wrapper_execute
+    action(sql, params)
+psycopg2.errors.NotNullViolation: column &quot;realm_id&quot; of relation &quot;zerver_message&quot; contains null values
+</code></pre></div>
+
+
+
+<a name="1449799"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449799" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449799">(Oct 14 2022 at 15:24)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> as a possible 6.0 blocker -- and I don't know if your recent experience with this migration is relevant.</p>
+<p>So it looks like something in the 0419 upgrade step failed to set a <code>realm_id</code> for one or more messages?</p>
+
+
+
+<a name="1449843"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449843" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449843">(Oct 14 2022 at 16:25)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/Zullip.20git.20upgrade.20fails/near/1449799">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> as a possible 6.0 blocker -- and I don't know if your recent experience with this migration is relevant.</p>
+<p>So it looks like something in the 0419 upgrade step failed to set a <code>realm_id</code> for one or more messages?</p>
+</blockquote>
+<p>Yeah, I think so</p>
+
+
+
+<a name="1449844"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449844" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449844">(Oct 14 2022 at 16:26)</a>:</h4>
+<p>Let's debug what the message is and go from there.</p>
+
+
+
+<a name="1449845"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449845" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449845">(Oct 14 2022 at 16:26)</a>:</h4>
+<p><span class="user-mention" data-user-id="20576">@Cosmic Sound</span> Can you run these in <code>manage.py shell</code>  to get an idea what kind of messages, and how many, are affected?</p>
+<div class="codehilite"><pre><span></span><code>Message.objects.filter(realm=None).filter(recipient__type=Recipient.PERSONAL).count()
+Message.objects.filter(realm=None).filter(recipient__type=Recipient.STREAM).count()
+Message.objects.filter(realm=None).filter(recipient__type=Recipient.HUDDLE).count()
+</code></pre></div>
+
+
+
+<a name="1449846"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449846" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449846">(Oct 14 2022 at 16:26)</a>:</h4>
+<p>The user should be able to start the server while we do so BTW.</p>
+
+
+
+<a name="1449847"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449847" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449847">(Oct 14 2022 at 16:26)</a>:</h4>
+<p>Though maybe a manual puppet apply is required? I am not sure whether that runs after migrations.</p>
+
+
+
+<a name="1449850"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449850" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449850">(Oct 14 2022 at 16:29)</a>:</h4>
+<p>Sure <span class="user-mention" data-user-id="10349">@Mateusz Mandera</span>  give me 5 mins to finish a task, will look into that</p>
+
+
+
+<a name="1449853"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449853" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449853">(Oct 14 2022 at 16:30)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span>  it is true I was able to start the server, was not fatal issue to cause downtime, only could not manage to pass the upgrade.</p>
+
+
+
+<a name="1449878"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449878" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449878">(Oct 14 2022 at 17:12)</a>:</h4>
+<p>Here is the output: </p>
+<div class="codehilite" data-code-language="Python"><pre><span></span><code><span class="n">In</span> <span class="p">[</span><span class="mi">1</span><span class="p">]:</span> <span class="n">Message</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">realm</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">recipient__type</span><span class="o">=</span><span class="n">Recipient</span><span class="o">.</span><span class="n">PERSONAL</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+   <span class="o">...</span><span class="p">:</span> <span class="n">Message</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">realm</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">recipient__type</span><span class="o">=</span><span class="n">Recipient</span><span class="o">.</span><span class="n">STREAM</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+   <span class="o">...</span><span class="p">:</span> <span class="n">Message</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">realm</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">recipient__type</span><span class="o">=</span><span class="n">Recipient</span><span class="o">.</span><span class="n">HUDDLE</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+   <span class="o">...</span><span class="p">:</span>
+<span class="o">---------------------------------------------------------------------------</span>
+<span class="n">FieldError</span>                                <span class="n">Traceback</span> <span class="p">(</span><span class="n">most</span> <span class="n">recent</span> <span class="n">call</span> <span class="n">last</span><span class="p">)</span>
+<span class="n">Input</span> <span class="n">In</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="ow">in</span> <span class="o">&lt;</span><span class="n">cell</span> <span class="n">line</span><span class="p">:</span> <span class="mi">1</span><span class="o">&gt;</span><span class="p">()</span>
+<span class="o">----&gt;</span> <span class="mi">1</span> <span class="n">Message</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">realm</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">recipient__type</span><span class="o">=</span><span class="n">Recipient</span><span class="o">.</span><span class="n">PERSONAL</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+      <span class="mi">2</span> <span class="n">Message</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">realm</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">recipient__type</span><span class="o">=</span><span class="n">Recipient</span><span class="o">.</span><span class="n">STREAM</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+      <span class="mi">3</span> <span class="n">Message</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">realm</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">recipient__type</span><span class="o">=</span><span class="n">Recipient</span><span class="o">.</span><span class="n">HUDDLE</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="mf">.8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">django</span><span class="o">/</span><span class="n">db</span><span class="o">/</span><span class="n">models</span><span class="o">/</span><span class="n">manager</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">85</span><span class="p">,</span> <span class="ow">in</span> <span class="n">BaseManager</span><span class="o">.</span><span class="n">_get_queryset_methods</span><span class="o">.&lt;</span><span class="nb">locals</span><span class="o">&gt;.</span><span class="n">create_method</span><span class="o">.&lt;</span><span class="nb">locals</span><span class="o">&gt;.</span><span class="n">manager_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+     <span class="mi">84</span> <span class="k">def</span> <span class="nf">manager_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="o">---&gt;</span> <span class="mi">85</span>     <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_queryset</span><span class="p">(),</span> <span class="n">name</span><span class="p">)(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="mf">.8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">django</span><span class="o">/</span><span class="n">db</span><span class="o">/</span><span class="n">models</span><span class="o">/</span><span class="n">query</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">1071</span><span class="p">,</span> <span class="ow">in</span> <span class="n">QuerySet</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+   <span class="mi">1066</span> <span class="s2">"""</span>
+<span class="s2">   1067 Return a new QuerySet instance with the args ANDed to the existing</span>
+<span class="s2">   1068 set.</span>
+<span class="s2">   1069 """</span>
+   <span class="mi">1070</span> <span class="bp">self</span><span class="o">.</span><span class="n">_not_support_combined_queries</span><span class="p">(</span><span class="s2">"filter"</span><span class="p">)</span>
+<span class="o">-&gt;</span> <span class="mi">1071</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filter_or_exclude</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="mf">.8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">django</span><span class="o">/</span><span class="n">db</span><span class="o">/</span><span class="n">models</span><span class="o">/</span><span class="n">query</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">1089</span><span class="p">,</span> <span class="ow">in</span> <span class="n">QuerySet</span><span class="o">.</span><span class="n">_filter_or_exclude</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">negate</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+   <span class="mi">1087</span>     <span class="n">clone</span><span class="o">.</span><span class="n">_deferred_filter</span> <span class="o">=</span> <span class="n">negate</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span>
+   <span class="mi">1088</span> <span class="k">else</span><span class="p">:</span>
+<span class="o">-&gt;</span> <span class="mi">1089</span>     <span class="n">clone</span><span class="o">.</span><span class="n">_filter_or_exclude_inplace</span><span class="p">(</span><span class="n">negate</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+   <span class="mi">1090</span> <span class="k">return</span> <span class="n">clone</span>
+
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="mf">.8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">django</span><span class="o">/</span><span class="n">db</span><span class="o">/</span><span class="n">models</span><span class="o">/</span><span class="n">query</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">1096</span><span class="p">,</span> <span class="ow">in</span> <span class="n">QuerySet</span><span class="o">.</span><span class="n">_filter_or_exclude_inplace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">negate</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+   <span class="mi">1094</span>     <span class="bp">self</span><span class="o">.</span><span class="n">_query</span><span class="o">.</span><span class="n">add_q</span><span class="p">(</span><span class="o">~</span><span class="n">Q</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+   <span class="mi">1095</span> <span class="k">else</span><span class="p">:</span>
+<span class="o">-&gt;</span> <span class="mi">1096</span>     <span class="bp">self</span><span class="o">.</span><span class="n">_query</span><span class="o">.</span><span class="n">add_q</span><span class="p">(</span><span class="n">Q</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="mf">.8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">django</span><span class="o">/</span><span class="n">db</span><span class="o">/</span><span class="n">models</span><span class="o">/</span><span class="n">sql</span><span class="o">/</span><span class="n">query</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">1502</span><span class="p">,</span> <span class="ow">in</span> <span class="n">Query</span><span class="o">.</span><span class="n">add_q</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q_object</span><span class="p">)</span>
+   <span class="mi">1493</span> <span class="c1"># For join promotion this case is doing an AND for the added q_object</span>
+   <span class="mi">1494</span> <span class="c1"># and existing conditions. So, any existing inner join forces the join</span>
+   <span class="mi">1495</span> <span class="c1"># type to remain inner. Existing outer joins can however be demoted.</span>
+   <span class="mi">1496</span> <span class="c1"># (Consider case where rel_a is LOUTER and rel_a__col=1 is added - if</span>
+   <span class="mi">1497</span> <span class="c1"># rel_a doesn't produce any rows, then the whole condition must fail.</span>
+   <span class="mi">1498</span> <span class="c1"># So, demotion is OK.</span>
+   <span class="mi">1499</span> <span class="n">existing_inner</span> <span class="o">=</span> <span class="p">{</span>
+   <span class="mi">1500</span>     <span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">alias_map</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">alias_map</span><span class="p">[</span><span class="n">a</span><span class="p">]</span><span class="o">.</span><span class="n">join_type</span> <span class="o">==</span> <span class="n">INNER</span>
+   <span class="mi">1501</span> <span class="p">}</span>
+<span class="o">-&gt;</span> <span class="mi">1502</span> <span class="n">clause</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_q</span><span class="p">(</span><span class="n">q_object</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">used_aliases</span><span class="p">)</span>
+   <span class="mi">1503</span> <span class="k">if</span> <span class="n">clause</span><span class="p">:</span>
+   <span class="mi">1504</span>     <span class="bp">self</span><span class="o">.</span><span class="n">where</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">clause</span><span class="p">,</span> <span class="n">AND</span><span class="p">)</span>
+
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="mf">.8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">django</span><span class="o">/</span><span class="n">db</span><span class="o">/</span><span class="n">models</span><span class="o">/</span><span class="n">sql</span><span class="o">/</span><span class="n">query</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">1532</span><span class="p">,</span> <span class="ow">in</span> <span class="n">Query</span><span class="o">.</span><span class="n">_add_q</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q_object</span><span class="p">,</span> <span class="n">used_aliases</span><span class="p">,</span> <span class="n">branch_negated</span><span class="p">,</span> <span class="n">current_negated</span><span class="p">,</span> <span class="n">allow_joins</span><span class="p">,</span> <span class="n">split_subq</span><span class="p">,</span> <span class="n">check_filterable</span><span class="p">)</span>
+   <span class="mi">1528</span> <span class="n">joinpromoter</span> <span class="o">=</span> <span class="n">JoinPromoter</span><span class="p">(</span>
+   <span class="mi">1529</span>     <span class="n">q_object</span><span class="o">.</span><span class="n">connector</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">q_object</span><span class="o">.</span><span class="n">children</span><span class="p">),</span> <span class="n">current_negated</span>
+   <span class="mi">1530</span> <span class="p">)</span>
+   <span class="mi">1531</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">q_object</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+<span class="o">-&gt;</span> <span class="mi">1532</span>     <span class="n">child_clause</span><span class="p">,</span> <span class="n">needed_inner</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_filter</span><span class="p">(</span>
+   <span class="mi">1533</span>         <span class="n">child</span><span class="p">,</span>
+   <span class="mi">1534</span>         <span class="n">can_reuse</span><span class="o">=</span><span class="n">used_aliases</span><span class="p">,</span>
+   <span class="mi">1535</span>         <span class="n">branch_negated</span><span class="o">=</span><span class="n">branch_negated</span><span class="p">,</span>
+   <span class="mi">1536</span>         <span class="n">current_negated</span><span class="o">=</span><span class="n">current_negated</span><span class="p">,</span>
+   <span class="mi">1537</span>         <span class="n">allow_joins</span><span class="o">=</span><span class="n">allow_joins</span><span class="p">,</span>
+   <span class="mi">1538</span>         <span class="n">split_subq</span><span class="o">=</span><span class="n">split_subq</span><span class="p">,</span>
+   <span class="mi">1539</span>         <span class="n">check_filterable</span><span class="o">=</span><span class="n">check_filterable</span><span class="p">,</span>
+   <span class="mi">1540</span>     <span class="p">)</span>
+   <span class="mi">1541</span>     <span class="n">joinpromoter</span><span class="o">.</span><span class="n">add_votes</span><span class="p">(</span><span class="n">needed_inner</span><span class="p">)</span>
+   <span class="mi">1542</span>     <span class="k">if</span> <span class="n">child_clause</span><span class="p">:</span>
+
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="mf">.8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">django</span><span class="o">/</span><span class="n">db</span><span class="o">/</span><span class="n">models</span><span class="o">/</span><span class="n">sql</span><span class="o">/</span><span class="n">query</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">1377</span><span class="p">,</span> <span class="ow">in</span> <span class="n">Query</span><span class="o">.</span><span class="n">build_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filter_expr</span><span class="p">,</span> <span class="n">branch_negated</span><span class="p">,</span> <span class="n">current_negated</span><span class="p">,</span> <span class="n">can_reuse</span><span class="p">,</span> <span class="n">allow_joins</span><span class="p">,</span> <span class="n">split_subq</span><span class="p">,</span> <span class="n">reuse_with_filtered_relation</span><span class="p">,</span> <span class="n">check_filterable</span><span class="p">)</span>
+   <span class="mi">1375</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">arg</span><span class="p">:</span>
+   <span class="mi">1376</span>     <span class="k">raise</span> <span class="n">FieldError</span><span class="p">(</span><span class="s2">"Cannot parse keyword query </span><span class="si">%r</span><span class="s2">"</span> <span class="o">%</span> <span class="n">arg</span><span class="p">)</span>
+<span class="o">-&gt;</span> <span class="mi">1377</span> <span class="n">lookups</span><span class="p">,</span> <span class="n">parts</span><span class="p">,</span> <span class="n">reffed_expression</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve_lookup_type</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
+   <span class="mi">1379</span> <span class="k">if</span> <span class="n">check_filterable</span><span class="p">:</span>
+   <span class="mi">1380</span>     <span class="bp">self</span><span class="o">.</span><span class="n">check_filterable</span><span class="p">(</span><span class="n">reffed_expression</span><span class="p">)</span>
+
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="mf">.8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">django</span><span class="o">/</span><span class="n">db</span><span class="o">/</span><span class="n">models</span><span class="o">/</span><span class="n">sql</span><span class="o">/</span><span class="n">query</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">1187</span><span class="p">,</span> <span class="ow">in</span> <span class="n">Query</span><span class="o">.</span><span class="n">solve_lookup_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lookup</span><span class="p">)</span>
+   <span class="mi">1185</span>     <span class="k">if</span> <span class="n">expression</span><span class="p">:</span>
+   <span class="mi">1186</span>         <span class="k">return</span> <span class="n">expression_lookups</span><span class="p">,</span> <span class="p">(),</span> <span class="n">expression</span>
+<span class="o">-&gt;</span> <span class="mi">1187</span> <span class="n">_</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">lookup_parts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">names_to_path</span><span class="p">(</span><span class="n">lookup_splitted</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_meta</span><span class="p">())</span>
+   <span class="mi">1188</span> <span class="n">field_parts</span> <span class="o">=</span> <span class="n">lookup_splitted</span><span class="p">[</span><span class="mi">0</span> <span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">lookup_splitted</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">lookup_parts</span><span class="p">)]</span>
+   <span class="mi">1189</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lookup_parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">field_parts</span><span class="p">:</span>
+
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="mf">.8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">django</span><span class="o">/</span><span class="n">db</span><span class="o">/</span><span class="n">models</span><span class="o">/</span><span class="n">sql</span><span class="o">/</span><span class="n">query</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">1677</span><span class="p">,</span> <span class="ow">in</span> <span class="n">Query</span><span class="o">.</span><span class="n">names_to_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">names</span><span class="p">,</span> <span class="n">opts</span><span class="p">,</span> <span class="n">allow_many</span><span class="p">,</span> <span class="n">fail_on_missing</span><span class="p">)</span>
+   <span class="mi">1669</span>     <span class="k">if</span> <span class="n">pos</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">fail_on_missing</span><span class="p">:</span>
+   <span class="mi">1670</span>         <span class="n">available</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+   <span class="mi">1671</span>             <span class="p">[</span>
+   <span class="mi">1672</span>                 <span class="o">*</span><span class="n">get_field_names_from_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">),</span>
+   <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+   <span class="mi">1675</span>             <span class="p">]</span>
+   <span class="mi">1676</span>         <span class="p">)</span>
+<span class="o">-&gt;</span> <span class="mi">1677</span>         <span class="k">raise</span> <span class="n">FieldError</span><span class="p">(</span>
+   <span class="mi">1678</span>             <span class="s2">"Cannot resolve keyword '</span><span class="si">%s</span><span class="s2">' into field. "</span>
+   <span class="mi">1679</span>             <span class="s2">"Choices are: </span><span class="si">%s</span><span class="s2">"</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">available</span><span class="p">))</span>
+   <span class="mi">1680</span>         <span class="p">)</span>
+   <span class="mi">1681</span>     <span class="k">break</span>
+   <span class="mi">1682</span> <span class="c1"># Check if we need any joins for concrete inheritance cases (the</span>
+   <span class="mi">1683</span> <span class="c1"># field lives in parent, but we are currently in one of its</span>
+   <span class="mi">1684</span> <span class="c1"># children)</span>
+
+<span class="n">FieldError</span><span class="p">:</span> <span class="n">Cannot</span> <span class="n">resolve</span> <span class="n">keyword</span> <span class="s1">'realm'</span> <span class="n">into</span> <span class="n">field</span><span class="o">.</span> <span class="n">Choices</span> <span class="n">are</span><span class="p">:</span> <span class="n">attachment</span><span class="p">,</span> <span class="n">content</span><span class="p">,</span> <span class="n">date_sent</span><span class="p">,</span> <span class="n">edit_history</span><span class="p">,</span> <span class="n">has_attachment</span><span class="p">,</span> <span class="n">has_image</span><span class="p">,</span> <span class="n">has_link</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">last_edit_time</span><span class="p">,</span> <span class="n">missedmessageemailaddress</span><span class="p">,</span> <span class="n">reaction</span><span class="p">,</span> <span class="n">recipient</span><span class="p">,</span> <span class="n">recipient_id</span><span class="p">,</span> <span class="n">rendered_content</span><span class="p">,</span> <span class="n">rendered_content_version</span><span class="p">,</span> <span class="n">scheduledmessagenotificationemail</span><span class="p">,</span> <span class="n">search_tsvector</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="n">sender_id</span><span class="p">,</span> <span class="n">sending_client</span><span class="p">,</span> <span class="n">sending_client_id</span><span class="p">,</span> <span class="n">subject</span><span class="p">,</span> <span class="n">submessage</span><span class="p">,</span> <span class="n">usermessage</span>
+</code></pre></div>
+
+
+
+<a name="1449905"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449905" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449905">(Oct 14 2022 at 17:49)</a>:</h4>
+<p>Ah, true, you're running this in the working deployment's directory, so there <code>Message.realm</code> doesn't exist as far as Django is concerned. Let's go through direct SQL <span class="user-mention" data-user-id="20576">@Cosmic Sound</span>  Can you try this?</p>
+<p>(it's basically the same code as above, just with SQL instead of Django ORM queries)</p>
+<div class="codehilite"><pre><span></span><code>from django.db import connection
+with connection.cursor() as c:
+    c.execute(&#39;SELECT COUNT(*) FROM &quot;zerver_message&quot; INNER JOIN &quot;zerver_recipient&quot; ON (&quot;zerver_message&quot;.&quot;recipient_id&quot; = &quot;zerver_recipient&quot;.&quot;id&quot;) WHERE (&quot;zerver_message&quot;.&quot;realm_id&quot; IS NULL AND &quot;zerver_recipient&quot;.&quot;type&quot; = 1)&#39;)
+    r = c.fetchall()
+    print(f&quot;PERSONAL: {r}&quot;)
+
+    c.execute(&#39;SELECT COUNT(*) FROM &quot;zerver_message&quot; INNER JOIN &quot;zerver_recipient&quot; ON (&quot;zerver_message&quot;.&quot;recipient_id&quot; = &quot;zerver_recipient&quot;.&quot;id&quot;) WHERE (&quot;zerver_message&quot;.&quot;realm_id&quot; IS NULL AND &quot;zerver_recipient&quot;.&quot;type&quot; = 2)&#39;)
+    r = c.fetchall()
+    print(f&quot;STREAM: {r}&quot;)
+
+    c.execute(&#39;SELECT COUNT(*) FROM &quot;zerver_message&quot; INNER JOIN &quot;zerver_recipient&quot; ON (&quot;zerver_message&quot;.&quot;recipient_id&quot; = &quot;zerver_recipient&quot;.&quot;id&quot;) WHERE (&quot;zerver_message&quot;.&quot;realm_id&quot; IS NULL AND &quot;zerver_recipient&quot;.&quot;type&quot; = 3)&#39;)
+    r = c.fetchall()
+    print(f&quot;HUDDLE: {r}&quot;)
+</code></pre></div>
+
+
+
+<a name="1449906"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449906" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449906">(Oct 14 2022 at 17:52)</a>:</h4>
+<p>I just run the whole code at once?</p>
+
+
+
+<a name="1449907"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449907" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449907">(Oct 14 2022 at 17:52)</a>:</h4>
+<p>also in the shell i suppose</p>
+
+
+
+<a name="1449908"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449908" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449908">(Oct 14 2022 at 17:52)</a>:</h4>
+<p>Yup, paste that all into <code>./manage.py shell</code></p>
+
+
+
+<a name="1449909"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449909" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449909">(Oct 14 2022 at 17:52)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>PERSONAL: [(4,)]
+STREAM: [(4,)]
+HUDDLE: [(0,)]
+</code></pre></div>
+
+
+
+<a name="1449910"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449910" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449910">(Oct 14 2022 at 17:53)</a>:</h4>
+<p>Thats all</p>
+
+
+
+<a name="1449917"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449917" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449917">(Oct 14 2022 at 18:04)</a>:</h4>
+<p>Huh, that's surprising, I'd expect bugs in the Huddle case, not the others. But that's few messages, which is good, we can look at them closer. Can you try:</p>
+<div class="codehilite"><pre><span></span><code>from django.db import connection
+with connection.cursor() as c:
+    c.execute(&#39;SELECT zerver_message.id FROM &quot;zerver_message&quot; INNER JOIN &quot;zerver_recipient&quot; ON (&quot;zerver_message&quot;.&quot;recipient_id&quot; = &quot;zerver_recipient&quot;.&quot;id&quot;) WHERE (&quot;zerver_message&quot;.&quot;realm_id&quot; IS NULL AND &quot;zerver_recipient&quot;.&quot;type&quot; = 1)&#39;)
+    r = c.fetchall()
+    ids = [x[0] for x in r]
+    print(f&quot;PERSONAL: {ids}&quot;)
+
+    print(Message.objects.filter(id__in=ids).values(&quot;sender__delivery_email&quot;, &quot;recipient&quot;, &quot;date_sent&quot;)
+
+
+    c.execute(&#39;SELECT zerver_message.id FROM &quot;zerver_message&quot; INNER JOIN &quot;zerver_recipient&quot; ON (&quot;zerver_message&quot;.&quot;recipient_id&quot; = &quot;zerver_recipient&quot;.&quot;id&quot;) WHERE (&quot;zerver_message&quot;.&quot;realm_id&quot; IS NULL AND &quot;zerver_recipient&quot;.&quot;type&quot; = 2)&#39;)
+    r = c.fetchall()
+    ids = [x[0] for x in r]
+    print(f&quot;STREAM: {ids}&quot;)
+
+    print(Message.objects.filter(id__in=ids).values(&quot;sender__delivery_email&quot;, &quot;recipient&quot;, &quot;date_sent&quot;)
+</code></pre></div>
+<p>(feel free to censor the emails if they're user emails)</p>
+
+
+
+<a name="1449927"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449927" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449927">(Oct 14 2022 at 18:09)</a>:</h4>
+<p>(this may be easier in <code>./manage dbshell</code>)</p>
+
+
+
+<a name="1449930"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449930" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449930">(Oct 14 2022 at 18:12)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/Zullip.20git.20upgrade.20fails/near/1449927">said</a>:</p>
+<blockquote>
+<p>(this may be easier in <code>./manage dbshell</code>)</p>
+</blockquote>
+<p>yeah, good thought, would have been easier  <span aria-label="sweat smile" class="emoji emoji-1f605" role="img" title="sweat smile">:sweat_smile:</span> we'll have Message ids after this though, so ORM will be available for digging more</p>
+
+
+
+<a name="1449932"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449932" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449932">(Oct 14 2022 at 18:16)</a>:</h4>
+<p>on it</p>
+
+
+
+<a name="1449933"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449933" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449933">(Oct 14 2022 at 18:16)</a>:</h4>
+<p>In dbshell does not return anything</p>
+
+
+
+<a name="1449935"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449935" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449935">(Oct 14 2022 at 18:17)</a>:</h4>
+<p>Both same</p>
+
+
+
+<a name="1449936"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449936" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449936">(Oct 14 2022 at 18:19)</a>:</h4>
+<p>If I just have to paste it at onice</p>
+
+
+
+<a name="1449937"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449937" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449937">(Oct 14 2022 at 18:19)</a>:</h4>
+<p>It does not return a thing</p>
+
+
+
+<a name="1449938"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449938" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449938">(Oct 14 2022 at 18:20)</a>:</h4>
+<p><span class="user-mention" data-user-id="20576">@Cosmic Sound</span> Yeah that code above is for <code>manage.py shell</code></p>
+
+
+
+<a name="1449939"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449939" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449939">(Oct 14 2022 at 18:21)</a>:</h4>
+<p>(Alex was just pointing out  that I could have made it much simpler if I went with just using <code>dbshell</code> and doing SQL queries there)</p>
+
+
+
+<a name="1449942"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449942" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449942">(Oct 14 2022 at 18:21)</a>:</h4>
+<p>I think is something wrong maybe with the syntax</p>
+
+
+
+<a name="1449943"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449943" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449943">(Oct 14 2022 at 18:22)</a>:</h4>
+<p>I tried both of them</p>
+
+
+
+<a name="1449944"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449944" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449944">(Oct 14 2022 at 18:22)</a>:</h4>
+<p>Empty return</p>
+
+
+
+<a name="1449981"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449981" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449981">(Oct 14 2022 at 19:25)</a>:</h4>
+<p>There are missing close-parentheses on two of the <code>print</code> statements. It’s waiting for more input.</p>
+
+
+
+<a name="1449982"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449982" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449982">(Oct 14 2022 at 19:26)</a>:</h4>
+<div class="codehilite" data-code-language="Diff"><pre><span></span><code><span class="gd">-    print(Message.objects.filter(id__in=ids).values("sender__delivery_email", "recipient", "date_sent")</span><span class="w"></span>
+<span class="gi">+    print(Message.objects.filter(id__in=ids).values("sender__delivery_email", "recipient", "date_sent"))</span><span class="w"></span>
+</code></pre></div>
+
+
+
+<a name="1449988"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1449988" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1449988">(Oct 14 2022 at 19:31)</a>:</h4>
+<p>To be explicit -- <span class="user-mention" data-user-id="20576">@Cosmic Sound</span>, try this into <code>./manage.py shell</code>:</p>
+<div class="codehilite" data-code-language="Python"><pre><span></span><code><span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">connection</span>
+<span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">c</span><span class="p">:</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">'SELECT zerver_message.id FROM "zerver_message" INNER JOIN "zerver_recipient" ON ("zerver_message"."recipient_id" = "zerver_recipient"."id") WHERE ("zerver_message"."realm_id" IS NULL AND "zerver_recipient"."type" = 1)'</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">r</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"PERSONAL: </span><span class="si">{</span><span class="n">ids</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="n">Message</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">id__in</span><span class="o">=</span><span class="n">ids</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">(</span><span class="s2">"sender__delivery_email"</span><span class="p">,</span> <span class="s2">"recipient"</span><span class="p">,</span> <span class="s2">"date_sent"</span><span class="p">))</span>
+
+
+    <span class="n">c</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">'SELECT zerver_message.id FROM "zerver_message" INNER JOIN "zerver_recipient" ON ("zerver_message"."recipient_id" = "zerver_recipient"."id") WHERE ("zerver_message"."realm_id" IS NULL AND "zerver_recipient"."type" = 2)'</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">r</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"STREAM: </span><span class="si">{</span><span class="n">ids</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="n">Message</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">id__in</span><span class="o">=</span><span class="n">ids</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">(</span><span class="s2">"sender__delivery_email"</span><span class="p">,</span> <span class="s2">"recipient"</span><span class="p">,</span> <span class="s2">"date_sent"</span><span class="p">))</span>
+</code></pre></div>
+
+
+
+<a name="1450011"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450011" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450011">(Oct 14 2022 at 19:58)</a>:</h4>
+<div class="codehilite" data-code-language="Python"><pre><span></span><code><span class="n">PERSONAL</span><span class="p">:</span> <span class="p">[</span><span class="mi">10337</span><span class="p">,</span> <span class="mi">10338</span><span class="p">,</span> <span class="mi">10339</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="o">&lt;</span><span class="n">QuerySet</span> <span class="p">[{</span><span class="s1">'sender__delivery_email'</span><span class="p">:</span> <span class="s1">'welcome-bot@zulip.com'</span><span class="p">,</span> <span class="s1">'recipient'</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">'date_sent'</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">43</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">771567</span><span class="p">,</span> <span class="n">tzinfo</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)},</span> <span class="p">{</span><span class="s1">'sender__delivery_email'</span><span class="p">:</span> <span class="s1">'ichi-bot@chat.uhlhosting.ch'</span><span class="p">,</span> <span class="s1">'recipient'</span><span class="p">:</span> <span class="mi">61</span><span class="p">,</span> <span class="s1">'date_sent'</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="mi">54</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">357208</span><span class="p">,</span> <span class="n">tzinfo</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)},</span> <span class="p">{</span><span class="s1">'sender__delivery_email'</span><span class="p">:</span> <span class="s1">'ichi-bot@chat.uhlhosting.ch'</span><span class="p">,</span> <span class="s1">'recipient'</span><span class="p">:</span> <span class="mi">61</span><span class="p">,</span> <span class="s1">'date_sent'</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="mi">54</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">487381</span><span class="p">,</span> <span class="n">tzinfo</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)},</span> <span class="p">{</span><span class="s1">'sender__delivery_email'</span><span class="p">:</span> <span class="s1">'postal-bot@chat.uhlhosting.ch'</span><span class="p">,</span> <span class="s1">'recipient'</span><span class="p">:</span> <span class="mi">61</span><span class="p">,</span> <span class="s1">'date_sent'</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2022</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="mi">54</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">193574</span><span class="p">,</span> <span class="n">tzinfo</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)}]</span><span class="o">&gt;</span>
+<span class="n">STREAM</span><span class="p">:</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
+<span class="o">&lt;</span><span class="n">QuerySet</span> <span class="p">[{</span><span class="s1">'sender__delivery_email'</span><span class="p">:</span> <span class="s1">'welcome-bot@zulip.com'</span><span class="p">,</span> <span class="s1">'recipient'</span><span class="p">:</span> <span class="mi">9</span><span class="p">,</span> <span class="s1">'date_sent'</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">43</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">806931</span><span class="p">,</span> <span class="n">tzinfo</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)},</span> <span class="p">{</span><span class="s1">'sender__delivery_email'</span><span class="p">:</span> <span class="s1">'welcome-bot@zulip.com'</span><span class="p">,</span> <span class="s1">'recipient'</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span> <span class="s1">'date_sent'</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">43</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">815176</span><span class="p">,</span> <span class="n">tzinfo</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)},</span> <span class="p">{</span><span class="s1">'sender__delivery_email'</span><span class="p">:</span> <span class="s1">'welcome-bot@zulip.com'</span><span class="p">,</span> <span class="s1">'recipient'</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span> <span class="s1">'date_sent'</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">43</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">822913</span><span class="p">,</span> <span class="n">tzinfo</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)},</span> <span class="p">{</span><span class="s1">'sender__delivery_email'</span><span class="p">:</span> <span class="s1">'welcome-bot@zulip.com'</span><span class="p">,</span> <span class="s1">'recipient'</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span> <span class="s1">'date_sent'</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">43</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">829876</span><span class="p">,</span> <span class="n">tzinfo</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)}]</span><span class="o">&gt;</span>
+</code></pre></div>
+
+
+
+<a name="1450318"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450318" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450318">(Oct 15 2022 at 10:13)</a>:</h4>
+<p><span class="user-mention" data-user-id="20576">@Cosmic Sound</span>  Huh, i don't see any obvious pattern that would let me identify a bug, other than all these were sent by bots <span aria-label="thinking" class="emoji emoji-1f914" role="img" title="thinking">:thinking:</span>  Some questions:</p>
+<ol>
+<li>Have you overriden <code>settings.CROSS_REALM_BOT_EMAILS</code> in your settings by any chance?</li>
+<li>Can you run this in <code>manage.py shell</code>, so that we can see what those recipients are and if there's a pattern?</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>Recipient.objects.filter(id__in=[8, 9, 10, 61])
+</code></pre></div>
+
+
+
+<a name="1450327"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450327" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450327">(Oct 15 2022 at 10:20)</a>:</h4>
+<p>As well as</p>
+<div class="codehilite"><pre><span></span><code>emails = [&#39;welcome-bot@zulip.com&#39;, &quot;postal-bot@chat.uhlhosting.ch&quot;, &quot;&#39;ichi-bot@chat.uhlhosting.ch&quot;]
+UserProfile.objects.filter(delivery_email__in=emails).values(&quot;delivery_email&quot;, &quot;realm&quot;)
+</code></pre></div>
+
+
+
+<a name="1450328"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450328" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450328">(Oct 15 2022 at 10:21)</a>:</h4>
+<p>My main hypothesis right now is that there is some incorrect database state in terms of <code>Recipient</code> objects. since those things have happened on self-hosted deployments occasionally, and they might mess with the migration's assumptions</p>
+
+
+
+<a name="1450336"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450336" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450336">(Oct 15 2022 at 11:00)</a>:</h4>
+<div class="codehilite" data-code-language="Python 2.x"><pre><span></span><code><span class="n">In</span> <span class="p">[</span><span class="mi">2</span><span class="p">]:</span> <span class="n">Recipient</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">id__in</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">61</span><span class="p">])</span>
+<span class="n">Out</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span> <span class="o">---------------------------------------------------------------------------</span>
+<span class="n">DoesNotExist</span>                              <span class="n">Traceback</span> <span class="p">(</span><span class="n">most</span> <span class="n">recent</span> <span class="n">call</span> <span class="n">last</span><span class="p">)</span>
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="o">.</span><span class="mi">8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">IPython</span><span class="o">/</span><span class="n">core</span><span class="o">/</span><span class="n">formatters</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">707</span><span class="p">,</span> <span class="ow">in</span> <span class="n">PlainTextFormatter</span><span class="o">.</span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+    <span class="mi">700</span> <span class="n">stream</span> <span class="o">=</span> <span class="n">StringIO</span><span class="p">()</span>
+    <span class="mi">701</span> <span class="n">printer</span> <span class="o">=</span> <span class="n">pretty</span><span class="o">.</span><span class="n">RepresentationPrinter</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span>
+    <span class="mi">702</span>     <span class="bp">self</span><span class="o">.</span><span class="n">max_width</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">newline</span><span class="p">,</span>
+    <span class="mi">703</span>     <span class="n">max_seq_length</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_seq_length</span><span class="p">,</span>
+    <span class="mi">704</span>     <span class="n">singleton_pprinters</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">singleton_printers</span><span class="p">,</span>
+    <span class="mi">705</span>     <span class="n">type_pprinters</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_printers</span><span class="p">,</span>
+    <span class="mi">706</span>     <span class="n">deferred_pprinters</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">deferred_printers</span><span class="p">)</span>
+<span class="o">--&gt;</span> <span class="mi">707</span> <span class="n">printer</span><span class="o">.</span><span class="n">pretty</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+    <span class="mi">708</span> <span class="n">printer</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="mi">709</span> <span class="k">return</span> <span class="n">stream</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="o">.</span><span class="mi">8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">IPython</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">pretty</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">410</span><span class="p">,</span> <span class="ow">in</span> <span class="n">RepresentationPrinter</span><span class="o">.</span><span class="n">pretty</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+    <span class="mi">407</span>                         <span class="k">return</span> <span class="n">meth</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span> <span class="n">cycle</span><span class="p">)</span>
+    <span class="mi">408</span>                 <span class="k">if</span> <span class="bp">cls</span> <span class="ow">is</span> <span class="ow">not</span> <span class="nb">object</span> \
+    <span class="mi">409</span>                         <span class="ow">and</span> <span class="nb">callable</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'__repr__'</span><span class="p">)):</span>
+<span class="o">--&gt;</span> <span class="mi">410</span>                     <span class="k">return</span> <span class="n">_repr_pprint</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span> <span class="n">cycle</span><span class="p">)</span>
+    <span class="mi">412</span>     <span class="k">return</span> <span class="n">_default_pprint</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span> <span class="n">cycle</span><span class="p">)</span>
+    <span class="mi">413</span> <span class="k">finally</span><span class="p">:</span>
+
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="o">.</span><span class="mi">8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">IPython</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">pretty</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">778</span><span class="p">,</span> <span class="ow">in</span> <span class="n">_repr_pprint</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">cycle</span><span class="p">)</span>
+    <span class="mi">776</span> <span class="s2">"""A pprint that just redirects to the normal repr function."""</span>
+    <span class="mi">777</span> <span class="c1"># Find newlines and replace them with p.break_()</span>
+<span class="o">--&gt;</span> <span class="mi">778</span> <span class="n">output</span> <span class="o">=</span> <span class="nb">repr</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+    <span class="mi">779</span> <span class="n">lines</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
+    <span class="mi">780</span> <span class="k">with</span> <span class="n">p</span><span class="o">.</span><span class="n">group</span><span class="p">():</span>
+
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="o">.</span><span class="mi">8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">django</span><span class="o">/</span><span class="n">db</span><span class="o">/</span><span class="n">models</span><span class="o">/</span><span class="n">query</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">299</span><span class="p">,</span> <span class="ow">in</span> <span class="n">QuerySet</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    <span class="mi">297</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">REPR_OUTPUT_SIZE</span><span class="p">:</span>
+    <span class="mi">298</span>     <span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"...(remaining elements truncated)..."</span>
+<span class="o">--&gt;</span> <span class="mi">299</span> <span class="k">return</span> <span class="s2">"&lt;</span><span class="si">%s</span><span class="s2"> </span><span class="si">%r</span><span class="s2">&gt;"</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="o">.</span><span class="mi">8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">django</span><span class="o">/</span><span class="n">db</span><span class="o">/</span><span class="n">models</span><span class="o">/</span><span class="n">base</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">580</span><span class="p">,</span> <span class="ow">in</span> <span class="n">Model</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    <span class="mi">579</span> <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="o">--&gt;</span> <span class="mi">580</span>     <span class="k">return</span> <span class="s2">"&lt;</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&gt;"</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+
+<span class="n">File</span> <span class="o">~/</span><span class="n">deployments</span><span class="o">/</span><span class="mi">2022</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">28</span><span class="o">-</span><span class="mi">18</span><span class="o">-</span><span class="mi">23</span><span class="o">-</span><span class="mi">24</span><span class="o">/</span><span class="n">zerver</span><span class="o">/</span><span class="n">models</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">1483</span><span class="p">,</span> <span class="ow">in</span> <span class="n">Recipient</span><span class="o">.</span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+   <span class="mi">1482</span> <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="o">-&gt;</span> <span class="mi">1483</span>     <span class="n">display_recipient</span> <span class="o">=</span> <span class="n">get_display_recipient</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+   <span class="mi">1484</span>     <span class="k">return</span> <span class="n">f</span><span class="s2">"&lt;Recipient: {display_recipient} ({self.type_id}, {self.type})&gt;"</span>
+
+<span class="n">File</span> <span class="o">~/</span><span class="n">deployments</span><span class="o">/</span><span class="mi">2022</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">28</span><span class="o">-</span><span class="mi">18</span><span class="o">-</span><span class="mi">23</span><span class="o">-</span><span class="mi">24</span><span class="o">/</span><span class="n">zerver</span><span class="o">/</span><span class="n">models</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">214</span><span class="p">,</span> <span class="ow">in</span> <span class="n">get_display_recipient</span><span class="p">(</span><span class="n">recipient</span><span class="p">)</span>
+    <span class="mi">213</span> <span class="k">def</span> <span class="nf">get_display_recipient</span><span class="p">(</span><span class="n">recipient</span><span class="p">:</span> <span class="s2">"Recipient"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DisplayRecipientT</span><span class="p">:</span>
+<span class="o">--&gt;</span> <span class="mi">214</span>     <span class="k">return</span> <span class="n">get_display_recipient_by_id</span><span class="p">(</span>
+    <span class="mi">215</span>         <span class="n">recipient</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+    <span class="mi">216</span>         <span class="n">recipient</span><span class="o">.</span><span class="n">type</span><span class="p">,</span>
+    <span class="mi">217</span>         <span class="n">recipient</span><span class="o">.</span><span class="n">type_id</span><span class="p">,</span>
+    <span class="mi">218</span>     <span class="p">)</span>
+
+<span class="n">File</span> <span class="o">~/</span><span class="n">deployments</span><span class="o">/</span><span class="mi">2022</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">28</span><span class="o">-</span><span class="mi">18</span><span class="o">-</span><span class="mi">23</span><span class="o">-</span><span class="mi">24</span><span class="o">/</span><span class="n">zerver</span><span class="o">/</span><span class="n">models</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">208</span><span class="p">,</span> <span class="ow">in</span> <span class="n">get_display_recipient_by_id</span><span class="p">(</span><span class="n">recipient_id</span><span class="p">,</span> <span class="n">recipient_type</span><span class="p">,</span> <span class="n">recipient_type_id</span><span class="p">)</span>
+    <span class="mi">205</span> <span class="kn">from</span> <span class="nn">zerver.lib.display_recipient</span> <span class="kn">import</span> <span class="n">get_display_recipient_remote_cache</span>
+    <span class="mi">207</span> <span class="k">if</span> <span class="n">recipient_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">per_request_display_recipient_cache</span><span class="p">:</span>
+<span class="o">--&gt;</span> <span class="mi">208</span>     <span class="n">result</span> <span class="o">=</span> <span class="n">get_display_recipient_remote_cache</span><span class="p">(</span><span class="n">recipient_id</span><span class="p">,</span> <span class="n">recipient_type</span><span class="p">,</span> <span class="n">recipient_type_id</span><span class="p">)</span>
+    <span class="mi">209</span>     <span class="n">per_request_display_recipient_cache</span><span class="p">[</span><span class="n">recipient_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span>
+    <span class="mi">210</span> <span class="k">return</span> <span class="n">per_request_display_recipient_cache</span><span class="p">[</span><span class="n">recipient_id</span><span class="p">]</span>
+
+<span class="n">File</span> <span class="o">~/</span><span class="n">deployments</span><span class="o">/</span><span class="mi">2022</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">28</span><span class="o">-</span><span class="mi">18</span><span class="o">-</span><span class="mi">23</span><span class="o">-</span><span class="mi">24</span><span class="o">/</span><span class="n">zerver</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">cache</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">175</span><span class="p">,</span> <span class="ow">in</span> <span class="n">cache_with_key</span><span class="o">.&lt;</span><span class="nb">locals</span><span class="o">&gt;.</span><span class="n">decorator</span><span class="o">.&lt;</span><span class="nb">locals</span><span class="o">&gt;.</span><span class="n">func_with_caching</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="mi">172</span> <span class="k">if</span> <span class="n">val</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="mi">173</span>     <span class="k">return</span> <span class="n">val</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="o">--&gt;</span> <span class="mi">175</span> <span class="n">val</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="mi">177</span> <span class="n">cache_set</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">cache_name</span><span class="o">=</span><span class="n">cache_name</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+    <span class="mi">179</span> <span class="k">return</span> <span class="n">val</span>
+
+<span class="n">File</span> <span class="o">~/</span><span class="n">deployments</span><span class="o">/</span><span class="mi">2022</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">28</span><span class="o">-</span><span class="mi">18</span><span class="o">-</span><span class="mi">23</span><span class="o">-</span><span class="mi">24</span><span class="o">/</span><span class="n">zerver</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">display_recipient</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">46</span><span class="p">,</span> <span class="ow">in</span> <span class="n">get_display_recipient_remote_cache</span><span class="p">(</span><span class="n">recipient_id</span><span class="p">,</span> <span class="n">recipient_type</span><span class="p">,</span> <span class="n">recipient_type_id</span><span class="p">)</span>
+     <span class="mi">44</span> <span class="k">if</span> <span class="n">recipient_type</span> <span class="o">==</span> <span class="n">Recipient</span><span class="o">.</span><span class="n">STREAM</span><span class="p">:</span>
+     <span class="mi">45</span>     <span class="k">assert</span> <span class="n">recipient_type_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
+<span class="o">---&gt;</span> <span class="mi">46</span>     <span class="n">stream</span> <span class="o">=</span> <span class="n">Stream</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">values</span><span class="p">(</span><span class="s2">"name"</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">recipient_type_id</span><span class="p">)</span>
+     <span class="mi">47</span>     <span class="k">return</span> <span class="n">stream</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span>
+     <span class="mi">49</span> <span class="c1"># The main priority for ordering here is being deterministic.</span>
+     <span class="mi">50</span> <span class="c1"># Right now, we order by ID, which matches the ordering of user</span>
+     <span class="mi">51</span> <span class="c1"># names in the left sidebar.</span>
+
+<span class="n">File</span> <span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">venv</span><span class="o">-</span><span class="n">cache</span><span class="o">/</span><span class="n">b4ba5048959a2b70574d95fb2938f7a861d1ad07</span><span class="o">/</span><span class="n">zulip</span><span class="o">-</span><span class="n">py3</span><span class="o">-</span><span class="n">venv</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="o">.</span><span class="mi">8</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">django</span><span class="o">/</span><span class="n">db</span><span class="o">/</span><span class="n">models</span><span class="o">/</span><span class="n">query</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">496</span><span class="p">,</span> <span class="ow">in</span> <span class="n">QuerySet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="mi">494</span>     <span class="k">return</span> <span class="n">clone</span><span class="o">.</span><span class="n">_result_cache</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="mi">495</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">num</span><span class="p">:</span>
+<span class="o">--&gt;</span> <span class="mi">496</span>     <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">(</span>
+    <span class="mi">497</span>         <span class="s2">"</span><span class="si">%s</span><span class="s2"> matching query does not exist."</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">_meta</span><span class="o">.</span><span class="n">object_name</span>
+    <span class="mi">498</span>     <span class="p">)</span>
+    <span class="mi">499</span> <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">MultipleObjectsReturned</span><span class="p">(</span>
+    <span class="mi">500</span>     <span class="s2">"get() returned more than one </span><span class="si">%s</span><span class="s2"> -- it returned </span><span class="si">%s</span><span class="s2">!"</span>
+    <span class="mi">501</span>     <span class="o">%</span> <span class="p">(</span>
+   <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="mi">504</span>     <span class="p">)</span>
+    <span class="mi">505</span> <span class="p">)</span>
+
+<span class="n">DoesNotExist</span><span class="p">:</span> <span class="n">Stream</span> <span class="n">matching</span> <span class="n">query</span> <span class="n">does</span> <span class="ow">not</span> <span class="n">exist</span><span class="o">.</span>
+
+<span class="n">In</span> <span class="p">[</span><span class="mi">3</span><span class="p">]:</span>
+</code></pre></div>
+
+
+
+<a name="1450360"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450360" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450360">(Oct 15 2022 at 11:30)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> 1. I do not recall making such a change.</p>
+
+
+
+<a name="1450554"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450554" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450554">(Oct 16 2022 at 07:35)</a>:</h4>
+<p><span class="user-mention" data-user-id="20576">@Cosmic Sound</span> Okay, I think this basically confirms the corrupt Recipients theory. Basically, I think these are Recipients  with no matching Stream/UserProfile objects - resulting from improper deletion of Streams and UserProfiles in the past, that left these Recipients undeleted. Let's make 100% sure that's what we have here and then we'll be able to fix it so that you can upgrade your server.</p>
+<p>Can you run this?</p>
+<div class="codehilite"><pre><span></span><code>for recipient in Recipient.objects.filter(id__in=[8, 9]):
+    assert recipient.type == Recipient.STREAM
+    try:
+        Stream.objects.get(id=recipient.type_id)
+        print(f&quot;Stream exists for {recipient.id}&quot;)
+    except Stream.DoesNotExist:
+        print(f&quot;Recipient {recipient.id} has no Stream&quot;)
+
+for recipient in Recipient.objects.filter(id__in=[10, 61]):
+    assert recipient.type == Recipient.PERSONAL
+    try:
+        UserProfile.objects.get(id=recipient.type_id)
+        print(f&quot;UserProfile exists for {recipient.id}&quot;)
+    except UserProfile.DoesNotExist:
+        print(f&quot;Recipient {recipient.id} has no UserProfile&quot;)
+</code></pre></div>
+
+
+
+<a name="1450564"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450564" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450564">(Oct 16 2022 at 12:37)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>Recipient 8 has no Stream
+Recipient 9 has no Stream
+Recipient 10 has no UserProfile
+UserProfile exists for 61
+</code></pre></div>
+
+
+
+<a name="1450750"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450750" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450750">(Oct 16 2022 at 16:57)</a>:</h4>
+<p>Okay, mystery solved then!  <code>UserProfile exists for 61</code> is fine, because the message to this <code>Recipient</code> is from October 14th, I assume it was sent after the failed migration, when you had already restarted the server using the pre-upgrade deployment. So it wasn't touched by the migration or the new code that sets <code>.realm</code>. </p>
+<p><span class="user-mention" data-user-id="12178">@Alex Vandiver</span> So I don't think this is an obstacle for 6.0, since it was corrupt Recipient state, not a bug in the migration. Though there will be some number of deployments in this situation, due to having manually <code>user_profile.delete()</code>-ed in the past - so we should think whether we should come up with some plan for this (<code>Upgrade notes</code> instructions perhaps?), or just assume they will come here to ask and we'll help them fix it...</p>
+
+
+
+<a name="1450751"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450751" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450751">(Oct 16 2022 at 16:57)</a>:</h4>
+<p>Now, onto fixing this here. <span class="user-mention" data-user-id="20576">@Cosmic Sound</span> Are you okay with us just deleting these  corrupt Recipient objects? As we saw, there's a few Messages to them - this will permanently delete those Messages too. But those belong to deleted users and streams, so they already aren't accessible in your Zulip (though if you thought they're important, they're still recoverable in <code>manage.py shell</code>)</p>
+
+
+
+<a name="1450780"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450780" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450780">(Oct 16 2022 at 17:47)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> yes let's clean them up, so we can check if upgrade proceeds.</p>
+
+
+
+<a name="1450841"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450841" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450841">(Oct 16 2022 at 19:43)</a>:</h4>
+<p><span class="user-mention" data-user-id="20576">@Cosmic Sound</span>   Cool, in that case:</p>
+<div class="codehilite"><pre><span></span><code>for recipient in Recipient.objects.filter(id__in=[8, 9]):
+    assert recipient.type == Recipient.STREAM
+    try:
+        Stream.objects.get(id=recipient.type_id)
+        print(f&quot;Stream exists for {recipient.id}&quot;)
+    except Stream.DoesNotExist:
+        print(f&quot;Recipient {recipient.id} has no Stream, deleting&quot;)
+        recipient.delete()
+
+for recipient in Recipient.objects.filter(id__in=[10]):
+    assert recipient.type == Recipient.PERSONAL
+    try:
+        UserProfile.objects.get(id=recipient.type_id)
+        print(f&quot;UserProfile exists for {recipient.id}&quot;)
+    except UserProfile.DoesNotExist:
+        print(f&quot;Recipient {recipient.id} has no UserProfile, deleting&quot;)
+        recipient.delete()
+</code></pre></div>
+<p>and we should be good to proceed. Though let's make sure Django applies migrations correctly to avoid your server going down again, since I'm not sure how exactly this works after a failed upgrade like this... So after the above code,  can you show <code>manage.py showmigrations
+</code>?</p>
+
+
+
+<a name="1450872"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450872" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450872">(Oct 16 2022 at 21:43)</a>:</h4>
+<p><a href="https://pastebin.com/zhAhB5iu">https://pastebin.com/zhAhB5iu</a></p>
+
+
+
+<a name="1450873"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450873" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450873">(Oct 16 2022 at 21:43)</a>:</h4>
+<p>should I run again the upgrade?</p>
+
+
+
+<a name="1450874"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450874" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450874">(Oct 16 2022 at 21:47)</a>:</h4>
+<p>Guess this you are aware of this deps issues: </p>
+<div class="codehilite" data-code-language="Python"><pre><span></span><code><span class="n">warning</span> <span class="s2">" &gt; postcss-media-minmax@5.0.0"</span> <span class="n">has</span> <span class="n">incorrect</span> <span class="n">peer</span> <span class="n">dependency</span> <span class="s2">"postcss@8.4.5"</span><span class="o">.</span>
+<span class="p">[</span><span class="mi">4</span><span class="o">/</span><span class="mi">4</span><span class="p">]</span> <span class="n">Building</span> <span class="n">fresh</span> <span class="n">packages</span><span class="o">...</span>
+<span class="n">warning</span> <span class="n">Ignored</span> <span class="n">scripts</span> <span class="n">due</span> <span class="n">to</span> <span class="n">flag</span><span class="o">.</span>
+</code></pre></div>
+
+
+
+<a name="1450884"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1450884" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1450884">(Oct 16 2022 at 22:22)</a>:</h4>
+<p>Yes, you can ignore the spew about postcss-media-minmax.</p>
+
+
+
+<a name="1451018"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451018" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451018">(Oct 17 2022 at 08:48)</a>:</h4>
+<p>Yeah, now we should be ready to upgrade if you ran the deletion code above. If my understanding is correct, I expect that at the end Django will try to apply migration <code>0420</code>, which will fail again (because new messages have been posted with no <code>.realm</code> set).  Once that happens, you should do (in the new, upgraded deployment directory):</p>
+<div class="codehilite"><pre><span></span><code>manage.py migrate --fake zerver 0418
+manage.py migrate
+</code></pre></div>
+<p>Basically, this will fake-revert the <code>.realm</code> backfill migration <code>0419</code>, allowing it to run again (it will set <code>.realm</code> for all Messages this time, because we got rid of the bugged ones) and Django will successfully apply <code>0420</code> as well, completing the upgrade - so you'll be able to restart the server and things should work.</p>
+<p><span class="user-mention" data-user-id="12178">@Alex Vandiver</span> Could you double-check if my thinking on this upgrade procedure sounds right?</p>
+
+
+
+<a name="1451034"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451034" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451034">(Oct 17 2022 at 10:57)</a>:</h4>
+<p>I got this at first: Cannot find a migration matching '0418' from app 'zerver'. .</p>
+
+
+
+<a name="1451127"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451127" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451127">(Oct 17 2022 at 15:21)</a>:</h4>
+<p><span class="user-mention" data-user-id="20576">@Cosmic Sound</span>  What commands did you run before that?</p>
+
+
+
+<a name="1451252"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451252" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451252">(Oct 17 2022 at 18:52)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="10349">Mateusz Mandera</span> <a href="#narrow/stream/31-production-help/topic/Zullip.20git.20upgrade.20fails/near/1450841">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="20576">Cosmic Sound</span>   Cool, in that case:</p>
+<div class="codehilite"><pre><span></span><code>for recipient in Recipient.objects.filter(id__in=[8, 9]):
+    assert recipient.type == Recipient.STREAM
+    try:
+        Stream.objects.get(id=recipient.type_id)
+        print(f&quot;Stream exists for {recipient.id}&quot;)
+    except Stream.DoesNotExist:
+        print(f&quot;Recipient {recipient.id} has no Stream, deleting&quot;)
+        recipient.delete()
+
+for recipient in Recipient.objects.filter(id__in=[10]):
+    assert recipient.type == Recipient.PERSONAL
+    try:
+        UserProfile.objects.get(id=recipient.type_id)
+        print(f&quot;UserProfile exists for {recipient.id}&quot;)
+    except UserProfile.DoesNotExist:
+        print(f&quot;Recipient {recipient.id} has no UserProfile, deleting&quot;)
+        recipient.delete()
+</code></pre></div>
+<p>and we should be good to proceed. Though let's make sure Django applies migrations correctly to avoid your server going down again, since I'm not sure how exactly this works after a failed upgrade like this... So after the above code,  can you show <code>manage.py showmigrations
+</code>?</p>
+</blockquote>
+<p>I first run this. And then the migration commands, all commands where issued in the order received.</p>
+
+
+
+<a name="1451253"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451253" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451253">(Oct 17 2022 at 18:54)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="10349">Mateusz Mandera</span> <a href="#narrow/stream/31-production-help/topic/Zullip.20git.20upgrade.20fails/near/1451018">said</a>:</p>
+<blockquote>
+<p>Yeah, now we should be ready to upgrade if you ran the deletion code above. If my understanding is correct, I expect that at the end Django will try to apply migration <code>0420</code>, which will fail again (because new messages have been posted with no <code>.realm</code> set).  Once that happens, you should do (in the new, upgraded deployment directory):</p>
+<div class="codehilite"><pre><span></span><code>manage.py migrate --fake zerver 0418
+manage.py migrate
+</code></pre></div>
+<p>Basically, this will fake-revert the <code>.realm</code> backfill migration <code>0419</code>, allowing it to run again (it will set <code>.realm</code> for all Messages this time, because we got rid of the bugged ones) and Django will successfully apply <code>0420</code> as well, completing the upgrade - so you'll be able to restart the server and things should work.</p>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> Could you double-check if my thinking on this upgrade procedure sounds right?</p>
+</blockquote>
+<p>when i runned this nothing was returned alto.</p>
+
+
+
+<a name="1451273"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451273" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451273">(Oct 17 2022 at 19:21)</a>:</h4>
+<p><span class="user-mention" data-user-id="20576">@Cosmic Sound</span> Ah, okay - I meant that you can proceed with the upgrade. So running your Zulip upgrade command (<code>upgrade-zulip</code> or such - I don't know if you upgrade from a tarball or a git repo) followed by the <code>manage.py migrate</code> fiddling I posted above, if the upgrade process fails at migration <code>0420</code> as I described</p>
+
+
+
+<a name="1451274"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451274" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451274">(Oct 17 2022 at 19:22)</a>:</h4>
+<p>I upgrade from git.</p>
+
+
+
+<a name="1451277"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451277" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451277">(Oct 17 2022 at 19:24)</a>:</h4>
+<p>I did all the above, yet fails with the error I sent</p>
+
+
+
+<a name="1451309"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451309" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451309">(Oct 17 2022 at 20:01)</a>:</h4>
+<p>Can you show the full console output of the whole procedure? Though maybe the problem is just that you're in the old deployment directory when running the <code>manage.py migrate ........</code> commands? You could try running them after <code>cd /home/zulip/deployments/next</code></p>
+
+
+
+<a name="1451390"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451390" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451390">(Oct 17 2022 at 22:33)</a>:</h4>
+<p>Today I started from the migrations mentioned: </p>
+<div class="codehilite" data-code-language="Bash"><pre><span></span><code>root@chat:/home/ubuntu# su zulip -c <span class="s1">'/home/zulip/deployments/current/manage.py migrate --fake zerver 0418'</span>
+Cannot find a migration matching <span class="s1">'0418'</span> from app <span class="s1">'zerver'</span>.
+root@chat:/home/ubuntu# su zulip -c <span class="s1">'/home/zulip/deployments/current/manage.py migrate --fake zerver 0419'</span>
+Cannot find a migration matching <span class="s1">'0419'</span> from app <span class="s1">'zerver'</span>.
+root@chat:/home/ubuntu# su zulip -c <span class="s1">'/home/zulip/deployments/current/manage.py migrate --fake zerver 0420'</span>
+Cannot find a migration matching <span class="s1">'0420'</span> from app <span class="s1">'zerver'</span>.
+root@chat:/home/ubuntu# su zulip -c <span class="s1">'/home/zulip/deployments/current/manage.py migrate'</span>
+Operations to perform:
+  Apply all migrations: analytics, auth, confirmation, contenttypes, otp_static, otp_totp, sessions, social_django, two_factor, zerver
+Running migrations:
+  No migrations to apply.
+</code></pre></div>
+
+
+
+<a name="1451392"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451392" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451392">(Oct 17 2022 at 22:34)</a>:</h4>
+<p>The rest you know it explained above.</p>
+
+
+
+<a name="1451393"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451393" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451393">(Oct 17 2022 at 22:34)</a>:</h4>
+<p>I run all commands in the order they were received.</p>
+
+
+
+<a name="1451394"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451394" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451394">(Oct 17 2022 at 22:35)</a>:</h4>
+<p>You were not supposed to run that command with <code>0419</code> or <code>0420</code>.</p>
+
+
+
+<a name="1451395"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451395" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451395">(Oct 17 2022 at 22:35)</a>:</h4>
+<p>It did nothing anyway</p>
+
+
+
+<a name="1451396"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451396" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451396">(Oct 17 2022 at 22:35)</a>:</h4>
+<p>See the output</p>
+
+
+
+<a name="1451397"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451397" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451397">(Oct 17 2022 at 22:35)</a>:</h4>
+<p>So nothing was altered by running that</p>
+
+
+
+<a name="1451811"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451811" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451811">(Oct 18 2022 at 17:31)</a>:</h4>
+<p><span class="user-mention" data-user-id="20576">@Cosmic Sound</span> I assume your <code>/home/zulip/deployments/current</code> is still the old, pre-upgrade directory. Can you show the latest <code>/var/log/zulip/upgrade.log</code> from this last upgrade?</p>
+<p>Also, <code>ls /home/zulip/deployments/next/zerver/migrations/ | sort</code> to check the <code>next</code> directory - im pretty sure the migrations should be there, we may need to be running the migrate commands there as I mentioned</p>
+
+
+
+<a name="1451830"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451830" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451830">(Oct 18 2022 at 17:51)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="10349">Mateusz Mandera</span> <a href="#narrow/stream/31-production-help/topic/Zullip.20git.20upgrade.20fails/near/1451811">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="20576">Cosmic Sound</span> I assume your <code>/home/zulip/deployments/current</code> is still the old, pre-upgrade directory. Can you show the latest <code>/var/log/zulip/upgrade.log</code> from this last upgrade?</p>
+<p>Also, <code>ls /home/zulip/deployments/next/zerver/migrations/ | sort</code> to check the <code>next</code> directory - im pretty sure the migrations should be there, we may need to be running the migrate commands there as I mentioned</p>
+</blockquote>
+<p>here is last log: <a href="https://pastebin.com/J7BDGtFD">https://pastebin.com/J7BDGtFD</a></p>
+
+
+
+<a name="1451831"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451831" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451831">(Oct 18 2022 at 17:52)</a>:</h4>
+<p>Here is the sort log</p>
+
+
+
+<a name="1451835"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451835" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451835">(Oct 18 2022 at 17:53)</a>:</h4>
+<p>How do I run the migration in next?</p>
+
+
+
+<a name="1451840"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451840" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451840">(Oct 18 2022 at 17:56)</a>:</h4>
+<div class="codehilite" data-code-language="Python"><pre><span></span><code><span class="n">zulip</span><span class="nd">@chat</span><span class="p">:</span><span class="o">~/</span><span class="n">deployments</span><span class="o">/</span><span class="nb">next</span><span class="err">$</span> <span class="o">./</span><span class="n">manage</span><span class="o">.</span><span class="n">py</span> <span class="n">migrate</span> <span class="o">--</span><span class="n">fake</span> <span class="n">zerver</span> <span class="mi">0418</span>
+<span class="n">Operations</span> <span class="n">to</span> <span class="n">perform</span><span class="p">:</span>
+  <span class="n">Target</span> <span class="n">specific</span> <span class="n">migration</span><span class="p">:</span> <span class="mi">0418</span><span class="n">_archivedmessage_realm_message_realm</span><span class="p">,</span> <span class="kn">from</span> <span class="nn">zerver</span>
+<span class="n">Running</span> <span class="n">migrations</span><span class="p">:</span>
+  <span class="n">Rendering</span> <span class="n">model</span> <span class="n">states</span><span class="o">...</span> <span class="n">DONE</span>
+  <span class="n">Unapplying</span> <span class="n">zerver</span><span class="mf">.0419</span><span class="n">_backfill_message_realm</span><span class="o">...</span> <span class="n">FAKED</span>
+<span class="n">zulip</span><span class="nd">@chat</span><span class="p">:</span><span class="o">~/</span><span class="n">deployments</span><span class="o">/</span><span class="nb">next</span><span class="err">$</span> <span class="o">./</span><span class="n">manage</span><span class="o">.</span><span class="n">py</span> <span class="n">migrate</span>
+<span class="n">Operations</span> <span class="n">to</span> <span class="n">perform</span><span class="p">:</span>
+  <span class="n">Apply</span> <span class="nb">all</span> <span class="n">migrations</span><span class="p">:</span> <span class="n">analytics</span><span class="p">,</span> <span class="n">auth</span><span class="p">,</span> <span class="n">confirmation</span><span class="p">,</span> <span class="n">contenttypes</span><span class="p">,</span> <span class="n">otp_static</span><span class="p">,</span> <span class="n">otp_totp</span><span class="p">,</span> <span class="n">sessions</span><span class="p">,</span> <span class="n">social_django</span><span class="p">,</span> <span class="n">two_factor</span><span class="p">,</span> <span class="n">zerver</span>
+<span class="n">Running</span> <span class="n">migrations</span><span class="p">:</span>
+  <span class="n">Applying</span> <span class="n">zerver</span><span class="mf">.0419</span><span class="n">_backfill_message_realm</span><span class="o">...</span>
+<span class="n">Processing</span> <span class="n">batch</span> <span class="mi">1</span> <span class="n">to</span> <span class="mi">10000</span> <span class="k">for</span> <span class="n">Message</span>
+<span class="n">Processing</span> <span class="n">batch</span> <span class="mi">10001</span> <span class="n">to</span> <span class="mi">20000</span> <span class="k">for</span> <span class="n">Message</span>
+ <span class="n">OK</span>
+  <span class="n">Applying</span> <span class="n">zerver</span><span class="mf">.0420</span><span class="n">_alter_archivedmessage_realm_alter_message_realm</span><span class="o">...</span> <span class="n">OK</span>
+<span class="n">zulip</span><span class="nd">@chat</span><span class="p">:</span><span class="o">~/</span><span class="n">deployments</span><span class="o">/</span><span class="nb">next</span><span class="err">$</span>
+</code></pre></div>
+<p>I have redone these from next folder.</p>
+
+
+
+<a name="1451843"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451843" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451843">(Oct 18 2022 at 17:56)</a>:</h4>
+<p>what next?</p>
+
+
+
+<a name="1451850"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451850" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451850">(Oct 18 2022 at 18:03)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> tried to rerun migrations, it failed again, and not it returns: </p>
+<div class="codehilite"><pre><span></span><code>root@chat:/home/zulip/deployments/next/scripts# ./upgrade-zulip-from-git main
+Another deployment in progress; waiting for lock... (If no deployment is running, rmdir /home/zulip/deployments/lock)
+Another deployment in progress; waiting for lock... (If no deployment is running, rmdir /home/zulip/deployments/lock)
+^C
+</code></pre></div>
+
+
+
+<a name="1451851"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451851" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451851">(Oct 18 2022 at 18:03)</a>:</h4>
+<p>yet there is no such dir</p>
+
+
+
+<a name="1451852"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451852" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451852">(Oct 18 2022 at 18:04)</a>:</h4>
+<div class="codehilite" data-code-language="Bash"><pre><span></span><code>root@chat:/home/zulip/deployments# ls -latr
+total <span class="m">64</span>
+drwxr-xr-x <span class="m">25</span> zulip zulip <span class="m">4096</span> Aug  <span class="m">1</span> <span class="m">20</span>:00 <span class="m">2022</span>-08-01-19-55-31
+drwxr-xr-x <span class="m">24</span> zulip zulip <span class="m">4096</span> Sep <span class="m">28</span> <span class="m">18</span>:21 <span class="m">2022</span>-09-28-18-18-36
+drwxr-xr-x <span class="m">25</span> zulip zulip <span class="m">4096</span> Sep <span class="m">28</span> <span class="m">18</span>:24 <span class="m">2022</span>-09-28-18-23-24
+lrwxrwxrwx  <span class="m">1</span> zulip zulip   <span class="m">43</span> Sep <span class="m">28</span> <span class="m">18</span>:25 last -&gt; /home/zulip/deployments/2022-08-01-19-55-31
+lrwxrwxrwx  <span class="m">1</span> zulip zulip   <span class="m">43</span> Sep <span class="m">28</span> <span class="m">18</span>:25 current -&gt; /home/zulip/deployments/2022-09-28-18-23-24
+drwxr-xr-x <span class="m">24</span> zulip zulip <span class="m">4096</span> Oct <span class="m">13</span> <span class="m">18</span>:16 <span class="m">2022</span>-10-13-18-14-31
+drwxr-xr-x <span class="m">25</span> zulip zulip <span class="m">4096</span> Oct <span class="m">14</span> <span class="m">00</span>:23 <span class="m">2022</span>-10-14-00-21-36
+drwxr-xr-x <span class="m">25</span> zulip zulip <span class="m">4096</span> Oct <span class="m">14</span> <span class="m">00</span>:57 <span class="m">2022</span>-10-14-00-56-27
+drwxr-xr-x <span class="m">16</span> zulip zulip <span class="m">4096</span> Oct <span class="m">14</span> <span class="m">18</span>:17 ..
+srwx------  <span class="m">1</span> zulip zulip    <span class="m">0</span> Oct <span class="m">16</span> <span class="m">06</span>:00 uwsgi-socket
+srwx------  <span class="m">1</span> zulip zulip    <span class="m">0</span> Oct <span class="m">16</span> <span class="m">06</span>:00 uwsgi-stats
+prw-------  <span class="m">1</span> zulip zulip    <span class="m">0</span> Oct <span class="m">16</span> <span class="m">06</span>:00 uwsgi-control
+drwxr-xr-x <span class="m">24</span> zulip zulip <span class="m">4096</span> Oct <span class="m">16</span> <span class="m">21</span>:45 <span class="m">2022</span>-10-16-21-44-16
+drwxr-xr-x <span class="m">25</span> zulip zulip <span class="m">4096</span> Oct <span class="m">16</span> <span class="m">21</span>:51 <span class="m">2022</span>-10-16-21-49-52
+drwxr-xr-x <span class="m">25</span> zulip zulip <span class="m">4096</span> Oct <span class="m">17</span> <span class="m">10</span>:59 <span class="m">2022</span>-10-17-10-57-53
+drwxr-xr-x <span class="m">25</span> zulip zulip <span class="m">4096</span> Oct <span class="m">17</span> <span class="m">11</span>:16 <span class="m">2022</span>-10-17-11-14-48
+drwxr-xr-x <span class="m">25</span> zulip zulip <span class="m">4096</span> Oct <span class="m">17</span> <span class="m">18</span>:53 <span class="m">2022</span>-10-17-18-52-32
+drwxr-xr-x <span class="m">25</span> zulip zulip <span class="m">4096</span> Oct <span class="m">17</span> <span class="m">22</span>:38 <span class="m">2022</span>-10-17-22-36-41
+drwxr-xr-x <span class="m">25</span> zulip zulip <span class="m">4096</span> Oct <span class="m">17</span> <span class="m">22</span>:40 <span class="m">2022</span>-10-17-22-39-14
+lrwxrwxrwx  <span class="m">1</span> root  root    <span class="m">43</span> Oct <span class="m">18</span> <span class="m">17</span>:59 next -&gt; /home/zulip/deployments/2022-10-18-17-59-25
+drwxr-xr-x <span class="m">24</span> zulip zulip <span class="m">4096</span> Oct <span class="m">18</span> <span class="m">17</span>:59 <span class="m">2022</span>-10-18-17-59-25
+drwxr-xr-x <span class="m">16</span> zulip zulip <span class="m">4096</span> Oct <span class="m">18</span> <span class="m">17</span>:59 .
+root@chat:/home/zulip/deployments#
+</code></pre></div>
+
+
+
+<a name="1451874"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451874" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451874">(Oct 18 2022 at 18:13)</a>:</h4>
+<p><code>12.3 GiB [##########] /zulip-npm-cache</code></p>
+
+
+
+<a name="1451883"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451883" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451883">(Oct 18 2022 at 18:14)</a>:</h4>
+<div class="codehilite" data-code-language="Bash"><pre><span></span><code>--- /home/zulip/.cache ------------------------------------------------------------------------------------------------------------------------------------------------
+                         /..
+    <span class="m">4</span>.1 GiB <span class="o">[</span><span class="c1">##########] /yarn</span>
+</code></pre></div>
+
+
+
+<a name="1451886"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451886" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451886">(Oct 18 2022 at 18:15)</a>:</h4>
+<p>Would be useful maybe to add some cleanup process to migration, seems to have taken a lot of space 30 GB Machine it was fulll.</p>
+
+
+
+<a name="1451901"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451901" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Notification Bot <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451901">(Oct 18 2022 at 18:23)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="20576">Cosmic Sound</span> has marked this topic as resolved.</p>
+
+
+
+<a name="1451902"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451902" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451902">(Oct 18 2022 at 18:24)</a>:</h4>
+<p>Managed to upgrade, yet the yarn cache is just huge</p>
+
+
+
+<a name="1451904"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451904" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451904">(Oct 18 2022 at 18:24)</a>:</h4>
+<p>Also it seems the machine went from 4 GB ram to now almost 6. Wondering what takes so much.</p>
+
+
+
+<a name="1451906"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451906" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451906">(Oct 18 2022 at 18:26)</a>:</h4>
+<p>I don't know about the other issues, but you should make sure that <code>/home/zulip/deployments/current</code> is linking to the latest deployment (<code>/home/zulip/deployments/2022-10-18-17-59-25</code> I assume) to be sure you're running always the latest code</p>
+
+
+
+<a name="1451910"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1451910" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1451910">(Oct 18 2022 at 18:27)</a>:</h4>
+<p>(the migrations seems to have indeed applied successfully based on your output in <a href="#narrow/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails/near/1451840">https://chat.zulip.org/#narrow/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails/near/1451840</a>)</p>
+
+
+
+<a name="1452050"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1452050" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1452050">(Oct 18 2022 at 23:07)</a>:</h4>
+<p>I thought we had code to delete the yarn cache on upgrade if it was larger than some size; is that logic only running in the development environment or is my memory off?</p>
+
+
+
+<a name="1452147"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1452147" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1452147">(Oct 19 2022 at 01:38)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="10349">Mateusz Mandera</span> <a href="#narrow/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails/near/1451906">said</a>:</p>
+<blockquote>
+<p>I don't know about the other issues, but you should make sure that <code>/home/zulip/deployments/current</code> is linking to the latest deployment (<code>/home/zulip/deployments/2022-10-18-17-59-25</code> I assume) to be sure you're running always the latest code</p>
+</blockquote>
+<p>Yes, already check that, all works well. Thanks <span class="user-mention" data-user-id="10349">@Mateusz Mandera</span>  for the support and patience!</p>
+
+
+
+<a name="1452148"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Zullip%20git%20upgrade%20fails/near/1452148" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Cosmic Sound <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails.html#1452148">(Oct 19 2022 at 01:39)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/.E2.9C.94.20Zullip.20git.20upgrade.20fails/near/1452050">said</a>:</p>
+<blockquote>
+<p>I thought we had code to delete the yarn cache on upgrade if it was larger than some size; is that logic only running in the development environment or is my memory off?</p>
+</blockquote>
+<p>In my findings almost 5 GB of yarn's cache, is huge imho.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

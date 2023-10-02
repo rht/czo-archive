@@ -1,0 +1,200 @@
+[
+    {
+        "content": "<p>We had a resolved topic that we needed to unresolve. The yellow bar appeared when I was writing a reply so clicked unresolve.  I then added the update this appeared on screen.</p>",
+        "id": 1418271,
+        "sender_full_name": "Matt",
+        "timestamp": 1660213909
+    },
+    {
+        "content": "<p>What was then odd was that I could see the new update in a new topic with the same name, unresolved but the orginal was there too. I went to move the new one to the old. Completed this and after it had done something, the original topic had vanished as had many others unrelated to this.</p>",
+        "id": 1418272,
+        "sender_full_name": "Matt",
+        "timestamp": 1660213945
+    },
+    {
+        "content": "<p>They have just gone. This is a bit of a disaster. How can we recover those and debug what happened here.</p>",
+        "id": 1418273,
+        "sender_full_name": "Matt",
+        "timestamp": 1660213971
+    },
+    {
+        "content": "<p>On inspecting the database, they've completely vanished.</p>",
+        "id": 1418279,
+        "sender_full_name": "Matt",
+        "timestamp": 1660216281
+    },
+    {
+        "content": "<p>Restored from a backup but this is concerning either way.</p>",
+        "id": 1418280,
+        "sender_full_name": "Matt",
+        "timestamp": 1660216292
+    },
+    {
+        "content": "<p>Do you have any log data from around that time? Version you are running? Which client were you using?</p>",
+        "id": 1418302,
+        "sender_full_name": "Matt",
+        "timestamp": 1660219073
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21057\">@Matt</span> thanks for the report; this seems surprising given how Zulip is designed. How did you check whether the messages disappeared from the database?</p>",
+        "id": 1418442,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660253196
+    },
+    {
+        "content": "<p>What I think is most likely what happened is that there was some sort of web client bug that caused the confusing state, and reloading your browser window would have resulted in the topic appearing unresolved as expected.</p>",
+        "id": 1418443,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660253234
+    },
+    {
+        "content": "<p>I don't think there's any mechanism through which it would be possible for resolving a topic to delete a message from the database.</p>",
+        "id": 1418444,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660253259
+    },
+    {
+        "content": "<p>Now, there is one thing that could cause messages in many older topics in a stream to disappear, namely: <a href=\"https://zulip.com/help/message-retention-policy\">https://zulip.com/help/message-retention-policy</a></p>",
+        "id": 1418445,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660253353
+    },
+    {
+        "content": "<p>So I'd check if someone set a message retention policy for the stream or organization around the time of what you experienced.</p>",
+        "id": 1418446,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660253377
+    },
+    {
+        "content": "<p>(If so, messages deleted by retention policy can be restored for about a month after deletion from the <code>archivedmessage</code> table, basically as protection against mistakes where someone didn't realize the implications of their policy soon after changing it)</p>",
+        "id": 1418447,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660253426
+    },
+    {
+        "content": "<p>I checked in the database. A good 10+ topics had all just vanished. I restored from a backup to restore them. I did try and replicate but couldn't cause it to happen a second time.</p>",
+        "id": 1418495,
+        "sender_full_name": "Matt",
+        "timestamp": 1660258164
+    },
+    {
+        "content": "<p>We don't delete any data at a retention period for this stream.</p>",
+        "id": 1418497,
+        "sender_full_name": "Matt",
+        "timestamp": 1660258212
+    },
+    {
+        "content": "<p>Have checked the <code>archivedmessage</code> table too but they're not in there.</p>",
+        "id": 1418509,
+        "sender_full_name": "Matt",
+        "timestamp": 1660258948
+    },
+    {
+        "content": "<p>How are you checking if they vanished? Are you using the message IDs, the topics, or something else?</p>",
+        "id": 1418539,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660260512
+    },
+    {
+        "content": "<p>Well the topics are no where to be seen and searching for the content of the messages are no longer there at all.</p>",
+        "id": 1418540,
+        "sender_full_name": "Matt",
+        "timestamp": 1660260543
+    },
+    {
+        "content": "<p>Well, as you can imagine, we're very careful to avoid code paths that could accidentally delete things, so I think it's most likely that what's happening is something more like \"Messages were accidentally moved to a different stream\", or the search query being used to find them isn't correct, without further evidence. One thing that would be compelling proof that they were actually deleted is if you get the message IDs from your backup and see whether those message IDs appear in your message table or not.</p>",
+        "id": 1418545,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660260728
+    },
+    {
+        "content": "<p>(Since message IDs are not changed when moving messages)</p>",
+        "id": 1418546,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660260737
+    },
+    {
+        "content": "<p>This appears to have happened again. Similar thing before, renamed a topic, both the old name and new name remained and then topics in another stream all vanished.</p>",
+        "id": 1418800,
+        "sender_full_name": "Matt",
+        "timestamp": 1660297764
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21057\">@Matt</span> very strange. I still don't see any mechanism through which this might happen. Do you run any bots that delete messages? <br>\nSince you said you have backups, can you compare with the backups to figure out whether messages are actually being deleted or just ending up in an unexpected place?</p>\n<p>And can you investigate your database for whether there are gaps in the sequence of message IDs? </p>\n<p>Comparing these may be helpful, for example; only deleted messages will be missing:</p>\n<div class=\"codehilite\"><pre><span></span><code>$ ./manage.py dbshell\nzulip=&gt; select max(id) from zerver_message;\n max\n-----\n 112\n(1 row)\n\nzulip=&gt; select count(*) from zerver_message;\n count\n-------\n   112\n(1 row)\n</code></pre></div>",
+        "id": 1418919,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660333115
+    },
+    {
+        "content": "<p>Have you fixed your Notification Bot issue yet?</p>",
+        "id": 1418920,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660333138
+    },
+    {
+        "content": "<p>I could imagine this being related, in that notification bot sends a message when moving topics between streams, and that code path could thus be throwing an exception and not completing.</p>",
+        "id": 1418921,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660333143
+    },
+    {
+        "content": "<p>That is all resolved and renamed in the database and settings file. They started coming through normally  after testing but this occurred again after that.</p>",
+        "id": 1419301,
+        "sender_full_name": "Matt",
+        "timestamp": 1660398535
+    },
+    {
+        "content": "<p>Restored backup:</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip=&gt; select max(id) from zerver_message;\n  max\n--------\n 247775\n(1 row)\n\nzulip=&gt; select count(*) from zerver_message;\n count\n-------\n 24978\n(1 row)\n</code></pre></div>\n<p>Server with missing data:</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip=&gt; select max(id) from zerver_message;\n  max\n--------\n 247806\n(1 row)\n\nzulip=&gt; select count(*) from zerver_message;\n count\n-------\n 24841\n(1 row)\n</code></pre></div>\n<p>I need to deep dive in to IDs again but have been a bit tight on time but the count seems to indicate a loss of messages but need to manually verify with the backup and last live db side by side.</p>",
+        "id": 1419302,
+        "sender_full_name": "Matt",
+        "timestamp": 1660398606
+    },
+    {
+        "content": "<p>OK have confirmed, that a sample of IDs that I know vanished, are missing entirely. 247034-247043 are only on the backup. One of the topis had multiple posts too whereas most just have the one post.</p>",
+        "id": 1419305,
+        "sender_full_name": "Matt",
+        "timestamp": 1660399655
+    },
+    {
+        "content": "<p>And they do not exist in archived messages (manually deleted stuff does).</p>",
+        "id": 1419306,
+        "sender_full_name": "Matt",
+        "timestamp": 1660399825
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21057\">@Matt</span> fascinating. Was this happening every time a topic was moved before fixing the notification bot detail? If so, it may be worth sending some test messages, noting their IDs, and then trying to check whether you can still reproduce.</p>",
+        "id": 1419361,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660428466
+    },
+    {
+        "content": "<p>I still see no mechanism for how messages would be deleted by this operation; it does a <code>Message.objects.bulk_update</code> to change the <code>topic</code> and possibly <code>stream</code> fields for the messages (Depending if you're moving between streams), but there's no code path that does a delete here.</p>",
+        "id": 1419362,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660428558
+    },
+    {
+        "content": "<p>I'll continue to investigate. Is it normal for two versions of Postgres to be running? Seems 12 and 14 are. I doubt this is related but this seems odd?</p>",
+        "id": 1419543,
+        "sender_full_name": "Matt",
+        "timestamp": 1660510933
+    },
+    {
+        "content": "<p>That is not expected, but might happen if you upgraded postgres at some point and didn't shut down the old version? I'd expect only 14 is being used.</p>",
+        "id": 1419815,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660598899
+    },
+    {
+        "content": "<p>Well this stopped happening. Have removed psql12 too but not sure if that was related or not. Such an odd issue but will mark resolved for now and re-open if it comes back to haunt me later.</p>",
+        "id": 1420689,
+        "sender_full_name": "Matt",
+        "timestamp": 1660734697
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"21057\">Matt</span> has marked this topic as resolved.</p>",
+        "id": 1420690,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1660734702
+    }
+]

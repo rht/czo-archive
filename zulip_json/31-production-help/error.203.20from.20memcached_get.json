@@ -1,0 +1,128 @@
+[
+    {
+        "content": "<p>Hi folks, new user here.<br>\nI've successfully rolled out a zulip server on an Amazon EC2 instance running Ubuntu. All is well, the server is running nicely, I've added my first non-me user and we're going places.<br>\nThe problem is, I'm getting errors sent to me by email as follows:</p>\n<p>'Traceback (most recent call last):  <br>\n  File \"/home/zulip/deployments/2018-03-18-12-53-51/zerver/worker/queue_processors.py\", line 141, in consume_wrapper  <br>\n    self.consume(data)  <br>\n  File \"/home/zulip/deployments/2018-03-18-12-53-51/zerver/worker/queue_processors.py\", line 377, in consume  <br>\n    user_profile = get_user_profile_by_id(server_meta['user_id'])  <br>\n  File \"/home/zulip/deployments/2018-03-18-12-53-51/zerver/lib/cache.py\", line 156, in func_with_caching  <br>\n    val = cache_get(key, cache_name=cache_name)  <br>\n  File \"/home/zulip/deployments/2018-03-18-12-53-51/zerver/lib/cache.py\", line 196, in cache_get  <br>\n    ret = cache_backend.get(KEY_PREFIX + key)  <br>\n  File \"/home/zulip/deployments/2018-03-18-12-53-51/zulip-py3-venv/lib/python3.5/site-packages/django/core/cache/backends/memcached.py\", line 79, in get  <br>\n    val = self._cache.get(key)  <br>\npylibmc.ConnectionError: error 3 from memcached_get(:1:f88e97e6eed5345ecbb10583e2faa): (0x32d6a30) CONNECTION FAILURE, ::rec() returned zero, server has disconnected,  host: <a href=\"http://127.0.0.1:11211/\" target=\"_blank\" title=\"http://127.0.0.1:11211/\">127.0.0.1:11211</a> -&gt; libmemcached/io.cc:484  </p>\n<p>Request info:  <br>\n- path: None  <br>\n- None: None  <br>\n- REMOTE_ADDR: \"None\"  <br>\n- QUERY_STRING: \"None\"  <br>\n- SERVER_NAME: \"None\" '</p>\n<p>I don't know what these errors mean, can anyone help?</p>",
+        "id": 545276,
+        "sender_full_name": "Jonathan Holt",
+        "timestamp": 1521573629
+    },
+    {
+        "content": "<p>Hi <span class=\"user-mention\" data-user-id=\"5937\">@Jonathan Holt</span> -- thanks for coming by!</p>\n<p>We occasionally get a burst of these same errors on <a href=\"http://zulipchat.com\" target=\"_blank\" title=\"http://zulipchat.com\">zulipchat.com</a> -- like 5-20 or so of them all in the span of a minute, and then we might not see them again for weeks. Is that similar to your experience?</p>",
+        "id": 545362,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1521583636
+    },
+    {
+        "content": "<p>Based on the message, I think they happen when we restart memcached, though I haven't noted for sure if that's the case.</p>\n<p>Note that if you have unattended-upgrades enabled on your system, an upgrade to memcached may cause it to restart without you taking any action or specifically noticing.</p>",
+        "id": 545365,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1521583683
+    },
+    {
+        "content": "<p>I've had a low-priority todo item for a while to go and add a retry or something so that when the memcached server disappears and comes back, we don't raise an error like this.</p>",
+        "id": 545367,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1521583898
+    },
+    {
+        "content": "<p>Also, we have a mechanism for rate-limiting error emails; we won't send more than one per 10min for a single issue. But we group the errors by a hash of the stack plus the message -- so this particular error evades that by including <br>\nin the exception message a bunch of detail that changes every time, making it a lot noisier.</p>",
+        "id": 545369,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1521584145
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span> just to add a bit of detail: This is definitely caused by a memcached restart.  There was an Ubuntu security release memcached package put out today, and I bet <span class=\"user-mention\" data-user-id=\"5937\">@Jonathan Holt</span> has Ubuntu's (default-on) \"unattended upgrades\" feature enabled.</p>",
+        "id": 545382,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1521585471
+    },
+    {
+        "content": "<p>Great -- that all fits together, then :)</p>",
+        "id": 545399,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1521585912
+    },
+    {
+        "content": "<p>I still haven't turned it off, but I've verified that the unattended upgrades is the cause of the massive stream of error emails I get every now and then</p>",
+        "id": 545401,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1521586167
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span> I wonder if we should add a notice in the install script or a more prominent one in the docs about unattended-upgrades, since that does seem to be a source of confusion about the reliability of Zulip.  Not sure if there's a good place for this.</p>",
+        "id": 545417,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1521587153
+    },
+    {
+        "content": "<p>Maybe a system configuration section under <a href=\"http://zulip.readthedocs.io/en/latest/production/install.html#step-4-configure-and-use\" target=\"_blank\" title=\"http://zulip.readthedocs.io/en/latest/production/install.html#step-4-configure-and-use\">Configure and Use</a></p>",
+        "id": 545430,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1521587624
+    },
+    {
+        "content": "<p>Yeah, that's probably a reasonable place for this.</p>",
+        "id": 545444,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1521588083
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/8769\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/8769\">#8769</a></p>",
+        "id": 545492,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1521590291
+    },
+    {
+        "content": "<p>Guys, thanks so much for your help. Glad to hear that these errors are basically nothing to worry about. If I've got unattended upgrades running as suspected, does that mean I don't need to worry about keeping my packages up to date too?</p>",
+        "id": 545678,
+        "sender_full_name": "Jonathan Holt",
+        "timestamp": 1521637456
+    },
+    {
+        "content": "<p>Can I also just check the following:<br>\n1) I'm running on Xenial. According to the zulip docs, this means that the LOCAL_UPLOADS_DIR backend is such that user uploaded content isn't visible to anyone who isn't on a logged in browser session. The thing is, I've tried logging out and accessing user uploaded data, and it still works (check out <a href=\"https://zulip.marshallcarterdark.co.uk/user_uploads/2/d8/pSbw1GFbrRvUMHnvVsz4PxrZ/IMG_20180317_120741.jpg\" target=\"_blank\" title=\"IMG_20180317_120741.jpg\">https://zulip.marshallcarterdark.co.uk/user_uploads/2/d8/pSbw1GFbrRvUMHnvVsz4PxrZ/IMG_20180317_120741.jpg</a> for yourself). Any ideas?</p>\n<div class=\"message_inline_image\"><a href=\"https://zulip.marshallcarterdark.co.uk/user_uploads/2/d8/pSbw1GFbrRvUMHnvVsz4PxrZ/IMG_20180317_120741.jpg\" target=\"_blank\" title=\"https://zulip.marshallcarterdark.co.uk/user_uploads/2/d8/pSbw1GFbrRvUMHnvVsz4PxrZ/IMG_20180317_120741.jpg\"><img src=\"https://zulip.marshallcarterdark.co.uk/user_uploads/2/d8/pSbw1GFbrRvUMHnvVsz4PxrZ/IMG_20180317_120741.jpg\"></a></div><p>2) I'm running on an EC2 instance with only incoming ports 22, 80 and 443 open.  Should I additionally be running a firewall? (ufw, for instance?)</p>\n<p>3) Are there any other security issues I should be considering before I go live with this setup?</p>",
+        "id": 545682,
+        "sender_full_name": "Jonathan Holt",
+        "timestamp": 1521639571
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"5937\">@Jonathan Holt</span> securing LOCAL_UPLOADS_DIR was something that was added fairly recently- it wasn't in the 1.7.1 release, but will be in the upcoming 1.8 release (I believe)</p>",
+        "id": 545722,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1521647927
+    },
+    {
+        "content": "<p>You're probably looking at docs built off of the <code>master</code> branch, instead of a tagged release.</p>",
+        "id": 545723,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1521647954
+    },
+    {
+        "content": "<p>Gotcha. I'll await release. (Upgrading should be fun!)</p>",
+        "id": 545724,
+        "sender_full_name": "Jonathan Holt",
+        "timestamp": 1521647955
+    },
+    {
+        "content": "<p>Upgrading is actually pretty painless, I was surprised.</p>",
+        "id": 545725,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1521647987
+    },
+    {
+        "content": "<p>It's so painless that for a while, we pulled in commits off of master after the 1.7.1 release.</p>",
+        "id": 545726,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1521648009
+    },
+    {
+        "content": "<p>(We wanted the dark theme)</p>",
+        "id": 545727,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1521648020
+    },
+    {
+        "content": "<p>On the firewall front, limiting to just those 3 forks should be all you need.</p>",
+        "id": 545804,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1521652585
+    }
+]

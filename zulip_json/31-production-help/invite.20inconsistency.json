@@ -1,0 +1,116 @@
+[
+    {
+        "content": "<p>Hi, I upgraded a sever to Zulip 5.6 from an older version (4.X and it was later on running master or main for a while), and now I get this error when I try to see my invites:</p>\n<div class=\"codehilite\"><pre><span></span><code>2022-09-02 15:13:14.967 ERR  [zerver.middleware.json_error_handler] Traceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/base.py&quot;, line 181, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/lib/rest.py&quot;, line 33, in _wrapped_view_func\n    response = view_func(request, *args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/views/decorators/csrf.py&quot;, line 54, in wrapped_view\n    return view_func(*args, **kwargs)\n  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/lib/rest.py&quot;, line 169, in rest_dispatch\n    return target_function(request, **kwargs)\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/utils/decorators.py&quot;, line 130, in _wrapped_view\n    response = view_func(request, *args, **kwargs)\n  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/decorator.py&quot;, line 791, in _wrapped_view_func\n    return authenticate_log_and_execute_json(\n  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/decorator.py&quot;, line 778, in authenticate_log_and_execute_json\n    return limited_view_func(request, user_profile, *args, **kwargs)\n  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/decorator.py&quot;, line 984, in wrapped_func\n    return func(request, *args, **kwargs)\n  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/decorator.py&quot;, line 600, in _wrapped_view_func\n    return view_func(request, user_profile, *args, **kwargs)\n  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/views/invite.py&quot;, line 102, in get_user_invites\n    all_users = do_get_invites_controlled_by_user(user_profile)\n  File &quot;/home/zulip/deployments/2022-08-24-23-56-24/./zerver/actions/invites.py&quot;, line 274, in do_get_invites_controlled_by_user\n    expiry_date=get_invitation_expiry_date(invitee.confirmation.get()),\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/manager.py&quot;, line 85, in manager_method\n    return getattr(self.get_queryset(), name)(*args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 439, in get\n    raise self.model.MultipleObjectsReturned(\nconfirmation.models.Confirmation.MultipleObjectsReturned: get() returned more than one Confirmation -- it returned 3!\n\n2022-09-02 15:13:14.995 ERR  [django.request] Internal Server Error: /json/invites\n</code></pre></div>\n<p>I don't know what causes this, but I would not mind losing all my invite links in case there is something wrong with the database.</p>",
+        "id": 1429593,
+        "sender_full_name": "Erik Tews",
+        "timestamp": 1662132006
+    },
+    {
+        "content": "<p>I figured out two things:</p>\n<p>First of all, it seems to be related to this line of code here: <a href=\"https://github.com/zulip/zulip/blob/fe9ed2e69d61a43ebe893eb5f7bde6815b431992/zerver/actions/invites.py#L275\">https://github.com/zulip/zulip/blob/fe9ed2e69d61a43ebe893eb5f7bde6815b431992/zerver/actions/invites.py#L275</a></p>\n<p>And second, I figured out that I have some users multiple times in my <code>zerver_preregistrationuser</code> table in Postgres. They have a different id of course, but the same email address.</p>",
+        "id": 1429613,
+        "sender_full_name": "Erik Tews",
+        "timestamp": 1662134351
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16874\">@Erik Tews</span> Hmm, multiple PreregistrationUsers with the same email is normal, since that's not supposed to be unique - but it looks like the error is caused by a PreregistrationUser with multiple Confirmations tied to it. Not sure how it would happen <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span>  We can start by finding out if it's just one object like that or if there's more. Can you run this in <code>manage.py shell</code>?</p>\n<div class=\"codehilite\"><pre><span></span><code>from confirmation.models import Confirmation\nfor prereg_user in PreregistrationUser.objects.all():\n    try:\n        prereg_user.confirmation.get()\n    except Confirmation.MultipleObjectsReturned:\n        print(f&quot;Multiple confirmation objects for {prereg_user.id}&quot;)\n</code></pre></div>",
+        "id": 1430751,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1662482067
+    },
+    {
+        "content": "<p>Yeah, that output would be helpful; this looks like some sort of database corruption. </p>\n<p><span class=\"user-mention\" data-user-id=\"16874\">@Erik Tews</span> did you upgrade the operating system as well by any chance? <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-the-operating-system\">https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-the-operating-system</a> has the instructions.</p>",
+        "id": 1430886,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662491884
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <a href=\"#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1430751\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"16874\">Erik Tews</span> Hmm, multiple PreregistrationUsers with the same email is normal, since that's not supposed to be unique - but it looks like the error is caused by a PreregistrationUser with multiple Confirmations tied to it. Not sure how it would happen <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span>  We can start by finding out if it's just one object like that or if there's more. Can you run this in <code>manage.py shell</code>?</p>\n<p><div class=\"codehilite\"><pre><span></span><code>from confirmation.models import Confirmation\nfor prereg_user in PreregistrationUser.objects.all():\n    try:\n        prereg_user.confirmation.get()\n    except Confirmation.MultipleObjectsReturned:\n        print(f&quot;Multiple confirmation objects for {prereg_user.id}&quot;)\n</code></pre></div><br>\n</p>\n</blockquote>\n<p>Unfortunately not, I use the docker-compose deployment and there I get the following error when trying to start the shell:</p>\n<div class=\"codehilite\"><pre><span></span><code># docker-compose exec -u zulip zulip     /home/zulip/deployments/current/manage.py shell\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/manage.py&quot;, line 157, in &lt;module&gt;\n    execute_from_command_line(sys.argv)\n  File &quot;/home/zulip/deployments/current/manage.py&quot;, line 122, in execute_from_command_line\n    utility.execute()\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/__init__.py&quot;, line 413, in execute\n    self.fetch_command(subcommand).run_from_argv(self.argv)\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 354, in run_from_argv\n    self.execute(*args, **cmd_options)\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 398, in execute\n    output = self.handle(*args, **options)\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/commands/shell.py&quot;, line 100, in handle\n    return getattr(self, shell)(options)\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/commands/shell.py&quot;, line 36, in ipython\n    start_ipython(argv=[])\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/IPython/__init__.py&quot;, line 130, in start_ipython\n    return launch_new_instance(argv=argv, **kwargs)\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/traitlets/config/application.py&quot;, line 975, in launch_instance\n    app.initialize(argv)\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/traitlets/config/application.py&quot;, line 110, in inner\n    return method(app, *args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/IPython/terminal/ipapp.py&quot;, line 319, in initialize\n    self.init_shell()\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/IPython/terminal/ipapp.py&quot;, line 333, in init_shell\n    self.shell = self.interactive_shell_class.instance(parent=self,\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/traitlets/config/configurable.py&quot;, line 551, in instance\n    inst = cls(*args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/IPython/terminal/interactiveshell.py&quot;, line 527, in __init__\n    super(TerminalInteractiveShell, self).__init__(*args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/IPython/core/interactiveshell.py&quot;, line 660, in __init__\n    self.init_virtualenv()\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/IPython/core/interactiveshell.py&quot;, line 943, in init_virtualenv\n    if any(p_venv == p.parents[1] for p in paths):\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/IPython/core/interactiveshell.py&quot;, line 943, in &lt;genexpr&gt;\n    if any(p_venv == p.parents[1] for p in paths):\n  File &quot;/usr/lib/python3.8/pathlib.py&quot;, line 621, in __getitem__\n    raise IndexError(idx)\nIndexError: 1\n\nIf you suspect this is an IPython 7.33.0 bug, please report it at:\n    https://github.com/ipython/ipython/issues\nor send an email to the mailing list at ipython-dev@python.org\n\nYou can print a more detailed traceback right now with &quot;%tb&quot;, or use &quot;%debug&quot;\nto interactively debug it.\n\nExtra-detailed tracebacks for bug-reporting purposes can be enabled via:\n    c.Application.verbose_crash=True\n</code></pre></div>",
+        "id": 1431398,
+        "sender_full_name": "Erik Tews",
+        "timestamp": 1662561506
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1430886\">said</a>:</p>\n<blockquote>\n<p>Yeah, that output would be helpful; this looks like some sort of database corruption. </p>\n<p><span class=\"user-mention silent\" data-user-id=\"16874\">Erik Tews</span> did you upgrade the operating system as well by any chance? <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-the-operating-system\">https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-the-operating-system</a> has the instructions.</p>\n</blockquote>\n<p>No, since I use the docker deployment, so I think that doesn't really apply there, right?</p>",
+        "id": 1431399,
+        "sender_full_name": "Erik Tews",
+        "timestamp": 1662561542
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <a href=\"#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1430751\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"16874\">Erik Tews</span> Hmm, multiple PreregistrationUsers with the same email is normal, since that's not supposed to be unique - but it looks like the error is caused by a PreregistrationUser with multiple Confirmations tied to it. Not sure how it would happen</p>\n</blockquote>\n<p>But as a general idea: Somehow this happened. In general, Postgres is really good at making sure that certain things are unique in a table or across multiple tables. So when Zulip assumes that something is unique,  should one maybe add a constraint to the database that makes sure that will never happen?</p>",
+        "id": 1431402,
+        "sender_full_name": "Erik Tews",
+        "timestamp": 1662562958
+    },
+    {
+        "content": "<p>I think the Docker environment would have the same issue fixed by <code>/home/zulip/deployments/current/scripts/setup/reindex-textual-data --force</code> if you upgraded the host image for the database to newer <code>libc</code>, but yeah that should only happen if you're using an external database server.</p>",
+        "id": 1431445,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662570261
+    },
+    {
+        "content": "<p>I would have thought we had a database constraint that would prevent this outcome. <span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> do you understand how the indexes are setup that might prevent such a bug? Studying that might help determine the bug here.</p>",
+        "id": 1431451,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662570797
+    },
+    {
+        "content": "<p>(It's likely possible to just delete one of the duplicates to clear the error, but I'd like to be confident we understand the bug first).</p>",
+        "id": 1431452,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662570857
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1431451\">said</a>:</p>\n<blockquote>\n<p>I would have thought we had a database constraint that would prevent this outcome. <span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> do you understand how the indexes are setup that might prevent such a bug? Studying that might help determine the bug here.</p>\n</blockquote>\n<p>There isn't a database constraint and I don't think there can be in the current model - this is because our <code>Confirmation</code> objects can point to rows in  various tables. This happens via Django's GenericForeignKey (<a href=\"https://docs.djangoproject.com/en/4.1/ref/contrib/contenttypes/\">https://docs.djangoproject.com/en/4.1/ref/contrib/contenttypes/</a>)</p>\n<div class=\"codehilite\"><pre><span></span><code>content_object = GenericForeignKey(&quot;content_type&quot;, &quot;object_id&quot;)\n</code></pre></div>\n<p>I agree it'd be important to understand how this bug happened though, because I'm confused by how this could even happen for a single <code>PreregistrationUser</code> to be pointed to by multiple <code>Confirmation</code>s. Some race condition is one idea that comes to mind. Also some hypothetical bug in <code>zerver/migrations/0401_migrate_old_realm_reactivation_links.py</code> crossed my mind but it deals with <code>REALM_REACTIVATION</code> Confirmations, so I don't see how</p>",
+        "id": 1431464,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1662571765
+    },
+    {
+        "content": "<p>Oh, I have an idea for a potential overlap between <code>ConfirmationEmailWorker</code> and <code>maybe_send_to_registration</code> creating <code>Confirmations</code> for a <code>PreregistrationUser</code>, let me investigate that <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>",
+        "id": 1431468,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1662572125
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1431452\">said</a>:</p>\n<blockquote>\n<p>(It's likely possible to just delete one of the duplicates to clear the error, but I'd like to be confident we understand the bug first).</p>\n</blockquote>\n<p>It looks like the error went away by itself now. Maybe some of the duplicate ones expired?</p>",
+        "id": 1431488,
+        "sender_full_name": "Erik Tews",
+        "timestamp": 1662573578
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> <a href=\"#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1431468\">said</a>:</p>\n<blockquote>\n<p>Oh, I have an idea for a potential overlap between <code>ConfirmationEmailWorker</code> and <code>maybe_send_to_registration</code> creating <code>Confirmations</code> for a <code>PreregistrationUser</code>, let me investigate that <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>\n</blockquote>\n<p>When it helps you, I use SAML auth on my server, so there are no real local full users with a password and so on.</p>",
+        "id": 1431489,
+        "sender_full_name": "Erik Tews",
+        "timestamp": 1662573647
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1431445\">said</a>:</p>\n<blockquote>\n<p>I think the Docker environment would have the same issue fixed by <code>/home/zulip/deployments/current/scripts/setup/reindex-textual-data --force</code> if you upgraded the host image for the database to newer <code>libc</code>, but yeah that should only happen if you're using an external database server.</p>\n</blockquote>\n<p>I think that counts as <em>external</em> since it's a different docker container.</p>",
+        "id": 1431490,
+        "sender_full_name": "Erik Tews",
+        "timestamp": 1662573773
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1431445\">said</a>:</p>\n<blockquote>\n<p>I think the Docker environment would have the same issue fixed by <code>/home/zulip/deployments/current/scripts/setup/reindex-textual-data --force</code> if you upgraded the host image for the database to newer <code>libc</code>, but yeah that should only happen if you're using an external database server.</p>\n</blockquote>\n<p>Is the script maybe triggered automatically by the default Docker setup?</p>",
+        "id": 1431497,
+        "sender_full_name": "Erik Tews",
+        "timestamp": 1662574492
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"16874\">Erik Tews</span> <a href=\"#narrow/stream/31-production-help/topic/invite.20inconsistency/near/1431490\">said</a>:</p>\n<blockquote>\n<p>I think that counts as <em>external</em> since it's a different docker container.</p>\n</blockquote>\n<p>If you're using our Postgres container image, I don't think we've upgraded it in a way that would trigger the Postgres issue in question. When we do, we'll script it to run the reindexing tool.</p>",
+        "id": 1431565,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1662578933
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16874\">@Erik Tews</span>: I don't know if you saw this, but we found <a href=\"https://github.com/zulip/zulip/pull/23050\">#23050</a> recently which may explain how things got into that state.</p>",
+        "id": 1444269,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1664846144
+    },
+    {
+        "content": "<p>Yes, that's a good description of my bug</p>",
+        "id": 1444276,
+        "sender_full_name": "Erik Tews",
+        "timestamp": 1664847362
+    }
+]

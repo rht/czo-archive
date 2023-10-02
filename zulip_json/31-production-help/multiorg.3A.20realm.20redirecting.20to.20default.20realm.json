@@ -1,0 +1,284 @@
+[
+    {
+        "content": "<p>Before I go down a rabbit hole even more, I figured I would ask. I installed Zulip on Ubuntu and configured my initial org/realm, with all being fine. I re-ran the <code>./manage.py generate_realm_creation_link</code> and registered with the same email account as my initial realm. Created the CNAME record, re-did my cert to include the subdomain, logged in and added a logo. Now, for some reason, when I hit my realm domain (<a href=\"http://coolgroup.chat.domain.com\" target=\"_blank\" title=\"http://coolgroup.chat.domain.com\">coolgroup.chat.domain.com</a>) it redirects to my default realm (<a href=\"http://chat.domain.com\" target=\"_blank\" title=\"http://chat.domain.com\">chat.domain.com</a>). I even still see the two different realms with there separate logos on my desktop app, though they both show the same content.<br>\nI do see the primary realm and the secondary realm in the <code>zulip.zerver_realm</code> PostgreSQL DB, so I am assuming something went screwy with the nginx config? <br>\nThe last thing I did before I noticed it wasn't working (the next morning) was enabling <code>EMAIL_GATEWAY_PATTERN</code> and running <code>./zulip-puppet-apply -f</code> which errored out the first time as I ran it as <em>zulip</em> not <em>root</em>.<br>\nI will continue to work on it, but any pointers are appreciated!</p>",
+        "id": 568368,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524506112
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7571\">@Michael Potts</span> that's not a familiar issue</p>",
+        "id": 568379,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524506836
+    },
+    {
+        "content": "<p>But I guess one thing I'd look at is the <code>ALLOWED_HOSTS</code> variable in <code>/etc/zulip/settings.py</code>.</p>",
+        "id": 568380,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524506861
+    },
+    {
+        "content": "<p>figures. :/ lol</p>",
+        "id": 568384,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524506941
+    },
+    {
+        "content": "<p><code>EXTERNAL_HOST = 'chat.domain.com'</code><br>\n<code>ALLOWED_HOSTS</code> is still commented out from default.</p>",
+        "id": 568386,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524507018
+    },
+    {
+        "content": "<p>Yeah, so if you're using subdomains, you may need to set ALLOWED_HOSTS to allow the subdomain.</p>",
+        "id": 568388,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524507087
+    },
+    {
+        "content": "<p>I'll add it and see, but I figured based on the wording of the comment that subdomains were included (<a href=\"https://github.com/zulip/zulip/blob/master/zproject/prod_settings_template.py#L91\" target=\"_blank\" title=\"https://github.com/zulip/zulip/blob/master/zproject/prod_settings_template.py#L91\">https://github.com/zulip/zulip/blob/master/zproject/prod_settings_template.py#L91</a>).<br>\nAlso curious as to how it worked for a bit as I tinkered with other stuff...</p>",
+        "id": 568391,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524507387
+    },
+    {
+        "content": "<p>Alas, it didn't work. :/</p>",
+        "id": 568402,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524508269
+    },
+    {
+        "content": "<p>Well, since that didn't work and creating a new 3rd realm didn't change anything (it instantly redirects back to the base realm), I think I will do the overkill option to just nuke and reinstall it. I haven't made any non-setup changes yet, so it's nothing lost..</p>",
+        "id": 568668,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524524062
+    },
+    {
+        "content": "<p>Ok, so I have now rebuilt my entire environment. It looks like the issue is down to the fact that I am trying to sign into <code>chat.domain.com</code> and <code>org1.chat.domain.com</code> Zulip realms at the same time.</p>\n<p>If I sign into <code>org1.chat.domain.com</code>, all is fine. If I sign into <code>chat.domain.com</code>, the <code>org1.</code> site gets redirected. <br>\nI can stop it by deleting the <em>sessionid</em> cookie that has a domain of <code>.chat.domain.com</code>, leaving the <em>sessionid</em> cookie for <code>.org1.chat.domain.com</code>. It looks like the fact that the <em>sessionid</em> cookie applies to the subdomains is what causes the issue.</p>\n<p>Is this expected behavior? Should I be able to sign into the default realm and an additional realm at the same time?</p>",
+        "id": 568817,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524542430
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7571\">@Michael Potts</span> ahh, I see the problem</p>",
+        "id": 568852,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524545425
+    },
+    {
+        "content": "<p>Yeah, it's generally recommended that you either host all realms on subdomains or just have the one realm on the root domain, more or less for this reason.</p>",
+        "id": 568853,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524545449
+    },
+    {
+        "content": "<p>I think there isn't actually a way for us to create a cookie on the root domain that doesn't appear on the subdomains, though I'd be happy to be corrected (my memory is a bit fuzzy, but that problem with cookies feels familiar)</p>",
+        "id": 568854,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524545505
+    },
+    {
+        "content": "<p>I do believe you are correct with the cookie issue. Cookies always apply to subdomain.</p>",
+        "id": 568970,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524576014
+    },
+    {
+        "content": "<p>I'll have to think a bit more on how I engineer my solution. Initial thoughts are that I could use eliminate the <em>chat</em> part of <code>org1.chat.domain.com</code> since that may be confusing for people if they are never supposed to use that realm.</p>",
+        "id": 568971,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524576019
+    },
+    {
+        "content": "<p>Yeah, you could have the domains not be subdomain-related to each other using the REALM_HOSTS setting.</p>",
+        "id": 569124,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524589389
+    },
+    {
+        "content": "<p>We should probably document more clearly that having one organization on the root domain and another on a subdomain doesn't really work if there are going to be any users in common between the two organizations.</p>",
+        "id": 569125,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524589418
+    },
+    {
+        "content": "<p>What is this <em>REALM_HOSTS</em> you speak of? It sounds like it would be helpful towards my end goal of having <code>org1.org.com</code> be somehow aliased to <code>org1.chat.domain.com</code>...</p>",
+        "id": 569252,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524592925
+    },
+    {
+        "content": "<p>It's a not-yet-documented option (in large part because ultimately I think it should be moved to a value in the database), but basically you put into it a dictionary mapping hostnames to a subdomain that you want that hostname to act as</p>",
+        "id": 569256,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524593000
+    },
+    {
+        "content": "<p>E.g. you'd put something like <code>{'org1.org.com': 'org1'}</code></p>",
+        "id": 569258,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524593021
+    },
+    {
+        "content": "<p>ok this is amazing. Gonna not try to get too excited and actually get my instance working 100% before trying that.</p>",
+        "id": 569279,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524593592
+    },
+    {
+        "content": "<p>My previous message was a lie.</p>\n<p>That worked perfectly. Had to add <code>org1.org.com</code> into the <em>ALLOWED_HOSTS</em>, which is obvious in hindsight.</p>",
+        "id": 569290,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524594390
+    },
+    {
+        "content": "<p>Yeah, it's possible we could do something clever with the default ALLOWED_HOSTS and auto-append <code>REALM_HOSTS.keys()</code> to it or something.</p>",
+        "id": 569293,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524594602
+    },
+    {
+        "content": "<blockquote>\n<p>Yeah, it's possible we could do something clever with the default ALLOWED_HOSTS and auto-append <code>REALM_HOSTS.keys()</code> to it or something.</p>\n</blockquote>\n<p>We actually do this already -- from <code>zproject/settings.py</code>:</p>\n<div class=\"codehilite\"><pre><span></span># ... and with the hosts in REALM_HOSTS.\nALLOWED_HOSTS += REALM_HOSTS.values()\n</pre></div>",
+        "id": 569297,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1524594783
+    },
+    {
+        "content": "<p>Or maybe I should just quote the documentation, not the implementation <span class=\"emoji emoji-1f609\" title=\"wink\">:wink:</span> </p>\n<div class=\"codehilite\"><pre><span></span>    # Alternate hostnames to serve particular realms on, in addition to\n    # their usual subdomains.  Keys are realm string_ids (aka subdomains),\n    # and values are alternate hosts.\n    # The values will also be added to ALLOWED_HOSTS.\n    &#39;REALM_HOSTS&#39;: {},\n</pre></div>",
+        "id": 569298,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1524594812
+    },
+    {
+        "content": "<p>So <span class=\"user-mention\" data-user-id=\"7571\">@Michael Potts</span>  I'm actually a bit puzzled at the part where you had to add <code>org1.org.com</code> to the ALLOWED_HOSTS. What's your <code>REALM_HOSTS</code> setting? Does it really not work if you leave that out of your ALLOWED_HOSTS?</p>",
+        "id": 569299,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1524594890
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span>  Let me retest, stand by</p>",
+        "id": 569300,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524594986
+    },
+    {
+        "content": "<p>Also yeah, I can confirm FTR that subdomains of EXTERNAL_HOSTS should be automatically included in ALLOWED_HOSTS.</p>",
+        "id": 569302,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1524595037
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span> <br>\n<a href=\"/user_uploads/2/6a/_fKple4QR6pOPa_mRlI8MaCw/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">pasted image</a><br>\nThat results in a 400 Bad Request on <code>chat.bsidesjax.org</code>.</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/6a/_fKple4QR6pOPa_mRlI8MaCw/pasted_image.png\" target=\"_blank\" title=\"pasted image\"><img src=\"/user_uploads/2/6a/_fKple4QR6pOPa_mRlI8MaCw/pasted_image.png\"></a></div>",
+        "id": 569305,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524595199
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/69/6hb7fVmAzu7esyXdcpwOdnWp/2018-04-24-14_39_07-rootChat01_-_home_zulip_deployments.png\" target=\"_blank\" title=\"2018-04-24-14_39_07-rootChat01_-_home_zulip_deployments.png\">2018-04-24-14_39_07-rootChat01_-_home_zulip_deployments.png</a> <br>\nThat works.</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/69/6hb7fVmAzu7esyXdcpwOdnWp/2018-04-24-14_39_07-rootChat01_-_home_zulip_deployments.png\" target=\"_blank\" title=\"2018-04-24-14_39_07-rootChat01_-_home_zulip_deployments.png\"><img src=\"/user_uploads/2/69/6hb7fVmAzu7esyXdcpwOdnWp/2018-04-24-14_39_07-rootChat01_-_home_zulip_deployments.png\"></a></div>",
+        "id": 569306,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524595254
+    },
+    {
+        "content": "<p>can i presume that the date of the deployment folder is analogous to the version I am running? if so, that's the version!</p>",
+        "id": 569307,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524595296
+    },
+    {
+        "content": "<p>(no point in obscuring org names, so I am just gonna give up on that. lol. did it out of habit anyways)</p>",
+        "id": 569309,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524595392
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7571\">@Michael Potts</span> the date is the date you installed it, not the version number.</p>",
+        "id": 569320,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524596413
+    },
+    {
+        "content": "<blockquote>\n<p><span class=\"user-mention\" data-user-id=\"7571\">@Michael Potts</span> the date is the date you installed it, not the version number.</p>\n</blockquote>\n<p>Yea... that makes sense now that I look at it again... :)</p>",
+        "id": 569344,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524596922
+    },
+    {
+        "content": "<p>Also, evidently I lied. it's not working. It doesn't result in a 400 anymore but it takes me to the default realm not the correct realm...</p>",
+        "id": 569348,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524597118
+    },
+    {
+        "content": "<p>(We definitely use the <code>REALM_HOSTS</code> setting both in production and in the development environment).  Oh, you might need to add some <code>nginx</code> config for your separate host as well.</p>",
+        "id": 569363,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524597332
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  I glanced through there but didn't see anything referencing my existing domain (that I could then append with my own). I'll look further..</p>",
+        "id": 569374,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524597789
+    },
+    {
+        "content": "<p>Oh hey look what I found. lol<br>\n<a href=\"/user_uploads/2/ba/gSpjCxTkSpL5lyC7aYy3IDjm/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">pasted image</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/ba/gSpjCxTkSpL5lyC7aYy3IDjm/pasted_image.png\" target=\"_blank\" title=\"pasted image\"><img src=\"/user_uploads/2/ba/gSpjCxTkSpL5lyC7aYy3IDjm/pasted_image.png\"></a></div>",
+        "id": 569375,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524597896
+    },
+    {
+        "content": "<p>if anyone has any tips of where to look, do let me know! thus far I have not found anything that makes me think I am on the right track.</p>",
+        "id": 569423,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524603851
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7571\">@Michael Potts</span> what have you been trying in debugging?</p>",
+        "id": 569466,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524605253
+    },
+    {
+        "content": "<p>I think you might want to start up a <code>manage.py shell</code>, use <code>get_realm</code> to access your two realms, and play with printing <code>realm.host</code> and <code>Realm.host_for_subdomain(subdomain)</code> for each.  Ideally, those should all be consistent with what you're trying to do.</p>",
+        "id": 569467,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524605346
+    },
+    {
+        "content": "<p>And then the next thing would be to watch the <code>/var/log/zulip/server.log</code> and <code>/var/log/nginx/error.log</code> when accessing the problem subdomain to see what's going on.</p>",
+        "id": 569468,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524605368
+    },
+    {
+        "content": "<p>Finally, make sure you cleared your browser cookies after making the changes, since old cookies from the old model could confuse things.</p>",
+        "id": 569469,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524605388
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7571\">@Michael Potts</span> I think I see the problem (or a problem): your <code>REALM_HOSTS</code> is inverted. <span class=\"emoji emoji-1f609\" title=\"wink\">:wink:</span> Per the doc comment I quoted above, it should look like</p>\n<div class=\"codehilite\"><pre><span></span>REALM_HOSTS = {&#39;bsidesjax&#39;: &#39;chat.bsidesjax.org&#39;}\n</pre></div>",
+        "id": 569472,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1524605571
+    },
+    {
+        "content": "<p>(Tim had remembered it the other way around when mentioning the option above, which is presumably where you got that from)</p>",
+        "id": 569473,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1524605650
+    },
+    {
+        "content": "<p>That worked! Let me add the others real quick.</p>",
+        "id": 569494,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524607390
+    },
+    {
+        "content": "<p>Great :)</p>",
+        "id": 569506,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1524609143
+    }
+]

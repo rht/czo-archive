@@ -1,0 +1,224 @@
+[
+    {
+        "content": "<p>So, I'd like to get feedback on a proposed changed to what happens when you send a message while scrolled such that the latest messages are offscreen in a given narrow.  Currently, the behavior is that in \"All messages\", we display a little \"Sent! Scroll down to see your message\" notice (which could surely be enhanced with a button to do the scroll maximally for you).  And in all other views, we jump the blue message selection cursor to your newly sent message without scrolling (which is definitely a bug) and also without displaying said notice.  </p>\n<p>(I noticed this while trying to verify a better fix for the bug with that notice appearing incorrectly that was detailed in <a href=\"https://github.com/zulip/zulip/pull/19819\">#19819</a>, so thanks <span class=\"user-mention\" data-user-id=\"14114\">@Priyansh Garg (garg3133)</span> for the thoughtful manual testing experiment.)</p>",
+        "id": 1259741,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632854778
+    },
+    {
+        "content": "<p>Fixing the bug most simply (i.e. the 1-line change to make it actually scroll) would result in Zulip's narrowed views sharing the model that Slack/Discord have, which is that sending a message always jumps you to the end of the feed, presumably marking everything as read.  I feel like that's a really bad experience, since it destroys unread messages state, and even if you have no unreads, if you're scrolled a ways up, it's probably for a reason, and losing that scroll position is likely also annoying.  </p>\n<p>So my proposal, prototyped in <a href=\"https://github.com/zulip/zulip/pull/19856\">#19856</a>, is that we just delete the code to attempt that scroll.  I imagine that we could instead do something where we figure out how far up you are, and only jump you to the bottom if it's &lt;N messages and they're all unread, but that feels unpredictable and thus not a great experience either.  See <a href=\"https://github.com/zulip/zulip/pull/11462\">#11462</a> for some additional thoughts I came up with on the topic back in 2019.</p>",
+        "id": 1259742,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632854977
+    },
+    {
+        "content": "<p>I think as part of this change we definitely need to make the \"Scroll down to see your messages\" widget have a button to jump to the bottom: <a href=\"https://github.com/zulip/zulip/pull/19857\">#19857</a>.</p>",
+        "id": 1259748,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632855310
+    },
+    {
+        "content": "<p>But I'd really appreciate feedback from as many people as possible on the \"sending a message jumps immediately to the bottom\" behavior, since this would be a very highly visible UI change to a reasonably common workflow, and I'd like to be confident that the change is correct.  This is the kind of UI detail where an option could be appropriate if there were folks who really like the Slack/Discord model of jumping to the bottom for their use case, and I don't have a clear intuition for whether those users exist.</p>\n<p>(Note that in either proposal we would continue autoscrolling towards the bottom if you're sending a message while the bottom of the feed is in view; so this discussion is entirely about what happens when you send a message while scrolled up very far).</p>",
+        "id": 1259749,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632855423
+    },
+    {
+        "content": "<p>I lack confidence, but my intuition is to agree with you that the auto-scrolling seems bad.</p>",
+        "id": 1259840,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1632868824
+    },
+    {
+        "content": "<p>We can show a scroll to bottom button when user is trying to scroll.</p>",
+        "id": 1259843,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1632868991
+    },
+    {
+        "content": "<p>We can do this by default irrespective of anything.</p>",
+        "id": 1259844,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1632869028
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"5140\">Aman Agrawal (amanagr)</span> <a href=\"#narrow/stream/101-design/topic/autoscroll.20when.20sending.20off.20screen/near/1259843\">said</a>:</p>\n<blockquote>\n<p>We can show a scroll to bottom button when user is trying to scroll.</p>\n</blockquote>\n<p>Yeah, I think that's a good idea as well, with some care taken around placement to make it not distracting. I wonder if it'd be useful for it to display any information (like \"123 messages below; jump to bottom\") or we just want something that's just \"Go to latest\" like Slack/Discord do.  I've always kind found it annoying that one doesn't get much information on how far the ends are in that state. </p>\n<p>That said, we can't always compute efficiently how far it'll be, so we'd likely have a \"100+ messages\" state if we did that.</p>",
+        "id": 1260195,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632939458
+    },
+    {
+        "content": "<p>I think simple is better. Also, we can add things on feedback. Opened <a href=\"https://github.com/zulip/zulip/pull/19862\">#19862</a>.</p>",
+        "id": 1260208,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1632940151
+    },
+    {
+        "content": "<p>I'm deploying the <a href=\"https://github.com/zulip/zulip/pull/19856\">#19856</a> branch to <a href=\"http://chat.zulip.org\">chat.zulip.org</a> so folks can try it out.</p>",
+        "id": 1260388,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1632956982
+    },
+    {
+        "content": "<p>I've been pretty happy with the <a href=\"https://github.com/zulip/zulip/pull/19856\">#19856</a> experience in the cases where it's been relevant.  (E.g. I just sent a message a few minutes ago where I appreciated this working as deployed on CZO).</p>",
+        "id": 1263235,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1633483085
+    },
+    {
+        "content": "<p>I think we should merge this fix now, and we can afterwards prioritize having a better \"jump to bottom\" UI widget for mouse users (<a href=\"https://github.com/zulip/zulip/pull/19862\">#19862</a>).  I've tagged <a href=\"https://github.com/zulip/zulip/pull/19862\">#19862</a> as a release goal so we won't forget about it, but if that takes a few weeks, I'd prefer to have the more technically subtle <a href=\"https://github.com/zulip/zulip/pull/19856\">#19856</a> in production because it is an important UX bug fix and also is the kind of thing that benefits from being in production for a few weeks to discover corner case issues.</p>",
+        "id": 1263236,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1633483251
+    },
+    {
+        "content": "<p>Any feedback on that proposal?</p>",
+        "id": 1263237,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1633483267
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"5140\">Aman Agrawal (amanagr)</span> <a href=\"#narrow/stream/101-design/topic/autoscroll.20when.20sending.20off.20screen/near/1260208\">said</a>:</p>\n<blockquote>\n<p>I think simple is better. Also, we can add things on feedback. Opened <a href=\"https://github.com/zulip/zulip/pull/19862\">#19862</a>.</p>\n</blockquote>\n<p><span class=\"user-mention\" data-user-id=\"5140\">@Aman Agrawal (amanagr)</span> would you be up for taking this one on?</p>",
+        "id": 1263879,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1633644301
+    },
+    {
+        "content": "<p>Okay.</p>",
+        "id": 1263934,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1633652082
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/7b/VGMEyww0gUummEGuSnEauAoT/Screenshot-2021-10-08-at-7.38.23-AM.png\">Screenshot-2021-10-08-at-7.38.23-AM.png</a> <a href=\"/user_uploads/2/d1/0PZQRwdUJ2o-nDb_5-znfcaS/Screenshot-2021-10-08-at-7.38.33-AM.png\">Screenshot-2021-10-08-at-7.38.33-AM.png</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/7b/VGMEyww0gUummEGuSnEauAoT/Screenshot-2021-10-08-at-7.38.23-AM.png\" title=\"Screenshot-2021-10-08-at-7.38.23-AM.png\"><img src=\"/user_uploads/2/7b/VGMEyww0gUummEGuSnEauAoT/Screenshot-2021-10-08-at-7.38.23-AM.png\"></a></div><div class=\"message_inline_image\"><a href=\"/user_uploads/2/d1/0PZQRwdUJ2o-nDb_5-znfcaS/Screenshot-2021-10-08-at-7.38.33-AM.png\" title=\"Screenshot-2021-10-08-at-7.38.33-AM.png\"><img src=\"/user_uploads/2/d1/0PZQRwdUJ2o-nDb_5-znfcaS/Screenshot-2021-10-08-at-7.38.33-AM.png\"></a></div><p>button desing thoughts?</p>",
+        "id": 1263979,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1633658961
+    },
+    {
+        "content": "<p>Should we place it at bottom center or bottom right?</p>",
+        "id": 1263980,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1633659003
+    },
+    {
+        "content": "<p>Opened <a href=\"https://github.com/zulip/zulip/pull/19937\">#19937</a></p>",
+        "id": 1263987,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1633668009
+    },
+    {
+        "content": "<p>I would expect the symbol to be a down caret, like we have in the mobile app.</p>",
+        "id": 1263994,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1633671518
+    },
+    {
+        "content": "<p>Bottom right feels normal to me.</p>",
+        "id": 1263995,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1633671575
+    },
+    {
+        "content": "<p>Should we try just matching our mobile design for it? It's bluish and translucent, more subtle than in the screenshots above.</p>",
+        "id": 1263997,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1633671702
+    },
+    {
+        "content": "<p>Okay, makes sense.</p>",
+        "id": 1264152,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1633715761
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/20/M9ZGRaSeXO3fuVp7rmJLD2Y2/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/20/M9ZGRaSeXO3fuVp7rmJLD2Y2/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/20/M9ZGRaSeXO3fuVp7rmJLD2Y2/image.png\"></a></div>",
+        "id": 1264174,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1633716998
+    },
+    {
+        "content": "<p>Looks good to me -- is <a href=\"https://github.com/zulip/zulip/pull/19937\">#19937</a> ready to play with?</p>",
+        "id": 1264221,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1633720606
+    },
+    {
+        "content": "<p>Yes.</p>",
+        "id": 1264446,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1633764268
+    },
+    {
+        "content": "<p>This looks very weird in night mode (deployed on CZO).</p>\n<p><a href=\"/user_uploads/2/ee/8_sVC9kTPP0bXBwAfcAfYaAP/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/ee/8_sVC9kTPP0bXBwAfcAfYaAP/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/ee/8_sVC9kTPP0bXBwAfcAfYaAP/image.png\"></a></div>",
+        "id": 1268009,
+        "sender_full_name": "Priyansh Garg (garg3133)",
+        "timestamp": 1634545792
+    },
+    {
+        "content": "<p>And if the compose-box is open:</p>\n<p><a href=\"/user_uploads/2/ca/HyF05kdJPNNkSPxHCG7h60WR/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/ca/HyF05kdJPNNkSPxHCG7h60WR/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/ca/HyF05kdJPNNkSPxHCG7h60WR/image.png\"></a></div>",
+        "id": 1268010,
+        "sender_full_name": "Priyansh Garg (garg3133)",
+        "timestamp": 1634545811
+    },
+    {
+        "content": "<p>if I have the chevron appears and I click to a user I have no PMs with through the buddy_list, it still stays for a few seconds.</p>",
+        "id": 1268042,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1634561297
+    },
+    {
+        "content": "<p>I think if someone mouses over the chevron, it should stick around until they move their mouse away. It's frustrating to have it disappear while you're trying to click on it.</p>",
+        "id": 1268063,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1634574191
+    },
+    {
+        "content": "<p>Yeah, but the report is that it's incorrectly appearing at all when you click into any empty view, and that's just a bug.</p>",
+        "id": 1268094,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634580375
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/autoscroll.20when.20sending.20off.20screen/near/1268094\">said</a>:</p>\n<blockquote>\n<p>Yeah, but the report is that it's incorrectly appearing at all when you click into any empty view, and that's just a bug.</p>\n</blockquote>\n<p>Sure, I wasn't replying to <span class=\"user-mention silent\" data-user-id=\"9808\">Yash RE</span> 's comment -- I was just providing an additional piece of feedback.</p>",
+        "id": 1268097,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1634580704
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/98/pHu25JC596fJLSmvRrOJrkEy/Bildschirmfoto-2021-10-19-um-12.15.17.png\">Bildschirmfoto-2021-10-19-um-12.15.17.png</a> </p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/98/pHu25JC596fJLSmvRrOJrkEy/Bildschirmfoto-2021-10-19-um-12.15.17.png\" title=\"Bildschirmfoto-2021-10-19-um-12.15.17.png\"><img src=\"/user_uploads/2/98/pHu25JC596fJLSmvRrOJrkEy/Bildschirmfoto-2021-10-19-um-12.15.17.png\"></a></div><p>I have this weird thing now.<br>\nI do not know if it is reported already, but did not find it quickly</p>\n<p>This does only happen here, as far as I know</p>",
+        "id": 1268367,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1634638608
+    },
+    {
+        "content": "<p>It's been reported at <a class=\"stream-topic\" data-stream-id=\"101\" href=\"/#narrow/stream/101-design/topic/autoscroll.20when.20sending.20off.20screen\">#design &gt; autoscroll when sending off screen</a>. It's a new feature we're testing out here on CZO.</p>",
+        "id": 1268368,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1634638669
+    },
+    {
+        "content": "<p>Great. I cant delete my message so I will just leave this here. Sorry</p>",
+        "id": 1268370,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1634638692
+    },
+    {
+        "content": "<p>No worries!</p>",
+        "id": 1268371,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1634638794
+    },
+    {
+        "content": "<p>It's possible I should pull this off <a href=\"http://chat.zulip.org\">chat.zulip.org</a> until it's fixed.</p>",
+        "id": 1270557,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634949174
+    },
+    {
+        "content": "<p>I'll do that; as well as other experiments that are not ##<strong>design&gt;modal migration</strong>.</p>",
+        "id": 1270559,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634949214
+    }
+]

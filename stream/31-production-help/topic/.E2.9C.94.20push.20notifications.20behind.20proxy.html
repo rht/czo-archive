@@ -1,0 +1,242 @@
+<html>
+<head><meta charset="utf-8"><title>✔ push notifications behind proxy · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html">✔ push notifications behind proxy</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1572332"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1572332" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1572332">(May 19 2023 at 00:44)</a>:</h4>
+<p>hi again! trying to get push notifications working. I am running zulip in a vm behind a reverse proxy (swag/nginx, which live in docker). i can access zulip fine, but nginx breaks when I try to put in the <code>proxy_set_header</code> lines from the <a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#customizing-the-outgoing-http-proxy">instructions</a> in my reverse proxy. Should I be modifying the nginx proxy internal to the vm?</p>
+
+
+
+<a name="1572414"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1572414" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1572414">(May 19 2023 at 03:20)</a>:</h4>
+<p>my /var/log/zulip/server.log isn't show the actual ip of my clients, but I read somewhere that it should.<br>
+It looks like I've successfully registered the notification service, (events_missedmessage_mobile_notifications.log says they're being sent)</p>
+<p>something must be wrong with my proxy configs. <br>
+my main reverse proxy, Swag, has a zulip.subdomain.conf file. I added proxy_set_header for x-forwarded for, and x-forwarded-proto, but adding <code>proxy_set_header Host $http_host;</code> breaks the routing and I get a 400 error. (the http_version and timeout are duplicates of the main nginx conf file)</p>
+
+
+
+<a name="1572418"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1572418" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1572418">(May 19 2023 at 03:46)</a>:</h4>
+<p>pretty sure this line in swag is the zulip push notification trying to get out:<br>
+<code>[zulip vm ip]- - [18/May/2023:23:45:59 -0400] "CONNECT push.zulipchat.com:443 HTTP/1.0" 400 150 "-" "-"</code></p>
+
+
+
+<a name="1572419"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1572419" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1572419">(May 19 2023 at 03:51)</a>:</h4>
+<p>in zulip.conf, i have [loadbalancer] set to the LAN IP range (192.168.1.0/24), and [http_proxy] set to the internal ip of Swag (running in a docker, so it's a forwarded port from the server). Changing the <code>port</code> between forwarded port 80 and forwarder 443 doesn't seem to affect anything</p>
+
+
+
+<a name="1572712"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1572712" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1572712">(May 19 2023 at 15:59)</a>:</h4>
+<p><span class="user-mention" data-user-id="26762">@Ben</span>: Is this a <em>reverse</em> proxy, which sits between end-users and the Zulip server, or an <em>outgoing</em> proxy, which sits between the Zulip server and requests it makes to the outside world?</p>
+<p>The <a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#customizing-the-outgoing-http-proxy">doc you linked</a> is for outgoing proxies -- but referencing <a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#nginx-configuration"><code>proxy_set_header</code> lines</a> is about incoming (reverse) proxies.</p>
+
+
+
+<a name="1572714"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1572714" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1572714">(May 19 2023 at 16:00)</a>:</h4>
+<p><code>[loadbalancer]</code> sections are about where incoming (reverse) proxies are in your network -- servers that your browser will bounce through to get to Zulip.  <code>[http_proxy]</code> settings are about how the Zulip server talks to the outside world, like when it makes requests to the push bouncer.</p>
+
+
+
+<a name="1572716"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1572716" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1572716">(May 19 2023 at 16:01)</a>:</h4>
+<p>In neither case should you need to manually make changes to <code>/etc/nginx/</code> inside the Zulip server's VM itself.</p>
+
+
+
+<a name="1572718"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1572718" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1572718">(May 19 2023 at 16:03)</a>:</h4>
+<p>My guess is that you have a reverse proxy, but not an outgoing proxy.  So you should set:</p>
+<div class="codehilite"><pre><span></span><code>[loadbalancer]
+ips = 192.168.1.42 # or the specific IP address which Swag is on
+</code></pre></div>
+<p>...and remove the <code>[http_proxy]</code> stanza.</p>
+
+
+
+<a name="1572721"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1572721" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1572721">(May 19 2023 at 16:08)</a>:</h4>
+<p>It may be helpful to show us the full <code>zulip.subdomain.conf</code> file from your Swag host.</p>
+<p>The <code>proxy_set_header Host $http_host</code> is necessary so that requests to Zulip get the right hostname -- the one that your browser typed in.  If you're getting 400's, then your settings in <code>/etc/zulip/settings.py</code> may not be right -- specifically, <code>EXTERNAL_HOST</code> should be the hostname that browsers type in, even if that resolves (to them) to the Swag reverse proxy.  It may be helpful to show us that setting, and your <code>ALLOWED_HOSTS</code> (which should be empty).</p>
+
+
+
+<a name="1573021"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1573021" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1573021">(May 19 2023 at 20:03)</a>:</h4>
+<p>thanks very much, this is very informative, I wasnt sure if either nginx instance (zulip vm or swag) would handle outbound requests; you're correct: I only have Swag configured to run as a reverse proxy. It connects the public url for my service to the LAN IP of the VM, where Zulip is.</p>
+<ol>
+<li>I updated zulip.conf to remove the <code>[http_proxy]</code> stanza, and pointed <code>[loadbalancer]</code> to the Swag ip (it's the server IP, running in a Docker)</li>
+<li>I settings.py for <code>EXTERNAL_HOST</code> to be <code>zulip.mydomain.com</code></li>
+<li>you're right, I only have a reverse proxy configured - i wasnt sure if this would handle outbound requests and got confused. Here's the <code>zulip.subdomain.conf</code> file:</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+
+    server_name zulip.*;
+
+    include /config/nginx/ssl.conf;
+
+    client_max_body_size 0;
+
+    location / {
+
+        include /config/nginx/proxy.conf;
+        include /config/nginx/resolver.conf;
+        set $upstream_app 192.168.1.193;
+        set $upstream_port 443;
+        set $upstream_proto https;
+        proxy_pass $upstream_proto://$upstream_app:$upstream_port;
+
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    #proxy_set_header Host $http_host; #this gives a 400 error
+
+    proxy_buffering off;
+    }
+}
+</code></pre></div>
+
+
+
+<a name="1573047"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1573047" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1573047">(May 19 2023 at 20:12)</a>:</h4>
+<p>Have you run <code>~zulip/deployments/current/zulip-puppet-apply</code> to pick up the loadbalancer changes, and <code>~zulip/deployments/current/scripts/restart-server</code> to pick up the <code>EXTERNAL_HOST</code> change?</p>
+
+
+
+<a name="1573048"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1573048" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1573048">(May 19 2023 at 20:12)</a>:</h4>
+<p>(the former should be run as <code>root</code>, the latter as <code>zulip</code>)</p>
+
+
+
+<a name="1573073"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1573073" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1573073">(May 19 2023 at 20:26)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="26762">Ben</span> <a href="#narrow/stream/31-production-help/topic/push.20notifications.20behind.20proxy/near/1573021">said</a>:</p>
+<blockquote>
+<p>I wasnt sure if either nginx instance (zulip vm or swag) would handle outbound requests</p>
+</blockquote>
+<p>The Zulip server <a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#customizing-the-outgoing-http-proxy">runs an instance of the Smokescreen outgoing proxy</a> to protect against SSRF and the like.  Some (mostly corporate) deployments have requirements for a further layer of outgoing proxy to talk to the outside world, which is what <code>http_proxy</code> is for.</p>
+
+
+
+<a name="1573188"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1573188" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1573188">(May 19 2023 at 21:53)</a>:</h4>
+<p>after the lb change, I ran: <code>$ sudo /home/zulip/deployments/current/scripts/zulip-puppet-apply</code><br>
+after the puppet script, I ran <code>su zulip -c '/home/zulip/deployments/current/scripts/restart-server'</code></p>
+
+
+
+<a name="1573191"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1573191" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1573191">(May 19 2023 at 21:56)</a>:</h4>
+<p>OK, looks right.  And you confirm that <code>EXTERNAL_HOST</code> is set to what your browser URL is?</p>
+<p>What does <code>/var/log/zulip/django.log</code> say when you access it?</p>
+
+
+
+<a name="1573236"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1573236" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1573236">(May 19 2023 at 22:42)</a>:</h4>
+<p>yes, <code>external_host</code> is set to the browser url, <code>zulip.mydomain.com</code><br>
+<code>/var/log/zulip/django.log</code> only has entries when I don't have $http_host set:</p>
+<div class="codehilite"><pre><span></span><code>2023-05-19 22:01:56.889 INFO [zr] 192.168.1.1     POST    200  75ms (db: 7ms/2q) (+start: 14ms) /json/users/me/presence (9@root via Mozilla)
+[pid: 120242|app: 0|req: 3/150] 192.168.1.1 () {86 vars in 1637 bytes} [Fri May 19 22:01:56 2023] POST /json/users/me/presence =&gt; generated 154 bytes in 117 msecs (HTTP/1.1 200) 9 headers in 320 bytes (1 switches on core 0)
+2023-05-19 22:01:56.956 INFO [zr] 192.168.1.1     GET     404  15ms (db: 2ms/1q) /prod-static/images/default-avatar.png (9@root via Mozilla)
+[pid: 120240|app: 0|req: 84/151] 192.168.1.1 () {76 vars in 1412 bytes} [Fri May 19 22:01:56 2023] GET /prod-static/images/default-avatar.png?version=1&amp;s=50 =&gt; generated 6800 bytes in 18 msecs (HTTP/1.1 404) 5 headers in 302 bytes (1 switches on core 0)
+2023-05-19 22:02:13.675 INFO [zr] 192.168.1.1     GET     200  18ms (db: 2ms/2q) /json/messages (9@root via Mozilla)
+[pid: 120240|app: 0|req: 85/152] 192.168.1.1 () {80 vars in 1552 bytes} [Fri May 19 22:02:13 2023] GET /json/messages?anchor=3&amp;num_before=1000&amp;num_after=0&amp;client_gravatar=true =&gt; generated 785 bytes in 22 msecs (HTTP/1.1 200) 9 headers in 320 bytes (1 switches on core 0)
+</code></pre></div>
+
+
+
+<a name="1573246"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1573246" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1573246">(May 19 2023 at 22:44)</a>:</h4>
+<p>here's a sample of the <strong>swag</strong> nginx log at <code>/config/log/nginx/access.log</code> while $http_proxy is set:</p>
+<div class="codehilite"><pre><span></span><code>192.168.1.1 - - [19/May/2023:18:42:57 -0400] &quot;GET / HTTP/2.0&quot; 400 166 &quot;-&quot; &quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36&quot;
+136.[x].[x].[x] - - [19/May/2023:18:43:03 -0400] &quot;GET /notifications/hub?access_token=[token] HTTP/1.1&quot; 502 383 &quot;-&quot; &quot;Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36&quot;
+</code></pre></div>
+
+
+
+<a name="1573288"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1573288" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1573288">(May 19 2023 at 23:54)</a>:</h4>
+<p>hey! so push notifs are working now, I'm not sure why the $http_host line breaks the proxy. must be something upstream with the default swag config.</p>
+<p>I'm going ot post current settings for posterity:</p>
+
+
+
+<a name="1573294"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1573294" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1573294">(May 19 2023 at 23:57)</a>:</h4>
+<p>swag reverse proxy (nginx) zulip.subdomain.conf:</p>
+<div class="codehilite"><pre><span></span><code>server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+
+    server_name zulip.*;
+    include /config/nginx/ssl.conf;
+    client_max_body_size 0;
+
+    location / {
+        proxy_buffering off;
+
+        include /config/nginx/proxy.conf;
+        include /config/nginx/resolver.conf;
+        set $upstream_app 192.168.1.193; # ip of zulip vm
+        set $upstream_port 443;
+        set $upstream_proto https;
+
+#        proxy_set_header Host $http_host; #400 error
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+
+        proxy_pass $upstream_proto://$upstream_app:$upstream_port;
+    }
+}
+</code></pre></div>
+
+
+
+<a name="1573297"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1573297" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1573297">(May 19 2023 at 23:59)</a>:</h4>
+<p><code>/etc/zulip/settings.py</code> has <code>EXTERNAL_HOST = 'zulip.mydomain.com' </code> , matches with the subdomain+fqdn i have configured via SWAG.</p>
+<p><code>/etc/zulip/zulip.conf</code> :</p>
+<div class="codehilite"><pre><span></span><code>[machine]
+puppet_classes = zulip::profile::standalone
+deploy_type = production
+
+[loadbalancer]
+ips = [ip of server where swag docker is running]
+
+[postgresql]
+version = 14
+</code></pre></div>
+
+
+
+<a name="1573299"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1573299" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ben <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1573299">(May 20 2023 at 00:00)</a>:</h4>
+<p>I think that's it - very big thanks for helping me understand zulip and nginx better, I really appreciate it!</p>
+
+
+
+<a name="1573300"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20push%20notifications%20behind%20proxy/near/1573300" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Notification Bot <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20push.20notifications.20behind.20proxy.html#1573300">(May 20 2023 at 00:00)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="26762">Ben</span> has marked this topic as resolved.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

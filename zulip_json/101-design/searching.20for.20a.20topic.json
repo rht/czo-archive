@@ -1,0 +1,302 @@
+[
+    {
+        "content": "<p>Seeing the work on \"recent topics\" has given me a small idea... I think we should have some way of making the space in the message list show only topic names as well as details like people who've participated in them, etc. An important thing this would help achieve is allow the user to search through the list of topic names to find eg a topic where you remember the name or help look up conversations regarding a subject without having to trace through all messages that mention the subject... we could implement this through the zoomed in view of the left sidebar but that would probably be messy.</p>",
+        "id": 853303,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586864042
+    },
+    {
+        "content": "<p>We could implement this through eg a <code>topic-only</code>filter.</p>",
+        "id": 853307,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586864161
+    },
+    {
+        "content": "<p>We are already planning on adding something similar for the stream-topic typeahead where we'll autocomplete topics directly, thus autofilling streams.</p>",
+        "id": 853308,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1586864172
+    },
+    {
+        "content": "<p>I don't think I understand what you mean, could you link to the conversation / any mock-up?</p>",
+        "id": 853309,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586864291
+    },
+    {
+        "content": "<p>Your idea is different, but the internal data and functions would likely be the same. See <a href=\"https://github.com/zulip/zulip/pull/14468\" title=\"https://github.com/zulip/zulip/pull/14468\">#14468</a>.</p>",
+        "id": 853310,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1586864527
+    },
+    {
+        "content": "<p>oh, right, that makes sense.</p>",
+        "id": 853311,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586864549
+    },
+    {
+        "content": "<p>How about this UX though:</p>\n<ol>\n<li>Press / to go to navbar.</li>\n<li>Type: <code>topic:</code>.</li>\n<li>Use typeahead to search among all topics.</li>\n</ol>",
+        "id": 853312,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1586864626
+    },
+    {
+        "content": "<p>Or a key directly search topics through navbar?</p>",
+        "id": 853314,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1586864723
+    },
+    {
+        "content": "<p>re Rohitt: That doesn't sound too bad, feels kinda like a work around though</p>",
+        "id": 853315,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586864730
+    },
+    {
+        "content": "<p>Like &lt;Ctrl&gt; + <code>/</code>.</p>",
+        "id": 853316,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1586864757
+    },
+    {
+        "content": "<p>Does the idea or topics in places of messages make sense, though? Kinda like the unreads view from mobile.</p>",
+        "id": 853319,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586865086
+    },
+    {
+        "content": "<p>So, we should be able to have a prototype to play with easily here. What you're saying could be done by messing around with <code>stream_list.update_stream_sidebar_for_narrow</code>, essentially expanding all the streams as if we'd narrowed to them.</p>",
+        "id": 853324,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1586865539
+    },
+    {
+        "content": "<p>I'm going to look at <code>stream_list.update_stream_sidebar_for_narrow</code> but here are some messy examples of what I'm talking about:<br>\n<a href=\"/user_uploads/2/3b/bv3qC2d6RovlPls57EBDIHHB/image.png\" title=\"image.png\">code review</a> <br>\n<a href=\"/user_uploads/2/44/xEtxljDG90DzwW1VBVqsgGtF/image.png\" title=\"image.png\">all</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/3b/bv3qC2d6RovlPls57EBDIHHB/image.png\" title=\"code review\"><img src=\"/user_uploads/2/3b/bv3qC2d6RovlPls57EBDIHHB/image.png\"></a></div><div class=\"message_inline_image\"><a href=\"/user_uploads/2/44/xEtxljDG90DzwW1VBVqsgGtF/image.png\" title=\"all\"><img src=\"/user_uploads/2/44/xEtxljDG90DzwW1VBVqsgGtF/image.png\"></a></div>",
+        "id": 853326,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586867201
+    },
+    {
+        "content": "<p>I wrote something there that didn't quite work like I expected, but maybe you could build off of it:</p>\n<div class=\"codehilite\"><pre><span></span><span class=\"gh\">diff --git static/js/stream_list.js static/js/stream_list.js</span>\n<span class=\"gh\">index f7db7fd024..d0cc92fb27 100644</span>\n<span class=\"gd\">--- static/js/stream_list.js</span>\n<span class=\"gi\">+++ static/js/stream_list.js</span>\n<span class=\"gu\">@@ -381,6 +381,46 @@ function deselect_stream_items() {</span>\n     $(&quot;ul#stream_filters li&quot;).removeClass(&#39;active-filter&#39;);\n }\n\n<span class=\"gi\">+function render_stream_topics(stream_id, info={}) {</span>\n<span class=\"gi\">+    if (!stream_id) {</span>\n<span class=\"gi\">+        topic_zoom.clear_topics();</span>\n<span class=\"gi\">+        return;</span>\n<span class=\"gi\">+    }</span>\n<span class=\"gi\">+</span>\n<span class=\"gi\">+    const stream_li = exports.get_stream_li(stream_id);</span>\n<span class=\"gi\">+</span>\n<span class=\"gi\">+    if (!stream_li) {</span>\n<span class=\"gi\">+        // This is a sanity check.  When we narrow to a subscribed</span>\n<span class=\"gi\">+        // stream, there will always be a stream list item</span>\n<span class=\"gi\">+        // corresponding to that stream in our sidebar.  This error</span>\n<span class=\"gi\">+        // stopped appearing from March 2018 until at least</span>\n<span class=\"gi\">+        // April 2020, so if it appears again, something regressed.</span>\n<span class=\"gi\">+        // blueslip.error(&#39;No stream_li for subscribed stream &#39; + stream_id);</span>\n<span class=\"gi\">+        // topic_zoom.clear_topics();</span>\n<span class=\"gi\">+        return;</span>\n<span class=\"gi\">+    }</span>\n<span class=\"gi\">+</span>\n<span class=\"gi\">+    if (!info.topic_selected) {</span>\n<span class=\"gi\">+        // stream_li.addClass(&#39;active-filter&#39;);</span>\n<span class=\"gi\">+    }</span>\n<span class=\"gi\">+</span>\n<span class=\"gi\">+    if (stream_id !== topic_list.active_stream_id()) {</span>\n<span class=\"gi\">+        // topic_zoom.clear_topics();</span>\n<span class=\"gi\">+    }</span>\n<span class=\"gi\">+    topic_list.rebuild(stream_li, stream_id);</span>\n<span class=\"gi\">+</span>\n<span class=\"gi\">+    return stream_li;</span>\n<span class=\"gi\">+}</span>\n<span class=\"gi\">+</span>\n<span class=\"gi\">+exports.expand_streams = function () {</span>\n<span class=\"gi\">+    $(&quot;ul#stream_filters li&quot;).addClass(&#39;active-filter&#39;);</span>\n<span class=\"gi\">+</span>\n<span class=\"gi\">+    const stream_ids = stream_data.get_unsorted_subs().map(x =&gt; x.stream_id);</span>\n<span class=\"gi\">+    stream_ids.forEach(x =&gt; {</span>\n<span class=\"gi\">+        render_stream_topics(x);</span>\n<span class=\"gi\">+    })</span>\n<span class=\"gi\">+};</span>\n<span class=\"gi\">+</span>\n exports.update_stream_sidebar_for_narrow = function (filter) {\n     const info = exports.get_sidebar_stream_topic_info(filter);\n</pre></div>",
+        "id": 853327,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1586867620
+    },
+    {
+        "content": "<p>The way I would approach this is to have a \"summarize\" hotkey that popped up a modal.  Having a modal would allow some more things to be display, like total number of messages, list of authors, etc., and it could have a somewhat consistent UI to the new \"Recent Topics\" thing.</p>",
+        "id": 853329,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1586867704
+    },
+    {
+        "content": "<p>It's not totally clear to me how the core problem here couldn't be solved more easily with \"Recent Topics.\"  For example, you could filter recent topics by stream inside the modal.</p>",
+        "id": 853330,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1586867774
+    },
+    {
+        "content": "<p>I don't like the idea of a modal... (I'll be the bad guy for a moment and suggest)  it'd be better UX if the recent topics used the same space as the message list instead of opening a modal, I actually imagined that's where that project would head in the future.</p>",
+        "id": 853331,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586868007
+    },
+    {
+        "content": "<p>and the idea of summaries is what I was going for as well, we just seem to disagree about whether it should be a separate modal.</p>",
+        "id": 853332,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586868094
+    },
+    {
+        "content": "<p>But, yeah, I do see the benefits of a modal. I suppose I just have a weak disagree here.</p>",
+        "id": 853333,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586868260
+    },
+    {
+        "content": "<p>If you don't have a modal, and you instead take over the message view, you have to consider:</p>\n<ul>\n<li>what happens when you use search?  (That's easy, I guess, just dismiss the view)</li>\n<li>do you allow the compose box to open (and then who are you replying to?)</li>\n<li>how do you handle things like pro tips, etc., that you don't want to scroll off screen?</li>\n<li>how do you do keyboard navigation through the topics?</li>\n</ul>\n<p>I think you could solve all the above problems without a modal, but I doubt it's worth it.</p>",
+        "id": 853335,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1586868592
+    },
+    {
+        "content": "<p>BTW one more advantage of a modal is that if you don't find the topic you're looking for, you can dismiss the modal and be back in your old view.  I realize, of course, that you can do the same thing with the back key, but some people are strangely reluctant to hit the back button and/or don't know the alt-left shortcut.</p>",
+        "id": 853336,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1586868704
+    },
+    {
+        "content": "<p>I think the compromise here is that we'd say that the \"Recent Topics\" view would take over the middle pane (not including navbar), which is maybe all you're proposing here.  I still would prefer a modal there, though, as it provides the easy affordance of just dismissing the modal if you don't find what you need.</p>",
+        "id": 853337,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1586868871
+    },
+    {
+        "content": "<p>uh, first: By pro tip do you mean the same thing as tool tip?</p>",
+        "id": 853346,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586869546
+    },
+    {
+        "content": "<p>Your questions are very valid:</p>\n<ul>\n<li>what happens when you use search? (That's easy, I guess, just dismiss the view)</li>\n</ul>\n<p>I say this should search through the topics... <code>is:alerted</code> show only the topics which contain at least one message that alert the user, but don't show the messages. <code>is:stared</code>? Same. Full search power.</p>\n<ul>\n<li>how do you do keyboard navigation through the topics?</li>\n</ul>\n<p>I think having custom keyboard navigation is something that we'd definitely want. It's more accessible, it's more convenient. You'd want to accommodate keyboard navigation in the modal anyway for convenience.</p>\n<ul>\n<li>do you allow the compose box to open (and then who are you replying to?)</li>\n</ul>\n<p>This is a hard question. I'd say disable keyboard hotkeys and go back to \"all\" or something if the user explicitly opens if with mouse click (or just grey out and disable the whole thing).</p>",
+        "id": 853349,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586869924
+    },
+    {
+        "content": "<p>But yeah, I'm more so just suggesting the compromise.</p>",
+        "id": 853350,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586870046
+    },
+    {
+        "content": "<p>I just feel like it should visually occupy the same space as the message list. A pop up that sits on top of the middle panel might be okay.</p>",
+        "id": 853351,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586870122
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"9808\">Yash RE</span> <a href=\"#narrow/stream/101-design/topic/searching.20for.20a.20topic/near/853346\" title=\"#narrow/stream/101-design/topic/searching.20for.20a.20topic/near/853346\">said</a>:</p>\n<blockquote>\n<p>uh, first: By pro tip do you mean the same thing as tool tip?</p>\n</blockquote>\n<p>See the \"Pro tip\" in the screenshot in the topic that you forked this discussion off.</p>",
+        "id": 853357,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1586871703
+    },
+    {
+        "content": "<p>Oh, yeah, the \"some-key\" text. Yeah.</p>",
+        "id": 853377,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586874268
+    },
+    {
+        "content": "<p>FWIW Slack generally does the take-over-the-middle-pane approach for its various non-message-view features, which I think is in line with what <span class=\"user-mention\" data-user-id=\"9808\">@Yash RE</span> wants here.  And then they obviously remove the compose box as appropriate, which we'd want to do for our more compact topic views.  And then the look-and-feel of the middle pane is pretty tailored to each feature:</p>\n<p><a href=\"/user_uploads/2/1a/bR3TzMkuT1uhjbbUHJ2EIH86/image.png\" title=\"image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/1a/bR3TzMkuT1uhjbbUHJ2EIH86/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/1a/bR3TzMkuT1uhjbbUHJ2EIH86/image.png\"></a></div>",
+        "id": 853380,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1586874764
+    },
+    {
+        "content": "<p>oh, yeah. I should have checked.</p>",
+        "id": 853381,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586874841
+    },
+    {
+        "content": "<p>actually, Steve, with reference to <a class=\"stream-topic\" data-stream-id=\"101\" href=\"/#narrow/stream/101-design/topic/other.20features\">#design &gt; other features</a>: for stuff like productivity tools and other non-chat use... we should probable have something like this anyway.</p>",
+        "id": 853382,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586874937
+    },
+    {
+        "content": "<p>Hmmmmmmmm. Would it make sense to have drafts be in a similar kind of thing?</p>",
+        "id": 853384,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586875029
+    },
+    {
+        "content": "<p>Like personally I feel like the most appropriate use for a modal is eg \"Edit status message\"</p>",
+        "id": 853385,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586875177
+    },
+    {
+        "content": "<p>Or like all the settings pannels.</p>",
+        "id": 853386,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586875191
+    },
+    {
+        "content": "<p>For the <strong>stream and settings panels</strong>, I am actually anti-modal--for them, I would just have them take over the entire browser window.  It seems like having the stuff in the background just wastes valuable real estate.  And then you would just need a really obvious way to exit them.</p>\n<p>If we were deeply against modals (for which I have some tiny bit of empathy, but nearly as extreme as other people), and we went to a <strong>take-over-the-middle-pane</strong> paradigm, then obviously <strong>drafts</strong> would seem like an obvious candidate for that.  The only counterargument there is that drafts almost look <strong>too</strong> much like the message pane, to be borderline confusing.  But there are ways to address that.</p>",
+        "id": 853424,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1586876748
+    },
+    {
+        "content": "<p>And, yes, for stuff like <strong>productivity tools</strong> (first-class todo lists, etc.), having some kind of consistent paradigm would also be helpful.  And when we get to those--maybe good summer projects?--that might be a good time to invest in some kind of take-over-the-middle-pane framework.  (I'm not saying that take-over-the-middle-pane requires a ton of code, but there would be enough nuances that we'd want to solve it one time, nicely, and have some kind of module or class that manages it.)</p>",
+        "id": 853427,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1586876948
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9808\">@Yash RE</span> I've thought of something similar (showing topics in the left panel) for ZT for quite some time, so it's interesting that this approach comes up now :)<br>\n(moved to right topic)</p>",
+        "id": 853513,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1586883807
+    },
+    {
+        "content": "<p>Steve, btw: Didn't your attempt at the unreads view look basically the same as the screenshots I shared?</p>",
+        "id": 853541,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1586887821
+    },
+    {
+        "content": "<p>not exactly</p>",
+        "id": 853545,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1586888116
+    },
+    {
+        "content": "<p>Another idea here is to add the UI for a topic search similar to the stream search, but only when zoomed in top a stream. (the red area is supposed to represent the clickable region.)<br>\n<a href=\"https://www.figma.com/file/RzbaFYSoT1oTxapDE4tVsl/topic-search?node-id=0%3A1\" title=\"https://www.figma.com/file/RzbaFYSoT1oTxapDE4tVsl/topic-search?node-id=0%3A1\">https://www.figma.com/file/RzbaFYSoT1oTxapDE4tVsl/topic-search?node-id=0%3A1</a></p>",
+        "id": 870327,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1588862704
+    },
+    {
+        "content": "<p>Yeah, we should be able to search/filter topics when in the zoomed view.  For me 99% of the time that I hit \"more topics\" it's because I want to find something that I don't remember the exact name of, so I really wish it was just a modal with sort/filter widgets.</p>\n<p>I have a feeling there might be some convergence here with the \"Recent Topics\" experiment.</p>",
+        "id": 870331,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1588862968
+    },
+    {
+        "content": "<p>We have this feature in ZT, as part of the work done by <span class=\"user-mention\" data-user-id=\"10457\">@Sumanth Rao</span> with our topics widget last year.</p>",
+        "id": 870332,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1588863234
+    },
+    {
+        "content": "<p>I can highly recommend it :)</p>",
+        "id": 870333,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1588863242
+    },
+    {
+        "content": "<p>cool. This would be a neat frontend project.</p>",
+        "id": 870335,
+        "sender_full_name": "Yash RE",
+        "timestamp": 1588863546
+    },
+    {
+        "content": "<p>We have an open issue for showing topic results in the stream typeahead that I wanna work on in this week. These two could reuse a lot of the code for sorting etc.</p>",
+        "id": 870340,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1588864274
+    },
+    {
+        "content": "<p>Just adding a voice to this. Would really like to be able to search for topic titles specifically across all streams.</p>",
+        "id": 874615,
+        "sender_full_name": "pemontto",
+        "timestamp": 1589284057
+    },
+    {
+        "content": "<p><a href=\"#narrow/stream/91-code-review/topic/Recent.20Topics.20.2314603\">Recent Topics</a> has some work for this. Although, it only searches among topics whose messages are locally available.</p>",
+        "id": 874616,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1589284314
+    },
+    {
+        "content": "<p>This is on my Todo list for this week, but other stuff keeps popping up. If someone wants to work on it and doesn't have experience in our typeahead area, you can ping me for discussion. <span aria-label=\"smiley\" class=\"emoji emoji-1f603\" role=\"img\" title=\"smiley\">:smiley:</span></p>",
+        "id": 874679,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1589294362
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"5140\">Aman Agrawal</span> <a href=\"#narrow/stream/101-design/topic/searching.20for.20a.20topic/near/874616\">said</a>:</p>\n<blockquote>\n<p><a href=\"#narrow/stream/91-code-review/topic/Recent.20Topics.20.2314603\">Recent Topics</a> has some work for this. Although, it only searches among topics whose messages are locally available.</p>\n</blockquote>\n<p>Yeah, I think anything frontend-focused that doesn't go to the server for complete data is going to be missing here.</p>",
+        "id": 874851,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1589303411
+    },
+    {
+        "content": "<p>I think what's being suggested here is a <code>topic-contains:</code> search operator that just searches topics for things, or something along those lines.</p>",
+        "id": 874853,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1589303442
+    }
+]

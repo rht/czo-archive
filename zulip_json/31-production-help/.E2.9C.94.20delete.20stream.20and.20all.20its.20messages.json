@@ -1,0 +1,86 @@
+[
+    {
+        "content": "<p>Hello,<br>\nI have a stream with 3M+ messages in it. I try to delete it (it was on a 2.0.6 zulip I think), but it did not delete messages. I understood after that it has been archived.<br>\nIs there a way to really delete it and all of its messages ?<br>\nThank you.</p>",
+        "id": 1274465,
+        "sender_full_name": "delaf",
+        "timestamp": 1635619055
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9869\">@delaf</span> If you find the stream id of this stream, then you could permanently (and irreversably) delete all its messages by running something like this in <code>manage.py shell</code>:</p>\n<p>(I wrote this snippet with batching because 3M is a lot of messages...)</p>\n<div class=\"codehilite\"><pre><span></span><code>BATCH_SIZE = 1000\n\nstream = Stream.objects.get(id=YOURSTREAMID)\nall_messages_query = Message.objects.filter(recipient_id=stream.recipient_id)\ncount = 1\nwhile all_messages_query.exists():\n    message_ids = all_messages_query.order_by(&quot;id&quot;)[:BATCH_SIZE].values_list(&quot;id&quot;)\n    print(f&quot;deleting batch number {count}.&quot;)\n    all_messages_query.filter(id__in=message_ids).delete()\n    count += 1\n\nprint(&quot;done.&quot;)\n</code></pre></div>",
+        "id": 1274514,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1635709547
+    },
+    {
+        "content": "<p>Make sure not to put a wrong stream id, because that'll cause irreversible data loss if you don't have backups <span aria-label=\"neutral\" class=\"emoji emoji-1f610\" role=\"img\" title=\"neutral\">:neutral:</span></p>",
+        "id": 1274515,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1635709690
+    },
+    {
+        "content": "<p>ok thank you !</p>",
+        "id": 1274517,
+        "sender_full_name": "delaf",
+        "timestamp": 1635710204
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> does the id is this one?</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip=&gt; select id,name,recipient_id from zerver_stream where name like &#39;%badstream%&#39;;\n id |            name               | recipient_id\n----+-------------------------------+--------------\n 17 | !DEACTIVATED:badstream        |           42\n 61 | 00819be!DEACTIVATED:badstream |          191\n</code></pre></div>",
+        "id": 1274518,
+        "sender_full_name": "delaf",
+        "timestamp": 1635710319
+    },
+    {
+        "content": "<p>17 and 61</p>",
+        "id": 1274519,
+        "sender_full_name": "delaf",
+        "timestamp": 1635710324
+    },
+    {
+        "content": "<p>(before understanding that the stream has not been deleted, I have created another one with the same name that I need to delete too, I have archive it too)</p>",
+        "id": 1274520,
+        "sender_full_name": "delaf",
+        "timestamp": 1635710387
+    },
+    {
+        "content": "<p>Yeah, these names are what an archived stream gets renamed to, so that looks right</p>",
+        "id": 1274521,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1635710410
+    },
+    {
+        "content": "<p>FYI: </p>\n<div class=\"codehilite\"><pre><span></span><code>zulip=&gt; select recipient_id, count(*) as nb  from zerver_message where recipient_id in (42, 191) group by recipient_id order by nb desc limit 10;\n recipient_id |   nb\n--------------+---------\n           42 | 2923876\n          191 |     233\n(2 rows)\n</code></pre></div>",
+        "id": 1274522,
+        "sender_full_name": "delaf",
+        "timestamp": 1635710476
+    },
+    {
+        "content": "<p>not 3M but close ;-)</p>",
+        "id": 1274523,
+        "sender_full_name": "delaf",
+        "timestamp": 1635710486
+    },
+    {
+        "content": "<p><code>BATCH_SIZE = 10000</code> is OK too and do the job quicker.<br>\n(deleted 2075000 with <code>BATCH_SIZE = 1000</code>, and the end with <code>BATCH_SIZE = 10000</code>)</p>",
+        "id": 1274524,
+        "sender_full_name": "delaf",
+        "timestamp": 1635711417
+    },
+    {
+        "content": "<p>Great!</p>",
+        "id": 1274525,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1635713344
+    },
+    {
+        "content": "<p>Thank you <span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span>  !<br>\nthe postgresql is happy: now less than 2GB, it was around 13GB before !</p>",
+        "id": 1274526,
+        "sender_full_name": "delaf",
+        "timestamp": 1635714719
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10349\">Mateusz Mandera</span> has marked this topic as resolved.</p>",
+        "id": 1274582,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1635757581
+    }
+]

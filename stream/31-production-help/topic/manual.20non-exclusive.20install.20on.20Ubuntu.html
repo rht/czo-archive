@@ -1,0 +1,92 @@
+<html>
+<head><meta charset="utf-8"><title>manual non-exclusive install on Ubuntu · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/manual.20non-exclusive.20install.20on.20Ubuntu.html">manual non-exclusive install on Ubuntu</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="48255"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/manual%20non-exclusive%20install%20on%20Ubuntu/near/48255" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Urs Liska <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/manual.20non-exclusive.20install.20on.20Ubuntu.html#48255">(Nov 01 2016 at 23:31)</a>:</h4>
+<p>I'm looking for a self-hosted solution for my project communication and found the zulip presentation at GSoC mentors summit very promising.<br>
+However, the regular installation with the install script won't work as I can't provide an exclusive server for zulip. (I have a rented root server running Ubuntu 14.04, and on it I have running multiple servers, e.g. mail server, GitLab, ownCloud and some more).</p>
+<p>I don't feel comfortable with the suggested solution of installing zulip in a VM on that remote server (to which I have only access through an SSH terminal). Therefore I'd like to know *if* it's possible at all to install zulip manually as a server among others, manually setting up DB, program etc., and if so, if there's a pointer where to look for documentaiton for such a process.<br>
+If such a process seems feasible but isn't documented yet I might help with such documentation if I'd be directed through the process.</p>
+
+
+
+<a name="48257"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/manual%20non-exclusive%20install%20on%20Ubuntu/near/48257" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/manual.20non-exclusive.20install.20on.20Ubuntu.html#48257">(Nov 01 2016 at 23:38)</a>:</h4>
+<p><span class="user-mention" data-user-email="ul@openlilylib.org">@Urs Liska</span> we don't have a documented process for doing that.  If you're willing to spend some significant time on setup, we could work on putting together such a documented process together.  There are basically a few services that we configure and one would need to make sure are compatible with whatever else you have running on your machine:</p>
+<ul>
+<li>postgres</li>
+<li>redis</li>
+<li>memcached</li>
+<li>rabbitmq</li>
+<li>nginx</li>
+</ul>
+<p>So step 1 would be to check if you're using any of those (or other things like Apache using their default ports)</p>
+
+
+
+<a name="48258"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/manual%20non-exclusive%20install%20on%20Ubuntu/near/48258" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Urs Liska <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/manual.20non-exclusive.20install.20on.20Ubuntu.html#48258">(Nov 01 2016 at 23:47)</a>:</h4>
+<p>If I'm willing to spend that time probably depends on *how* ugly it actually becomes. Generally I'm ready to go, and I think such a process would serve you as well, as the current state definitely rules out a significant number of potential users (i.e. people/admins installing zulip).</p>
+<p>Out of my head I can say the folloiwng:</p>
+<ul>
+<li>postgres is installed in v 9.6.0 (and used by a number of other services)</li>
+<li>bash doesn't know about redis, but I'm pretty sure it is running with GitLab (can't say whether this is an advantage or a problem</li>
+<li>nginx is the only web server I use for everything. Apache is installed (by default) but not running</li>
+</ul>
+<p>For the others and redis I need more investigation but can't provide this right now, as my monster day is definitely over now (it's about 60 hours now that I last got out of a real bed in Sunnyvale ...)</p>
+
+
+
+<a name="48259"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/manual%20non-exclusive%20install%20on%20Ubuntu/near/48259" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/manual.20non-exclusive.20install.20on.20Ubuntu.html#48259">(Nov 01 2016 at 23:50)</a>:</h4>
+<p>OK; the first issue is going to be what the database names you have in <code>/var/lib/postgresql/9.6</code>; Zulip uses the default of <code>main</code> by default, and we'll need to make that an option (and probably default to "zulip") as one piece of simplifying this.  </p>
+
+
+
+<a name="48261"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/manual%20non-exclusive%20install%20on%20Ubuntu/near/48261" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/manual.20non-exclusive.20install.20on.20Ubuntu.html#48261">(Nov 01 2016 at 23:53)</a>:</h4>
+<p>We don't do anything too crazy; the likely things to deal with are going to be stuff like:</p>
+<ul>
+<li>Integrating what we need in /etc/nginx/nginx.conf in some reasonable way (most stuff is in the sites-foo file and thus fine)</li>
+<li>adding postgres 9.6 support to some config files (or installing 9.5; that might be easier)</li>
+<li>nothing with redis if the port is available; we can check with <code>netstat -nlp</code> tomorrow.</li>
+</ul>
+<p>I'm happy to help with any code changes on our end</p>
+
+
+
+<a name="48262"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/manual%20non-exclusive%20install%20on%20Ubuntu/near/48262" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Urs Liska <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/manual.20non-exclusive.20install.20on.20Ubuntu.html#48262">(Nov 01 2016 at 23:58)</a>:</h4>
+<p>There are directories for 9.4, 9.5 and 9.6, and each contains one item <code>main</code>. However, when opening psql it says <code>psql (9.6.0, Server 9.4.9)</code> and lists me the following:</p>
+<div class="codehilite"><pre><span></span>                                      Liste der Datenbanken
+     Name      | Eigentümer | Kodierung | Sortierfolge | Zeichentyp  |    Zugriffsprivilegien    
+---------------+------------+-----------+--------------+-------------+---------------------------
+ mattermost    | postgres   | UTF8      | de_DE.UTF-8  | de_DE.UTF-8 | 
+ moodle        | moodleuser | UTF8      | de_DE.UTF-8  | de_DE.UTF-8 | =Tc/moodleuser           +
+               |            |           |              |             | moodleuser=CTc/moodleuser
+ moodle-db     | moodle     | UTF8      | de_DE.UTF-8  | de_DE.UTF-8 | 
+ postgres      | postgres   | UTF8      | de_DE.UTF-8  | de_DE.UTF-8 | 
+ roundcubemail | roundcube  | UTF8      | de_DE.UTF-8  | de_DE.UTF-8 | 
+ template0     | postgres   | UTF8      | de_DE.UTF-8  | de_DE.UTF-8 | =c/postgres              +
+               |            |           |              |             | postgres=CTc/postgres
+ template1     | postgres   | UTF8      | de_DE.UTF-8  | de_DE.UTF-8 | =c/postgres              +
+               |            |           |              |             | postgres=CTc/postgres
+ uliska        | postgres   | UTF8      | de_DE.UTF-8  | de_DE.UTF-8 | =Tc/postgres             +
+               |            |           |              |             | postgres=CTc/postgres    +
+</pre></div>
+
+
+<p>Regardless of me understanding where the actual DBs are located, defaulting to <code>zulip</code> definitely sounds like a good idea.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

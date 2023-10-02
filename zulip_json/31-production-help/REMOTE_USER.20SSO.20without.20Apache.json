@@ -1,0 +1,68 @@
+[
+    {
+        "content": "<p>Hey folks. I'm trying to set up a corporate internal Zulip server (using docker-zulip) and I've got <em>almost</em> everything working. There's a proxy that sets a header with our SSO details before hitting Zulip at all, so I shouldn't need the apache_sso puppet. I'm setting the <code>request.META[\"REMOTE_USER\"]</code> via a <code>uwsgi_param</code> directive. The odd thing is that it keeps redirecting me back to <code>/accounts/login/sso</code> even on success. Does anyone have a few minutes to troubleshoot? Maybe <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> ?</p>",
+        "id": 585122,
+        "sender_full_name": "Jay B",
+        "timestamp": 1527047424
+    },
+    {
+        "content": "<p>This is what my <code>server.log</code> looks like when I hit the \"Log in with SSO\" button:</p>\n<div class=\"codehilite\"><pre><span></span>2018-05-23 03:58:21.290 INFO [zr] 10.94.43.106    GET     302  15ms (db: 4ms/8q) /accounts/login/sso/ [me]@[mycorp].com via website)\n2018-05-23 03:58:21.412 INFO [zr] 10.94.43.106    GET     302   3ms (db: 0ms/2q) (+start: 5ms) / (unauth via ?)\n2018-05-23 03:58:21.546 INFO [zr] 10.94.43.106    GET     200  10ms (db: 1ms/2q) /accounts/login/sso (unauth via ?)\n</pre></div>\n\n\n<p>Maybe the cookie isn't being set properly?</p>",
+        "id": 585127,
+        "sender_full_name": "Jay B",
+        "timestamp": 1527048051
+    },
+    {
+        "content": "<p>Definitely looks like a cookie issue; one can see from this line:<br>\n<code> GET     302  15ms (db: 4ms/8q) /accounts/login/sso/ [me]@[mycorp].com</code> <br>\nthat it is indeed successfully logging you in and calling the Django <code>login</code> method that sets the cookie.</p>",
+        "id": 585131,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1527050668
+    },
+    {
+        "content": "<p>But then after it redirects you to <code>/</code>, it finds you not logged in.</p>",
+        "id": 585132,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1527050679
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"6158\">@Jay B</span> is there a mismatch between the domains you're using for the SSO auth vs. hosting the actual organization?</p>",
+        "id": 585133,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1527050700
+    },
+    {
+        "content": "<p>the most likely story here is that it's setting a cookie on one domain and then you're redirecting over to another.</p>",
+        "id": 585134,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1527050715
+    },
+    {
+        "content": "<p>Hmmm, yeah, that could be. The SSO domain is not the website domain.</p>",
+        "id": 585151,
+        "sender_full_name": "Jay B",
+        "timestamp": 1527053030
+    },
+    {
+        "content": "<p>But by the time the request makes it to the zulip service, there shouldn't be any difference. REMOTE_USER is set to a login, and the <code>@[mycorp].com</code> is added via the <code>SSO_APPEND_DOMAIN</code> option.</p>",
+        "id": 585152,
+        "sender_full_name": "Jay B",
+        "timestamp": 1527053157
+    },
+    {
+        "content": "<p>Actually, I found the issue. I had added a custom middleware (subclassed from <code>RemoteUserMiddleware</code>) that changed the header field it was looking for. That was before I discovered that I could rewrite my custom header into <code>REMOTE_USER</code> via <code>uwsgi_param</code>. Apparently the two didn't like each other.</p>",
+        "id": 585156,
+        "sender_full_name": "Jay B",
+        "timestamp": 1527053925
+    },
+    {
+        "content": "<p>Thanks for your help, though!</p>",
+        "id": 585157,
+        "sender_full_name": "Jay B",
+        "timestamp": 1527053936
+    },
+    {
+        "content": "<p>Great, glad to hear you got this working!</p>",
+        "id": 585158,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1527054006
+    }
+]

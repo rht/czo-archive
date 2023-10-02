@@ -1,0 +1,206 @@
+[
+    {
+        "content": "<p>In standing Zulip up on a new instance (to migrate from AWS -&gt; GCP), after starting up the server for the first time I'm seeing:</p>\n<div class=\"codehilite\"><pre><span></span>Traceback (most recent call last):\n  File &quot;/home/zulip/deployments/2017-05-05-00-02-57/zulip-venv/lib/python2.7/site-packages/django/core/handlers/wsgi.py&quot;, line 170, in __call__\n    response = self.get_response(request)\n  File &quot;/home/zulip/deployments/2017-05-05-00-02-57/zulip-venv/lib/python2.7/site-packages/django/core/handlers/base.py&quot;, line 124, in get_response\n    response = self._middleware_chain(request)\n  File &quot;/home/zulip/deployments/2017-05-05-00-02-57/zulip-venv/lib/python2.7/site-packages/django/core/handlers/exception.py&quot;, line 41, in inner\n    response = response_for_exception(request, exc)\n  File &quot;/home/zulip/deployments/2017-05-05-00-02-57/zulip-venv/lib/python2.7/site-packages/django/core/handlers/exception.py&quot;, line 86, in response_for_exception\n    response = handle_uncaught_exception(request, get_resolver(get_urlconf()), sys.exc_info())\n  File &quot;/home/zulip/deployments/2017-05-05-00-02-57/zulip-venv/lib/python2.7/site-packages/django/core/handlers/exception.py&quot;, line 131, in handle_uncaught_exception\n    if resolver.urlconf_module is None:\n  File &quot;/home/zulip/deployments/2017-05-05-00-02-57/zulip-venv/lib/python2.7/site-packages/django/utils/functional.py&quot;, line 35, in __get__\n    res = instance.__dict__[self.name] = self.func(instance)\n  File &quot;/home/zulip/deployments/2017-05-05-00-02-57/zulip-venv/lib/python2.7/site-packages/django/urls/resolvers.py&quot;, line 306, in urlconf_module\n    return import_module(self.urlconf_name)\n  File &quot;/usr/lib/python2.7/importlib/__init__.py&quot;, line 37, in import_module\n    __import__(name)\n  File &quot;./zproject/urls.py&quot;, line 7, in &lt;module&gt;\n    import zerver.forms\n  File &quot;./zerver/forms.py&quot;, line 14, in &lt;module&gt;\n    from zerver.lib.actions import do_change_password, is_inactive, user_email_is_unique\n  File &quot;./zerver/lib/actions.py&quot;, line 22, in &lt;module&gt;\n    from zerver.lib.message import (\n  File &quot;./zerver/lib/message.py&quot;, line 12, in &lt;module&gt;\n    from zerver.lib.avatar import get_avatar_url\n  File &quot;./zerver/lib/avatar.py&quot;, line 10, in &lt;module&gt;\n    from zerver.lib.upload import upload_backend, MEDIUM_AVATAR_SIZE\n  File &quot;./zerver/lib/upload.py&quot;, line 16, in &lt;module&gt;\n    from boto.s3.bucket import Bucket\n  File &quot;/home/zulip/deployments/2017-05-05-00-02-57/zulip-venv/lib/python2.7/site-packages/boto/__init__.py&quot;, line 1216, in &lt;module&gt;\n    boto.plugin.load_plugins(config)\nAttributeError: &#39;module&#39; object has no attribute &#39;plugin&#39;\n</pre></div>",
+        "id": 196289,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493945216
+    },
+    {
+        "content": "<p>I was able to enter the virtualenv as root and and <code>pip install boto==2.46.1</code> and <code>pip install google-compute-engine</code> to make things work, but... are these part of some known issue?</p>",
+        "id": 196290,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493945300
+    },
+    {
+        "content": "<p>never seen that before!  What version were you installing?</p>",
+        "id": 196292,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493946160
+    },
+    {
+        "content": "<p>Oh, I wonder whether this is a GCP issue</p>",
+        "id": 196294,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493946211
+    },
+    {
+        "content": "<p>Like, maybe they have some weird Python hackery in their default config?</p>",
+        "id": 196295,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493946224
+    },
+    {
+        "content": "<p>I'm guessing so, at least for the second error (<code>boto ImportError: No module named google_compute_engine</code>), which emerged after I upgraded boto, appearing on <code>import boto</code>.</p>",
+        "id": 196296,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493946774
+    },
+    {
+        "content": "<p>(This is using the standard GCP Ubuntu 16.04 image.)</p>",
+        "id": 196297,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493946806
+    },
+    {
+        "content": "<p>Or maybe a consequence of magic like <a href=\"https://github.com/google/cadvisor/issues/760\" target=\"_blank\" title=\"https://github.com/google/cadvisor/issues/760\">https://github.com/google/cadvisor/issues/760</a></p>",
+        "id": 196298,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493946933
+    },
+    {
+        "content": "<p>Yeah, that second issue is easily reproduced in a fresh GCP vm via:</p>\n<div class=\"codehilite\"><pre><span></span>virtualenv venv\nsource venv/bin/activate\npip install boto\npython -c &#39;import boto&#39;\n</pre></div>",
+        "id": 196299,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493947085
+    },
+    {
+        "content": "<p>cool; would upgrading our version of boto in Zulip help?</p>",
+        "id": 196300,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493947104
+    },
+    {
+        "content": "<p>Oh gosh, this is very strange: this mix of <code>python2.7</code> and <code>python3</code> paths looks crazy, yes?</p>\n<div class=\"codehilite\"><pre><span></span>Traceback (most recent call last):\n  File &quot;&lt;string&gt;&quot;, line 1, in &lt;module&gt;\n  File &quot;/home/jmandel/venv/local/lib/python2.7/site-packages/boto/__init__.py&quot;, line 1216, in &lt;module&gt;\n    boto.plugin.load_plugins(config)\n  File &quot;/home/jmandel/venv/local/lib/python2.7/site-packages/boto/plugin.py&quot;, line 93, in load_plugins\n    _import_module(file)\n  File &quot;/home/jmandel/venv/local/lib/python2.7/site-packages/boto/plugin.py&quot;, line 75, in _import_module\n    return imp.load_module(name, file, filename, data)\n  File &quot;/usr/lib/python3/dist-packages/google_compute_engine/boto/boto_config.py&quot;, line 29, in &lt;module&gt;\n    from google_compute_engine import config_manager\nImportError: No module named google_compute_engine\n</pre></div>",
+        "id": 196301,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493947115
+    },
+    {
+        "content": "<p>oh yeah, that's weird</p>",
+        "id": 196302,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493947131
+    },
+    {
+        "content": "<p>I feel like in part we should report a bug</p>",
+        "id": 196303,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493947138
+    },
+    {
+        "content": "<p>Since GCP shouldn't be infecting venvs like that</p>",
+        "id": 196304,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493947155
+    },
+    {
+        "content": "<p>-&gt; AFK for a bit, but I'd recommend you send something into their support.  <br>\nI think on the Zulip side, we can certainly add a config option of the form <code>/etc/zulip/extra_requirements.txt</code> that's a list of extra things to include in the venv as a workaround for this sort of thing (so you don't have it break on every upgrade when you get a new venv).</p>",
+        "id": 196305,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493947246
+    },
+    {
+        "content": "<p>Thanks! OK, so three things<br>\n1. I'm still unclear on where the initial error came from (<code>'module object has no attribute 'plugin'</code>).<br>\n2. Indeed; will  report the <code>import boto</code> issue to GCP after I dig in a bit.<br>\n3. On the <code>extra_requirements.txt</code> idea, I'll file a zulip issue to start.</p>",
+        "id": 196306,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493947385
+    },
+    {
+        "content": "<p>Re: 1, I'm guessing Google is doing something evil to patch their module into every Python import on the system (or maybe just has boto configured to use their plugins in an accidentally unconditional way?).</p>",
+        "id": 196307,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493947476
+    },
+    {
+        "content": "<p>boto checks <code>/etc/boto.cfg</code>, which GCP prepopulates in its image to include:</p>\n<div class=\"codehilite\"><pre><span></span>[Plugin]\nplugin_directory = /usr/lib/python3/dist-packages/google_compute_engine/boto\n</pre></div>",
+        "id": 196311,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493947820
+    },
+    {
+        "content": "<p>So... not evil patching, exactly, but not totally delightful.</p>",
+        "id": 196312,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493947842
+    },
+    {
+        "content": "<p>Easy to fix with <code>rm</code> though ;-)</p>",
+        "id": 196313,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493947850
+    },
+    {
+        "content": "<p>(I guess I don't actually know what zulip is using boto for here.)</p>",
+        "id": 196315,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493947896
+    },
+    {
+        "content": "<p>Just S3 sync ops, I guess (which I don't even use — might be good to put these conditional behind a check for s3-backed uploads, if that's the only place boto is used)</p>",
+        "id": 196319,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493948063
+    },
+    {
+        "content": "<p>yeah, just for S3 sync.  It's kinda annoying to make Python code happy with doing that sort of conditional import thing.  I wonder if there's a way for us to change our code to make boto ignore that file?</p>",
+        "id": 196349,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493950848
+    },
+    {
+        "content": "<p>Mmm, <a href=\"https://github.com/boto/boto/blob/abb38474ee5124bb571da0c42be67cd27c47094f/boto/pyami/config.py#L41-L42\" target=\"_blank\" title=\"https://github.com/boto/boto/blob/abb38474ee5124bb571da0c42be67cd27c47094f/boto/pyami/config.py#L41-L42\">apparently</a>:</p>\n<div class=\"codehilite\"><pre><span></span># If there&#39;s a BOTO_CONFIG variable set, we load ONLY\n# that variable\nif &#39;BOTO_CONFIG&#39; in os.environ:\n    BotoConfigLocations = [expanduser(os.environ[&#39;BOTO_CONFIG&#39;])]\n</pre></div>",
+        "id": 196350,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493950962
+    },
+    {
+        "content": "<p>We can just set it empty by default.</p>",
+        "id": 196351,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493950989
+    },
+    {
+        "content": "<p>hmm, looks like that's at-import-time?</p>",
+        "id": 196354,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493951048
+    },
+    {
+        "content": "<p>So we'd need to wrap every piece of code that imports Zulip with emptying that environment variable.  Hrm.</p>",
+        "id": 196355,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493951069
+    },
+    {
+        "content": "<p>Technically the Zulip code could modify its own env if that var isn't set, no?</p>",
+        "id": 196357,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493951147
+    },
+    {
+        "content": "<p>yes, but it looks like we need to do that before import</p>",
+        "id": 196359,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493951166
+    },
+    {
+        "content": "<p>indeed.</p>",
+        "id": 196360,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493951172
+    },
+    {
+        "content": "<p>Since reading the indentation, that check is at import time, not Boto object initialization time</p>",
+        "id": 196361,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493951191
+    },
+    {
+        "content": "<p>Yup</p>",
+        "id": 196362,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493951239
+    },
+    {
+        "content": "<p>I guess one thing we could do is modify the installer to check if that file exists, and if so, print a warning.</p>",
+        "id": 196363,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493951356
+    },
+    {
+        "content": "<p>That'd be just fine ;-)</p>",
+        "id": 196367,
+        "sender_full_name": "Josh Mandel",
+        "timestamp": 1493952017
+    }
+]

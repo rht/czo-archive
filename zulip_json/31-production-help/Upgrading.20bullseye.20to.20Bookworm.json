@@ -1,0 +1,68 @@
+[
+    {
+        "content": "<p>I followed steps describe here : <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade.html#upgrading-from-debian-11-to-12\">https://zulip.readthedocs.io/en/latest/production/upgrade.html#upgrading-from-debian-11-to-12</a></p>\n<p>Step five give me these errors :</p>\n<div class=\"codehilite\"><pre><span></span><code>root@ct-zulip:~ # /home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 \\\n    /home/zulip/deployments/current/ --ignore-static-assets --audit-fts-indexes\n2023-07-09 00:24:40,865 upgrade-zulip-stage-2: Upgrading from 7.2 to 7.2, in /home/zulip/deployments/current/\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2023-07-05-19-52-51/../current/manage.py&quot;, line 12, in &lt;module&gt;\n    setup_path()\n  File &quot;/home/zulip/deployments/2023-07-05-19-52-51/scripts/lib/setup_path.py&quot;, line 20, in setup_path\n    raise RuntimeError(venv + &quot; was not set up for this Python version&quot;)\nRuntimeError: /home/zulip/deployments/2023-07-05-19-52-51/zulip-py3-venv was not set up for this Python version\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2&quot;, line 212, in &lt;module&gt;\n    django_pg_version = subprocess.check_output(\n                        ^^^^^^^^^^^^^^^^^^^^^^^^\n  File &quot;/usr/lib/python3.11/subprocess.py&quot;, line 466, in check_output\n    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File &quot;/usr/lib/python3.11/subprocess.py&quot;, line 571, in run\n    raise CalledProcessError(retcode, process.args,\nsubprocess.CalledProcessError: Command &#39;[&#39;../current/manage.py&#39;, &#39;shell&#39;, &#39;-c&#39;, &#39;from django.db import connection; print(int(connection.cursor().connection.server_version/10000))&#39;]&#39; returned non-zero exit status 1.\n</code></pre></div>\n<p>I tried with running this line <code>rm -rf /srv/zulip-venv-cache/*</code> and without running it.</p>\n<p>============</p>\n<p>I'm running Zulip 7.2 in an Proxmox LXC Debian container.</p>",
+        "id": 1606527,
+        "sender_full_name": "Louis-Marie Gendron",
+        "timestamp": 1688862649
+    },
+    {
+        "content": "<p>I have the same issue, but running Zulip inside a VM.</p>",
+        "id": 1606737,
+        "sender_full_name": "cap",
+        "timestamp": 1688935131
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26472\">@Louis-Marie Gendron</span> For me executing <code>/home/zulip/deployments/current/scripts/lib/create-production-venv /home/zulip/deployments/current</code> did the trick. After that <code>/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 \\\n    /home/zulip/deployments/current/ --ignore-static-assets --audit-fts-indexes</code> did run through.<br>\n<code>supervisorctl status</code> also says that everything is running.</p>\n<p>But please do a snapshot before trying <span aria-label=\"sweat smile\" class=\"emoji emoji-1f605\" role=\"img\" title=\"sweat smile\">:sweat_smile:</span></p>",
+        "id": 1606742,
+        "sender_full_name": "cap",
+        "timestamp": 1688939186
+    },
+    {
+        "content": "<p>Nice! Thank you, I will try that.</p>",
+        "id": 1606774,
+        "sender_full_name": "Louis-Marie Gendron",
+        "timestamp": 1688963217
+    },
+    {
+        "content": "<p>Finally, I couldn't wait to try what you found. It worked for me too. Thank you so much. Zulip Server 7.2 is now running in my Proxmox LXC container. A freshly updated Debian from bullseye to bookworm!</p>",
+        "id": 1606783,
+        "sender_full_name": "Louis-Marie Gendron",
+        "timestamp": 1688965558
+    },
+    {
+        "content": "<p>Glad to hear that.<br>\nIt seems that the documentation on how to upgrade is flawed.<br>\nCould somebody please verify <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade.html#upgrading-from-debian-11-to-12\">the documentation</a>?</p>",
+        "id": 1606904,
+        "sender_full_name": "cap",
+        "timestamp": 1688991835
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17716\">@cap</span>: This is an error in the upgrade process, not an error in the documentation.  We'll get it fixed up.</p>",
+        "id": 1607000,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1689003885
+    },
+    {
+        "content": "<p>What @cap found might be useful in this topic too <a href=\"#narrow/stream/31-production-help/topic/upgrade.20from.205.20to.207.20and.20debian.20distupgrade\">upgrade from 5 to 7 and debian distupgrade</a></p>",
+        "id": 1607007,
+        "sender_full_name": "Louis-Marie Gendron",
+        "timestamp": 1689004986
+    },
+    {
+        "content": "<p>Yup, that's the same failure mode.  Having the full stacktrace is very helpful here. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1607009,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1689005098
+    },
+    {
+        "content": "<p>The bug reported in <a href=\"https://github.com/zulip/zulip/pull/26338\">#26338</a> seems to be related to (or a duplicate of) this?</p>",
+        "id": 1616387,
+        "sender_full_name": "Lauryn Menard",
+        "timestamp": 1690364362
+    },
+    {
+        "content": "<p>Yes.  They don't say what version of Zulip they're on, but we should get a 7.3 out with this fix to address it.</p>",
+        "id": 1616592,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1690382029
+    }
+]

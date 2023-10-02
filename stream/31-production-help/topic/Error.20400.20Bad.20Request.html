@@ -1,0 +1,133 @@
+<html>
+<head><meta charset="utf-8"><title>Error 400 Bad Request · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20400.20Bad.20Request.html">Error 400 Bad Request</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1461057"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20400%20Bad%20Request/near/1461057" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Omar Muñoz <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20400.20Bad.20Request.html#1461057">(Nov 08 2022 at 17:40)</a>:</h4>
+<p>Hello. Im having trouble running a docker instance of zulip. Im getting an Error 400 Bad Request. Ive searched about it and ive done what's suggested, having the domain in which it is being served in the SETTING_EXTERNAL_HOST variable, and adding the ip address of the machine in SETTING_ALLOWED_HOSTS as '["${ipAddress}"]' but Im still getting that error. I wanted to ask which IP address Im supposed to add in this variable. I added the public one</p>
+
+
+
+<a name="1461106"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20400%20Bad%20Request/near/1461106" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20400.20Bad.20Request.html#1461106">(Nov 08 2022 at 18:49)</a>:</h4>
+<p><span class="user-mention" data-user-id="25188">@Omar Muñoz</span> you need to have the hostname users will be entering in their browser in these parameters; not IP addresses.</p>
+
+
+
+<a name="1461113"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20400%20Bad%20Request/near/1461113" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Omar Muñoz <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20400.20Bad.20Request.html#1461113">(Nov 08 2022 at 18:56)</a>:</h4>
+<p>I just had SETTING_EXTERNAL_HOST: zulip.domain.tld, but that was giving me the error. When I searched about it, people mentioned adding the IP in SETTING_ALLOWED_HOSTS, like in <a href="https://github.com/zulip/docker-zulip/issues/134#issuecomment-450478647">this github issue</a>.  That's why I added it. So that last variable just can't have IPs? What else can I do about the error? I only have the one domain that is supposed to reach zulip, and thats the one in SETTING_EXTERNAL_HOST</p>
+
+
+
+<a name="1461141"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20400%20Bad%20Request/near/1461141" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20400.20Bad.20Request.html#1461141">(Nov 08 2022 at 19:19)</a>:</h4>
+<p>Do you have any layers of proxies between Zulip and how you're accessing it?</p>
+
+
+
+<a name="1461241"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20400%20Bad%20Request/near/1461241" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Omar Muñoz <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20400.20Bad.20Request.html#1461241">(Nov 08 2022 at 21:33)</a>:</h4>
+<p>sorry for the late reply. Im using an nginx reverse proxy. Im running dockers port 80 and 443 on the host's port 9010 and 9011, though I dont <em>need</em> them there, if using those ports is a problem. If I access localhost:9011 (my server has a GUI), it loads, but js and css dont because it tries to load from the domain which doesnt work. But this means that the containers do run correctly and are serving correctly through those ports. My problem is specifically when using the domain, but it is correctly typed in the docker-compose yml file. This is my nginx config file. I have a file for each service im proxying, so thats why only zulip stuff appears here. All other services im reverse proxying use the same exact thing, except for domain name and ports, and those work</p>
+<div class="codehilite"><pre><span></span><code>server {
+    if ($host = zulip.domain.tld) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+  listen 80;
+  server_name zulip.domain.tld;
+  return 301 https://zulip.domain.tld$request_uri;
+
+
+}
+
+server {
+
+    listen 443;
+    server_name zulip.domain.tld;
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/zulip.domain.tld-0001/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/zulip.domain.tld-0001/privkey.pem; # managed by Certbot
+    ssl on;
+    ssl_session_cache  builtin:1000  shared:SSL:10m;
+    ssl_protocols  TLSv1 TLSv1.1 TLSv1.2;
+    ssl_ciphers HIGH:!aNULL:!eNULL:!EXPORT:!CAMELLIA:!DES:!MD5:!PSK:!RC4;
+    ssl_prefer_server_ciphers on;
+
+    # Set the access log location
+
+    access_log            /var/log/nginx/zulip.access.log;
+    error_log /var/log/nginx/error.log;
+
+
+    location / {
+
+    # Set the proxy headers
+
+      proxy_set_header        Host $host;
+      proxy_set_header        X-Real-IP $remote_addr;
+      proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header        X-Forwarded-Proto $scheme;
+
+      # Configure which address the request is proxied to
+
+      proxy_pass          http://127.0.0.1:9011;
+      proxy_read_timeout  90;
+      proxy_redirect      http://127.0.0.1:9011 https://zulip.domain.tld;
+
+      # Set the security headers
+
+      add_header Strict-Transport-Security &quot;max-age=31536000; includeSubDomains; preload&quot;; #HSTS
+      add_header X-Frame-Options DENY; #Prevents clickjacking
+      add_header X-Content-Type-Options nosniff; #Prevents mime sniffing
+      add_header X-XSS-Protection &quot;1; mode=block&quot;; #Prevents cross-site scripting attacks
+      add_header Referrer-Policy &quot;origin&quot;;
+    }
+
+
+}
+</code></pre></div>
+
+
+
+<a name="1461315"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20400%20Bad%20Request/near/1461315" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Omar Muñoz <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20400.20Bad.20Request.html#1461315">(Nov 08 2022 at 23:18)</a>:</h4>
+<p>good news I think? The good old restart the server did the trick? Or at least, I restarted the server and it's working now, though I had to point to the container's port 80, rather than 443, but it's using th outer nginx's cert so it still uses SSL, so it's fine. THank you for your time haha. Or rather, sorry for taking time away from you</p>
+
+
+
+<a name="1461324"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20400%20Bad%20Request/near/1461324" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20400.20Bad.20Request.html#1461324">(Nov 08 2022 at 23:36)</a>:</h4>
+<p><span class="user-mention" data-user-id="25188">@Omar Muñoz</span>: I think <a href="https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy">https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy</a> is relevant to you, if you have not read it already.</p>
+
+
+
+<a name="1461325"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20400%20Bad%20Request/near/1461325" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20400.20Bad.20Request.html#1461325">(Nov 08 2022 at 23:37)</a>:</h4>
+<p>For the Docker install, this means setting <code>LOADBALANCER_IPS</code>, which will handle setting <code>ips</code> under <code>[loadbalancer]</code> in the image.</p>
+
+
+
+<a name="1461330"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20400%20Bad%20Request/near/1461330" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20400.20Bad.20Request.html#1461330">(Nov 08 2022 at 23:40)</a>:</h4>
+<p>Without doing that, your access logs will show all clients coming from the proxy's IP, and every non-authenticated request will be IP rate-limited together.</p>
+
+
+
+<a name="1461592"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Error%20400%20Bad%20Request/near/1461592" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Omar Muñoz <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Error.20400.20Bad.20Request.html#1461592">(Nov 09 2022 at 15:19)</a>:</h4>
+<p>Understood. I'll set that up. Thank you very much for your time <span aria-label="smiley" class="emoji emoji-1f603" role="img" title="smiley">:smiley:</span></p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

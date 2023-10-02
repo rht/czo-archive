@@ -1,0 +1,1358 @@
+[
+    {
+        "content": "<p>Many of you know that we've been wanting to make Zulip's permissions model more flexible, both for stream-level permissions and global permissions. I've now <a href=\"https://github.com/zulip/zulip/issues/19525\">opened a master issue</a> for our plan for this, which essentially replaces every organization setting where you currently get to select a role with letting you select a user group instead.  (And <a href=\"https://github.com/zulip/zulip/pull/19526\">#19526</a> covers the work to make user groups management much better UI wise; we'll also be adding many new settings for administration of user groups as part of this project).  For a transitional period (and maybe forever), the current roles like Moderator will be available as \"system groups\" that can't be renamed in this design, so that we can migrate the infrastructure incrementally without temporary regressions.</p>\n<p>For folks familiar with Discord, this at least as flexible as their \"Roles\" system (i.e. when done, every permission will be able to be given to an arbitrary user group, and user groups can nest within other user groups).  </p>\n<p>This will be a multi-month project; as a result, I don't know whether it will make it in for Zulip 5.0 (tentatively scheduled for October); if it doesn't, I expect we'll choose the Zulip 6.0 release schedule primarily based on what is required to complete this migration in a way we feel great about.  (As a reminder, I'm <a href=\"#narrow/stream/65-checkins/topic/tabbott\">on vacation</a> for the next 3 weeks).  That said, this project is one of the things I will be giving priority to in the limited work I will be doing while travelling.</p>",
+        "id": 1244561,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1628205904
+    },
+    {
+        "content": "<p>Let's use this thread for feedback/questions about the user experience for this; we should use separate threads in the appropriate streams (E.g. <a class=\"stream\" data-stream-id=\"378\" href=\"/#narrow/stream/378-api-design\">#api design</a>, <a class=\"stream\" data-stream-id=\"3\" href=\"/#narrow/stream/3-backend\">#backend</a>, <a class=\"stream\" data-stream-id=\"6\" href=\"/#narrow/stream/6-frontend\">#frontend</a>) for the engineering pieces of this migration.</p>",
+        "id": 1244564,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1628205960
+    },
+    {
+        "content": "<p>I'm super excited for this! I've been hearing tons of feedback/feature requests from customers that this bundle of work will address.</p>",
+        "id": 1244601,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1628207827
+    },
+    {
+        "content": "<p>Most of the permissions here are eg:</p>\n<blockquote>\n<p>Group that can join this group themselves (default: nobody)</p>\n</blockquote>\n<p>The sole plural example seems to be:</p>\n<blockquote>\n<p>Groups that can mention this group (Specific roles shouldn't be able to mention specific user groups <a href=\"https://github.com/zulip/zulip/pull/19029\">#19029</a>) (default: everyone)</p>\n</blockquote>\n<p>Is the intent indeed that most of these will be \"pick exactly one group\" (and presumably if you want two, you can create a new group that contains those two groups)?</p>",
+        "id": 1244658,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1628224539
+    },
+    {
+        "content": "<p>Regarding the system groups, like moderator group, etc., I just wanted to confirm whether these groups would be used for mentioning in messages or just for the purpose of permissions.</p>",
+        "id": 1244709,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1628252084
+    },
+    {
+        "content": "<p>I do think that being able to select multiple groups would be great. (Especially on the „who can subscribe“ setting)</p>",
+        "id": 1244745,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1628258699
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span>  and <span class=\"user-mention silent\" data-user-id=\"699\">Anders Kaseorg</span> can comment more on the implementation side, but I think in general the user should not have to explicitly create a group in a separate part of the UI in order to give some set of permissions to multiple groups. We may automatically name and create a group for the user.</p>",
+        "id": 1247290,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1629140521
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10242\">Sahil Batra</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1244709\">said</a>:</p>\n<blockquote>\n<p>Regarding the system groups, like moderator group, etc., I just wanted to confirm whether these groups would be used for mentioning in messages or just for the purpose of permissions.</p>\n</blockquote>\n<p>It can be useful to mention system groups (especially admins and moderators), so we should probably make them mentionable. If so, we should make it possible to control who can mention those groups in the group management UI, same as for other groups.</p>",
+        "id": 1247291,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1629140768
+    },
+    {
+        "content": "<p>Newbie here: Group mentions already exist, right? On the leanprover zulip, we regularly <code>@</code>-mention the <code>@maintainers</code> group.</p>",
+        "id": 1247298,
+        "sender_full_name": "Johan Commelin",
+        "timestamp": 1629141442
+    },
+    {
+        "content": "<blockquote>\n<p>It can be useful to mention system groups (especially admins and moderators), so we should probably make them mentionable. If so, we should make it possible to control who can mention those groups in the group management UI, same as for other groups.</p>\n</blockquote>\n<p>Yeah, I have kept the current PR to allow mentioning them.<br>\nI agree we should have a setting for it.</p>",
+        "id": 1247329,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1629144138
+    },
+    {
+        "content": "<blockquote>\n<p>Newbie here: Group mentions already exist, right? On the leanprover zulip, we regularly <code>@</code>-mention the <code>@maintainers</code> group.</p>\n</blockquote>\n<p>Yes they exist right now, the discussion here was to allow mentioning the groups formed based on user role.</p>",
+        "id": 1247330,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1629144325
+    },
+    {
+        "content": "<p>During development, we are not planning to make the automatically generated role-based groups mentionable, since it would likely result in a way to circumvent restrictions on who can use wildcard mentions in large streams.  The medium-term plan is to just have \"who can mention this group\" be a setting for the group.</p>",
+        "id": 1256420,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1631835598
+    },
+    {
+        "content": "<p>Hi :)<br>\nI noticed that moderators aren't able to modify stream permissions of existing streams or archive streams. Is this an option to come or will this be redundant with the new permissions model?</p>",
+        "id": 1262956,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1633437777
+    },
+    {
+        "content": "<p>This is something in plan to do in future, but we will first handle the organization settings and permissions under the new model and then move to streams.</p>",
+        "id": 1262957,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1633438977
+    },
+    {
+        "content": "<p>Ok, thanks!</p>",
+        "id": 1262965,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1633441849
+    },
+    {
+        "content": "<p>Do we want to include bots in the role-based system groups? (All bots have role set as member by default). I think we should not include them.</p>",
+        "id": 1266209,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1634152209
+    },
+    {
+        "content": "<p>The role-based system group for the \"member\" role will be used to express things like that a stream is public. A public stream will correspond basically to the \"who can join\" permission being set to the \"member\" role-based group.</p>\n<p>Bots should generally be able to join public streams. So that means bots should be in the role-based group, just like other users/accounts.</p>",
+        "id": 1266337,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1634155662
+    },
+    {
+        "content": "<p>Yeah, I agree.</p>",
+        "id": 1266371,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634158981
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1247290\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span>  and <span class=\"user-mention silent\" data-user-id=\"699\">Anders Kaseorg</span> can comment more on the implementation side, but I think in general the user should not have to explicitly create a group in a separate part of the UI in order to give some set of permissions to multiple groups. We may automatically name and create a group for the user.</p>\n</blockquote>\n<p>Somewhat relatedly, do we want something for individual users to give access? (eg, in several communities I'm in, it would be common for me to have an \"#adehnert\" stream where I talk about whatever I want, and the permissions I'd want would presumably be me as the only owner, only person who can subscribe people, etc..I'd bet in many companies, a team lead will just want to specify themselves as the owner of their team's stream.) I guess maybe the answer may end up being \"these settings implementation-wise allow exactly one group, but the UI will transparently create a group if you try to use a user and/or multiple groups\".</p>",
+        "id": 1267168,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1634321935
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"591\">@Alex Dehnert</span> yeah, we've not settled on the full UI/UX details, but that sort of model of an implicitly created \"Owners of #adehnert\" group is what we have in mind.</p>",
+        "id": 1267313,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634338493
+    },
+    {
+        "content": "<p>So one detail that is explained in the <a href=\"https://github.com/zulip/zulip/issues/19525\">main issue</a> is that as part of transitioning existing permissions settings which allow selecting a given role to this groups model, we'll be creating \"system groups\" that represent e.g. \"All users with the moderator role\" and are maintained implicitly when editing users' role in the UI.  It's unclear to me whether we will keep these transitional groups forever, but in any case, it's very possible they'll be an important part of the permissions experience for a year or more, so we should think about how they work.</p>\n<p>The question at hand is what we want the description for these groups to be.  I think we currently plan for their name to be e.g. \"Moderators\" (though I don't think capitalization is settled) for the users with that role.  The first question is what folks think about that label.  The second question is what we want the group description to be -- e.g. should it be <code>System group containing all with the \"Moderator\" role.</code>?</p>\n<p>This is the main decision remaining before merging <a href=\"https://github.com/zulip/zulip/pull/19654\">#19654</a>, which creates and maintains these groups (they won't be displayed in the UI in that first version; so only API clients can discover them).</p>",
+        "id": 1268620,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634689713
+    },
+    {
+        "content": "<p>Oh, one other naming detail: The group that contains everyone including guests should probably be called \"Everyone\", not \"Guests\", since while it's probably easy to understand that you're included in the \"Moderators\" group in you're an administrator, it's not at all obvious that being a Moderator/Member/etc. makes you implicitly a member of a \"Guests\" group.</p>",
+        "id": 1268634,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634690901
+    },
+    {
+        "content": "<p>Ah, so \"Moderators\" would include admins as well? We should probably clarify that in the description.</p>",
+        "id": 1268640,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1634691019
+    },
+    {
+        "content": "<p>Is there a proposal for a full list of system group names + descriptions? I think seeing the whole list will make it easier to discuss the details.</p>",
+        "id": 1268643,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1634691079
+    },
+    {
+        "content": "<p>No proposal beyond my messages above.  The code is in <a href=\"https://github.com/zulip/zulip/pull/19654\">#19654</a>, here's an excerpt:</p>\n<div class=\"codehilite\"><pre><span></span><code>    SYSTEM_USER_GROUP_ROLE_MAP = {\n        UserProfile.ROLE_REALM_OWNER: &quot;Owners&quot;,\n        UserProfile.ROLE_REALM_ADMINISTRATOR: &quot;Administrators&quot;,\n        UserProfile.ROLE_MODERATOR: &quot;Moderators&quot;,\n        UserProfile.ROLE_MEMBER: &quot;Members&quot;,\n        UserProfile.ROLE_GUEST: &quot;Guests&quot;,\n    }\n</code></pre></div>\n<p>Note that doesn't have descriptions at all yet, which I why I started this conversation to think about that.</p>\n<p>(Though note that doesn't cover Full Members; see <a class=\"stream-topic\" data-stream-id=\"101\" href=\"/#narrow/stream/101-design/topic/full.20members.20user.20group\">#design &gt; full members user group</a> for the questions around how that should work).</p>",
+        "id": 1268645,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634691241
+    },
+    {
+        "content": "<p>We also have the option of having two sets of implicit groups:</p>\n<ul>\n<li>Ones named like \"Moderators\" would be just users who have the moderator role.  </li>\n<li>Ones named like \"Moderators and above\" or something would have this system of contain other groups.  (These are groups we need to migrate a current permission where \"Admins and moderators\" can do X).</li>\n</ul>",
+        "id": 1268647,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634691329
+    },
+    {
+        "content": "<p>These are potentially @mention-able, right? I think it's generally more useful to @-mention moderators + admins than only moderators who are <em>not</em> admins, which argues for having a short name to refer to moderators and above.</p>",
+        "id": 1268648,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1634691446
+    },
+    {
+        "content": "<p>Yeah; we have the option to go with names that are \"Moderators\" with a description that explains it's the \"or above\" concept, and a \"Moderator role only\" or something group for the exact role if we want those.</p>",
+        "id": 1268652,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634691638
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1268648\">said</a>:</p>\n<blockquote>\n<p>These are potentially @mention-able, right? I think it's generally more useful to @-mention moderators + admins than only moderators who are <em>not</em> admins, which argues for having a short name to refer to moderators and above.</p>\n</blockquote>\n<p>At present, it will not be possible to mention them, but we could change that in the future.  In any case, they will certainly be available when choosing who should have permission to do X, and I think in almost all cases one will want one of the \"or above\" role groups.</p>",
+        "id": 1268654,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634691682
+    },
+    {
+        "content": "<p>My guess is that there's not much reason to ever want \"moderators but not admins\" (unless you allow negative ACLs, and even then it seems very dubious).</p>",
+        "id": 1268689,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1634699894
+    },
+    {
+        "content": "<p>I agree we should change <code>Guests</code> to <code>Everyone</code>. Not sure of adding \"and above\" in names. Currently in settings dropdowns we specify <code>Admins and moderators</code>, <code>Admins, moderators and members</code>, etc.</p>",
+        "id": 1269031,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1634748515
+    },
+    {
+        "content": "<p>Yeah, if we think about these groups as effectively \"The group of users who have the Moderator permission\", then using the role names with s/Guest/Everyone/ makes a lot of sense.  With guests being members of \"The group of users who have the Everyone permission\", but not \"The group of users who have the Member permission\",</p>",
+        "id": 1270433,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634942549
+    },
+    {
+        "content": "<p>One other note about naming; do we want \"Spectators\" (i.e. logged-out users) to be representable in this permissions system?  If so, \"Everyone\" may not be the best name, since it would perhaps suggest that \"Spectators\" are included.</p>",
+        "id": 1270453,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634943329
+    },
+    {
+        "content": "<p>Perhaps something like \"Account holders\" is the right label for everyone who has an account in the organization?</p>",
+        "id": 1270454,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1634943378
+    },
+    {
+        "content": "<p>Hmm, yeah, that's a potential complication. For viewing permissions (e.g. \"Who can access user email addresses \"), one does need to disambiguate between spectators and logged-in users.</p>",
+        "id": 1271237,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1635144048
+    },
+    {
+        "content": "<p>Well, one theory is that we just don't support giving spectators access to real email addresses, but I'm sure there will be settings where this is relevant.  (If nothing else, \"who can view messages on this stream\" would need to have effectively \"Everyone on the Internet even without an account\" as the displayed option when you've made your stream web-public, I think).</p>",
+        "id": 1271664,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635199604
+    },
+    {
+        "content": "<p>I think \"Everyone on the Internet\" is a good approach to the wording for the web-public option.</p>\n<p>The term \"Account holders\" feels jargony to me. I think something like \"Everyone in the Zulip organization\", or \"Everyone in <code>**${realm.name}**</code>\", would be clearer. Possibly with \"including guests\" if we want to be explicit about that.</p>\n<p>So for example a set of options could be:</p>\n<ul>\n<li>[… all the more-specific groups …]</li>\n<li>Members of <code>**${realm.name}**</code> (not guests)</li>\n<li>Everyone in <code>**${realm.name}**</code>, including guests</li>\n<li>Everyone on the Internet</li>\n</ul>",
+        "id": 1273634,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1635456201
+    },
+    {
+        "content": "<p>Continuing a discussion from <a class=\"stream-topic\" data-stream-id=\"101\" href=\"/#narrow/stream/101-design/topic/full.20members.20user.20group\">#design &gt; full members user group</a> of the naming and future of the groups we create based on roles:</p>\n<p><span class=\"user-mention silent\" data-user-id=\"699\">Anders Kaseorg</span> <a href=\"#narrow/stream/101-design/topic/full.20members.20user.20group/near/1270432\">said</a>:</p>\n<blockquote>\n<p>Yeah. And I want to eventually get to a place where it becomes totally supported to, say, rename the Moderators group to TAs, depending on the needs of the organization.</p>\n</blockquote>\n<p>I agree with this. I think it would be good to have a future where the Moderators group can be renamed, and where there doesn't even need to be a group that really corresponds to Moderators -- an org might have one group that has a subset of \"moderator\" permissions, and another that has a superset but less than \"admin\". Or one group with a moderator-like set of permissions just for one set of streams, and another for another set of streams. Or something else.</p>\n<p>In that future, there might still be a Moderators group whenever you create a new org, but it'd be like the streams <a class=\"stream\" data-stream-id=\"1\" href=\"/#narrow/stream/1-announce\">#announce</a> or <a class=\"stream\" data-stream-id=\"2\" href=\"/#narrow/stream/2-general\">#general</a> -- it's just an example and a starting point.</p>",
+        "id": 1273639,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1635456686
+    },
+    {
+        "content": "<p>One thing we'd have to deal with in that future is what to do when introducing a new permission, where today we'd say that permission is given by default to \"moderators\" or to \"admins\" etc.</p>",
+        "id": 1273641,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1635457440
+    },
+    {
+        "content": "<p>I guess one solution would be to pick some existing permission and say that the new permission gets granted to the same set of groups that have that one.</p>\n<p>If in doubt what permission to pick, it's always safe to pick one that already implies the same powers; if nothing else, there's always \"owners\", or whoever has the ability to grant the permission to other users.</p>\n<p>The main downside of that conservative option is that sometimes the point of a new permission is to give a wider set of users a limited version of some power that a smaller set already had. In that case, in a new org we might be giving the permission to all moderators, but the conservative option would mean that an existing org which hadn't touched their permission settings would have the permission go only to admins or owners. That divergence feels like it'd be a source of confusion -- the docs would be either complicated or inaccurate -- and also would mean the feature effectively didn't make it out to most users in existing orgs.</p>\n<p>So hmm, that doesn't seem good. The more general template of \"pick some existing permission to clone from\" works, but we'd want to pick one that goes to the same default group as we want the new permission to go to, so that the bulk of existing orgs (which haven't extensively customized their permissions) will continue to stay in sync with the defaults apart from where they've chosen otherwise.</p>",
+        "id": 1273642,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1635457609
+    },
+    {
+        "content": "<p>I think this strategy would have worked well for the historical examples I can think of. For example, the new “resolve topic” permission could have been cloned from the “rename topic” permission.</p>",
+        "id": 1274030,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1635532789
+    },
+    {
+        "content": "<p>Hmm, what roles are those permissions associated with by default? I'd have thought that might be an example of where we'd want the new permission to go to a wider set than the existing permission that subsumes it.</p>",
+        "id": 1274043,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1635534979
+    },
+    {
+        "content": "<p>I think Anders might be right that in most cases we could clone from the users who have a related permission and get a reasonable default.  We could do a bit of a study on specific cases to see if that checks out for the last 10 permissions we've wanted to add.</p>",
+        "id": 1274100,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635543364
+    },
+    {
+        "content": "<p>I do think a lot of the new permissions we've added in recent years have been conceptually splitting an existing permission, in some sense, at least things after the introduction of the Moderator role.</p>",
+        "id": 1274101,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635543413
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"2187\">Greg Price</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1273634\">said</a>:</p>\n<blockquote>\n<p>I think \"Everyone on the Internet\" is a good approach to the wording for the web-public option.</p>\n<p>The term \"Account holders\" feels jargony to me. I think something like \"Everyone in the Zulip organization\", or \"Everyone in <code>**${realm.name}**</code>\", would be clearer. Possibly with \"including guests\" if we want to be explicit about that.</p>\n<p>So for example a set of options could be:</p>\n<ul>\n<li>[… all the more-specific groups …]</li>\n<li>Members of <code>**${realm.name}**</code> (not guests)</li>\n<li>Everyone in <code>**${realm.name}**</code>, including guests</li>\n<li>Everyone on the Internet</li>\n</ul>\n</blockquote>\n<p>I think those labels feel pretty good as group descriptions to me.  I think we would probably still want shorter group names for those; maybe something like  <code>@members</code> / <code>@everyone</code> /  <code>@internet</code>, given those descriptions?</p>",
+        "id": 1274102,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635543427
+    },
+    {
+        "content": "<p>What I'm really thinking about with that list is a UI like where you're choosing who can read the messages in a stream. I think a good UI for that would involve a dropdown where \"Everyone on the Internet\" is a string that's part of the UI -- it's not a user-edited string.</p>",
+        "id": 1274121,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1635544025
+    },
+    {
+        "content": "<p>Specifically one version of it would be:</p>\n<p>Who can read messages in this stream:<br>\n[then a dropdown picker, where the choices are:]</p>\n<ul>\n<li>Choose a group…</li>\n<li>Members of <code>**${realm.name}**</code> (not guests)</li>\n<li>Everyone in <code>**${realm.name}**</code>, including guests</li>\n<li>Everyone on the Internet</li>\n</ul>\n<p>And if you select \"Choose a group…\", a bit of UI appears where you can select a group, however we want that to work. Probably a searchable list of names.</p>",
+        "id": 1274123,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1635544135
+    },
+    {
+        "content": "<p>Yeah, I see, that makes sense.  We can play with it; I think it's worth mocking up a widget of some sort here to play with to help clarify our thinking.</p>",
+        "id": 1274162,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635545372
+    },
+    {
+        "content": "<p>Hello,</p>\n<blockquote>\n<p>\"choose a group...\"</p>\n</blockquote>\n<p>Maybe the system should allow to choose multiple groups not only one ?</p>",
+        "id": 1274449,
+        "sender_full_name": "delaf",
+        "timestamp": 1635604727
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9869\">@delaf</span> the design intent is to encourage creating a group that contains other groups rather than allowing one to choose multiple groups for a specific setting.  (The UI would make it easy to create such a group from the settings UI).</p>",
+        "id": 1275102,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635814112
+    },
+    {
+        "content": "<p>The benefit of that model is that it'd avoid the API having multiple different ways to represent a set of groups having a given permission.</p>",
+        "id": 1275103,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635814147
+    },
+    {
+        "content": "<p>OK.<br>\ngroup can contains other group is a nice feature !</p>",
+        "id": 1275161,
+        "sender_full_name": "delaf",
+        "timestamp": 1635837846
+    },
+    {
+        "content": "<p>is it possible to mix group &amp; user inside a group ?</p>",
+        "id": 1275162,
+        "sender_full_name": "delaf",
+        "timestamp": 1635837877
+    },
+    {
+        "content": "<p>It will be. You can read about the proposed design in <a href=\"https://github.com/zulip/zulip/pull/19525\">#19525</a>.</p>",
+        "id": 1275533,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1635884064
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1274102\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"2187\">Greg Price</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1273634\">said</a>:</p>\n<blockquote>\n<p>I think \"Everyone on the Internet\" is a good approach to the wording for the web-public option.</p>\n<p>The term \"Account holders\" feels jargony to me. I think something like \"Everyone in the Zulip organization\", or \"Everyone in <code>**${realm.name}**</code>\", would be clearer. Possibly with \"including guests\" if we want to be explicit about that.</p>\n<p>So for example a set of options could be:</p>\n<ul>\n<li>[… all the more-specific groups …]</li>\n<li>Members of <code>**${realm.name}**</code> (not guests)</li>\n<li>Everyone in <code>**${realm.name}**</code>, including guests</li>\n<li>Everyone on the Internet</li>\n</ul>\n</blockquote>\n<p>I think those labels feel pretty good as group descriptions to me.  I think we would probably still want shorter group names for those; maybe something like  <code>@members</code> / <code>@everyone</code> /  <code>@internet</code>, given those descriptions?</p>\n</blockquote>\n<p>What do we want to do next here? I think these names and descriptions are fine, do we want to proceed with these?</p>\n<p>Also, I wanted to confirm how we would handle the spectator case. I don't think we would have a separate user-group in database for those since there will be no user-profile objects for them. We would just need to handle them specifically in code for permissions. I am not completely familiar with the code for spectators acccess but this is as per my current understanding.</p>",
+        "id": 1283325,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1637174212
+    },
+    {
+        "content": "<p>Yeah, sorry I let this conversation get lost without a clear answer.  Here's a concrete proposal that I think answers all the questions needed to start merging data model commits:</p>\n<ul>\n<li>Owners: <code>@role:owners</code>.  Description: \"Owners of this organization\"</li>\n<li>Administrators: <code>@role:administrators</code>.  Description: \"Administrators of this organization, including owners\"</li>\n<li>Moderators: <code>@role:moderators</code>.  Description: \"Moderators of this organization, including administrators\"</li>\n<li>Full Members: <code>@role:fullmembers</code>.  Description: \"Members of this organization, not including new accounts and guests\"</li>\n<li>Members: <code>@role:members</code>. Description: \"Members of this organization, not including guests\"</li>\n<li>Everyone: <code>@role:everyone</code>. Description: \"Everyone in this organization, including guests\"</li>\n<li>Everyone on the Internet: <code>@role:internet</code>.  Description: \"Everyone on the Internet\".  This group would be implemented as a group that contains <code>@role:everyone</code>, and is also used for controlling spectators/web public streams behavior, for organizations that have that enabled.  I don't expect us to use this group in the immediate term, so it'll effectively be just a group containing <code>@role:everyone</code> that we create in the database migrations for the above.  Medium term, checks for whether a spectator can do something would be of the form \"Does the group with permission to do X contain the @role:internet group?\".  But I don't expect there'll be a need to do anything with this group until after we've migrated all the permissions dropdowns to work with groups rather than roles, so we're just optimistically trying to avoid extra data migration complexity for creating this at a different time from the rest.</li>\n<li>If we ever feel the need to allow giving a permission to everyone on the Internet but not to some users with accounts, we can create an always-empty group of the name <code>@role:spectators</code> that <code>@role:internet</code> contains and is the thing that represents that special power, but I don't see a reason we'd need such a feature.</li>\n</ul>\n<p>We can potentially in UI elements replace \"this organization\" with <code>**{realm.name}**</code> as a nice touch if that feels nice when we're building UI components; but the above would be what appears in the database and the API (and thus any clients that don't implement such nice touches) to represent these role groups.</p>",
+        "id": 1283867,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1637267916
+    },
+    {
+        "content": "<p>We can of course always rename these groups in the future if we decide the <code>role:</code> prefix is harmful (And force-rename any groups like <code>moderators</code> that might already exist, if necessary), but this seems like a safe set of choices that might work out in the long term, but in any case will at least let us build all the API and other infrastructure for migrating our systems to use groups to determine permissions without requiring as a prerequisite any coupled user-facing UI changes, beyond tiny things to not display / let you mention these system user groups (at least until we have a different way way to prevent these from being used to do wildcard mentions when you don't have permission to do them).</p>",
+        "id": 1283868,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1637268275
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10242\">@Sahil Batra</span> ideally, we'd have the implementation avoid repeating the content detailed there in more than one place except maybe some repetition in tests, so if you can arrange that, I think it'd be reasonable to program in those choices and we can double-check the state of this conversation before merging the pull request (and thus signing up to need to do a database migration to change any of the above).</p>",
+        "id": 1283870,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1637268373
+    },
+    {
+        "content": "<p>What happens with @fullmbembers and @members if there is no waiting period for full members? The \"not including new accounts\" part of the description wouldn't make sense in that case.</p>",
+        "id": 1283892,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1637271324
+    },
+    {
+        "content": "<p>Those two groups would have identical membership.  We could probably be clever and not display both options if we thought it important, but we're not aiming to settle that level of UI detail at this stage.</p>",
+        "id": 1283932,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1637284923
+    },
+    {
+        "content": "<p>Stumbled across this as I was confused by the ingranularity of settings:</p>\n<ul>\n<li>I can't remove email address access from guests (which is important in a business where customers are onboarded in Zulip)</li>\n<li>I can't restrict management of bots and user groups to moderators</li>\n</ul>\n<p>and so on.</p>\n<p>I was thinking of a kind of grid of permissions and roles.<br>\nSince the current roles are incremental, something like a horizontal slider would probably be more appropriate there though.<br>\nNot sure this makes sense anymore though when permissions can be given to each user group.</p>",
+        "id": 1299988,
+        "sender_full_name": "Janek",
+        "timestamp": 1640026661
+    },
+    {
+        "content": "<p>Yeah, a design goal of this project is to adjust the underlying infrastructure so that all of our settings can be flexible.</p>",
+        "id": 1308432,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1641943129
+    },
+    {
+        "content": "<p>We've completed the first two major phases of implementing this with the merge of <a href=\"https://github.com/zulip/zulip/pull/21611\">#21611</a>. We still have a long way to go: The project will probably end up requiring something like 8 major merges at this scale. Here's some notes on what we'll likely be doing next.</p>\n<ul>\n<li>I've updated <a href=\"https://github.com/zulip/zulip/issues/19525\">https://github.com/zulip/zulip/issues/19525</a> with the things we've now merged (in concept -- didn't edit a few details that are off).</li>\n<li>I suspect one of the good next projects will be extending <code>static/js/user_groups.ts</code> (and more broadly, the real-time sync codebase): \"Do JS frontend work to be able to provide functions like is_user_in_group, which would walk the data structures and be able to determine at least whether the current user is in a given group. If needed these functions can call the API when called with another user group, but it's essential for rendering UI to know if the current user can do things without a server round trip.\" from <a href=\"https://github.com/zulip/zulip/pull/19525\">#19525</a>.</li>\n<li>Another other thing we can do in parallel is start working on the UI widget for selecting a user group for a setting. It might be good for us to have a specific setting we're testing. (Originally, I was thinking the ideal setting would be a new permissions setting that we want to add an have be coupled to user groups -- since then we don't have to deal with the database complexity of migrating). But we can avoid that by just having the UI only list <code>is_system_group</code> user groups as options, and map it to the corresponding role before sending to the server, so no API changes required.  In any case, @alya let's pick something out.</li>\n<li>While we plan to rewrite the \"User groups\" management UI (<a href=\"https://github.com/zulip/zulip/pull/19526\">#19526</a>), it's possible we should look at how much work it'd be to display existing subgroups and be able to add a new subgroup. (It's likely at least some of the pills logic would be useful following a rewrite). I expect the initial UI work will primarily use the system groups that correspond exactly to roles, so this isn't a blocker for the above.</li>\n<li>I started <a class=\"stream-topic\" data-stream-id=\"3\" href=\"/#narrow/stream/3-backend/topic/Groups.20and.20LDAP\">#backend &gt; Groups and LDAP</a> for LDAP synchronization of groups, which will be much more useful once we do the rest of this.</li>\n</ul>",
+        "id": 1372972,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1650907209
+    },
+    {
+        "content": "<p>For folks curious about the schedule: While I expect us to continue merging pieces of this project over the coming months, I don't expect this feature to be integrated in a user-visible fashion for zulip 6.0.</p>",
+        "id": 1372975,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1650907341
+    },
+    {
+        "content": "<p>Just to update, I plan to start the JS part most probably tomorrow or day-after tomorrow.</p>",
+        "id": 1373699,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1650991966
+    },
+    {
+        "content": "<p>Since PR for extending <code>static/js/user_groups.ts</code>has been merged, with a couple of follow-ups pending which I can do in next couple of days, I think the next step to be working on the UI widget to select user groups  as mentioned above. Do we want to modify an existing setting or add a new setting?</p>",
+        "id": 1380326,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1652292927
+    },
+    {
+        "content": "<p>Hm, it would be nice not to have an intermediate state where one setting under Organization permissions randomly looks different from everything else. That might argue for a new setting, e.g. a stream-related one that wouldn't be in the org permissions panel? I'm not sure if there's a good relatively straightforward option.</p>",
+        "id": 1381373,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1652746028
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/19525\">#19525</a> also has a bunch of group management settings, but perhaps we want to update the group management UI before getting into that?</p>",
+        "id": 1381374,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1652746155
+    },
+    {
+        "content": "<p>One option can be to change stream post policy setting. It would mean to replace the dropdown with a multi-select dropdown list widget with only system groups as options.</p>",
+        "id": 1381573,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1652812219
+    },
+    {
+        "content": "<p>That one sounds good to me!</p>",
+        "id": 1381577,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1652812868
+    },
+    {
+        "content": "<p>Has there been a discussion anywhere about how the widget should work? Should the multi-select automatically check subgroups, e.g. if you check \"Moderators\", \"Admins\" get checked as well (and cannot be unchecked)?</p>",
+        "id": 1381578,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1652813055
+    },
+    {
+        "content": "<p>We may also need to think about usability once the number of groups is potentially large. E.g. would we keep selected groups pinned to the top in the dropdown, or in some other way make them easy to find?</p>",
+        "id": 1381580,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1652813236
+    },
+    {
+        "content": "<p>There has not been a proper discussion about UI/UX part yet. Would be good to have some initial discussions and then we can iterate over based on feedback. We can start a new topic.</p>",
+        "id": 1381591,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1652815092
+    },
+    {
+        "content": "<p>I guess if we actually had checkboxes in the dropdown, it would probably get tricky with handling subgroups. E.g. if you check \"Moderators\", how does the \"Admins\" checkbox work?</p>\n<ul>\n<li>Maybe you can't uncheck it because \"Moderators who are not admins\" is not a group?</li>\n<li>Maybe unchecking it creates the appropriate group under the hood?</li>\n<li>Maybe unchecking it unchecks \"Moderators\" and we communicate this somehow?</li>\n</ul>",
+        "id": 1381604,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1652817085
+    },
+    {
+        "content": "<p>It may be simpler to have a search/dropdown with pills for the selection, though we'd probably still want to communicate something about the nesting properties. It should somehow be clear to the user that once you've selected \"Moderators\", you don't need to <em>also</em> select \"Admins\".</p>",
+        "id": 1381605,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1652817196
+    },
+    {
+        "content": "<p>Hmm, yes pills may be better.</p>",
+        "id": 1381981,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1652894349
+    },
+    {
+        "content": "<p>Regarding nesting properties, do we want to not allow to select \"Admins\" when \"Moderators\" are selected, or allow to select it but just inform that it is not needed?</p>",
+        "id": 1381982,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1652894391
+    },
+    {
+        "content": "<p>Hm, so <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span>  reminded me that back to when we discussed this a while back, we were thinking that we could potentially put all the complexity of managing multiple groups that have some permission into the group creation UI. That is, you'd only ever have one group have that permission, but there would be a \"New group\" option in the dropdown, which would let you create a group if you don't see one that fits what you want.</p>\n<p>I think that approach still leaves some questions, like how we would avoid clutter/confusion from the custom groups created this way.</p>",
+        "id": 1383623,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1653339202
+    },
+    {
+        "content": "<p>As PR for extending <code>static/js/user_groups.ts</code> has been merged, and UI widget to select user groups as mentioned above is also being worked upon should I start working on <code>Rewrite the \"User groups\" management UI</code>?</p>\n<p>(Although if there are some other things to be taken care of before jumping into <code>\"User groups\" management UI</code>  and I might be missing please mention them and I would be happy to pick them up.)</p>",
+        "id": 1384193,
+        "sender_full_name": "Purushottam Tiwari",
+        "timestamp": 1653426954
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17546\">@Purushottam Tiwari</span> I think starting to work on such a rewrite in a great plan! Do you want to start a separate topic for it? I think there's a lot to discuss -- for now, I'll give my initial thought that we can potentially start the engineering with the new view accessible via <code>/#groups</code> in the URL, potentially only in a development environment, to allow iterating on its implementation with incremental improvements without changing the production experience for anyone.</p>\n<p><span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span> FYI in case you have time to kick that off.</p>",
+        "id": 1385167,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1653606229
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1383623\">said</a>:</p>\n<blockquote>\n<p>Hm, so <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span>  reminded me that back to when we discussed this a while back, we were thinking that we could potentially put all the complexity of managing multiple groups that have some permission into the group creation UI. That is, you'd only ever have one group have that permission, but there would be a \"New group\" option in the dropdown, which would let you create a group if you don't see one that fits what you want.</p>\n<p>I think that approach still leaves some questions, like how we would avoid clutter/confusion from the custom groups created this way.</p>\n</blockquote>\n<p>I think this is probably the key question -- if we're going to stick with our plan of having you select a single group, then the widget can just be one of our dropdown list widgets to select which group you want.</p>",
+        "id": 1385172,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1653606369
+    },
+    {
+        "content": "<p>I think the plan of having the thing you select be a single group (that may contain subgroups) is attractive in many ways:</p>\n<ul>\n<li>From an API perspective, we have a <code>users_who_can_do_x_group</code> value for each setting using this system, and that is just the ID of a single group. This is pretty important because we're probably going to end up with like 30 settings with this structure, so having each be represented by a single integer is helpful.</li>\n<li>For display purposes, we get to display a single group (which can be inspected in various ways), rather than a potentially arbitrary collection of users and groups.</li>\n</ul>",
+        "id": 1385173,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1653606474
+    },
+    {
+        "content": "<p>And I think our concept was that one of the options in that list could be a \"Create new group\" thing that made it handy to make a new group without leaving the screen, if we wanted to make it convenient to specify the union of two groups without clicking around between different components.</p>",
+        "id": 1385174,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1653606533
+    },
+    {
+        "content": "<p>Tagging <span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> for this discussion to make sure I've summarized what we'd had in mind correctly, so we had extended conversations about this set of details.</p>",
+        "id": 1385175,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1653606585
+    },
+    {
+        "content": "<p>That sounds right.</p>",
+        "id": 1385178,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1653606741
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1385167\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"17546\">Purushottam Tiwari</span> I think starting to work on such a rewrite in a great plan! Do you want to start a separate topic for it? I think there's a lot to discuss -- for now, I'll give my initial thought that we can potentially start the engineering with the new view accessible via <code>/#groups</code> in the URL, potentially only in a development environment, to allow iterating on its implementation with incremental improvements without changing the production experience for anyone.</p>\n<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> FYI in case you have time to kick that off.</p>\n</blockquote>\n<p><a href=\"https://github.com/zulip/zulip/pull/19526\">#19526</a> is the issue for this; I think it's up to <span class=\"user-mention\" data-user-id=\"17546\">@Purushottam Tiwari</span> to kick off discussion of any questions that arise.</p>",
+        "id": 1385266,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1653610214
+    },
+    {
+        "content": "<p>Ok, so to break it down into mergeable milestones, we could:</p>\n<ol>\n<li>\n<p>Replace the stream post permissions drop-down with a dropdown with filtering, which we'll want to do on the assumption that the list can in the future be quite long. Perhaps this can be the same as what we use for the \"New stream notifications\" dropdown? At this point, we may actually want to keep the group names the same as now, e.g. \"Admins and moderators\" as the name for the moderators group.</p>\n</li>\n<li>\n<p>Add non-system groups to a dropdown. We probably want to sort the system groups above other groups.</p>\n</li>\n<li>\n<p>Modify the \"Add new user group\" modal to allow adding members to the group.</p>\n</li>\n<li>\n<p>Add a \"New group\" option to the dropdown, which would pop up the \"Add new user group\" modal.</p>\n</li>\n<li>\n<p>Make it possible to add subgroups to groups.</p>\n</li>\n</ol>\n<p>Does that sound like a good sequence of steps?</p>",
+        "id": 1385394,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1653631400
+    },
+    {
+        "content": "<p>(3) could also be done in parallel if somebody is interested in taking it on.</p>",
+        "id": 1385395,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1653631530
+    },
+    {
+        "content": "<blockquote>\n<p>I think the plan of having the thing you select be a single group (that may contain subgroups) is attractive in many ways:</p>\n<ul>\n<li>From an API perspective, we have a users_who_can_do_x_group value for each setting using this system, and that is just the ID of a single group. This is pretty important because we're probably going to end up with like 30 settings with this structure, so having each be represented by a single integer is helpful.</li>\n<li>For display purposes, we get to display a single group (which can be inspected in various ways), rather than a potentially arbitrary collection of users and groups.</li>\n</ul>\n</blockquote>\n<p>The plan above sounds good. I think we can start working on the API/database part first probably with the stream-post-policy setting. </p>\n<ul>\n<li>We can keep the same setting and instead of using the policy values we can set it to the  appropriate <code>group_id</code> of the user group which is allowed to post at the database level. We can keep the frontend/UI same initially for changing the setting and API endpoint for changing the setting would support the original policy values only. Then we can map the policy values to the group IDs in server and then appropriately change the  setting value in database.</li>\n<li>And then as a next part we can change the frontend to a dropdown with filtering and pass user group IDs to the API for changing the setting as <span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> mentioned in (1) above.</li>\n</ul>\n<p>Does this makes sense?</p>",
+        "id": 1385576,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1653676827
+    },
+    {
+        "content": "<p>Yeah, that plan sounds good to me.</p>",
+        "id": 1387912,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1654217604
+    },
+    {
+        "content": "<p>The one concern I have is that changing the API for stream post permissions could be something that gets bogged down in API change logistics; I'm not sure if mobile reads that property, but if it does, then it might be a messy API change to manage.</p>\n<p>If that is an issue that risks bogging this down, we should just pick a new setting off our TODO list for the area and add that instead.</p>",
+        "id": 1387913,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1654217724
+    },
+    {
+        "content": "<p>I checked the code for mobile and terminal. From what I understand, they currently use <code>is_announcement_value</code> to check whether to allow user to post to a stream or not. Other cases are handled by server. But I can see there are open PRs, to replace it with using <code>stream_post_policy</code>. Using new setting would be fine I think. There are many settings mentioned in the issue, something like \"users who can unsubscribe others\" setting can be fine.</p>",
+        "id": 1389088,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1654536415
+    },
+    {
+        "content": "<p>Hmm, the advantage of doing the stream post policy setting was that it's not next to any other settings that would look different during the intermediate stage.</p>\n<p>Maybe if we're need to do a setting under org permissions, we can pick one that's towards the bottom of the list? E.g. <strong>Who can create and manage user groups</strong>.</p>",
+        "id": 1389272,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1654547729
+    },
+    {
+        "content": "<p>I was talking about the \"users who can unsubscribe others from this stream\", i.e. setting for a particular stream, as it is mentioned in the \"Stream settings\" section of the issue, which would keep it separate from the org settings UI and the stream post policy would only be one setting that would look different.</p>",
+        "id": 1389580,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1654586401
+    },
+    {
+        "content": "<p>Oh, I see, so that would be a new setting we don't currently have? That's fine by me if that doesn't make it too complicated.</p>",
+        "id": 1389581,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1654586488
+    },
+    {
+        "content": "<p>Yes, it would be a new setting.</p>",
+        "id": 1389583,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1654586529
+    },
+    {
+        "content": "<p>Cool, works for me. :)</p>",
+        "id": 1389822,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1654624012
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> your thoughts on the above discussion?</p>",
+        "id": 1390306,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1654710047
+    },
+    {
+        "content": "<p>I am waiting for a confirmation for this whether we want to introduce a new setting (if yes then does the one I talked about above works fine or we want some other) or use some existing setting before moving forward with this.</p>",
+        "id": 1395110,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1655921343
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10242\">@Sahil Batra</span> yeah, I think the approach of adding a new stream-level setting is a great one.</p>",
+        "id": 1395176,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655927260
+    },
+    {
+        "content": "<p>I'm not sure what the best choice of such a setting would be, but probably the \"who can remove users\" one is a good option (as it's likely something we'll want to be an independent lesser permission from \"who can administer this stream\").</p>",
+        "id": 1395179,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655927406
+    },
+    {
+        "content": "<p>What do we want to name the variable for such a setting? Perhaps something like:</p>\n<ul>\n<li><code>can_remove_subscribers_group</code> as a foreign key, appearing in the API as <code>can_remove_subscribers_group_id</code>?</li>\n</ul>",
+        "id": 1395180,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655927470
+    },
+    {
+        "content": "<p>Yes, <code>can_remove_subscribers_group</code> sounds good.</p>",
+        "id": 1395425,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1655960647
+    },
+    {
+        "content": "<p>As an update, I have started working on adding UI for <code>can_remove_subscribers_group</code> setting. As the stream permissions settings are inside a model currently and we disucssed using <code>dropdown_list_widget</code> for this, I am facing the issue of dropdown being cut from bottom as described in <a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/dropdown.20in.20bot.20edit.20modal\">#issues &gt; dropdown in bot edit modal</a>. Though there is an open PR <a href=\"https://github.com/zulip/zulip/pull/20536\">#20536</a> for changing stream settings UI, so maybe I can wait for that one to complete.</p>",
+        "id": 1437725,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1663609651
+    },
+    {
+        "content": "<p>Anyway, I want to confirm a couple of things before.</p>\n<ul>\n<li>We would allow selecting only one option, right? And have an easy option to create a user group in the same UI using a modal.</li>\n<li>Assuming we would allow creating a user group using a modal, do we want to add the option to create user group to the dropdown itself or we would add a separate button for it something like the \"Disable\" button in the below screenshot?<br>\n<a href=\"/user_uploads/2/f3/a8984L_kClLNtAz2WpyhNd1S/Screenshot-from-2022-09-19-23-20-07.png\">Screenshot-from-2022-09-19-23-20-07.png</a><div class=\"message_inline_image\"><a href=\"/user_uploads/2/f3/a8984L_kClLNtAz2WpyhNd1S/Screenshot-from-2022-09-19-23-20-07.png\" title=\"Screenshot-from-2022-09-19-23-20-07.png\"><img src=\"/user_uploads/2/f3/a8984L_kClLNtAz2WpyhNd1S/Screenshot-from-2022-09-19-23-20-07.png\"></a></div></li>\n</ul>",
+        "id": 1437730,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1663609871
+    },
+    {
+        "content": "<p>Yes selecting one option; that matches the data model.</p>",
+        "id": 1438009,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663681584
+    },
+    {
+        "content": "<p>I don't have a clear opinion on how to handle the \"create a new user group\" option. I think for v1, I'd just skip that detail, since it'll probably be easier to play with options for adding it when that's the only thing we're changing.</p>",
+        "id": 1438127,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663697996
+    },
+    {
+        "content": "<p>I was imagining a \"New group\" option in the dropdown, but having that be a follow-up sounds good, since we don't need it in order to preserve the current functionality.</p>",
+        "id": 1438241,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1663710374
+    },
+    {
+        "content": "<blockquote>\n<ul>\n<li>Group that is automatically a member of this stream.  (Might want 2 versions: One for \"added on account creation\" and another for \"cannot unsubscribe\")</li>\n</ul>\n</blockquote>\n<p>This feature is probably top priority for a lot of organizations that want to migrate from Rocketchat to Zulip (like we want to do). Together with this PR <a href=\"https://github.com/zulip/zulip/pull/23039\">https://github.com/zulip/zulip/pull/23039</a> this could be the tipping point for a lot of them to switch.</p>\n<p>Is there any estimation when to expect this feature to be implemented?</p>\n<p>(I've already started implemented parsing the mapping json settings from rc inside the migration script :P )</p>",
+        "id": 1458503,
+        "sender_full_name": "Simon Michalke",
+        "timestamp": 1667425008
+    },
+    {
+        "content": "<p>We don't have a current estimate, but a lot of the preparatory work has already happened (and I believe our next step here will add the first new setting using the new model). We'll be doing planning once the dust settles after the 6.0 release.</p>",
+        "id": 1458519,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1667425990
+    },
+    {
+        "content": "<p>We are running into the following limitation with the permissions system and I was wondering if this work (new permissions model) would cover this before I make a new issue.</p>\n<p>One of our moderators was unable to edit the name of a stream (which felt strange to him since he had himself created the stream). It turns out that only administrators are allowed to edit the names of streams - but we try to use the \"least-privilege principle\" with regards to permissions, so we don't want to make lot's of people admins.</p>\n<p>Will this new permissions model allow this kind of fine grained granting of permissions?</p>",
+        "id": 1492011,
+        "sender_full_name": "Daniel Bradburn",
+        "timestamp": 1674042440
+    },
+    {
+        "content": "<p>On a related note, it also feels strange that the \"creator\" of a stream is unable to edit the name, is this something that might be changed?</p>",
+        "id": 1492012,
+        "sender_full_name": "Daniel Bradburn",
+        "timestamp": 1674042502
+    },
+    {
+        "content": "<p>We have definitely planned to include these type of settings in the new permissions model. Some of them have been described in the issue - <a href=\"https://github.com/zulip/zulip/pull/19525\">#19525</a>.</p>",
+        "id": 1492014,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1674043486
+    },
+    {
+        "content": "<p>I think one of them will definitely be something like \"Who can edit stream name and description?\" and we would have some stream-level settings (i.e. different permissions for different streams) as described in the issue.</p>",
+        "id": 1492015,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1674043799
+    },
+    {
+        "content": "<p>Cool thanks for the info, looking forward to this greatly!</p>",
+        "id": 1492017,
+        "sender_full_name": "Daniel Bradburn",
+        "timestamp": 1674044803
+    },
+    {
+        "content": "<p>So, <a href=\"https://github.com/zulip/zulip/pull/23992\">#23992</a> is merging today; this is a major milestone as that is the first new setting that is (on the backend) controlled by membership in a User Group. The UI presentation is more or less identical to the preexisting role dropdowns, because we're only allowing you to pick \"system groups\" corresponding to roles to avoid a dependency on user groups UI changes that are planned but not complete. </p>\n<p>But we're now in a position to start adding new permissions settings with this model and migrating existing ones to use it, in parallel with the work towards letting you select a custom user group.</p>",
+        "id": 1503103,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1675631413
+    },
+    {
+        "content": "<p>The setting we just added is \"Who can unsubscribe other users from this stream?\" -- chosen largely for simplicity. I think probably one of the next steps we want to do is adding another reasonably simple similar setting in order to figure out how to arrange these settings so one can add new ones mostly through configuration, not adding a bunch of new code. A possible candidate is \"Who can subscribe other users to this stream\"? That has two advantages:</p>\n<ul>\n<li>We don't currently have a way to control that; it's currently hardcoded to \"any subscriber to this stream\".</li>\n<li>It's similar to the one we just added conceptually.</li>\n</ul>\n<p>The one thing that is awkward about this is the defaults situation -- the option that users might expect is \"Anyone currently subscribed to the stream\", and we don't currently have an easy way to represent a stream as a group.</p>\n<p>It's worth mentioning that the most important stream setting of this form to add will be \"Who can edit the settings for the stream?\"; and that has a similar complication -- we probably want the __default__ for that in the \"Create stream\" UI to be a group containing just the user who is creating that stream.</p>\n<p>So I'm pondering whether we will want to have implicitly maintained user groups for \"Individual user X\" and \"Members of stream Z\" similar to the system groups that we have for \"Users with role X\".</p>",
+        "id": 1503104,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1675631771
+    },
+    {
+        "content": "<p>I feel like having that sort of implicitly maintained group would add a lot of complexity, so I definitely don't want to do it unless we think doing so is important for having good UI ... but I can certainly see benefits to doing so for this sort of thing.</p>",
+        "id": 1503106,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1675631857
+    },
+    {
+        "content": "<p>But I think it's worth first exploring whether there are ways we can proceed with adding new stream settings pointing to groups without needing to do something very expensive like this.</p>",
+        "id": 1503108,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1675631990
+    },
+    {
+        "content": "<p>That said, I want to emphasize that most of our existing settings are global settings for the organization where these issues don't apply, so likely we should not block progress on adding organization settings pointing to groups (or reworking existing ones to be based on groups) on this issue.</p>",
+        "id": 1503109,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1675632051
+    },
+    {
+        "content": "<p>I guess one other detail to note on the stream settings front is that the definition for \"Who can remove other subscribers from this stream?\" has some implicit quirks:</p>\n<ul>\n<li>(You can always remove yourself from a stream)</li>\n<li>Organization administrators can remove anyone from any stream that they can see exists. (Which is all streams, but one could imagine that changing).</li>\n<li>You need to be able to see that the stream exists and view its subscribers in order to use this permission. In practice, for non-admins, this means that either you are a subscriber or the stream is public and you can access public streams (i.e., you are not a guest) and thus you could become a subscriber if you wanted to.</li>\n</ul>\n<p>Those quirks around access to the stream correspond to \"Can you see any UI that would offer to let you unsubscribe other users\".</p>",
+        "id": 1503110,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1675632580
+    },
+    {
+        "content": "<p>So, a possible option for the default group for \"Who can add subscribers to this stream?\" that would be equivalent to today's \"Any subscriber\" would be \"Any user in this organization\" -- in that the \"are you a subscriber, or able to become one?\" part is implicit.</p>",
+        "id": 1503111,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1675632647
+    },
+    {
+        "content": "<p>The thing which I don't like about that is that those sets being equivalent relies on our not changing the permissions model in the future to make \"Streams that you can view the subscribers of\" different from \"Streams that you can join by clicking a button without anyone else adding you\". But maybe that's OK for a default that we would set today; we can worry about those issues if/when we split those definitions, and explain whatever the mechanics are clearly to users.</p>",
+        "id": 1503112,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1675632794
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1503111\">said</a>:</p>\n<blockquote>\n<p>So, a possible option for the default group for \"Who can add subscribers to this stream?\" that would be equivalent to today's \"Any subscriber\" would be \"Any user in this organization\" -- in that the \"are you a subscriber, or able to become one?\" part is implicit.</p>\n</blockquote>\n<p>It's not quite any user -- guests are excluded, right?</p>",
+        "id": 1504408,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1675796635
+    },
+    {
+        "content": "<p>I think if the default permission for public streams expands to org members who are not currently subscribed, that seems OK. For private streams, I think it would be confusing to have the dropdown say \"Any user\", but we could keep \"Any subscriber\" as the user-facing string, even if on the backend it's derived as an intersection of other restrictions?</p>",
+        "id": 1504418,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1675796872
+    },
+    {
+        "content": "<p>Yeah, I suppose it would be \"Admins, moderators, and members\".</p>",
+        "id": 1504419,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1675796875
+    },
+    {
+        "content": "<p>I don't like the idea of having the strings vary -- remember that we're planning to have custom groups be options in this menu. One option for private streams would be for the label to be something like \"Which users who can access this stream can add subscribers?\".</p>",
+        "id": 1504421,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1675796954
+    },
+    {
+        "content": "<p>And then the /help/ page or a tooltip can explain in full detail what \"access a stream\" means.</p>",
+        "id": 1504423,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1675797011
+    },
+    {
+        "content": "<p>Can we make the string say \"Which subscribers...\"? Menu options should generally make sense without having to refer to the help page.</p>",
+        "id": 1504437,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1675797282
+    },
+    {
+        "content": "<p>For private streams with our current stream permissions model, yes. For public streams, it would not be accurate -- because members (who can join the stream but are not subscribed) and are in the group can do the action. Also administrators can, but that's independent of this setting.</p>\n<p>One thing to note is that we have the longer-term ambition to create a <code>StreamGroup</code> layer, which will likely include a setting of the form \"Which users can join any stream in this group without being invited\", and a very reasonable use case is to have a cluster of 12 private streams that members of a given group can access, without requiring members of that group to be subscribed to those streams at all times. In that setting, I expect at least some private streams might feature the same complication.</p>\n<p>One possible answer is to not worry about that for now and change the strings when we get there (or change them when we have a \"who can access this stream\" setting right next to that defines that term).</p>",
+        "id": 1504446,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1675797569
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1503104\">said</a>:</p>\n<blockquote>\n<p>A possible candidate is \"Who can subscribe other users to this stream\"? That has two advantages:</p>\n<ul>\n<li>We don't currently have a way to control that; it's currently hardcoded to \"any subscriber to this stream\".</li>\n</ul>\n</blockquote>\n<p>We currently have organization level setting <code>Who can add users to streams</code>.</p>",
+        "id": 1509258,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1676653937
+    },
+    {
+        "content": "<blockquote>\n<p>It's worth mentioning that the most important stream setting of this form to add will be \"Who can edit the settings for the stream?\"; and that has a similar complication -- we probably want the __default__ for that in the \"Create stream\" UI to be a group containing just the user who is creating that stream.</p>\n<p>So I'm pondering whether we will want to have implicitly maintained user groups for \"Individual user X\" and \"Members of stream Z\" similar to the system groups that we have for \"Users with role X\".</p>\n</blockquote>\n<p>I agree creating and managing groups with members of stream and single user would be complex.</p>",
+        "id": 1509261,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1676654500
+    },
+    {
+        "content": "<p>Just a thought - can we create a new table with a field like <code>type</code> and a field like <code>type_id</code> which can be id of a UserProfile, UserGroup or Stream. Basically something similar to the <code>Recipient</code> table that we have currently. And then the setting will be set to an object of new table.</p>",
+        "id": 1509264,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1676654894
+    },
+    {
+        "content": "<p>Hmm, think this would also be somewhat expensive like the case when we create UserGroups for stream subscribers and individual users.</p>",
+        "id": 1509265,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1676654942
+    },
+    {
+        "content": "<p>Having thought about this a bit more, I think we may well want to do the \"Group that's just user X\" class of system group that's implicitly generated in some cases -- could be named something like <code>@user:17</code> with their user ID -- for this use case of \"making the creator of a stream have permissions on that stream\". But I think if we use the right definition for settings on a stream (where users need both access to the stream and to be in the permission group), I'm not sure we'll actually have a use case for \"this stream's members\" as a category for these settings -- you'd represent that as using the \"Everyone\" group.</p>",
+        "id": 1513573,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1677268243
+    },
+    {
+        "content": "<p>As I will work on <a href=\"https://github.com/zulip/zulip/pull/23849\">#23849</a> once <a href=\"https://github.com/zulip/zulip/pull/25827\">#25827</a> is merged, I was wondering will it be fine if I add this setting following the user group permissions model ? Although the work done so far is as per the role-based model but I think its better to use new model as otherwise we will be migrating it in near future.</p>",
+        "id": 1580972,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1685465079
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24860\">@Ujjawal Modi</span> Yeah, I think implementing that setting on the groups system would be a great idea.</p>",
+        "id": 1581067,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685469489
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10242\">@Sahil Batra</span> FYI in case you have any preparatory work for that to suggest.</p>",
+        "id": 1581070,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685469519
+    },
+    {
+        "content": "<p>I did some work while working to add the \"Who can access all users\" setting. It is not at a stage where I could open a PR, but would share a couple of points regarding the preparatory work I did to add realm-level group based settings and can get feedback over here.</p>",
+        "id": 1581820,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1685536747
+    },
+    {
+        "content": "<p>Some of this might be basic and intutive, but would still mention it here as it would save us time if they are discussed here.</p>\n<ul>\n<li>We can add a new field like <code>default_group_name</code> to the existing <code>GroupPermissionSetting</code> type. This will be store the default group name for all realm-level group based settings.</li>\n<li>And then we can create a function to set the defaults for all the settings in <code>do_create_realm</code>. </li>\n<li>I am not sure whether we want to use the existing <code>do_set_realm_property</code> function to set the group-based settings or have a new function. I guess new function would be better since we would anyways have a different object simialr to existing <code>property_types</code>object for group based settings.</li>\n</ul>\n<p>Also noting here that the feedback on <a href=\"https://github.com/zulip/zulip/pull/24762\">#24762</a> might be helpful while implementing this setting.</p>",
+        "id": 1581821,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1685537092
+    },
+    {
+        "content": "<p>Speaking of which, <span class=\"user-mention\" data-user-id=\"25140\">@Hemant Umre</span> I think pushing on <a href=\"https://github.com/zulip/zulip/pull/24762\">#24762</a> will be pretty valuable once you have time -- I'm hoping we can get that completed pretty soon after the 7.0 release.</p>",
+        "id": 1581914,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685549271
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10242\">Sahil Batra</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1581821\">said</a>:</p>\n<blockquote>\n<p>Some of this might be basic and intutive, but would still mention it here as it would save us time if they are discussed here.</p>\n</blockquote>\n<p>All these points sounds reasonable to me. Regarding setting default for existing realms do we will be creating three migrations just like we have <a href=\"https://github.com/zulip/zulip/blob/main/zerver/migrations/0408_stream_can_remove_subscribers_group.py\">migration_408</a>, <a href=\"https://github.com/zulip/zulip/blob/main/zerver/migrations/0409_set_default_for_can_remove_subscribers_group.py\">migration_409</a> and <a href=\"https://github.com/zulip/zulip/blob/main/zerver/migrations/0410_alter_stream_can_remove_subscribers_group.py\">migration_410</a> which were added while adding the stream level setting <code>Who can unsubscribe others </code> ?</p>",
+        "id": 1581958,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1685552236
+    },
+    {
+        "content": "<p>That 3-migration approach is usually the best way to do this, yeah. <code>tools/renumber-migrations</code> is important to know about for rebasing branches with a bunch of migrations in them.</p>",
+        "id": 1583413,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685652906
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1581914\">said</a>:</p>\n<blockquote>\n<p>Speaking of which, <span class=\"user-mention silent\" data-user-id=\"25140\">Hemant Umre</span> I think pushing on <a href=\"https://github.com/zulip/zulip/pull/24762\">#24762</a> will be pretty valuable once you have time </p>\n</blockquote>\n<p>Yes <code>Tim Abbott</code>, my exam will finish early next week. I will start working on it ASAP.</p>",
+        "id": 1584357,
+        "sender_full_name": "Hemant Umre",
+        "timestamp": 1685718743
+    },
+    {
+        "content": "<p>Can we allow group fields to be <code>Null</code> ? We did not allowed the group field to be <code>Null</code> while adding stream level setting. But currently  while importing the realm we are making all the foreign key in <code>Realm </code> model to be <code>Null</code>. </p>\n<div class=\"codehilite\"><pre><span></span><code>   # We don&#39;t import the Stream model yet, since it depends on Realm,\n    # which isn&#39;t imported yet.  But we need the Stream model IDs for\n    # notifications_stream.\n    update_model_ids(Stream, data, &quot;stream&quot;)\n    re_map_foreign_keys(data, &quot;zerver_realm&quot;, &quot;notifications_stream&quot;, related_table=&quot;stream&quot;)\n    re_map_foreign_keys(data, &quot;zerver_realm&quot;, &quot;signup_notifications_stream&quot;, related_table=&quot;stream&quot;)\n\n     if realm.notifications_stream_id is not None:\n        notifications_stream_id: Optional[int] = int(realm.notifications_stream_id)\n    else:\n        notifications_stream_id = None\n    realm.notifications_stream_id = None\n    if realm.signup_notifications_stream_id is not None:\n        signup_notifications_stream_id: Optional[int] = int(realm.signup_notifications_stream_id)\n    else:\n        signup_notifications_stream_id = None\n    realm.signup_notifications_stream_id = None\n    realm.save()\n</code></pre></div>",
+        "id": 1585274,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1685979279
+    },
+    {
+        "content": "<p>I was thinking of following this similair approach for group fields that will be added in <code>Realm</code> model. But for that we have to allow the fileds to be <code>Null</code>.</p>",
+        "id": 1585275,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1685979350
+    },
+    {
+        "content": "<p>Also I am not sure about the value that should be given to <code>on_delete</code> parameter of the group field. I tried to use <code>Restrict</code> but there was error on deleting a <code>Realm</code> model instance which I have mentioned in <a class=\"stream-topic\" data-stream-id=\"49\" href=\"/#narrow/stream/49-development-help/topic/Circular.20dependency.20of.20Django.20models\">#development help &gt; Circular dependency of Django models</a> .</p>",
+        "id": 1585276,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1685979927
+    },
+    {
+        "content": "<p>I'm gonna reply to that <code>on_delete</code> detail in <a class=\"stream-topic\" data-stream-id=\"49\" href=\"/#narrow/stream/49-development-help/topic/Circular.20dependency.20of.20Django.20models\">#development help &gt; Circular dependency of Django models</a>.</p>",
+        "id": 1585833,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686014123
+    },
+    {
+        "content": "<p>I think for groups fields being <code>None</code>: From a product perspective, they should never be <code>None</code> - we use the \"nobody\" group to encode that state. But in the database layer, we probably will need to declare them as allowing <code>None</code> in <code>models.py</code> because of that data import sequence issue, and just enforce in application code that we never expose to the application a state where one of these fields is <code>None</code>; in practice this probably involves adding a bunch of <code>assert realm.foo_group_id is not None</code> when we're going to access one of these fields.</p>",
+        "id": 1585840,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686014445
+    },
+    {
+        "content": "<p>Foreign key constraints can be deferred to the end of a transaction, and I believe Django does this by default, allowing the construction of circular references. We shouldn’t need the column to be nullable just for that.</p>",
+        "id": 1585842,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1686014845
+    },
+    {
+        "content": "<p>Yeah I guess the question is whether we can make the early part of the data import process one transaction; we'd have to import all the groups for the new realm. Probably ok; it's separable steps like importing membership where we might not want to hold locks a long time.</p>",
+        "id": 1585899,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686022541
+    },
+    {
+        "content": "<p>So yeah that's probably the right approach for this.</p>",
+        "id": 1585900,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686022565
+    },
+    {
+        "content": "<p>So, proceeding with the above approach of not allowing null. Now, suppose a new realm is getting created through the view function. We have to do the following steps:</p>\n<ol>\n<li>Create a new <code>Realm </code>model instance.</li>\n<li>Create system groups for the new realm.</li>\n<li>Make all the groups fields in realm model to their default groups.</li>\n</ol>",
+        "id": 1586039,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1686047898
+    },
+    {
+        "content": "<p>As the fields will be non-nullable we have to provide a value to group fields while the realm is created in step 1. So , will it fine if I give a dummy value say -1, in step 1 and later those values will be changed in step 3 and all the three steps will be done in a single transaction.</p>",
+        "id": 1586042,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1686048042
+    },
+    {
+        "content": "<p>I think that would probably work; I'm not sure if there's a better pattern to use, but you can probably start with that and we can replace the pattern if we come up with a better one.</p>",
+        "id": 1586946,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686103403
+    },
+    {
+        "content": "<p>So <a href=\"https://github.com/zulip/zulip/pull/25928\">#25928</a> is a new issue that specs our the single-user group concept. Posting some noted on how I think that should work here for reference/visibility:</p>\n<blockquote>\n<p>I think we want <code>is_system_group=True</code> for these groups -- the idea being that they exist as an internals detail to allow us to have menus offering a \"single user\" or \"single group\" while still being able to be stored as a <code>setting_name_group_id</code>. (I feel like we had a #design conversation about this that we can refer to). And <code>is_system_group</code> should enable a lot of the policy things we want to have like not being editable in terms of either their settings or membership.</p>\n<p>I think ideally from a data storage standpoint, we'd arrange things such that these groups are created on-demand when someone wants to use it in a setting (rather than when a user is created, which would entail increasing how many groups exist by a huge number, with all the clutter both in the database and the API that comes with that). The main downside of that is that we'll need to do something a bit awkward in the API to allow clients to request that such a group be created. Options include:</p>\n<ul>\n<li>Adding a \"get details for this group by name\" endpoint that we'd query with \"user:{user_id}\" from the client that would have a success continuation of submitting the actual API request using the obtained group ID.</li>\n<li>Making all of our permissions settings that accept a <code>group_id</code> also accept a group name string of this form.</li>\n</ul>\n<p>I kinda prefer the second option, because it likely will make it easier for us to ensure the auto-creation step only happens if the acting user actually has permission to set a setting that it's needed for.</p>\n<p>But in either case, the idea would be that we'd auto-create these system groups when they are explicitly needed for a permission; the end result should be that an organization like <a href=\"http://chat.zulip.org\">chat.zulip.org</a> with 25K users probably has &lt;50 of these <code>user:{user_id}</code> groups rather than 25K of them, and that seems worth doing some work to arrange.</p>\n<p>We should probably post this technical proposal in \"api design\" for feedback before committing to implementing this as written.</p>\n</blockquote>",
+        "id": 1588807,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686249703
+    },
+    {
+        "content": "<p>We also opened <a href=\"https://github.com/zulip/zulip/pull/25927\">#25927</a>, which is adding support for a setting on a Group object for who can mention the group, which we need before we can do this to support so that we can have it always off for the <code>user:{user_id}</code> groups. I consider it a blocker for <a href=\"https://github.com/zulip/zulip/pull/25928\">#25928</a> (the single-user groups) so that they don't pollute typeahead in the compose box.</p>",
+        "id": 1588812,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686249908
+    },
+    {
+        "content": "<p>For that reason at least the backend part of <a href=\"https://github.com/zulip/zulip/pull/25927\">#25927</a> is a priority, as it'll also be our first setting on a group objects whose type is a group, and so we'll need to do the framework level work, like adding <code>property_types</code>. <span class=\"user-mention\" data-user-id=\"10242\">@Sahil Batra</span> you should consider whether you want to do this first setting yourself.</p>",
+        "id": 1588815,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686250054
+    },
+    {
+        "content": "<p>And then to finish spelling out context, <a href=\"https://github.com/zulip/zulip/pull/25929\">#25929</a> is the first really important group setting that we want to add, and depends on both of the above projects being completed.</p>",
+        "id": 1588828,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686250980
+    },
+    {
+        "content": "<p>My ongoing work of adding a new setting is under review now. So, I can take a new issue to work upon. Do you have any suggestions for the issue regarding this project which I can take?</p>",
+        "id": 1590096,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1686354131
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1588815\">said</a>:</p>\n<blockquote>\n<p>For that reason at least the backend part of <a href=\"https://github.com/zulip/zulip/pull/25927\">#25927</a> is a priority, as it'll also be our first setting on a group objects whose type is a group, and so we'll need to do the framework level work, like adding <code>property_types</code>. <span class=\"user-mention silent\" data-user-id=\"10242\">Sahil Batra</span> you should consider whether you want to do this first setting yourself.</p>\n</blockquote>\n<p>Yes, I can work on <a href=\"https://github.com/zulip/zulip/pull/25927\">#25927</a>.</p>",
+        "id": 1590266,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1686393790
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24860\">@Ujjawal Modi</span> check out the new board (<a class=\"stream-topic\" data-stream-id=\"2\" href=\"/#narrow/stream/2-general/topic/groups.20migration.20project\">#general &gt; groups migration project</a>); there's a good number of projects one can work on there, and I think at least a few of them are not blocked by other dependencies.</p>",
+        "id": 1591412,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686597749
+    },
+    {
+        "content": "<p>I guess one good early thing to do would be collaborating with <span class=\"user-mention\" data-user-id=\"17546\">@Purushottam Tiwari</span> to get <a href=\"https://github.com/zulip/zulip/pull/25578\">#25578</a> and <a href=\"https://github.com/zulip/zulip/pull/24766\">#24766</a> ready and integrated; I think I fell behind in reviewing those with the 7.0 release, but they're very high priorities for unblocking other parts of the groups project.</p>",
+        "id": 1591415,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686597813
+    },
+    {
+        "content": "<p>(Though maybe those just need a rebase, a round of testing/review on those after it would be much appreciated)</p>",
+        "id": 1591416,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686597846
+    },
+    {
+        "content": "<p>My hope is I can get at least <a href=\"https://github.com/zulip/zulip/pull/24766\">#24766</a> integrated before the baby arrives.</p>",
+        "id": 1591418,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686597916
+    },
+    {
+        "content": "<p>These both PRs are in completed state. I would rebase them so that they get merged and the project is not blocked.</p>",
+        "id": 1591421,
+        "sender_full_name": "Purushottam Tiwari",
+        "timestamp": 1686598093
+    },
+    {
+        "content": "<p>I opened <a href=\"https://github.com/zulip/zulip/pull/26070\">#26070</a> to add \"Who can mention this group\" setting which is currently under review.</p>",
+        "id": 1596361,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1687358249
+    },
+    {
+        "content": "<p>I also posted a reply on <a href=\"https://github.com/zulip/zulip/pull/25928\">#25928</a>. Just re-posting here again for visibility -</p>\n<blockquote>\n<p>Having is_system_group=True for these groups sounds good as we would not want them to be editable by membership. I am not sure about them being not editable by settings though, as some of the organizations would want to have different value set for settings like \"Who can mention this user group\" for role based system groups. But we might not want to allow settings for single-user groups though.</p>\n<p>Regarding the API and data storage details, I like the idea of creating the groups only when required sounds good and I agree that second option to make settings accept group name along with group ID is better. One point that we might need to think of is what we would do if a user is allowed to chagne a setting but not allowed to create user groups.</p>\n</blockquote>\n<p>I will start a discussion on <a class=\"stream\" data-stream-id=\"378\" href=\"/#narrow/stream/378-api-design\">#api design</a> for technical details. Also, had a couple of concerns which I will share soon (probably here only or in <a class=\"stream\" data-stream-id=\"378\" href=\"/#narrow/stream/378-api-design\">#api design</a> ).</p>",
+        "id": 1596367,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1687358481
+    },
+    {
+        "content": "<p>Great, I think we can proceed with the plan in <a href=\"https://github.com/zulip/zulip/pull/25928\">#25928</a>.</p>",
+        "id": 1599190,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1687835321
+    },
+    {
+        "content": "<p>I also started some discussion here in <a class=\"stream-topic\" data-stream-id=\"378\" href=\"/#narrow/stream/378-api-design/topic/single.20user.20groups\">#api design &gt; single user groups</a>. I specifically have a doubt about whether we need a separate field similar to <code>is_system_group</code> to be set as <code>True</code> for single user groups.</p>",
+        "id": 1599195,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1687835616
+    },
+    {
+        "content": "<p>As <a href=\"https://github.com/zulip/zulip/pull/26070\">#26070</a> is merged now can I start working on <a href=\"https://github.com/zulip/zulip/pull/25928\">#25928</a> ?</p>",
+        "id": 1604221,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1688574592
+    },
+    {
+        "content": "<p>I guess yes. There has been some discussion going in <a class=\"stream-topic\" data-stream-id=\"378\" href=\"/#narrow/stream/378-api-design/topic/single.20user.20groups\">#api design &gt; single user groups</a> for <a href=\"https://github.com/zulip/zulip/pull/25928\">#25928</a>.</p>",
+        "id": 1604758,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1688627817
+    },
+    {
+        "content": "<p>Yeah, that sounds right to me.</p>",
+        "id": 1605377,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1688680074
+    },
+    {
+        "content": "<p>For which setting do we want to allow giving permissions based on single user groups. We currently have only one stream level setting <code>Who can unsubscribe others from this stream</code> based on groups model. So, should I make changes in this setting or a new group based setting needs to be added .</p>",
+        "id": 1605911,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1688742329
+    },
+    {
+        "content": "<p>I think we can start with this setting itself.</p>",
+        "id": 1605979,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1688746679
+    },
+    {
+        "content": "<p>I had had <a href=\"https://github.com/zulip/zulip/pull/25929\">#25929</a> in mind as the first place we'd use that setting; I'm not sure we want to open up an existing setting for this new group type just yet.</p>",
+        "id": 1609261,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1689269398
+    },
+    {
+        "content": "<p>I am starting to work on <a href=\"https://github.com/zulip/zulip/pull/25929\">#25929</a>. At first , I will work on adding a group level setting <code>Who can manage this group</code>. As mentioned in issue the default value for this field will be the single user group corresponding to the group creator. So I am not sure about the value that should be given to <code>default_group_name</code> field  of  <code>GroupPermissionSetting</code>.</p>",
+        "id": 1610573,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1689536524
+    },
+    {
+        "content": "<p>I think giving <code>None</code> will be a good idea. This will also require us to add a logic in <code>check_add_user_group</code> that if value of <code>can_manage_group</code> received in function parameter is <code>None</code> than a single user_group corresponding to <code>acting_user</code> will be set for <code>can_manage_group</code> field. But we are calling <code>check_add_user_group</code> in various tests too and currently we are passing <code>None</code> for <code>acting_user</code>. So following the above approach will entail an additional task to always pass a valid user while calling the function in test .</p>",
+        "id": 1610574,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1689536532
+    },
+    {
+        "content": "<p>So should I follow the above approach or there is anything better ?</p>",
+        "id": 1610575,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1689536562
+    },
+    {
+        "content": "<p>4 messages were moved from this topic to <a class=\"stream-topic\" data-stream-id=\"378\" href=\"/#narrow/stream/378-api-design/topic/single.20user.20groups\">#api design &gt; single user groups</a> by <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span>.</p>",
+        "id": 1611044,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1689616948
+    },
+    {
+        "content": "<p>Currently when a new user_group is created we also make a audit log entry for changing <code>can_mention_group</code> of the following form.</p>\n<div class=\"codehilite\"><pre><span></span><code>RealmAuditLog(\n            realm=realm,\n            acting_user=acting_user,\n            event_type=RealmAuditLog.USER_GROUP_GROUP_BASED_SETTING_CHANGED,\n            event_time=creation_time,\n            modified_user_group=user_group,\n            extra_data=orjson.dumps(\n                {\n                    RealmAuditLog.OLD_VALUE: None,\n                    RealmAuditLog.NEW_VALUE: user_group.can_mention_group.id,\n                    &quot;property&quot;: &quot;can_mention_group&quot;,\n                }\n            ).decode(),\n        ),\n</code></pre></div>\n<p>Do we want a similar entry for <code>can_manage_group</code>?</p>",
+        "id": 1612949,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1689844590
+    },
+    {
+        "content": "<p>I don't know the reason for creating this entry. But is it fine to make a entry for a field with old value as <code>None</code> when the field is actually non-nullable ?</p>",
+        "id": 1612950,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1689845723
+    },
+    {
+        "content": "<p>I am not sure, but I think we should not have audit log entry for <code>can_mention_group</code> since technically the setting has not changed as the group did not exist before.</p>",
+        "id": 1613085,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1689871125
+    },
+    {
+        "content": "<p>It exists there so that the current value of <code>can_mention_group</code> always has an audit log with a matching <code>NEW_VALUE</code>.</p>",
+        "id": 1613344,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1689887251
+    },
+    {
+        "content": "<p>This way, before <code>can_mention_group</code> is ever changed, we still have an audit log of how the initial value came about.</p>",
+        "id": 1613345,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1689887325
+    },
+    {
+        "content": "<p>Alternatively, we can track that setting in the creation event and populate extra data without reusing the <code>USER_GROUP_GROUP_BASED_SETTING_CHANGED</code> event. I guess this might make more sense to avoid violating the null constraint?</p>",
+        "id": 1613346,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1689887535
+    },
+    {
+        "content": "<p>As mentioned in <a href=\"https://github.com/zulip/zulip/pull/25929\">#25929</a> we also want to show option of group creator while assigning permission for who can manage this group. For this we need a new field <code>group_creator</code> in <code>UserGroup</code> table. I have following questions regarding this field:-</p>\n<ul>\n<li>Should we allow it to be <code>null</code>?  If not than what value should be given to this field for role based system groups.</li>\n<li>How to handle the situation when a creator of user group is deactivated.</li>\n</ul>",
+        "id": 1615668,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1690299983
+    },
+    {
+        "content": "<p>We can also manage without having <code>group_creator</code> field in the <code>UserGroup</code> table if we do not want to allow a simple option like <code>User group creator</code> in UI which directly sets the setting to the user who created the group and only use this as a default, since we have <code>acting_user</code> field while creating the group.</p>",
+        "id": 1615697,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1690302095
+    },
+    {
+        "content": "<p>It should be correct to assume that the system groups' creator is <code>null</code>.</p>",
+        "id": 1615706,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690302506
+    },
+    {
+        "content": "<p>To make this information accessible in the UI, we can also return the group creator by adding it to the response dict after querying <code>RealmAuditLog</code>.</p>",
+        "id": 1615707,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690302706
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"10242\">Sahil Batra</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1615697\">said</a>:</p>\n<blockquote>\n<p>We can also manage without having <code>group_creator</code> field in the <code>UserGroup</code> table if we do not want to allow a simple option like <code>User group creator</code> in UI which directly sets the setting to the user who created the group and only use this as a default, since we have <code>acting_user</code> field while creating the group.</p>\n</blockquote>\n<p>Yes, while creating a new group there will be no use of <code>group_creator</code> field. But as mentioned here</p>\n<blockquote>\n<p>Dropdown values:</p>\n<ul>\n<li>All members of this group</li>\n<li>You [group creation context] / Group creator (user pill) [group editing context]</li>\n</ul>\n</blockquote>\n<p>while editing a user group we need to send group creator from server to client.</p>",
+        "id": 1615713,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1690303307
+    },
+    {
+        "content": "<p>Ok, I had missed that part of having the <code>Group creator</code> option. Sounds good to add this field then.</p>\n<p>One option can be set the creator field for role-based system groups to the user who created the realm. But this might be problematic when that user is deactiveted.</p>\n<p>I think we would also consider single-user group as system group, for those we can set them to the user itself. But am not sure.</p>",
+        "id": 1615723,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1690304363
+    },
+    {
+        "content": "<p>Does the user technically manage the single-user group? If that's not the case, I think setting it to <code>null</code> is more appropriate.</p>",
+        "id": 1615831,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690311761
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/25929\">#25929</a> mentions about adding a group level setting for configuring who can manage a group. Users with permissions to manage the group will be able to change user group name, description, group settings and members. One question I have do we want to allow all users who can manage the group to be able to delete the group also or we need a separate setting for configuring deletion permissions.</p>",
+        "id": 1618471,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1690898132
+    },
+    {
+        "content": "<p>One more question regarding implementing API changes. As the parameter <code>can_manage_group</code> will be accepting both string and integer I added the following in arguments list of view function:</p>\n<div class=\"codehilite\"><pre><span></span><code>    can_manage_group_id: Optional[Union[int, str]] = REQ(\n        &quot;can_manage_group&quot;, json_validator=check_string_or_int, default=None\n    ),\n</code></pre></div>\n<p>It works fine. But now whenever we want to give string value to this field we have to call <code>JSON.stringify()</code> in client before sending data to server. Currently in frontend we don't do this. So we have to write some additional logic for passing data to server in this case.</p>",
+        "id": 1618477,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1690899816
+    },
+    {
+        "content": "<p>However, if I remove the <code>json_validator</code> part then there is no need to call <code>JSON.stringify()</code> but then even a integer value to this field is considered as string.<br>\n Is there anything we can do better in above code to avoid making changes in frontend ?</p>",
+        "id": 1618478,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1690899946
+    },
+    {
+        "content": "<p>In this case, you can probably use <code>str_validator</code> with <code>check_string_or_int</code></p>",
+        "id": 1618518,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690906184
+    },
+    {
+        "content": "<p>Is there any issue with using <code>JSON.stringify</code> to pass IDs from the client?</p>",
+        "id": 1618520,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1690906468
+    },
+    {
+        "content": "<p>No, there is no issue with <code>JSON.stringify</code> I just asked if we could do anything better as we would be separately writing code for doing <code>JSON.stringify</code>.</p>",
+        "id": 1618523,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1690908037
+    },
+    {
+        "content": "<p>I think we have been using JSON with other <code>check_string_or_int</code> fields in the API. So it is reasonable to use <code>JSON.stringify</code> to be consistent.</p>",
+        "id": 1618577,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1690911833
+    },
+    {
+        "content": "<p>I have one more question regarding <a href=\"https://github.com/zulip/zulip/pull/25929\">#25929</a> about the value that should be stored in <code>data-unique-id</code> field of dropdown widget options for the case when the user group corresponding to option does not exist and we will be passing the string to server. Should we store the string that will be passed to server in this case ?</p>",
+        "id": 1619440,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1691083554
+    },
+    {
+        "content": "<p>I think this situation will arise for following options:-</p>\n<ul>\n<li>For <code>group creator option</code> when there is no single user group corresponding to it.</li>\n<li>For <code>all members of this group</code> option while creating a user group.</li>\n</ul>",
+        "id": 1619441,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1691083561
+    },
+    {
+        "content": "<p>Just to be clear I believe the intent was to have an option in the UI called <code>group_creator</code>, not a database field -- if you select that option, we'd send a request to the server for this field to have the <code>user:{your_user_id}</code> system group as its administrator group. (And the server would presumably create that group for you if it doesn't already exist).</p>",
+        "id": 1623980,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1691797130
+    },
+    {
+        "content": "<p>Yeah, but while changing this setting for an existing group it may be possible that the user changing the setting is different from one who created the group. So, in this case we need to send <code>user_id</code> of group creator and not <code>user_id</code> of the user changing the setting. So, a field <code>group_creator</code> will be required in database. Refer to the discussion <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1615668\">here</a> for more context.</p>",
+        "id": 1624312,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1691906231
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24860\">@Ujjawal Modi</span> the intent is that the data model will support setting any user's system group as the owner of a group, and we're likely to offer that option in the menu in the medium term. I am not sure what the source of confusion is here, but maybe you're under the impression that we want to <strong>only</strong> allow the group's creator system group to used in this setting? That isn't the intent, it's just a temporary UI simplification.</p>\n<p>As a result, I don't see an purpose in storing the user who created the group.</p>",
+        "id": 1625084,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692062177
+    },
+    {
+        "content": "<p>Yeah, I think I was under the confusion that we only want to allow group's creator system group to be owner. But let me try to clarify my present understanding now. The issue description mentions the following dropdown values:-</p>\n<blockquote>\n<p>Dropdown values:</p>\n<ul>\n<li>All members of this group</li>\n<li>You [group creation context] / Group creator (user pill) [group editing context]</li>\n<li>System groups corresponding to roles (including \"owners\" and excluding \"nobody\"), from most permissive to least permissive.</li>\n</ul>\n</blockquote>\n<p>Are you trying to say that after selecting the <code>Group Creator (user pill)</code> option while editing a group the owner of the group will be the user who changed the setting rather than the one who created the group ?</p>",
+        "id": 1625119,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1692072327
+    },
+    {
+        "content": "<p>My initial understanding was that selecting this option will make the group creator as the owner of the group. But if we want the above model than yeah there will be no need to store group creator.</p>",
+        "id": 1625121,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1692072514
+    },
+    {
+        "content": "<p>But if we want the latter one than I think there is need to store group creator. Because in that case client will send a string of form <code>user: {group_creator_id}</code> to server. So, client need to determine the <code>group_creator_id</code> and I think there is no way for client to determine it other than storing  it in database and sending it to client with UserGroup object.</p>",
+        "id": 1625125,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1692073108
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24860\">@Ujjawal Modi</span> what I'm saying is that the \"Group Creator\" option only exists in the \"Create a group\" form.</p>",
+        "id": 1625136,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692074636
+    },
+    {
+        "content": "<p>In the \"edit group\" form, you'd just have the existing value of the <code>user:7</code> group or whatever displayed as \"{user_icon} Tim Abbott\".</p>",
+        "id": 1625137,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692074698
+    },
+    {
+        "content": "<p>In the initial version, we might not do the UI work to make it possible to change it to another individual user -- you'd have to just make a group to do that. But long-term you'd just be able to pick any user in that widget -- it's just a bit of a tricky UX problem to have all the users in there that we want to defer.</p>",
+        "id": 1625138,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692074748
+    },
+    {
+        "content": "<p>Ok, so in the edit group form we will be having only the following options ?</p>\n<ul>\n<li>Role based system groups</li>\n<li>All members of this group</li>\n</ul>",
+        "id": 1625141,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1692074930
+    },
+    {
+        "content": "<p>Well, and the current value.</p>",
+        "id": 1625144,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692075076
+    },
+    {
+        "content": "<p>And to be clear I expect we'll be adding \"non-system group X\" fairly soon after this transition, once we feel good about the overall security model.</p>",
+        "id": 1625145,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692075110
+    },
+    {
+        "content": "<p>Thanks, now I completely understood the model. Can you also have a look to some other questions <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1618471\">here</a> and <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1619440\">here</a>.</p>",
+        "id": 1625152,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1692075319
+    },
+    {
+        "content": "<blockquote>\n<p>One question I have do we want to allow all users who can manage the group to be able to delete the group also or we need a separate setting for configuring deletion permissions.</p>\n</blockquote>\n<p>That can be controlled by the same setting -- this is a \"full edit\" capability.</p>",
+        "id": 1625159,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692075588
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"24860\">Ujjawal Modi</span> <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1619440\">said</a>:</p>\n<blockquote>\n<p>I have one more question regarding <a href=\"https://github.com/zulip/zulip/pull/25929\">#25929</a> about the value that should be stored in <code>data-unique-id</code> field of dropdown widget options for the case when the user group corresponding to option does not exist and we will be passing the string to server. Should we store the string that will be passed to server in this case ?</p>\n</blockquote>\n<p>I think storing a group ID integer (if it's a group like a system group that we already have data on) or a string like <code>user:16</code> that we would pass to the server would be a fine option here, yeah.</p>",
+        "id": 1625161,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692075641
+    },
+    {
+        "content": "<p>Just bumping the discussion <a href=\"#narrow/stream/101-design/topic/New.20permissions.20model/near/1612949\">here</a> as we don't have any conclusion for creating a separate audit log entry of type <code>USER_GROUP_GROUP_BASED_SETTING_CHANGED</code> when a user group is created.</p>",
+        "id": 1633816,
+        "sender_full_name": "Ujjawal Modi",
+        "timestamp": 1693485923
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24860\">@Ujjawal Modi</span> I think that behavior might be a bug? <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> should correct me if he disagrees, but I think there's no reason to create audit log entries with the initial values of a setting; we don't do that for the initial value of stream settings, for example, and I think the <code>OLD_VALUE/NEW_VALUE</code> scheme allows one to get the initial values if they've since changed.</p>",
+        "id": 1634084,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1693521401
+    },
+    {
+        "content": "<p>I think currently we don't have the standard of making an audit log entry for the state of an object at creation time.  There are ways in which having that consistent property is useful, in that you can always determine the current state just by looking at the audit log entries, and it's easier to detect drift in cases where things change properties without properly making audit log entries.</p>\n<p>But it's not <em>currently</em> our pattern, so we should probably be internally consistent and not generate the audit log entry on creation.</p>",
+        "id": 1634206,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1693528638
+    },
+    {
+        "content": "<p>For <a href=\"https://github.com/zulip/zulip/pull/10970\">#10970</a>, we are planning to have a \"Who can access all users in the realm\" group setting with \"Everyone\" and \"Members and above\" as option. Discussion - <a class=\"stream-topic\" data-stream-id=\"101\" href=\"/#narrow/stream/101-design/topic/access.20to.20all.20users.20in.20realm.20.2310970\">#design &gt; access to all users in realm #10970</a>.</p>\n<p>So, I wanted to discuss do we want to consider updating <a href=\"https://github.com/zulip/zulip/blob/1765ce23b0591e41c8a65fd92233da38b8972622/zerver/lib/types.py#L285\"><code>GroupPermissionType</code></a> to have a parameter like <code>allowed_system_groups</code> as parameter instead of adding more boolean fields like <code>allow_moderators_group</code>, <code>allow_full_members_group</code>. I remember about mentioning about this before as well but we decided to keep using the boolean fields and think about passing a list of allowed groups when required in future.</p>",
+        "id": 1637968,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1694428631
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10242\">@Sahil Batra</span> yeah this might be a situation that makes a good case for passing in a list of allowed groups.</p>",
+        "id": 1638312,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694458650
+    },
+    {
+        "content": "<p>One other option to instead pass a list of disallowed groups. I am not sure what would be better. I guess in most cases the list of disallowed groups would be shorter though.</p>",
+        "id": 1638656,
+        "sender_full_name": "Sahil Batra",
+        "timestamp": 1694494177
+    },
+    {
+        "content": "<p>I think the allowed groups version is going to be a lot easier to read and check seems to be correct.</p>",
+        "id": 1638835,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694531738
+    },
+    {
+        "content": "<p>We can potentially just for now add allowed groups as an optional parameter, and if not specified have no restrictions from that parameter, and keep the existing options.</p>",
+        "id": 1638836,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694531791
+    },
+    {
+        "content": "<p>Just to minimize the churn while we're figuring out what we want.</p>",
+        "id": 1638837,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694531810
+    }
+]

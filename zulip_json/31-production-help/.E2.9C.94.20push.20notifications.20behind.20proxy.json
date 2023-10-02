@@ -1,0 +1,134 @@
+[
+    {
+        "content": "<p>hi again! trying to get push notifications working. I am running zulip in a vm behind a reverse proxy (swag/nginx, which live in docker). i can access zulip fine, but nginx breaks when I try to put in the <code>proxy_set_header</code> lines from the <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#customizing-the-outgoing-http-proxy\">instructions</a> in my reverse proxy. Should I be modifying the nginx proxy internal to the vm?</p>",
+        "id": 1572332,
+        "sender_full_name": "Ben",
+        "timestamp": 1684457049
+    },
+    {
+        "content": "<p>my /var/log/zulip/server.log isn't show the actual ip of my clients, but I read somewhere that it should.<br>\nIt looks like I've successfully registered the notification service, (events_missedmessage_mobile_notifications.log says they're being sent)</p>\n<p>something must be wrong with my proxy configs. <br>\nmy main reverse proxy, Swag, has a zulip.subdomain.conf file. I added proxy_set_header for x-forwarded for, and x-forwarded-proto, but adding <code>proxy_set_header Host $http_host;</code> breaks the routing and I get a 400 error. (the http_version and timeout are duplicates of the main nginx conf file)</p>",
+        "id": 1572414,
+        "sender_full_name": "Ben",
+        "timestamp": 1684466402
+    },
+    {
+        "content": "<p>pretty sure this line in swag is the zulip push notification trying to get out:<br>\n<code>[zulip vm ip]- - [18/May/2023:23:45:59 -0400] \"CONNECT push.zulipchat.com:443 HTTP/1.0\" 400 150 \"-\" \"-\"</code></p>",
+        "id": 1572418,
+        "sender_full_name": "Ben",
+        "timestamp": 1684468018
+    },
+    {
+        "content": "<p>in zulip.conf, i have [loadbalancer] set to the LAN IP range (192.168.1.0/24), and [http_proxy] set to the internal ip of Swag (running in a docker, so it's a forwarded port from the server). Changing the <code>port</code> between forwarded port 80 and forwarder 443 doesn't seem to affect anything</p>",
+        "id": 1572419,
+        "sender_full_name": "Ben",
+        "timestamp": 1684468318
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26762\">@Ben</span>: Is this a <em>reverse</em> proxy, which sits between end-users and the Zulip server, or an <em>outgoing</em> proxy, which sits between the Zulip server and requests it makes to the outside world?</p>\n<p>The <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#customizing-the-outgoing-http-proxy\">doc you linked</a> is for outgoing proxies -- but referencing <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#nginx-configuration\"><code>proxy_set_header</code> lines</a> is about incoming (reverse) proxies.</p>",
+        "id": 1572712,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1684511948
+    },
+    {
+        "content": "<p><code>[loadbalancer]</code> sections are about where incoming (reverse) proxies are in your network -- servers that your browser will bounce through to get to Zulip.  <code>[http_proxy]</code> settings are about how the Zulip server talks to the outside world, like when it makes requests to the push bouncer.</p>",
+        "id": 1572714,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1684512022
+    },
+    {
+        "content": "<p>In neither case should you need to manually make changes to <code>/etc/nginx/</code> inside the Zulip server's VM itself.</p>",
+        "id": 1572716,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1684512071
+    },
+    {
+        "content": "<p>My guess is that you have a reverse proxy, but not an outgoing proxy.  So you should set:</p>\n<div class=\"codehilite\"><pre><span></span><code>[loadbalancer]\nips = 192.168.1.42 # or the specific IP address which Swag is on\n</code></pre></div>\n<p>...and remove the <code>[http_proxy]</code> stanza.</p>",
+        "id": 1572718,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1684512208
+    },
+    {
+        "content": "<p>It may be helpful to show us the full <code>zulip.subdomain.conf</code> file from your Swag host.</p>\n<p>The <code>proxy_set_header Host $http_host</code> is necessary so that requests to Zulip get the right hostname -- the one that your browser typed in.  If you're getting 400's, then your settings in <code>/etc/zulip/settings.py</code> may not be right -- specifically, <code>EXTERNAL_HOST</code> should be the hostname that browsers type in, even if that resolves (to them) to the Swag reverse proxy.  It may be helpful to show us that setting, and your <code>ALLOWED_HOSTS</code> (which should be empty).</p>",
+        "id": 1572721,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1684512491
+    },
+    {
+        "content": "<p>thanks very much, this is very informative, I wasnt sure if either nginx instance (zulip vm or swag) would handle outbound requests; you're correct: I only have Swag configured to run as a reverse proxy. It connects the public url for my service to the LAN IP of the VM, where Zulip is.</p>\n<ol>\n<li>I updated zulip.conf to remove the <code>[http_proxy]</code> stanza, and pointed <code>[loadbalancer]</code> to the Swag ip (it's the server IP, running in a Docker)</li>\n<li>I settings.py for <code>EXTERNAL_HOST</code> to be <code>zulip.mydomain.com</code></li>\n<li>you're right, I only have a reverse proxy configured - i wasnt sure if this would handle outbound requests and got confused. Here's the <code>zulip.subdomain.conf</code> file:</li>\n</ol>\n<div class=\"codehilite\"><pre><span></span><code>server {\n    listen 443 ssl;\n    listen [::]:443 ssl;\n\n    server_name zulip.*;\n\n    include /config/nginx/ssl.conf;\n\n    client_max_body_size 0;\n\n    location / {\n\n        include /config/nginx/proxy.conf;\n        include /config/nginx/resolver.conf;\n        set $upstream_app 192.168.1.193;\n        set $upstream_port 443;\n        set $upstream_proto https;\n        proxy_pass $upstream_proto://$upstream_app:$upstream_port;\n\n    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    proxy_set_header X-Forwarded-Proto $scheme;\n    #proxy_set_header Host $http_host; #this gives a 400 error\n\n    proxy_buffering off;\n    }\n}\n</code></pre></div>",
+        "id": 1573021,
+        "sender_full_name": "Ben",
+        "timestamp": 1684526617
+    },
+    {
+        "content": "<p>Have you run <code>~zulip/deployments/current/zulip-puppet-apply</code> to pick up the loadbalancer changes, and <code>~zulip/deployments/current/scripts/restart-server</code> to pick up the <code>EXTERNAL_HOST</code> change?</p>",
+        "id": 1573047,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1684527123
+    },
+    {
+        "content": "<p>(the former should be run as <code>root</code>, the latter as <code>zulip</code>)</p>",
+        "id": 1573048,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1684527143
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"26762\">Ben</span> <a href=\"#narrow/stream/31-production-help/topic/push.20notifications.20behind.20proxy/near/1573021\">said</a>:</p>\n<blockquote>\n<p>I wasnt sure if either nginx instance (zulip vm or swag) would handle outbound requests</p>\n</blockquote>\n<p>The Zulip server <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#customizing-the-outgoing-http-proxy\">runs an instance of the Smokescreen outgoing proxy</a> to protect against SSRF and the like.  Some (mostly corporate) deployments have requirements for a further layer of outgoing proxy to talk to the outside world, which is what <code>http_proxy</code> is for.</p>",
+        "id": 1573073,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1684528015
+    },
+    {
+        "content": "<p>after the lb change, I ran: <code>$ sudo /home/zulip/deployments/current/scripts/zulip-puppet-apply</code><br>\nafter the puppet script, I ran <code>su zulip -c '/home/zulip/deployments/current/scripts/restart-server'</code></p>",
+        "id": 1573188,
+        "sender_full_name": "Ben",
+        "timestamp": 1684533197
+    },
+    {
+        "content": "<p>OK, looks right.  And you confirm that <code>EXTERNAL_HOST</code> is set to what your browser URL is?</p>\n<p>What does <code>/var/log/zulip/django.log</code> say when you access it?</p>",
+        "id": 1573191,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1684533369
+    },
+    {
+        "content": "<p>yes, <code>external_host</code> is set to the browser url, <code>zulip.mydomain.com</code><br>\n<code>/var/log/zulip/django.log</code> only has entries when I don't have $http_host set:</p>\n<div class=\"codehilite\"><pre><span></span><code>2023-05-19 22:01:56.889 INFO [zr] 192.168.1.1     POST    200  75ms (db: 7ms/2q) (+start: 14ms) /json/users/me/presence (9@root via Mozilla)\n[pid: 120242|app: 0|req: 3/150] 192.168.1.1 () {86 vars in 1637 bytes} [Fri May 19 22:01:56 2023] POST /json/users/me/presence =&gt; generated 154 bytes in 117 msecs (HTTP/1.1 200) 9 headers in 320 bytes (1 switches on core 0)\n2023-05-19 22:01:56.956 INFO [zr] 192.168.1.1     GET     404  15ms (db: 2ms/1q) /prod-static/images/default-avatar.png (9@root via Mozilla)\n[pid: 120240|app: 0|req: 84/151] 192.168.1.1 () {76 vars in 1412 bytes} [Fri May 19 22:01:56 2023] GET /prod-static/images/default-avatar.png?version=1&amp;s=50 =&gt; generated 6800 bytes in 18 msecs (HTTP/1.1 404) 5 headers in 302 bytes (1 switches on core 0)\n2023-05-19 22:02:13.675 INFO [zr] 192.168.1.1     GET     200  18ms (db: 2ms/2q) /json/messages (9@root via Mozilla)\n[pid: 120240|app: 0|req: 85/152] 192.168.1.1 () {80 vars in 1552 bytes} [Fri May 19 22:02:13 2023] GET /json/messages?anchor=3&amp;num_before=1000&amp;num_after=0&amp;client_gravatar=true =&gt; generated 785 bytes in 22 msecs (HTTP/1.1 200) 9 headers in 320 bytes (1 switches on core 0)\n</code></pre></div>",
+        "id": 1573236,
+        "sender_full_name": "Ben",
+        "timestamp": 1684536139
+    },
+    {
+        "content": "<p>here's a sample of the <strong>swag</strong> nginx log at <code>/config/log/nginx/access.log</code> while $http_proxy is set:</p>\n<div class=\"codehilite\"><pre><span></span><code>192.168.1.1 - - [19/May/2023:18:42:57 -0400] &quot;GET / HTTP/2.0&quot; 400 166 &quot;-&quot; &quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36&quot;\n136.[x].[x].[x] - - [19/May/2023:18:43:03 -0400] &quot;GET /notifications/hub?access_token=[token] HTTP/1.1&quot; 502 383 &quot;-&quot; &quot;Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36&quot;\n</code></pre></div>",
+        "id": 1573246,
+        "sender_full_name": "Ben",
+        "timestamp": 1684536286
+    },
+    {
+        "content": "<p>hey! so push notifs are working now, I'm not sure why the $http_host line breaks the proxy. must be something upstream with the default swag config.</p>\n<p>I'm going ot post current settings for posterity:</p>",
+        "id": 1573288,
+        "sender_full_name": "Ben",
+        "timestamp": 1684540445
+    },
+    {
+        "content": "<p>swag reverse proxy (nginx) zulip.subdomain.conf:</p>\n<div class=\"codehilite\"><pre><span></span><code>server {\n    listen 443 ssl;\n    listen [::]:443 ssl;\n\n    server_name zulip.*;\n    include /config/nginx/ssl.conf;\n    client_max_body_size 0;\n\n    location / {\n        proxy_buffering off;\n\n        include /config/nginx/proxy.conf;\n        include /config/nginx/resolver.conf;\n        set $upstream_app 192.168.1.193; # ip of zulip vm\n        set $upstream_port 443;\n        set $upstream_proto https;\n\n#        proxy_set_header Host $http_host; #400 error\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n        proxy_set_header X-Real-IP $remote_addr;\n\n        proxy_pass $upstream_proto://$upstream_app:$upstream_port;\n    }\n}\n</code></pre></div>",
+        "id": 1573294,
+        "sender_full_name": "Ben",
+        "timestamp": 1684540657
+    },
+    {
+        "content": "<p><code>/etc/zulip/settings.py</code> has <code>EXTERNAL_HOST = 'zulip.mydomain.com' </code> , matches with the subdomain+fqdn i have configured via SWAG.</p>\n<p><code>/etc/zulip/zulip.conf</code> :</p>\n<div class=\"codehilite\"><pre><span></span><code>[machine]\npuppet_classes = zulip::profile::standalone\ndeploy_type = production\n\n[loadbalancer]\nips = [ip of server where swag docker is running]\n\n[postgresql]\nversion = 14\n</code></pre></div>",
+        "id": 1573297,
+        "sender_full_name": "Ben",
+        "timestamp": 1684540792
+    },
+    {
+        "content": "<p>I think that's it - very big thanks for helping me understand zulip and nginx better, I really appreciate it!</p>",
+        "id": 1573299,
+        "sender_full_name": "Ben",
+        "timestamp": 1684540843
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"26762\">Ben</span> has marked this topic as resolved.</p>",
+        "id": 1573300,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1684540849
+    }
+]

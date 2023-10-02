@@ -1,0 +1,92 @@
+[
+    {
+        "content": "<p>zerver.middleware.ProxyMisconfigurationError: Reverse proxy misconfiguration: No X-Forwarded-Proto header sent from trusted proxy 10.206.70.1</p>\n<p>Hello.<br>\nI was updating from 5.5. to 7.2 right now and I've encoutered following issue:</p>\n<div class=\"codehilite\"><pre><span></span><code>zerver.middleware.ProxyMisconfigurationError: Reverse proxy misconfiguration: No X-Forwarded-Proto header sent from trusted proxy 10.206.70.1\n</code></pre></div>\n<p>Does anyone have any idea how to proceed in this case?<br>\nCheers,</p>",
+        "id": 1604531,
+        "sender_full_name": "Szymon Niemiec",
+        "timestamp": 1688594004
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/zerver.2Emiddleware.2EProxyMisconfigurationError.3A.20Reverse.20proxy\">#issues &gt; zerver.middleware.ProxyMisconfigurationError: Reverse proxy</a> by <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span>.</p>",
+        "id": 1604557,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1688594463
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"27327\">@Szymon Niemiec</span> see <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#configuring-zulip-to-trust-proxies\">https://zulip.readthedocs.io/en/latest/production/deployment.html#configuring-zulip-to-trust-proxies</a>; I think you missed the second-to-last step in <a href=\"https://zulip.readthedocs.io/en/latest/overview/changelog.html#upgrade-notes-for-7-0\">https://zulip.readthedocs.io/en/latest/overview/changelog.html#upgrade-notes-for-7-0</a>.</p>",
+        "id": 1604559,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1688594522
+    },
+    {
+        "content": "<p>Hello, thanks for the guidance.<br>\nI've put in the reverse proxy IP into the config file, but i still see the 500 error.</p>",
+        "id": 1604585,
+        "sender_full_name": "Szymon Niemiec",
+        "timestamp": 1688597197
+    },
+    {
+        "content": "<p><code>/var/log/nginx/error.log</code> shows prints like this:</p>\n<div class=\"codehilite\"><pre><span></span><code>error] 2734#2734: *35 connect() failed (111: Connection refused) while connecting to upstream, client: 10.206.70.1, server: , request: &quot;GET /json/events?dont_block=true&amp;queue_id=1688277641%3A5&amp;last_event_id=8596&amp;client_gravatar=true&amp;slim_presence=true HTTP/1.1&quot;, upstream: &quot;http://127.0.0.1:9800/json/events?dont_block=true&amp;queue_id=1688277641%3A5&amp;last_event_id=8596&amp;client_gravatar=true&amp;slim_presence=true\n</code></pre></div>",
+        "id": 1604587,
+        "sender_full_name": "Szymon Niemiec",
+        "timestamp": 1688597311
+    },
+    {
+        "content": "<p>I'd double-check your work; is 10.206.70.1 the proxy's IP and is that in the <code>loadbalancer_ips</code> configuration? And did you run <code>zulip-puppet-apply</code> after editing <code>zulip.conf</code>?</p>",
+        "id": 1604590,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1688597543
+    },
+    {
+        "content": "<p>Hello,<br>\nIt works!!!<br>\nThe problem I had is that my reverse proxy (nginx) was not setting X-Forwarded-Proto header, and that seems to be required.<br>\nSorry for the imprecise messages.<br>\nThank you for your helpfulness.<br>\nBR,<br>\nSzymek.</p>",
+        "id": 1604603,
+        "sender_full_name": "Szymon Niemiec",
+        "timestamp": 1688598291
+    },
+    {
+        "content": "<p>The problem I had is that I was looking at <code>/var/log/nginx/error.log</code> whereas I should've been looking at  <code>/var/log/zulip/django.log</code></p>",
+        "id": 1604607,
+        "sender_full_name": "Szymon Niemiec",
+        "timestamp": 1688598486
+    },
+    {
+        "content": "<p>In <code>django.log</code> file there was important hint <code>No X-Forwarded-Proto header sent from trusted proxy ....</code></p>",
+        "id": 1604609,
+        "sender_full_name": "Szymon Niemiec",
+        "timestamp": 1688598653
+    },
+    {
+        "content": "<p>After reading this log I've added <code>proxy_set_header X-Forwarded-Proto https</code></p>",
+        "id": 1604612,
+        "sender_full_name": "Szymon Niemiec",
+        "timestamp": 1688598711
+    },
+    {
+        "content": "<p>To my nginx configuration in front of zulip container</p>",
+        "id": 1604613,
+        "sender_full_name": "Szymon Niemiec",
+        "timestamp": 1688598751
+    },
+    {
+        "content": "<p>And it finally worked</p>",
+        "id": 1604614,
+        "sender_full_name": "Szymon Niemiec",
+        "timestamp": 1688598760
+    },
+    {
+        "content": "<p>So yeah, thank you again for guiding me</p>",
+        "id": 1604616,
+        "sender_full_name": "Szymon Niemiec",
+        "timestamp": 1688598784
+    },
+    {
+        "content": "<p>Hm, we may need to increase the logging severity, then.  I thought I linked from those messages to the relevant docs page, too?</p>",
+        "id": 1604623,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1688599246
+    },
+    {
+        "content": "<p>Yeah, you did. I don't think there is anything to improve on your side. I think it's my carelessness in that i didn't realize that I should set not only <code>X-Forwarded-For</code> but also <code>X-Forwarded-Proto</code>. When you try to read quickly these two strings kinda blend into one. So yeah I should've be more careful in my reading.</p>",
+        "id": 1604629,
+        "sender_full_name": "Szymon Niemiec",
+        "timestamp": 1688599791
+    }
+]

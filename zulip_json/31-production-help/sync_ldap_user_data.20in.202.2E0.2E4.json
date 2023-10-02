@@ -1,0 +1,110 @@
+[
+    {
+        "content": "<p>Problem with /home/zulip/deployments/current/manage.py sync_ldap_user_data<br>\nIn 2.0.4 even disabled user are tried to sync. This leads to warning. In 1.9 they was ignored.<br>\nCan anyone try  to explain why this change was made?</p>",
+        "id": 782141,
+        "sender_full_name": "niels",
+        "timestamp": 1566589023
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11001\">@niels</span> can you explain the warning?  The reason for that change is to support automatic deactivation/reactivation here: <a href=\"https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#automatically-deactivating-users-with-active-directory\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#automatically-deactivating-users-with-active-directory\">https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#automatically-deactivating-users-with-active-directory</a></p>",
+        "id": 782162,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1566590391
+    },
+    {
+        "content": "<p>It's possible we're doing the checks in the wrong order here (and should abort other steps after we see a user is supposed to be deactivated).</p>",
+        "id": 782163,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1566590428
+    },
+    {
+        "content": "<p>But it'd be good to see an example of what you're seeing.</p>",
+        "id": 782164,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1566590437
+    },
+    {
+        "content": "<p>I think this should fix it: <a href=\"https://github.com/zulip/zulip/pull/13058\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/13058\">https://github.com/zulip/zulip/pull/13058</a>; it'd be awesome if you can test it (I'll also want unit tests to be written before we merge it)</p>",
+        "id": 782166,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1566590735
+    },
+    {
+        "content": "<p>Here the command I run <code>/home/zulip/deployments/current/manage.py sync_ldap_user_data &gt; /home/zulip/logs/sync.log 2&gt;&1; egrep '(WARN|ERR)' /home/zulip/logs/sync.log\"</code> and the output with 2.0.4 <br>\n<code>2019-08-24 01:00:05.726 WARN [zulip.sync_ldap_user_data] Did not find deactivated-user@exmaple.de in LDAP.</code> Ich changes the email-adress.</p>",
+        "id": 782573,
+        "sender_full_name": "niels",
+        "timestamp": 1566805205
+    },
+    {
+        "content": "<p>I will try the patch and give you feedback</p>",
+        "id": 782574,
+        "sender_full_name": "niels",
+        "timestamp": 1566805298
+    },
+    {
+        "content": "<p>Download the complete backends.py and get</p>\n<div class=\"codehilite\"><pre><span></span>zulip@kenny2:~/deployments/current$ scripts/restart-server\nTraceback (most recent call last):\n  File &quot;./manage.py&quot;, line 46, in &lt;module&gt;\n    execute_from_command_line(sys.argv)\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/__init__.py&quot;, line 364, in execute_from_command_line\n    utility.execute()\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/__init__.py&quot;, line 356, in execute\n    self.fetch_command(subcommand).run_from_argv(self.argv)\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py&quot;, line 283, in run_from_argv\n    self.execute(*args, **cmd_options)\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py&quot;, line 327, in execute\n    self.check()\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py&quot;, line 359, in check\n    include_deployment_checks=include_deployment_checks,\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py&quot;, line 346, in _run_checks\n    return checks.run_checks(**kwargs)\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zulip-py3-venv/lib/python3.6/site-packages/django/core/checks/registry.py&quot;, line 81, in run_checks\n    new_errors = check(app_configs=app_configs)\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zulip-py3-venv/lib/python3.6/site-packages/django/core/checks/urls.py&quot;, line 16, in check_url_config\n    return check_resolver(resolver)\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zulip-py3-venv/lib/python3.6/site-packages/django/core/checks/urls.py&quot;, line 26, in check_resolver\n    return check_method()\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zulip-py3-venv/lib/python3.6/site-packages/django/urls/resolvers.py&quot;, line 256, in check\n    for pattern in self.url_patterns:\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zulip-py3-venv/lib/python3.6/site-packages/django/utils/functional.py&quot;, line 35, in __get__\n    res = instance.__dict__[self.name] = self.func(instance)\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zulip-py3-venv/lib/python3.6/site-packages/django/urls/resolvers.py&quot;, line 407, in url_patterns\n    patterns = getattr(self.urlconf_module, &quot;urlpatterns&quot;, self.urlconf_module)\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zulip-py3-venv/lib/python3.6/site-packages/django/utils/functional.py&quot;, line 35, in __get__\n    res = instance.__dict__[self.name] = self.func(instance)\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zulip-py3-venv/lib/python3.6/site-packages/django/urls/resolvers.py&quot;, line 400, in urlconf_module\n    return import_module(self.urlconf_name)\n  File &quot;/usr/lib/python3.6/importlib/__init__.py&quot;, line 126, in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n  File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 994, in _gcd_import\n  File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 971, in _find_and_load\n  File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 955, in _find_and_load_unlocked\n  File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 665, in _load_unlocked\n  File &quot;&lt;frozen importlib._bootstrap_external&gt;&quot;, line 678, in exec_module\n  File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 219, in _call_with_frames_removed\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zproject/urls.py&quot;, line 8, in &lt;module&gt;\n    import zerver.forms\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zerver/forms.py&quot;, line 29, in &lt;module&gt;\n    from zproject.backends import email_auth_enabled, email_belongs_to_ldap\n  File &quot;/export/home/zulip/deployments/2019-08-19-14-36-52/zproject/backends.py&quot;, line 17, in &lt;module&gt;\n    import magic\nModuleNotFoundError: No module named &#39;magic&#39;\nTraceback (most recent call last):\n  File &quot;scripts/restart-server&quot;, line 31, in &lt;module&gt;\n    subprocess.check_call([&quot;./manage.py&quot;, &quot;send_stats&quot;, &quot;incr&quot;, &quot;events.server_restart&quot;, str(int(time.time()))])\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 311, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./manage.py&#39;, &#39;send_stats&#39;, &#39;incr&#39;, &#39;events.server_restart&#39;, &#39;1566808656&#39;]&#39; returned non-zero exit status 1.\n</pre></div>",
+        "id": 782586,
+        "sender_full_name": "niels",
+        "timestamp": 1566808798
+    },
+    {
+        "content": "<p>I patched it manually with no success. Still get an warning.</p>",
+        "id": 782589,
+        "sender_full_name": "niels",
+        "timestamp": 1566809624
+    },
+    {
+        "content": "<p>Here the diff</p>\n<div class=\"codehilite\"><pre><span></span><span class=\"gh\">diff backends.py backends.py.bak</span>\n391a392,394\n&gt;         self.sync_avatar_from_ldap(user, ldap_user)\n&gt;         self.sync_full_name_from_ldap(user, ldap_user)\n&gt;         self.sync_custom_profile_fields_from_ldap(user, ldap_user)\n394,396c397,398\n&lt;             if user_disabled_in_ldap:\n&lt;                 if user.is_active:\n&lt;                     logging.info(&quot;Deactivating user %s because they are disabled in LDAP.&quot; %\n<span class=\"gd\">---</span>\n&gt;             if user_disabled_in_ldap and user.is_active:\n&gt;                 logging.info(&quot;Deactivating user %s because they are disabled in LDAP.&quot; %\n398,399c400\n&lt;                     do_deactivate_user(user)\n&lt;                 # Do an early return to avoid trying to sync additional data.\n<span class=\"gd\">---</span>\n&gt;                 do_deactivate_user(user)\n401c402\n&lt;             elif not user.is_active:\n<span class=\"gd\">---</span>\n&gt;             if not user_disabled_in_ldap and not user.is_active:\n405,407d405\n&lt;         self.sync_avatar_from_ldap(user, ldap_user)\n&lt;         self.sync_full_name_from_ldap(user, ldap_user)\n&lt;         self.sync_custom_profile_fields_from_ldap(user, ldap_user)\n</pre></div>",
+        "id": 782590,
+        "sender_full_name": "niels",
+        "timestamp": 1566809713
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11001\">@niels</span> yeah, you definitely only want to apply the patch, not download the whole file (Which has other changes made in master over the last few months)</p>",
+        "id": 782767,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1566845450
+    },
+    {
+        "content": "<p>Try adding this patch as well:</p>\n<div class=\"codehilite\"><pre><span></span>diff --git a/zerver/management/commands/sync_ldap_user_data.py b/zerver/management/commands/sync_ldap_user_data.py\nindex 82a914ef60..0f3bbbea02 100644\n--- a/zerver/management/commands/sync_ldap_user_data.py\n+++ b/zerver/management/commands/sync_ldap_user_data.py\n@@ -25,7 +25,8 @@ def sync_ldap_user_data(user_profiles: List[UserProfile]) -&gt; None:\n             if sync_user_from_ldap(u):\n                 logger.info(&quot;Updated %s.&quot; % (u.email,))\n             else:\n-                logger.warning(&quot;Did not find %s in LDAP.&quot; % (u.email,))\n+                if u.is_active:\n+                    logger.warning(&quot;Did not find %s in LDAP.&quot; % (u.email,))\n                 if settings.LDAP_DEACTIVATE_NON_MATCHING_USERS:\n                     logger.info(&quot;Deactivated non-matching user: %s&quot; % (u.email,))\n         except ZulipLDAPException as e:\n</pre></div>",
+        "id": 782768,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1566845540
+    },
+    {
+        "content": "<p>Now it works. I'm unsure if both patches are necessary.</p>",
+        "id": 782926,
+        "sender_full_name": "niels",
+        "timestamp": 1566888927
+    },
+    {
+        "content": "<p>When only enable \"ZulipLDAPAuthBackend\" in AUTHENTICATION_BACKENDS, if cannot connect LDAP server by some reasons(network problem or wrong URI of LDAP server), all existed users in Zulip will be deactivated when sync_ldap_user_data. Is this a known issue? any workaround? Thanks!</p>",
+        "id": 784741,
+        "sender_full_name": "Tiger",
+        "timestamp": 1567563511
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13096\">@Tiger</span> as a workaround, can you try setting <code>LDAP_DEACTIVATE_NON_MATCHING_USERS = False</code> in <code>/etc/zulip/zulip.conf</code> and see if it solves this problem?</p>",
+        "id": 784752,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1567578554
+    },
+    {
+        "content": "<p>The problem itself I think must be in this block of code in <code>sync_user_from_ldap</code>:</p>\n<div class=\"codehilite\"><pre><span></span>    updated_user = backend.populate_user(backend.django_to_ldap_username(user_profile.email))\n    if not updated_user:\n        if settings.LDAP_DEACTIVATE_NON_MATCHING_USERS:\n            do_deactivate_user(user_profile)\n</pre></div>\n\n\n<p>Seems that <code>backend.populate_user</code> will return <code>None</code> if connection fails, causing deactivation. I'll make sure and open an issue <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>",
+        "id": 784753,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1567578976
+    },
+    {
+        "content": "<p>Issue (to document what exactly was the problem): <a href=\"https://github.com/zulip/zulip/issues/13130\" target=\"_blank\" title=\"https://github.com/zulip/zulip/issues/13130\">https://github.com/zulip/zulip/issues/13130</a><br>\nAnd PR fix: <a href=\"https://github.com/zulip/zulip/pull/13131\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/13131\">https://github.com/zulip/zulip/pull/13131</a></p>",
+        "id": 784755,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1567585797
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span>  Thank you very much for your help and fix!</p>",
+        "id": 785019,
+        "sender_full_name": "Tiger",
+        "timestamp": 1567663591
+    }
+]

@@ -1,0 +1,56 @@
+[
+    {
+        "content": "<p>I customized the listen port for nginx because I need to run behind an Apache reverse proxy, but on upgrade to 3.1 it tries to revert to port 80 and fails because it can't bind. It's not clear to me from the docs how to persist a change to the nginx site configuration across upgrades — I saw <code>master</code> has an <code>nginx_listen_port</code> setting so I guess it's fixed in the future, but what do now?</p>\n<p>Will I have to shut down Apache to run the upgrade, as I ended up doing when I first installed, or is there a better way?</p>",
+        "id": 967137,
+        "sender_full_name": "Casper Kvan Clausen",
+        "timestamp": 1596206754
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16856\">@Casper Kvan Clausen</span> I expect you just need to update your <code>/etc/zulip/zulip.conf</code> to configure <code>nginx_listen_port</code>, and then it'll use that porton the upgrade (no need to shut down apache)</p>",
+        "id": 967377,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596220161
+    },
+    {
+        "content": "<p>Ah, I took another look at the template. My issue is specifically that I'm using <code>http_only</code> since it's behind a reverse proxy that handles the SSL, and the puppet template for nginx only uses <code>nginx_listen_port</code> if you don't set <code>http_only</code>.</p>",
+        "id": 967408,
+        "sender_full_name": "Casper Kvan Clausen",
+        "timestamp": 1596221302
+    },
+    {
+        "content": "<p>It's not a huge deal to temporarily stop apache while the upgrade script runs and fix the template after, but it would be neat if there was a cleaner way.</p>",
+        "id": 967409,
+        "sender_full_name": "Casper Kvan Clausen",
+        "timestamp": 1596221352
+    },
+    {
+        "content": "<p>I think something like this would make sense:</p>\n<div class=\"codehilite\"><pre><span></span><code>--- zulip-enterprise.template.erb       2020-07-31 14:06:39.000000000 -0500\n+++ zulip-enterprise.template.erb2      2020-07-31 14:09:35.000000000 -0500\n@@ -15,7 +15,10 @@\n include /etc/nginx/zulip-include/upstreams;\n\n server {\n-&lt;% if @nginx_http_only != &#39;&#39; -%&gt;\n+&lt;% if @nginx_http_only != &#39;&#39; &amp;&amp; @nginx_listen_port != &#39;&#39; -%&gt;\n+    listen &lt;%= @nginx_listen_port %&gt;;\n+    listen [::]:&lt;%= @nginx_listen_port %&gt;;\n+&lt;% elsif @nginx_http_only != &#39;&#39; -%&gt;\n     listen 80;\n     listen [::]:80;\n &lt;% else -%&gt;\n</code></pre></div>",
+        "id": 967458,
+        "sender_full_name": "Casper Kvan Clausen",
+        "timestamp": 1596223041
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16856\">@Casper Kvan Clausen</span> yeah, that patch lgtm; can you test it and then submit it as a PR if it works for you?</p>",
+        "id": 967611,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596225967
+    },
+    {
+        "content": "<p>We can backport it to the 3.x branch so you'll not need to maintain it when you do the 3.2 upgrade.</p>",
+        "id": 967612,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1596225983
+    },
+    {
+        "content": "<p>Sure thing, will do!</p>",
+        "id": 967732,
+        "sender_full_name": "Casper Kvan Clausen",
+        "timestamp": 1596236299
+    },
+    {
+        "content": "<p>Actually it turned out to be a bad patch as it was overridden by the manifest, but I've submitted a PR for that.</p>",
+        "id": 967835,
+        "sender_full_name": "Casper Kvan Clausen",
+        "timestamp": 1596240541
+    }
+]

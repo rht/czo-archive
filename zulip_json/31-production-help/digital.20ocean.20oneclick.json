@@ -1,0 +1,98 @@
+[
+    {
+        "content": "<p>I was working on making a new release of DigitalOcean one click app. Running the install script from a droplet created from the image of 2.1.2 fails with the following error.</p>\n<div class=\"codehilite\"><pre><span></span>You are now connected to database &quot;zulip&quot; as user &quot;postgres&quot;.\nCREATE SCHEMA zulip AUTHORIZATION zulip;\nCREATE SCHEMA\n++ dirname /home/zulip/deployments/2020-01-17-03-52-29/scripts/setup/postgres-init-db\n+ /home/zulip/deployments/2020-01-17-03-52-29/scripts/setup/flush-memcached\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2020-01-17-03-52-29/scripts/setup/flush-memcached&quot;, line 18, in &lt;module&gt;\n    behaviors=settings.CACHES[&quot;default&quot;][&quot;OPTIONS&quot;]  # type: ignore # settings not typed properly\npylibmc.SomeErrors: error 19 from flush_all: (0x2e32890) AUTHENTICATION FAILURE,  host: 127.0.0.1:11211 -&gt; libmemcached/sasl.cc:292\n\nZulip installation failed (exit code 1)!\n\nThe install process is designed to be idempotent, so you can retry after resolving whatever issue caused the failure (there should be a traceback above). A log of this installation is available in /var/log/zulip/install.log\nFor troubleshooting see https://zulip.readthedocs.io/en/stable/production/troubleshooting.html.\n\n\nRun the following command or relogin to this server to retry installation\n  /opt/zulip/interactive_script.sh\n</pre></div>",
+        "id": 809840,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1579236039
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"52\">@Vishnu Ks</span> that looks to me like an authentication error attempting to use the memcached authentication credentials that we added in 2.1.2</p>",
+        "id": 809841,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1579239629
+    },
+    {
+        "content": "<p>I wonder if the problem is that the system's hostname has changed, since I just recalled that the SASL authentication that memcached uses includes both the hostname and the password.</p>",
+        "id": 809842,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1579239664
+    },
+    {
+        "content": "<p>This might be a broader problem for installations that end up migrating to a different hosting.  <span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> FYI; I wonder if we could use <code>127.0.0.1</code> as the hostname for the purposes of SASL authentication to avoid encoding the system's hostname in the memcached configuration?  Or alternatively, if we need to add some sort of record of the hostname used in that memcached stamp file to ensure that we update memached when running puppet after the hostname changes (which is roughly what's happening in this flow).</p>",
+        "id": 809843,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1579239755
+    },
+    {
+        "content": "<p>if it helps for debugging, I removed <code>username</code> and <code>password</code>as arguments  from pylibmc.Client and it seems to have fixed the error in <code>flush-memcached</code>.</p>",
+        "id": 809844,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1579239866
+    },
+    {
+        "content": "<p>The SASL hostname is not configurable in memcached; it just calls <code>gethostname()</code>. Recording it like <code>memcached-zulip-password</code> seems like a good plan.</p>",
+        "id": 809850,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1579245008
+    },
+    {
+        "content": "<p>But…does this mean that all droplets are using the same secrets?</p>",
+        "id": 809851,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1579245027
+    },
+    {
+        "content": "<p>I believe that they run the installer and then <code>rm -rf /etc/zulip</code>, similar to what Docker does.</p>",
+        "id": 809859,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1579250242
+    },
+    {
+        "content": "<blockquote>\n<p>I believe that they run the installer and then <code>rm -rf /etc/zulip</code>, similar to what Docker does.</p>\n</blockquote>\n<p>Yes. Thats how we do it currently.</p>",
+        "id": 810247,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1579523829
+    },
+    {
+        "content": "<p>Added a temporary fix by deleting <code> /etc/sasl2/memcached-sasldb2</code> and <code>/etc/sasl2/memcached-zulip-password</code> at the end of the one click image generator. Also submitted the image to DO marketplace.</p>\n<p><a href=\"https://github.com/hackerkid/marketplace-partners/commit/9b91a947a0d962178a31ab75585f9cff84b30a8e\" target=\"_blank\" title=\"https://github.com/hackerkid/marketplace-partners/commit/9b91a947a0d962178a31ab75585f9cff84b30a8e\">https://github.com/hackerkid/marketplace-partners/commit/9b91a947a0d962178a31ab75585f9cff84b30a8e</a></p>",
+        "id": 810603,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1579611642
+    },
+    {
+        "content": "<p>Deletig the two files just before the image generation will result in them getting generated again when the user creates the droplet from the image and runs the installer.</p>",
+        "id": 810604,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1579611751
+    },
+    {
+        "content": "<p>I guess deleting <code>memcached-sasldb2</code> was not necessary. While generating <code>memcached-zulip-password</code> puppet would have generated a new <code>memcached-sasldb2</code> anyway.</p>",
+        "id": 810606,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1579612117
+    },
+    {
+        "content": "<p>Probably better to delete both just for cleanliness.</p>",
+        "id": 810982,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1579725182
+    },
+    {
+        "content": "<p>Yeah. The image that is live now on marketplace has both the files deleted.</p>",
+        "id": 811455,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1579852535
+    },
+    {
+        "content": "<p>Great!</p>",
+        "id": 811571,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1579895976
+    },
+    {
+        "content": "<p>Glad to hear that migration is complete in the DO environment as well <span aria-label=\"slight smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"slight smile\">:slight_smile:</span></p>",
+        "id": 811572,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1579895991
+    }
+]

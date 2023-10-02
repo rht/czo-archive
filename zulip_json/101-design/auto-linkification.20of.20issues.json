@@ -1,0 +1,356 @@
+[
+    {
+        "content": "<p>I think we should probably talk about how to make e.g. <code>#1234</code> \"do the right thing\" when a project has multiple repos.</p>",
+        "id": 193068,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493190566
+    },
+    {
+        "content": "<p>Yeah...it doesn't seem like our current regex-filter paradigm is gonna easily extend to multiple repos.  This seems like a popular enough feature that we might want to give it its own model support, so that the admin just configures a list of repos, and then we'd have typeahead support for specifying the repo when you are about to type an issue number.  I'm not sure how we'd want to change the representations (both raw and rendered).  For the raw side, I could see just inserting the actual github URL.</p>",
+        "id": 193123,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493214942
+    },
+    {
+        "content": "<p>I was thinking that we could add another parameter \"stream\", beside regex and the link, to the auto-linkification parameters. This would partially solve the problem. The remaining problem would be that you cannot easily mention an issue of some other repo on a stream.</p>",
+        "id": 193130,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1493217874
+    },
+    {
+        "content": "<p>And I had problems setting up auto-linkification on my server. I could not find out what to do reading the error. Is there any limitations?</p>",
+        "id": 193131,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1493218049
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"Shayan.To@hotmail.com\" data-user-id=\"1073\">@Shayan Toqraee</span> I like your idea, because I think scoping the filters to specific streams would largely solve this problem.  The only thing that's a bit tricky is for realms like this, we have lots of streams where linking to the main Zulip repo makes sense, and then there are only one or two streams where a different repo makes sense (<a class=\"stream\" data-stream-id=\"105\" href=\"/#narrow/stream/zulipbot\">#zulipbot</a> comes to mind).  We could say that \"stream\" is optional, and if it's not specified, then the filter applies to all realms, but then we need to communicate somehow that more \"specific\" filters take precedence.</p>",
+        "id": 193136,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493218958
+    },
+    {
+        "content": "<p>Regarding the problems you had setting up linkification on your own server, I think we need more details to help you debug it.</p>",
+        "id": 193137,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493219009
+    },
+    {
+        "content": "<p>I agree. Seems very good.</p>",
+        "id": 193138,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1493219057
+    },
+    {
+        "content": "<p>Do you enforce the link to have a domain? I don't have a domain for my server, I use the IP address.</p>",
+        "id": 193140,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1493219234
+    },
+    {
+        "content": "<p>And is the regex case-sensitive?</p>",
+        "id": 193141,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1493219248
+    },
+    {
+        "content": "<p>We use GitLab, and it uses <code>!</code> for merge requests (the numbers are not unique between MRs and issues there). The regex gives me errors when I use an exclamation mark in it, even with a backslash.</p>",
+        "id": 193142,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1493219522
+    },
+    {
+        "content": "<p>I believe they're case-sensitive (although you can modify the regexes to capture stuff in a case-insensitive way).  Here some relevant JS code.  For use cases that are obviously going to be popular, such as the convenient GH links we're talking about now, I would love to move them away from being configured with regexes, so there's less work for admins and less danger of getting the regex wrong.</p>\n<div class=\"codehilite\"><pre><span></span> <span class=\"mi\">978</span> <span class=\"nx\">def</span> <span class=\"nx\">prepare_realm_pattern</span><span class=\"p\">(</span><span class=\"nx\">source</span><span class=\"p\">)</span><span class=\"o\">:</span>\n <span class=\"mi\">979</span>     <span class=\"err\">#</span> <span class=\"nx\">type</span><span class=\"o\">:</span> <span class=\"p\">(</span><span class=\"nx\">Text</span><span class=\"p\">)</span> <span class=\"o\">-&gt;</span> <span class=\"nx\">Text</span>\n <span class=\"mi\">980</span>     <span class=\"s2\">&quot;&quot;&quot; Augment a realm filter so it only matches after start-of-string,</span>\n<span class=\"s2\"> 981     whitespace, or opening delimiters, won&#39;t match if there are word</span>\n<span class=\"s2\"> 982     characters directly after, and saves what was matched as &quot;</span><span class=\"nx\">name</span><span class=\"s2\">&quot;. &quot;&quot;&quot;</span>\n <span class=\"mi\">983</span>     <span class=\"k\">return</span> <span class=\"nx\">r</span><span class=\"s2\">&quot;&quot;&quot;(?&lt;![^\\s&#39;&quot;</span><span class=\"err\">\\</span><span class=\"p\">(,</span><span class=\"o\">:&lt;</span><span class=\"p\">])(</span><span class=\"o\">?</span><span class=\"nx\">P</span><span class=\"o\">&lt;</span><span class=\"nx\">name</span><span class=\"o\">&gt;</span><span class=\"s2\">&quot;&quot;</span><span class=\"err\">&quot;</span> <span class=\"o\">+</span> <span class=\"nx\">source</span> <span class=\"o\">+</span> <span class=\"s1\">&#39;)(?!\\w)&#39;</span>\n</pre></div>",
+        "id": 193143,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493219570
+    },
+    {
+        "content": "<p>You may want to try <code>\\\\!</code>, in case there are two levels of escaping.  But this kind of thing makes me want to move away from regexes! <img alt=\":smile:\" class=\"emoji\" src=\"/static/generated/emoji/images/emoji/unicode/1f604.png\" title=\":smile:\"></p>",
+        "id": 193144,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493219660
+    },
+    {
+        "content": "<p>One strategy that we could use for multiple repos is different prefixes.  E.g. </p>\n<ul>\n<li>S123 = server <a href=\"https://github.com/zulip/zulip/pull/123\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/123\">#123</a></li>\n<li>M123 = RN app <a href=\"https://github.com/zulip/zulip/pull/123\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/123\">#123</a></li>\n<li>E123 = Electron <a href=\"https://github.com/zulip/zulip/pull/123\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/123\">#123</a></li>\n</ul>\n<div class=\"message_embed\"><a class=\"message_embed_image\" href=\"https://github.com/zulip/zulip/pull/123\" style=\"background-image: url(https://avatars0.githubusercontent.com/u/1858004?v=3&amp;s=400)\" target=\"_blank\"></a><div class=\"data-container\"><div class=\"message_embed_title\"><a href=\"https://github.com/zulip/zulip/pull/123\" target=\"_blank\" title=\"Exit 1 for failed install by r0fls · Pull Request #123 · zulip/zulip\">Exit 1 for failed install by r0fls · Pull Request #123 · zulip/zulip</a></div><div class=\"message_embed_description\">Proposed fix for issue #82, This will still print the full error message from line 7 if it fails. Line 6 shouldn't fail since it has checked root privelages at that point, but still could if there ...</div></div></div><div class=\"message_embed\"><a class=\"message_embed_image\" href=\"https://github.com/zulip/zulip/pull/123\" style=\"background-image: url(https://avatars0.githubusercontent.com/u/1858004?v=3&amp;s=400)\" target=\"_blank\"></a><div class=\"data-container\"><div class=\"message_embed_title\"><a href=\"https://github.com/zulip/zulip/pull/123\" target=\"_blank\" title=\"Exit 1 for failed install by r0fls · Pull Request #123 · zulip/zulip\">Exit 1 for failed install by r0fls · Pull Request #123 · zulip/zulip</a></div><div class=\"message_embed_description\">Proposed fix for issue #82, This will still print the full error message from line 7 if it fails. Line 6 shouldn't fail since it has checked root privelages at that point, but still could if there ...</div></div></div><div class=\"message_embed\"><a class=\"message_embed_image\" href=\"https://github.com/zulip/zulip/pull/123\" style=\"background-image: url(https://avatars0.githubusercontent.com/u/1858004?v=3&amp;s=400)\" target=\"_blank\"></a><div class=\"data-container\"><div class=\"message_embed_title\"><a href=\"https://github.com/zulip/zulip/pull/123\" target=\"_blank\" title=\"Exit 1 for failed install by r0fls · Pull Request #123 · zulip/zulip\">Exit 1 for failed install by r0fls · Pull Request #123 · zulip/zulip</a></div><div class=\"message_embed_description\">Proposed fix for issue #82, This will still print the full error message from line 7 if it fails. Line 6 shouldn't fail since it has checked root privelages at that point, but still could if there ...</div></div></div>",
+        "id": 193181,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493224281
+    },
+    {
+        "content": "<p>Hehe, I think we've gotten what we're going to learn from an initial phase of using inline URL preview; I'm going to turn it off for now.</p>",
+        "id": 193182,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493224324
+    },
+    {
+        "content": "<p>I like the custom prefix idea.  I'll also reiterate my thought that we might want some special UI for these types of links, and maybe we can figure out a scheme for these links that is less regex-driven.</p>",
+        "id": 193185,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493224815
+    },
+    {
+        "content": "<p>(at least from the user's perspective)</p>",
+        "id": 193187,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493224841
+    },
+    {
+        "content": "<p>I'm reasonably happy with the <a href=\"https://github.com/sipb/chiron/\" target=\"_blank\" title=\"https://github.com/sipb/chiron/\">Chiron</a> approach for these things. That's got some code for by default supporting things like \"Debathena <a href=\"https://github.com/zulip/zulip/pull/123\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/123\">#123</a>\", but just \"<a href=\"https://github.com/zulip/zulip/pull/123\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/123\">#123</a>\" for -c debathena, which I think mostly works pretty well on MIT zephyr. I don't think chiron has a current story for \"most classes, use <a href=\"https://github.com/zulip/zulip/pull/123\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/123\">#123</a> for debathena, but on -c scripts, use that for scripts\" or whatever. Also, \"config\" is currently <a href=\"https://github.com/sipb/chiron/blob/master/main.py#L23\" target=\"_blank\" title=\"https://github.com/sipb/chiron/blob/master/main.py#L23\">\"write some python code\"</a>, though the API could probably become a web interface without a ton of pain.</p>\n<p>I also appreciate that, unlike the current zulip support, it shows the issue title.</p>",
+        "id": 193338,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1493235725
+    },
+    {
+        "content": "<p>Yeah, the current support is convenient in that we don't need to do a round-trip to GitHub (or whatever service it is; people use it with their support ticket trackers too!) in order to render</p>",
+        "id": 193341,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493235811
+    },
+    {
+        "content": "<p>Which of course you can't do if you want to show titles</p>",
+        "id": 193342,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493235817
+    },
+    {
+        "content": "<p>One possible vision is to have the linkification filters support including a list of streams in the config; if you have a stream set on a filter, it supercedes other filters with the same regex.  But you can still make a filter that's global.  So in this realm, we'd have a global filter for the server project, and then stream-specific filters for a few of the smaller projects</p>",
+        "id": 193344,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493235933
+    },
+    {
+        "content": "<p>The chiron approach is to make the title async by the simple virtue of \"it's a bot that replies to things\". I don't think I generally run into much of an issue with waiting for the reply to come in?</p>",
+        "id": 193349,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1493237022
+    },
+    {
+        "content": "<p>It's actually more of a problem with message rendering, since if we have to wait for an RTT, sending will feel laggy.  Right now, we can actually render the linkified versions immediately using the frontend markdown processor.</p>",
+        "id": 193350,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493237279
+    },
+    {
+        "content": "<p>I'll write up a ticket for the per-stream proposal, just to have it on the record.  I'm worried the more-specific-wins rule may be hard to document and understand, but maybe not.</p>",
+        "id": 193362,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493238401
+    },
+    {
+        "content": "<p>yeah, agreed, I'm not confident about that one.  I guess we support an \"all streams but X list\" thing instead</p>",
+        "id": 193364,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493238625
+    },
+    {
+        "content": "<p>Right, chiron just doesn't link inline (the title wouldn't fit easily anyway, I think).</p>",
+        "id": 193365,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1493238698
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/4627\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/4627\">#4627</a></p>",
+        "id": 193366,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493238807
+    },
+    {
+        "content": "<p>For the most-specific-rule, you can still have some edge cases where the list of streams overlap:</p>\n<p>M9999 -&gt; map to iphone repo for streams iphone and mobile<br>\nM9999 -&gt; map to android repo for streams android and mobile</p>\n<p>Which one wins for mobile?  Or do we prevent dups still to some degree?</p>",
+        "id": 193371,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493239005
+    },
+    {
+        "content": "<p>Can the realm filters be ordered, and it matches the first one it can (regardless of specificity)?</p>",
+        "id": 193372,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1493239623
+    },
+    {
+        "content": "<p>Yeah, that might make the most sense from the user's perspective.  Implementing that could be a minor challenge, as user-defined orders are surprisingly tricky to persist in a multi-user environment.</p>",
+        "id": 193373,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493239918
+    },
+    {
+        "content": "<p>It will also lead to situations where you demote a filter to the point that it's not ever going to be used, which can create tricky UI problems.  (Do we warn the user their filter will now never take precedence?  Do we auto-delete it?  Do we gray it out?)</p>",
+        "id": 193374,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493240052
+    },
+    {
+        "content": "<p>The ordering race condition is this:</p>\n<ul>\n<li>Steve likes D, so says ABCDE -&gt; DABCE</li>\n<li>Rishi likes E, so say ABCDE -&gt; EABCD</li>\n</ul>\n<p>If Rishi loses the race, we need to apply his intention that EABCD is better than ABCDE to the value DABCE, which could result in either EDABC or DEABC.  And then, on top of that, we need a way to represent the ranks of each element.  A naive approach will lead to O(n) operations for every move.  Another approach is to have a topological order, but that's O(n) on reads.</p>",
+        "id": 193375,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493240358
+    },
+    {
+        "content": "<p>This is an admin setting, so I think doing a very simple conflict resolution (\"someone else edited the list at the same time, discarding your changes\") is probably fine?</p>",
+        "id": 193376,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1493240418
+    },
+    {
+        "content": "<p>Yeah, if we go that approach, then we want to have some kind of \"generation\" concept or have the client sending the patch send a representation of what they though the original ordering scheme was.</p>",
+        "id": 193377,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493240525
+    },
+    {
+        "content": "<p>It's not an unsolvable problem, of course, but there is a little bit of implementation complexity.</p>",
+        "id": 193381,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493240599
+    },
+    {
+        "content": "<p>I similarly think we don't have to worry about auto-detecting whether a filter will never be used. I think it'll be clear to the admin (after a few messages) if their filters are not doing what they thought it would do</p>",
+        "id": 193382,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1493240608
+    },
+    {
+        "content": "<p>Or maybe just always send the entire set of realm filters (on any realm filter change), and delete old + add new in a single transaction?</p>",
+        "id": 193385,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1493240786
+    },
+    {
+        "content": "<p>For sending over the whole-shebang, you need to be careful about clobbering the other admin's work, and for that, I think a \"generation\" field is the most robust thing.</p>",
+        "id": 193387,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493240851
+    },
+    {
+        "content": "<p>If Rishi and I both load our browsers with generation 99 of the filters, but Rishi wins the race, he'll send generation 99 back to the server, and the server will allow it.  But by the time I send it, the server's on generation 100, and it will reject my 99-based changes.</p>",
+        "id": 193389,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493240920
+    },
+    {
+        "content": "<p>If, on the other hand, Alice is the sole admin of the realm, she'll never lose the race with herself, so she can let generation N stay in her browser for days at a time before she gets around to submitting changes.</p>",
+        "id": 193390,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493241100
+    },
+    {
+        "content": "<p>agreed, but that's true for all our admin settings, e.g. if two admins try to change the realm name at the same time (though admittedly it would be a little more frustrating if it happened after you spent 20 minutes trying to construct a regexp :)). I feel like this is going to be a pretty rare situation?</p>",
+        "id": 193391,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1493241345
+    },
+    {
+        "content": "<p>Stepping out of the weeds for a second, the two big-picture options here are:</p>\n<ul>\n<li>Solve this problem by scoping regexes to streams.</li>\n<li>Solve this problem by adding a prefix to the regex for smaller repos.</li>\n</ul>\n<p>I think the latter is the better solution for the problem at hand.</p>",
+        "id": 193392,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493241383
+    },
+    {
+        "content": "<p>Yeah, the race scenario for ordering-changes is mostly analogous to name-changes, but the differences are:</p>\n<ul>\n<li>You're passing more complicated data over the wire for ordering changes, so everything is a bit more implemenation work (the initial request, the error handling, the live updates, etc.).</li>\n<li>The admins have a larger race window in terms of constructing the regex.</li>\n</ul>",
+        "id": 193393,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493241515
+    },
+    {
+        "content": "<p>The downfall of the per-stream solution here is that for a stream like \"general,\" we'd only be able to linkify server issues, not android issues.  Whereas schemes with Snnnn and Annnn would be flexible.</p>",
+        "id": 193394,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493241598
+    },
+    {
+        "content": "<p>What's the issue with linkinfying android issues on #general with, say, \"Android <a href=\"https://github.com/zulip/zulip/pull/123\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/123\">#123</a>\"?</p>",
+        "id": 193395,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1493241799
+    },
+    {
+        "content": "<p>It's just more for the user to type.  But I think <code>#A123</code> is easy enough, and I believe we could set that rule up now with no code changes.  But we eventually want autocomplete.</p>",
+        "id": 193396,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493242140
+    },
+    {
+        "content": "<p>Earlier in this topic this basic ideas was discussed:</p>\n<ul>\n<li>A realm admin configures all the repos of interest and gives each of them a handy prefix (probably one character suffices for most realms, but we'd allow it to be as long as the admin wants).</li>\n<li>All link-to-repo shortcuts would start with \"#\".  (Set aside for the moment that we also use \"#\" for stream links.)</li>\n<li>The typeahead would help users figure out which prefix to type, showing the prefix -&gt; repo-name mappings.</li>\n</ul>",
+        "id": 193397,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493242439
+    },
+    {
+        "content": "<p>On this realm the typeahead would look like this conceptually:</p>\n<div class=\"codehilite\"><pre><span></span>S - server (github.com/zulip/zulip)\nA - andorid(github.com/zulip/android)\nZ - zulibpot (github.com/zulipbot/zulipbot)\n</pre></div>",
+        "id": 193398,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493242533
+    },
+    {
+        "content": "<p>(And I would be able to link to any repo from any stream.)</p>",
+        "id": 193399,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493242556
+    },
+    {
+        "content": "<p>I found out that there is a very restricted check on the regex for auto-linkification. <code>zerver/models.py</code>, line 435. Will you take a look at it <span class=\"user-mention\" data-user-email=\"showell@zulipchat.com\" data-user-id=\"58\">@Steve Howell</span>?</p>",
+        "id": 193483,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1493265887
+    },
+    {
+        "content": "<p>And I think that getting a regex for linkification is a very powerful feature. It can be used in many ways (if it is not restricted by that check, though).</p>",
+        "id": 193484,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1493266081
+    },
+    {
+        "content": "<p>That check is a bit less restricted in master.  The reason it's restricted is to avoid accidental DoS issues</p>",
+        "id": 193496,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493272016
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"Shayan.To@hotmail.com\" data-user-id=\"1073\">@Shayan Toqraee</span> if you have example expressions you'd like to see supported, we can look at that</p>",
+        "id": 193497,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493272031
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> I need something like <code>[aA][bB][cC]!(?P&lt;id&gt;[0-9]+)</code>.<br>\nWhy do you restrict it to a small set of characters? I think a better approach would be to exclude some characters (for example <code>()*?+</code> and other ones).</p>",
+        "id": 193592,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1493303724
+    },
+    {
+        "content": "<p>I think we were just concerned about security/speed, since these regexes are used every time we render a message.</p>",
+        "id": 193593,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493304206
+    },
+    {
+        "content": "<p>The approach I proposed is no different in that manner.</p>",
+        "id": 193594,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1493304924
+    },
+    {
+        "content": "<p>We also need to play nice with our markdown processor, so we don't want special characters like <code>~</code>, <code>*</code>, etc.  It's easier to whitelist than blacklist.  I think we can add \"!\" to solve your problem.</p>",
+        "id": 193596,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1493305574
+    },
+    {
+        "content": "<p>yeah, sounds good.  <span class=\"user-mention\" data-user-email=\"Shayan.To@hotmail.com\" data-user-id=\"1073\">@Shayan Toqraee</span> can you open an issue with that example?  I imagine <span class=\"user-mention\" data-user-email=\"premsinwar4@gmail.com\" data-user-id=\"200\">@sinwar</span> may be interested in adding this since he did the last extensions to the allowed syntax</p>",
+        "id": 193692,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1493317314
+    },
+    {
+        "content": "<p>I opened the issue (<a href=\"https://github.com/zulip/zulip/pull/4653\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/4653\">#4653</a>).</p>",
+        "id": 194312,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1493456877
+    },
+    {
+        "content": "<p>And looking at <a href=\"https://github.com/zulip/zulip/blob/78f2df56492d076d644f1fbbabb777e13a97c5bd/zerver/models.py#L450\" target=\"_blank\" title=\"https://github.com/zulip/zulip/blob/78f2df56492d076d644f1fbbabb777e13a97c5bd/zerver/models.py#L450\"><code>zerver/models.py #L450</code></a>, the characters that are allowed after the <code>%(id)s</code> is very restricted as well. Is there a good reason?</p>",
+        "id": 194313,
+        "sender_full_name": "Shayan Toqraee",
+        "timestamp": 1493457280
+    }
+]

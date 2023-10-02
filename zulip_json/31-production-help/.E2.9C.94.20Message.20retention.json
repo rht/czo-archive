@@ -1,0 +1,182 @@
+[
+    {
+        "content": "<p>In my organization, users abuse private messages with attached files. As a result, disk memory is consumed.<br>\nIs it possible to forcibly archive only private messages? I don't want to lose the message history in streams. <br>\nThe best thing would be if there were separate settings for message retention in streams and in private messages.</p>",
+        "id": 1375920,
+        "sender_full_name": "Aggr",
+        "timestamp": 1651238142
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10714\">@Aggr</span> I think you could achieve that by setting a retention policy for every individual stream to be \"forever\" and then changing the global retention policy for the organization to something shorter.</p>",
+        "id": 1375951,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651245970
+    },
+    {
+        "content": "<p>(One might need to be careful when creating new streams to make sure they are set to retain forever.)</p>",
+        "id": 1375952,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651246004
+    },
+    {
+        "content": "<p>Сan I temporarily change <code>zerver/lib/retention.py</code><br>\nin the <code>move_expired_personal_and_huddle_messages_to_archive</code> function <br>\nline <code>message_retention_days = realm.message_retention_days</code><br>\nto <code>message_retention_days = 90</code>?<br>\nWill this lead to the result I want? <span aria-label=\"wink\" class=\"emoji emoji-1f609\" role=\"img\" title=\"wink\">:wink:</span></p>",
+        "id": 1376415,
+        "sender_full_name": "Aggr",
+        "timestamp": 1651316844
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10714\">@Aggr</span> that seems likely. I'd take a backup first, in case it doesn't <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span>.</p>",
+        "id": 1376486,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651349285
+    },
+    {
+        "content": "<p>I tried specifying a not so small number. It looks like it worked.</p>\n<div class=\"codehilite\"><pre><span></span><code>/var/log/zulip/message_retention.log\n\nCleaning old archive data.\nDeleted 2 old ArchiveTransactions.\nStarting the archiving process with chunk_size 1000\nArchiving stream messages for realm\nArchived 2 messages in 0.09s in transaction 35167.\nArchived 2 messages in 0.07s in transaction 35216.\nArchived 1 messages in 0.04s in transaction 35220.\nArchived 1 messages in 0.16s in transaction 35239.\nDone. Archived 6 messages.\nArchiving personal and huddle messages for realm\nArchived 1000 messages in 1.23s in transaction 35256.\n...\nDone. Archived 32934 messages\nCleaned up 2989 attachments for realm\nCleaning old archive data.\nDeleted 814 old ArchiveTransactions.\n</code></pre></div>\n<p>How to force the deletion of these 2989 files?</p>",
+        "id": 1376497,
+        "sender_full_name": "Aggr",
+        "timestamp": 1651353353
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10714\">@Aggr</span> you need <code>manage.py delete_old_unclaimed_attachments</code>. We have an open issue to run that automatically as a cron job, which I think is one <span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span>' plate, but you should just need to run it once for what you're doing here.</p>",
+        "id": 1377411,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651605639
+    },
+    {
+        "content": "<p>When files become \"unclaimed\"? If when all messages containing links to the file are deleted, then I assume that I have a problem with this.</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zserver:/home/zulip/deployments/current# su zulip -c &#39;./manage.py delete_old_unclaimed_attachments -w 0&#39; | wc -l\nThis was a dry run. Pass -f to actually delete.\n631\n</code></pre></div>\n<div class=\"codehilite\" data-code-language=\"SQL\"><pre><span></span><code><span class=\"k\">select</span><span class=\"w\"> </span><span class=\"k\">count</span><span class=\"p\">(</span><span class=\"n\">za</span><span class=\"p\">.</span><span class=\"n\">id</span><span class=\"p\">)</span><span class=\"w\"> </span><span class=\"n\">filesCount</span><span class=\"w\"></span>\n<span class=\"k\">from</span><span class=\"w\"> </span><span class=\"n\">zulip</span><span class=\"p\">.</span><span class=\"n\">zerver_archivedattachment</span><span class=\"w\"> </span><span class=\"n\">za</span><span class=\"w\"></span>\n<span class=\"k\">left</span><span class=\"w\"> </span><span class=\"k\">join</span><span class=\"w\"> </span><span class=\"n\">zulip</span><span class=\"p\">.</span><span class=\"n\">zerver_archivedattachment_messages</span><span class=\"w\"> </span><span class=\"n\">zam</span><span class=\"w\"> </span><span class=\"k\">on</span><span class=\"w\"> </span><span class=\"n\">za</span><span class=\"p\">.</span><span class=\"n\">id</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span><span class=\"n\">zam</span><span class=\"p\">.</span><span class=\"n\">archivedattachment_id</span><span class=\"w\"></span>\n<span class=\"k\">where</span><span class=\"w\"> </span><span class=\"n\">zam</span><span class=\"p\">.</span><span class=\"n\">id</span><span class=\"w\"> </span><span class=\"k\">is</span><span class=\"w\"> </span><span class=\"k\">null</span><span class=\"w\"></span>\n<span class=\"p\">;</span><span class=\"w\"></span>\n</code></pre></div>\n<table>\n<thead>\n<tr>\n<th>filescount</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>18480</td>\n</tr>\n</tbody>\n</table>",
+        "id": 1381487,
+        "sender_full_name": "Aggr",
+        "timestamp": 1652786114
+    },
+    {
+        "content": "<p>Hmm, <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Isn't this actually a different known bug, where we're just missing a mechanism for cleaning up files altogether? E.g.<code>get_old_unclaimed_attachments</code> only looks at the <code>Attachment</code> table, ignoring rows in <code>ArchivedAttachment</code>. But changing that wouldn't actually be the fix -  <code>ArchivedAttachment</code> rows are eventually going to be deleted after <code>ARCHIVED_DATA_VACUUMING_DELAY_DAYS</code> days. So the issue in the end is uploaded files that no longer have any database objects pointing to them (and need to be identified and deleted by different measures)</p>",
+        "id": 1381494,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1652792010
+    },
+    {
+        "content": "<p>Hmm, no, I might be wrong about <code>ArchivedAttachment</code> getting deleted by vacuuming - they might just end up with <code>messages = None</code> like <code>Attachment</code> rows do.  So we'd actually just need  to fetch and return<code>ArchivedAttachment</code> here</p>\n<div class=\"codehilite\"><pre><span></span><code>def get_old_unclaimed_attachments(weeks_ago: int) -&gt; Sequence[Attachment]:\n    # TODO: Change return type to QuerySet[Attachment]\n    delta_weeks_ago = timezone_now() - datetime.timedelta(weeks=weeks_ago)\n    old_attachments = Attachment.objects.filter(messages=None, create_time__lt=delta_weeks_ago)\n    return old_attachments\n</code></pre></div>",
+        "id": 1381495,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1652792195
+    },
+    {
+        "content": "<p>After more thought, that solution is wrong - it would e.g. lead to the deletion of a file because its <code>ArchivedAttachment</code> row has no messages, while its <code>Attachment</code> may still have <code>messages</code> - this can happen if only some of messages referencing it were archived and then were vacuumed (ref <a href=\"#narrow/stream/3-backend/topic/ArchivedAttachment.20bug/near/1353377\">https://chat.zulip.org/#narrow/stream/3-backend/topic/ArchivedAttachment.20bug/near/1353377</a> for explanation of how that data model works). The solution needs to correctly identify files for which <strong>both</strong> <code>Attachment</code> and <code>ArchivedAttachment</code> objects have no messages. </p>\n<p>I'll open a PR with that approach</p>",
+        "id": 1381934,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1652871795
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span>  Thank you for your help!</p>\n<blockquote>\n<p>The solution needs to correctly identify files for which both Attachment and ArchivedAttachment objects have no messages.</p>\n</blockquote>\n<p>I checked it out. I definitely don't have any files that aren't referenced by messages.<br>\nThe <code>ARCHIVED_DATA_VACUUMING_DELAY_DAYS</code> setting is configured in <code>zproject\\default_settings.py</code> ?</p>",
+        "id": 1382042,
+        "sender_full_name": "Aggr",
+        "timestamp": 1652900835
+    },
+    {
+        "content": "<p>I think I was wrong. I have files that are not referenced by messages.</p>\n<div class=\"codehilite\" data-code-language=\"SQL\"><pre><span></span><code><span class=\"k\">SELECT</span><span class=\"w\"> </span><span class=\"o\">*</span><span class=\"w\"> </span><span class=\"k\">FROM</span><span class=\"w\"></span>\n<span class=\"p\">(</span><span class=\"w\"></span>\n<span class=\"k\">SELECT</span><span class=\"w\"> </span><span class=\"n\">path_id</span><span class=\"w\"></span>\n<span class=\"p\">,</span><span class=\"w\"> </span><span class=\"ss\">\"size\"</span><span class=\"w\"></span>\n<span class=\"p\">,</span><span class=\"w\"> </span><span class=\"s1\">'archivedattachment'</span><span class=\"w\"> </span><span class=\"k\">AS</span><span class=\"w\"> </span><span class=\"k\">scope</span><span class=\"w\"></span>\n<span class=\"p\">,</span><span class=\"w\"> </span><span class=\"k\">CASE</span><span class=\"w\"> </span><span class=\"k\">WHEN</span><span class=\"w\"> </span><span class=\"n\">archivedmessage_id</span><span class=\"w\"> </span><span class=\"k\">IS</span><span class=\"w\"> </span><span class=\"k\">NOT</span><span class=\"w\"> </span><span class=\"k\">null</span><span class=\"w\"> </span><span class=\"k\">THEN</span><span class=\"w\"> </span><span class=\"mi\">1</span><span class=\"w\"> </span><span class=\"k\">END</span><span class=\"w\"> </span><span class=\"n\">amsg</span><span class=\"w\"></span>\n<span class=\"p\">,</span><span class=\"w\"> </span><span class=\"k\">null</span><span class=\"w\"> </span><span class=\"k\">AS</span><span class=\"w\"> </span><span class=\"n\">msg</span><span class=\"w\"></span>\n<span class=\"k\">FROM</span><span class=\"w\"> </span><span class=\"n\">zulip</span><span class=\"p\">.</span><span class=\"n\">zerver_archivedattachment</span><span class=\"w\"> </span><span class=\"n\">aa</span><span class=\"w\"></span>\n<span class=\"k\">LEFT</span><span class=\"w\"> </span><span class=\"k\">JOIN</span><span class=\"w\"> </span><span class=\"n\">zulip</span><span class=\"p\">.</span><span class=\"n\">zerver_archivedattachment_messages</span><span class=\"w\"> </span><span class=\"n\">aam</span><span class=\"w\"> </span><span class=\"k\">ON</span><span class=\"w\"> </span><span class=\"n\">aa</span><span class=\"p\">.</span><span class=\"n\">id</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span><span class=\"n\">aam</span><span class=\"p\">.</span><span class=\"n\">archivedattachment_id</span><span class=\"w\"></span>\n<span class=\"k\">UNION</span><span class=\"w\"></span>\n<span class=\"k\">SELECT</span><span class=\"w\"></span>\n<span class=\"n\">path_id</span><span class=\"w\"></span>\n<span class=\"p\">,</span><span class=\"w\"> </span><span class=\"ss\">\"size\"</span><span class=\"w\"></span>\n<span class=\"p\">,</span><span class=\"w\"> </span><span class=\"s1\">'attachment'</span><span class=\"w\"> </span><span class=\"k\">as</span><span class=\"w\"> </span><span class=\"k\">scope</span><span class=\"w\"></span>\n<span class=\"p\">,</span><span class=\"w\"> </span><span class=\"k\">null</span><span class=\"w\"> </span><span class=\"k\">as</span><span class=\"w\">  </span><span class=\"n\">amsg</span><span class=\"w\"></span>\n<span class=\"p\">,</span><span class=\"w\"> </span><span class=\"k\">case</span><span class=\"w\"> </span><span class=\"k\">when</span><span class=\"w\"> </span><span class=\"n\">am</span><span class=\"p\">.</span><span class=\"n\">message_id</span><span class=\"w\"> </span><span class=\"k\">is</span><span class=\"w\"> </span><span class=\"k\">not</span><span class=\"w\"> </span><span class=\"k\">null</span><span class=\"w\"> </span><span class=\"k\">then</span><span class=\"w\"> </span><span class=\"mi\">1</span><span class=\"w\"> </span><span class=\"k\">end</span><span class=\"w\"> </span><span class=\"n\">msg</span><span class=\"w\"></span>\n<span class=\"k\">FROM</span><span class=\"w\"></span>\n<span class=\"n\">zulip</span><span class=\"p\">.</span><span class=\"n\">zerver_attachment</span><span class=\"w\"> </span><span class=\"n\">a</span><span class=\"w\"></span>\n<span class=\"k\">LEFT</span><span class=\"w\"> </span><span class=\"k\">JOIN</span><span class=\"w\"> </span><span class=\"n\">zulip</span><span class=\"p\">.</span><span class=\"n\">zerver_attachment_messages</span><span class=\"w\"> </span><span class=\"n\">am</span><span class=\"w\"> </span><span class=\"k\">ON</span><span class=\"w\"> </span><span class=\"n\">a</span><span class=\"p\">.</span><span class=\"n\">id</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span><span class=\"n\">am</span><span class=\"p\">.</span><span class=\"n\">attachment_id</span><span class=\"w\"></span>\n<span class=\"p\">)</span><span class=\"w\"> </span><span class=\"n\">X</span><span class=\"w\"></span>\n<span class=\"k\">WHERE</span><span class=\"w\"> </span><span class=\"n\">amsg</span><span class=\"w\"> </span><span class=\"k\">is</span><span class=\"w\"> </span><span class=\"k\">null</span><span class=\"w\"> </span><span class=\"k\">AND</span><span class=\"w\"> </span><span class=\"n\">msg</span><span class=\"w\"> </span><span class=\"k\">is</span><span class=\"w\"> </span><span class=\"k\">null</span><span class=\"w\"></span>\n<span class=\"k\">ORDER</span><span class=\"w\"> </span><span class=\"k\">BY</span><span class=\"w\"> </span><span class=\"n\">path_id</span><span class=\"w\"></span>\n<span class=\"p\">;</span><span class=\"w\"></span>\n</code></pre></div>\n<p>This query returns a large number of records. Can someone tell me if it's safe to delete these <code>path_id</code>-files?</p>",
+        "id": 1383511,
+        "sender_full_name": "Aggr",
+        "timestamp": 1653294651
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10714\">@Aggr</span>  Looks reasonable to me at first glance - but I think it might be better to just wait for the review and merging of <a href=\"https://github.com/zulip/zulip/pull/22088\">https://github.com/zulip/zulip/pull/22088</a> - which will let <code>delete_old_unclaimed_attachments</code> do this cleanup. That's safer, since it'll have the benefit of being reviewed by others first <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1383535,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1653316852
+    },
+    {
+        "content": "<p>Thank you for your help again <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span>.<br>\nI also noticed that when archive job deletes files, the directories in which the files were stored remain. Of course, this does not violate anything, but still not very nice.</p>\n<div class=\"codehilite\"><pre><span></span><code>find /home/zulip/uploads/files/2/ -empty -type d | wc -l\n</code></pre></div>",
+        "id": 1383538,
+        "sender_full_name": "Aggr",
+        "timestamp": 1653319814
+    },
+    {
+        "content": "<p>Yeah, we can probably tweak that; though would need to be careful to avoid creating a race where a directory gets deleted for a file that's in the process of being uploaded.</p>",
+        "id": 1383614,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1653338494
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> thanks for preparing that PR; I agree we should take the opportunity to implement this aspect of Zulip fully.</p>",
+        "id": 1383615,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1653338523
+    },
+    {
+        "content": "<p>We merged <a href=\"https://github.com/zulip/zulip/pull/22088\">#22088</a>, which is great progress. <span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> I think there's still 2 outstanding issues here:</p>\n<ul>\n<li>We don't have a cron job to run <code>manage.py delete_old_unclaimed_attachments</code>.</li>\n<li>I think the system as implemented does nothing when <code>clean_archived_data</code> deletes an ArchivedAttachment object, potentially orphaning that file. (Additionally, installations may have had this happen in the past). <code>do_delete_old_unclaimed_attachments</code> just deletes files with an Attachment row but no actual file; nothing at present deletes files removes via retention policy. I'm not sure there is a correct implementation that doesn't involve sweeping the storage for files that do not have an <code>Attachment</code> object and deleting those (with care taken to avoid races with uploading a file). </li>\n</ul>\n<p>Does that summary fit your understanding?</p>",
+        "id": 1387898,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1654216814
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Hmm, I think <code>ArchivedAttachment</code>s are actually designed to stick around, with empty <code>.messages</code>. <code>clean_archived_data</code>  deletes <code>ArchiveTransactions</code> - which CASCADE-deletes  <code>ArchivedMessages</code> - and then other <code>ArchivedX</code> things that point to their corresponding <code>ArchivedMessage</code> (such as <code>ArchivedUserMessage</code>s, <code>ArchivedReaction</code>s etc.).</p>\n<p>But not <code>ArchivedAttachment</code>s, because those will just have their <code>.messages</code> emptied - but won't get deleted. So in theory we shouldn't get truly orphaned files through this</p>",
+        "id": 1389773,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1654622293
+    },
+    {
+        "content": "<p>Oh, great, that makes more sense -- we should be sure to add comment documentation of that detail.</p>",
+        "id": 1389774,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1654622337
+    },
+    {
+        "content": "<p>Hmm, but that leaves the question of how one is supposed to determine which ArchivedAttachment objects are ready to be deleted?</p>",
+        "id": 1389778,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1654622434
+    },
+    {
+        "content": "<p>I suppose the answer could be \"those that have empty <code>.messages</code>\"?</p>",
+        "id": 1389780,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1654622461
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/Message.20retention/near/1389780\">said</a>:</p>\n<blockquote>\n<p>I suppose the answer could be \"those that have empty <code>.messages</code>\"?</p>\n</blockquote>\n<p>I think it might be reasonable to leave it to <code>get_old_unclaimed_attachments</code> logic? (which we fixed in the PR ealier)</p>\n<div class=\"codehilite\"><pre><span></span><code>def get_old_unclaimed_attachments(\n    weeks_ago: int,\n) -&gt; Tuple[QuerySet[Attachment], QuerySet[ArchivedAttachment]]:\n    &quot;&quot;&quot;\n    The logic in this function is fairly tricky. The essence is that\n    a file should be cleaned up if and only if it not referenced by any\n    Message or ArchivedMessage. The way to find that out is through the\n    Attachment and ArchivedAttachment tables.\n    The queries are complicated by the fact that an uploaded file\n    may have either only an Attachment row, only an ArchivedAttachment row,\n    or both - depending on whether some, all or none of the messages\n    linking to it have been archived.\n    &quot;&quot;&quot;\n    delta_weeks_ago = timezone_now() - datetime.timedelta(weeks=weeks_ago)\n    old_attachments = Attachment.objects.annotate(\n        has_other_messages=Exists(\n            ArchivedAttachment.objects.filter(id=OuterRef(&quot;id&quot;)).exclude(messages=None)\n        )\n    ).filter(messages=None, create_time__lt=delta_weeks_ago, has_other_messages=False)\n    old_archived_attachments = ArchivedAttachment.objects.annotate(\n        has_other_messages=Exists(\n            Attachment.objects.filter(id=OuterRef(&quot;id&quot;)).exclude(messages=None)\n        )\n    ).filter(messages=None, create_time__lt=delta_weeks_ago, has_other_messages=False)\n\n    return old_attachments, old_archived_attachments\n</code></pre></div>\n<p>these returned Attachments and ArchivedAttachments then get deleted (with the file) by <code>do_delete_old_unclaimed_attachments</code>. </p>\n<p>Theoretically an <code>ArchivedAttachment</code> row becomes useless and could be deleted if it has empty <code>.messages</code> <strong>and</strong> the corresponding <code>Attachment</code> still exists with non-empty <code>.messages</code> - but I'm not sure if we need to complicate the picture further by trying to really delete them?</p>\n<p>(since the question of \"can ArchivedAttachment be deleted\" is a little bit different from \"can the ArchivedAttachment and the actual file both be deleted\")</p>",
+        "id": 1389793,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1654622961
+    },
+    {
+        "content": "<p>OK, so does that mean the only thing we need to fix is not having a cron job?</p>",
+        "id": 1389970,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1654635826
+    },
+    {
+        "content": "<p>Yes, that sounds right to me</p>",
+        "id": 1390146,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1654675360
+    },
+    {
+        "content": "<p>Opened <a href=\"https://github.com/zulip/zulip/pull/22213\">#22213</a> with a cronjob and some comments on the archive cleaning and ArchivedAttachment logic</p>",
+        "id": 1390159,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1654678062
+    },
+    {
+        "content": "<p>Great, thank you!</p>",
+        "id": 1390471,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1654718660
+    },
+    {
+        "content": "<p>I installed the server version 5.3 and I believe that the topic can be marked as resolved.<br>\n<span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> , thank you for your help again!<br>\n<span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> , thank you for everything you do for this wonderful project!<br>\n<a href=\"/user_uploads/2/77/iF3bxeWZTxAOvdb-xti5wk91/image.png\">image.png</a> <br>\n<a href=\"/user_uploads/2/b0/vdE2fFrEmWEdoz_Zr1dKfRbx/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/77/iF3bxeWZTxAOvdb-xti5wk91/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/77/iF3bxeWZTxAOvdb-xti5wk91/image.png\"></a></div><div class=\"message_inline_image\"><a href=\"/user_uploads/2/b0/vdE2fFrEmWEdoz_Zr1dKfRbx/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/b0/vdE2fFrEmWEdoz_Zr1dKfRbx/image.png\"></a></div>",
+        "id": 1395508,
+        "sender_full_name": "Aggr",
+        "timestamp": 1655972239
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10714\">@Aggr</span> thanks for following up and the kind words! <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1398160,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1656450332
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> has marked this topic as resolved.</p>",
+        "id": 1398161,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1656450340
+    }
+]

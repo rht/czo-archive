@@ -1,0 +1,104 @@
+[
+    {
+        "content": "<p>I recently updated from 7.0 to 7.3 and am now getting warning emails that the header is not configured correctly.</p>\n<p>I'm running on AWS (dedicated EC2 instance), and the ALB for public requests works fine and does include the header. However, AWS does health checks from the internal ALB instance directly to the EC2 server - there is no proxy in between. As a result, the AWS ALB reports the Zulip server as \"unhealthy\" because <code>No X-Forwarded-Proto header sent from trusted proxy...</code></p>\n<p>Is there any way around this?</p>",
+        "id": 1634982,
+        "sender_full_name": "James VL",
+        "timestamp": 1693862707
+    },
+    {
+        "content": "<p>(as a side note, the instance is working fine; however Django will send me an email for every connection attempt that is missing the headers, so for my setup it's about 3 every 5 minutes)</p>",
+        "id": 1635007,
+        "sender_full_name": "James VL",
+        "timestamp": 1693869449
+    },
+    {
+        "content": "<p>Hm.  This is roughly the configuration that we use for Zulip Cloud, and we don't get warnings.  Let me check our health check configuration.</p>",
+        "id": 1635129,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1693926651
+    },
+    {
+        "content": "<p>Ah -- the difference is that Zulip Cloud behind the ALB listens on HTTPS, so the healthcheck is over HTTPS, and the warning only fires if the request comes in over HTTP.</p>",
+        "id": 1635147,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1693930416
+    },
+    {
+        "content": "<p>In the configuration where Zulip is using <code>http_only</code>, we cannot distinguish \"request from a trusted proxy which sends no headers\" from \"request from the proxy itself.\"</p>\n<p>One option is that we can assume that the combination of:</p>\n<ol>\n<li><code>http_only</code></li>\n<li>User correctly configured proxy IPs in Zulip configuration</li>\n<li>Requests are coming from that trusted proxy IP</li>\n<li>That proxy sets <em>no</em> proxy headers</li>\n</ol>\n<p>...to be sufficiently rare that we can squash the warning about <code>X-Forwarded-Proto</code>, since there isn't even an <code>X-Forwarded -For</code>.</p>\n<p>The other angle on this is that we can provide a <code>/health-check</code> URL which is exempt from proxy-header-checking, and does some basic backend service checks.</p>",
+        "id": 1635149,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1693930628
+    },
+    {
+        "content": "<p>Either way would be great by me! <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1635152,
+        "sender_full_name": "James VL",
+        "timestamp": 1693931323
+    },
+    {
+        "content": "<blockquote>\n<ol start=\"4\">\n<li>That proxy sets <em>no</em> proxy headers</li>\n</ol>\n</blockquote>\n<p>Alternatively, you could check that the REAL_IP of the request is that of the proxy itself, e.g.</p>\n<div class=\"codehilite\"><pre><span></span><code>META:\n...\nHTTP_HOST = &#39;10.1.58.10&#39;\nHTTP_USER_AGENT = &#39;ELB-HealthChecker/2.0&#39;\nHTTP_X_FORWARDED_PROTO = &#39;&#39;\nHTTP_X_PROXY_MISCONFIGURATION = &#39;No X-Forwarded-Proto header sent from trusted proxy 10.1.18.51; see example configurations in https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy&#39;\nHTTP_X_REAL_IP = &#39;10.1.18.51&#39;\nPATH_INFO = &#39;/&#39;\nQUERY_STRING = &#39;&#39;\nREMOTE_ADDR = &#39;10.1.18.51\n</code></pre></div>\n<p>(IP addrs changed from my actual ones)</p>",
+        "id": 1635156,
+        "sender_full_name": "James VL",
+        "timestamp": 1693931608
+    },
+    {
+        "content": "<p>Ah, yeah, that's a pretty reasonable and straightforward fix.  I'll put up a PR for that this afternoon.</p>\n<p>Sorry for all of the log spam!</p>",
+        "id": 1635168,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1693934107
+    },
+    {
+        "content": "<p>I think we will also add a <code>/health-check</code> URL, which I'll try to remember to note on this topic, but if not it'll certainly be in the upgrade notes.</p>",
+        "id": 1635169,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1693934156
+    },
+    {
+        "content": "<p><code>/health-check</code> is always welcome, since that request may be better (either less resources or query for internal state) than simply hitting <code>/</code> and checking for a 200.</p>",
+        "id": 1635176,
+        "sender_full_name": "James VL",
+        "timestamp": 1693935283
+    },
+    {
+        "content": "<p>And no worries about the email spam! Nothing a temporary email rule can't handle for me in the mean time...</p>",
+        "id": 1635178,
+        "sender_full_name": "James VL",
+        "timestamp": 1693935305
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> any way I can shut this notification off while I'm waiting for the next release? the SES charges are starting to add up...</p>",
+        "id": 1638799,
+        "sender_full_name": "James VL",
+        "timestamp": 1694529500
+    },
+    {
+        "content": "<p>You can apply this patch to <code>~zulip/deployments/current</code> and run <code>./scripts/restart-server</code>:</p>\n<div class=\"codehilite\" data-code-language=\"Diff\"><pre><span></span><code><span class=\"gh\">diff --git zerver/middleware.py zerver/middleware.py</span>\n<span class=\"gh\">index 0eaa213ec5..4365a186b9 100644</span>\n<span class=\"gd\">--- zerver/middleware.py</span>\n<span class=\"gi\">+++ zerver/middleware.py</span>\n<span class=\"gu\">@@ -641,7 +641,8 @@ class DetectProxyMisconfiguration(MiddlewareMixin):</span>\n<span class=\"w\"> </span>        # localhost over HTTP (e.g. the email gateway).  Skip warnings\n<span class=\"w\"> </span>        # if the remote IP is localhost.\n<span class=\"w\"> </span>        if (\n<span class=\"gd\">-            proxy_state_header != \"\"</span>\n<span class=\"gi\">+            False</span>\n<span class=\"gi\">+            and proxy_state_header != \"\"</span>\n<span class=\"w\"> </span>            and not request.is_secure()\n<span class=\"w\"> </span>            and request.META[\"REMOTE_ADDR\"] not in (\"127.0.0.1\", \"::1\")\n<span class=\"w\"> </span>        ):\n</code></pre></div>",
+        "id": 1638802,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1694529604
+    },
+    {
+        "content": "<p>Pushed <a href=\"https://github.com/zulip/zulip/pull/26707\">#26707</a>.</p>",
+        "id": 1638848,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1694533284
+    },
+    {
+        "content": "<p>Merged; I guess we can now backport that to 7.x such that <span class=\"user-mention silent\" data-user-id=\"19765\">James VL</span> can just to <code>upgrade-zulip-from-git 7.x</code> to get the fix.</p>",
+        "id": 1638924,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694538691
+    },
+    {
+        "content": "<p>Very kind of you - I appreciate it! (and I did apply the patch locally - very relieved!)</p>",
+        "id": 1638947,
+        "sender_full_name": "James VL",
+        "timestamp": 1694541192
+    },
+    {
+        "content": "<p>Pushed <a href=\"https://github.com/zulip/zulip/pull/26720\">#26720</a> for the healthcheck endpoint.</p>",
+        "id": 1639292,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1694578501
+    }
+]

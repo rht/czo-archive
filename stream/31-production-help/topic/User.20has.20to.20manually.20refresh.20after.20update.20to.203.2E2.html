@@ -1,0 +1,337 @@
+<html>
+<head><meta charset="utf-8"><title>User has to manually refresh after update to 3.2 · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html">User has to manually refresh after update to 3.2</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1031507"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1031507" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1031507">(Oct 05 2020 at 22:04)</a>:</h4>
+<p>We recently updated to 3.2, one user after the update has reported that in order for them to see new posts they now need to change channels or refresh the page.  We haven't seen any issues on the client-side or server-side, does anyone have any ideas about what could cause this?</p>
+
+
+
+<a name="1031547"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1031547" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1031547">(Oct 05 2020 at 23:14)</a>:</h4>
+<p><span class="user-mention" data-user-id="17393">@Michael Bassler</span> hmm, it's strange that you're seeing that sort of problem with just 1 user.</p>
+
+
+
+<a name="1031548"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1031548" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1031548">(Oct 05 2020 at 23:14)</a>:</h4>
+<p>The root cause of that issue is likely a problem with the server-to-client events system.</p>
+
+
+
+<a name="1031549"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1031549" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1031549">(Oct 05 2020 at 23:14)</a>:</h4>
+<p>I'd start by looking at <code>/var/log/zulip/tornado.log</code> and <code>errors.log</code> looking for anything relevant.</p>
+
+
+
+<a name="1031550"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1031550" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1031550">(Oct 05 2020 at 23:14)</a>:</h4>
+<p>(The user's browser console might also have relevant errors)</p>
+
+
+
+<a name="1031558"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1031558" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1031558">(Oct 05 2020 at 23:25)</a>:</h4>
+<p><code>errors.log</code> shows: </p>
+<div class="codehilite"><pre><span></span><code>[zerver.lib.email_mirror] EMAIL_GATEWAY_PATTERN is an empty string, using NOREPLY_EMAIL_ADDRESS in the &#39;from&#39; field.
+</code></pre></div>
+
+
+<p>What should I be looking for in <code>tornado.log</code>? Filtering by clients IP I see a bunch of GET and DELETEs but don't see anything that stands out as an error. </p>
+<p>Browser console has periodically had: </p>
+<div class="codehilite"><pre><span></span><code>reactions.js:495 Uncaught TypeError: Cannot read property &#39;emoji_url&#39; of undefined
+</code></pre></div>
+
+
+<p>But I don't have direct access to the users env to validate that.</p>
+
+
+
+<a name="1031857"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1031857" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1031857">(Oct 06 2020 at 18:50)</a>:</h4>
+<p><span class="user-mention" data-user-id="17393">@Michael Bassler</span> OK, great, that exception is almost certainly the problem.</p>
+
+
+
+<a name="1031863"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1031863" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1031863">(Oct 06 2020 at 18:52)</a>:</h4>
+<p>(At least, if it's happening at the "right" place in the codebase, it could be).</p>
+<p>Can you post the full traceback?  It might be available via <code>blueslip.get_log()</code> on a JavaScript console.</p>
+<p><span class="user-mention" data-user-id="58">@Steve Howell</span> FYI; can you help investigate this?</p>
+
+
+
+<a name="1031945"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1031945" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1031945">(Oct 06 2020 at 21:37)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> Is your theory that the one user keeps bumping up against the <code>TypeError</code> problem for reactions?  Or should I be looking at the <code>EMAIL_GATEWAY_PATTERN</code> error?  The two things seem unrelated.</p>
+
+
+
+<a name="1031946"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1031946" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1031946">(Oct 06 2020 at 21:39)</a>:</h4>
+<p><code>EMAIL_GATEWAY_PATTERN</code> is certainly unrelated here, and harmless in general</p>
+
+
+
+<a name="1031948"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1031948" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1031948">(Oct 06 2020 at 21:42)</a>:</h4>
+<p>Thanks, <span class="user-mention" data-user-id="10349">@Mateusz Mandera</span>.</p>
+
+
+
+<a name="1031949"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1031949" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1031949">(Oct 06 2020 at 21:43)</a>:</h4>
+<p>The reactions bug seems to be a symptom of getting an <code>emoji_code</code> that is not a realm emoji:</p>
+<div class="codehilite" data-code-language="Python"><pre><span></span><code><span class="n">r</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">emoji</span><span class="o">.</span><span class="n">all_realm_emojis</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">emoji_code</span><span class="p">)</span><span class="o">.</span><span class="n">emoji_url</span><span class="p">;</span>
+</code></pre></div>
+
+
+
+<a name="1031957"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1031957" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1031957">(Oct 06 2020 at 22:02)</a>:</h4>
+<p><a href="https://github.com/zulip/zulip/pull/16485">https://github.com/zulip/zulip/pull/16485</a></p>
+
+
+
+<a name="1032082"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1032082" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1032082">(Oct 07 2020 at 00:22)</a>:</h4>
+<p>Yeah, I guess this'll be easier to debug with more output.</p>
+
+
+
+<a name="1032107"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1032107" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1032107">(Oct 07 2020 at 00:33)</a>:</h4>
+<p>I'm not sure whether it makes sense to backport that change (though I would backport an actual fix uncovered by it).  </p>
+<p>I don't have a good explanation for why this sort of thing might only affect one issue, but one idea might be:</p>
+<ul>
+<li>The user has in their personal history some use of a custom emoji.</li>
+<li>That custom emoji was deleted in some prior version.</li>
+</ul>
+<p><span class="user-mention" data-user-id="17393">@Michael Bassler</span> the best way to debug further would be if you were to use <code>upgrade-zulip-from-git</code> to install <code>3.2</code> with <a href="https://github.com/zulip/zulip/pull/16485">#16485</a> added, and see what the notice reads then.</p>
+
+
+
+<a name="1035516"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1035516" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1035516">(Oct 12 2020 at 18:29)</a>:</h4>
+<p>I am currently running <code>3.2</code> given that <code>upgrade-zulip-from-git</code> doesn't support upgrading to a commit, was your previous suggestion that I upgrade to <code>3.2</code> and manually apply the changes from that commit?</p>
+
+
+
+<a name="1035611"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1035611" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1035611">(Oct 12 2020 at 19:14)</a>:</h4>
+<p><span class="user-mention" data-user-id="17393">@Michael Bassler</span> simplest is to just make a branch on your fork with that commit and upgrade to that branch.</p>
+
+
+
+<a name="1035613"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1035613" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1035613">(Oct 12 2020 at 19:15)</a>:</h4>
+<p>I have a better idea though.</p>
+
+
+
+<a name="1035614"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1035614" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1035614">(Oct 12 2020 at 19:15)</a>:</h4>
+<p>Which is that we could backport the extra logging the 3.x branch, and you can just install that.</p>
+
+
+
+<a name="1035617"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1035617" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1035617">(Oct 12 2020 at 19:16)</a>:</h4>
+<p>Done.  So you can just do <code>upgrade-zulip-from-git 3.x</code>.</p>
+
+
+
+<a name="1035660"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1035660" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1035660">(Oct 12 2020 at 21:11)</a>:</h4>
+<p>That worked in our dev env, but we don't have the issue there. I'm going to schedule downtime for our prod instance.</p>
+
+
+
+<a name="1036250"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036250" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036250">(Oct 13 2020 at 15:07)</a>:</h4>
+<p>After the patch, the user reports "Cannot find/add realm emoji code '4'."</p>
+
+
+
+<a name="1036428"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036428" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036428">(Oct 13 2020 at 18:33)</a>:</h4>
+<p><span class="user-mention" data-user-id="17393">@Michael Bassler</span> great!  Now we can investigate in a <code>manage.py shell</code></p>
+
+
+
+<a name="1036429"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036429" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036429">(Oct 13 2020 at 18:33)</a>:</h4>
+<p><a href="https://zulip.readthedocs.io/en/latest/production/management-commands.html">https://zulip.readthedocs.io/en/latest/production/management-commands.html</a></p>
+
+
+
+<a name="1036430"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036430" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036430">(Oct 13 2020 at 18:33)</a>:</h4>
+<p>We'll want to do <code>RealmEmoji.objects.get(id=4)</code> and inspect its attributes.</p>
+
+
+
+<a name="1036716"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036716" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036716">(Oct 13 2020 at 23:54)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>In [4]: RealmEmoji.objects.get(id=4)
+---------------------------------------------------------------------------
+DoesNotExist                              Traceback (most recent call last)
+&lt;ipython-input-4-89cff8d40539&gt; in &lt;module&gt;
+----&gt; 1 RealmEmoji.objects.get(id=4)
+
+~/deployments/2020-10-12-21-11-57/zulip-py3-venv/lib/python3.6/site-packages/django/db/models/manager.py in manager_method(self, *args, **kwargs)
+     80         def create_method(name, method):
+     81             def manager_method(self, *args, **kwargs):
+---&gt; 82                 return getattr(self.get_queryset(), name)(*args, **kwargs)
+     83             manager_method.__name__ = method.__name__
+     84             manager_method.__doc__ = method.__doc__
+
+~/deployments/2020-10-12-21-11-57/zulip-py3-venv/lib/python3.6/site-packages/django/db/models/query.py in get(self, *args, **kwargs)
+    406             raise self.model.DoesNotExist(
+    407                 &quot;%s matching query does not exist.&quot; %
+--&gt; 408                 self.model._meta.object_name
+    409             )
+    410         raise self.model.MultipleObjectsReturned(
+
+DoesNotExist: RealmEmoji matching query does not exist.
+</code></pre></div>
+
+
+
+<a name="1036720"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036720" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036720">(Oct 13 2020 at 23:55)</a>:</h4>
+<p>That seems somewhat expected, the id does not exist but the user had some reference to it somewhere.</p>
+
+
+
+<a name="1036722"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036722" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036722">(Oct 13 2020 at 23:56)</a>:</h4>
+<p>Note: The user is reporting that with this change he is getting auto refresh. The error is present but it appears to refresh for him now.</p>
+
+
+
+<a name="1036750"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036750" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036750">(Oct 14 2020 at 00:02)</a>:</h4>
+<p>OK -- it sounds like that custom emoji was manually deleted.</p>
+
+
+
+<a name="1036757"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036757" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036757">(Oct 14 2020 at 00:04)</a>:</h4>
+<p>Is it something we should look to clean up or just leave?</p>
+
+
+
+<a name="1036758"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036758" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036758">(Oct 14 2020 at 00:04)</a>:</h4>
+<p>(Or possibly deleted like 2 years ago before we switched from deletion to deactivation).  So my guess is the root problem is the user's message history has a reaction or something referencing that deleted custom emoji.</p>
+<p>Can you try <code>Reaction.objects.filter(emoji_code=4, reaction_type=Reaction.REALM_EMOJI)</code>?</p>
+
+
+
+<a name="1036759"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036759" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036759">(Oct 14 2020 at 00:04)</a>:</h4>
+<p>That should find all Emoji reaction objects referencing the deleted custom emoji with ID 4.</p>
+
+
+
+<a name="1036768"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036768" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036768">(Oct 14 2020 at 00:05)</a>:</h4>
+<p>If the number of those is small, probably the simplest fix is to delete those Reaction records with:</p>
+<p><code>Reaction.objects.filter(emoji_code=4, reaction_type=Reaction.REALM_EMOJI).delete()</code></p>
+<p>After that (and clearly caches with <code>/home/zulip/deployments/current/scripts/setup/flush-memcached</code> and reloading the user's browser), you should be good.</p>
+
+
+
+<a name="1036775"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036775" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036775">(Oct 14 2020 at 00:08)</a>:</h4>
+<p>I'm not sure how to read that output:</p>
+<div class="codehilite"><pre><span></span><code>&lt;QuerySet [&lt;Reaction: redactedemail@example.com / 44381 / trollface&gt;, &#39;...(remaining elements truncated)...&#39;]&gt;
+</code></pre></div>
+
+
+
+<a name="1036781"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036781" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036781">(Oct 14 2020 at 00:08)</a>:</h4>
+<p>There is just one line where the number changes everytime</p>
+
+
+
+<a name="1036783"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036783" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036783">(Oct 14 2020 at 00:09)</a>:</h4>
+<p>also the email changes</p>
+
+
+
+<a name="1036786"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036786" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036786">(Oct 14 2020 at 00:09)</a>:</h4>
+<p>Yeah, maybe do <code>Reaction.objects.filter(emoji_code=4, reaction_type=Reaction.REALM_EMOJI).count()</code> to see how many there are.</p>
+
+
+
+<a name="1036787"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036787" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036787">(Oct 14 2020 at 00:09)</a>:</h4>
+<p>If there were like 3, it wouldn't have the truncated bit and would just show them all.</p>
+
+
+
+<a name="1036788"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036788" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036788">(Oct 14 2020 at 00:09)</a>:</h4>
+<p>145</p>
+
+
+
+<a name="1036790"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036790" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036790">(Oct 14 2020 at 00:10)</a>:</h4>
+<p>Anyway your options are basically (1) delete them or (2) if your team can recall what the custom emoji was meant to be, re-upload it and then renumber it to 4.</p>
+
+
+
+<a name="1036791"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036791" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036791">(Oct 14 2020 at 00:10)</a>:</h4>
+<p>These are just peoples reaction emojis to posts right? Not messages?</p>
+
+
+
+<a name="1036792"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036792" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036792">(Oct 14 2020 at 00:11)</a>:</h4>
+<p>Yes, correct, just the records of which users reacted with the deleted custom emoji with ID 4 to which messages.</p>
+
+
+
+<a name="1036897"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036897" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Bassler <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036897">(Oct 14 2020 at 00:39)</a>:</h4>
+<p>Done. flushed memcached and the user confirmed the error does not return after a refresh. </p>
+<p>Thank You for all your help with this!</p>
+
+
+
+<a name="1036901"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036901" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036901">(Oct 14 2020 at 00:40)</a>:</h4>
+<p>Great, thanks for the confirmation of the fix!</p>
+
+
+
+<a name="1036912"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036912" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036912">(Oct 14 2020 at 00:43)</a>:</h4>
+<p>I've confirmed that no Reaction objects exist on <a href="http://zulip.com">zulip.com</a> with this problem.</p>
+
+
+
+<a name="1036914"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/User%20has%20to%20manually%20refresh%20after%20update%20to%203.2/near/1036914" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/User.20has.20to.20manually.20refresh.20after.20update.20to.203.2E2.html#1036914">(Oct 14 2020 at 00:43)</a>:</h4>
+<p>So I'm guessing this isn't a normal/common Zulip bug, if it's a bug at all.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

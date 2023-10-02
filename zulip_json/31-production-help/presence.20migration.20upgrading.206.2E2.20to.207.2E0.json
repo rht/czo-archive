@@ -1,0 +1,188 @@
+[
+    {
+        "content": "<p>hi! <br>\nWhen upgrading to version 7, I get the error \"psycopg2.errors.DuplicateObject: constraint \"zerver_userpresenceo_user_profile_id_d75366d6_fk_zerver_us\" for relation \"zerver_userpresence\" already exists\" </p>\n<p>How to solve the problem?</p>",
+        "id": 1582735,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685612619
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/99/98xrTo8xG1nv8nOa3B0DOvca/upgrade.log\">upgrade.log</a></p>",
+        "id": 1582736,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685612631
+    },
+    {
+        "content": "<p>I also got this today and that was just the beginning of things going seriously wrong</p>",
+        "id": 1582760,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685620567
+    },
+    {
+        "content": "<p>I thought the issue might've been in us running postgresql-14 instead of 15 which was by now installed by ubuntu so I looked into the upgrade instructions which prompted me to do a database upgrade</p>",
+        "id": 1582761,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685620605
+    },
+    {
+        "content": "<p>something in the lines of /home/zulip/deployments/current/scripts/setup/upgrade-postgresql  (now do <em>not</em> run this!)</p>\n<p>The thing is there was no warning that this was indeed a trick someone had done as we now had our Zulip instance on postgresql-14 and running the script figured out our target was 14 but failed to deduct we were already there (not sure what happened, there were remnants of Postresql-12, maybe that was the issue?) </p>\n<div class=\"codehilite\"><pre><span></span><code>if [ &quot;$UPGRADE_TO&quot; = &quot;$UPGRADE_FROM&quot; ]; then                                                                                                                                                                                                      echo &quot;Already running PostgreSQL $UPGRADE_TO!&quot;\n    exit 1\nfi\nset -x\n\n&quot;$ZULIP_PATH&quot;/scripts/lib/setup-apt-repo\napt-get install -y &quot;postgresql-$UPGRADE_TO&quot;\nif pg_lsclusters -h | grep -qE &quot;^$UPGRADE_TO\\s+main\\b&quot;; then\n    pg_dropcluster &quot;$UPGRADE_TO&quot; main --stop\nfi\n</code></pre></div>",
+        "id": 1582762,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685620743
+    },
+    {
+        "content": "<p>So what it ended up doing was the latter part of dropping the entire 14-main cluster without ever asking a question</p>",
+        "id": 1582763,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685620764
+    },
+    {
+        "content": "<p>Also the upgrade only takes backups of the zulip folder, not the data</p>",
+        "id": 1582764,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685620781
+    },
+    {
+        "content": "<p>yeah seems a previous upgrade had not updated the postgres version value in the ini file which it trusted and wiped out our data</p>",
+        "id": 1582765,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685620898
+    },
+    {
+        "content": "<p>(I initially started doing the upgrade because the search had been broken for us since a previous upgrade )</p>",
+        "id": 1582766,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685621084
+    },
+    {
+        "content": "<p>ok now with very old backup upgrading from 6.1 after restoring the database I'm back at <br>\n<code>django.db.utils.ProgrammingError: constraint \"zerver_userpresenceo_user_profile_id_d75366d6_fk_zerver_us\" for relation \"zerver_userpresence\" already exists  </code></p>",
+        "id": 1582777,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685624148
+    },
+    {
+        "content": "<p><span aria-label=\"sweat smile\" class=\"emoji emoji-1f605\" role=\"img\" title=\"sweat smile\">:sweat_smile:</span></p>",
+        "id": 1582778,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685624317
+    },
+    {
+        "content": "<p>waiting for a solution to the problem ...</p>",
+        "id": 1582779,
+        "sender_full_name": "Serg  Grishchenko",
+        "timestamp": 1685624365
+    },
+    {
+        "content": "<p>Oh no, the database upgrade script sure is badass as it assumes version 14 as target (on zulip 6.x anyway as the upgrade to 7 fails) - I tried upgrading 14=&gt;15 to see if that's the issue but it failed</p>",
+        "id": 1582807,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685626935
+    },
+    {
+        "content": "<p>did some problem solving and tried again, this time forgetting to pass the target version 15 as parameter</p>",
+        "id": 1582808,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685626948
+    },
+    {
+        "content": "<p>well the script had already updated our \"current\" version information to 15 even though it failed (!) and now the script started doing an \"upgrade\" 15 =&gt; 14</p>",
+        "id": 1582809,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685626981
+    },
+    {
+        "content": "<p>and again there goes my version 14 cluster</p>",
+        "id": 1582810,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685626997
+    },
+    {
+        "content": "<p>Kudos to whoever coded that abomination.</p>",
+        "id": 1582811,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685627007
+    },
+    {
+        "content": "<p>Ok now I'm back to 6.1 and will wait for the solution also. Had to revert back to a snapshot from a year ago due to 7.0 upgrade path being as broken as it is.</p>",
+        "id": 1583174,
+        "sender_full_name": "Antti Kanes",
+        "timestamp": 1685640593
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9287\">@Antti Kanes</span> sorry to hear about your trouble. I'm confused, you're talking about upgrading postgres, which is an independent operation from upgrading the Zulip server -- did you see the original <code>psycopg2.errors.DuplicateObject: constraint \"zerver_userpresenceo_user_profile_id_d75366d6_fk_zerver_us\" for relation \"zerver_userpresence\" already exists\"</code> error in this thread?</p>",
+        "id": 1583260,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685647519
+    },
+    {
+        "content": "<p>If not, we should definitely split the topic so we can discuss the different issues correctly.</p>",
+        "id": 1583262,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685647532
+    },
+    {
+        "content": "<p>Oh, I see, you indeed report seeing that error. I guess I'm very confused as to how you ended up trying to upgrade <code>postgres</code> in response to an error about a migration not applying.</p>",
+        "id": 1583266,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685647620
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"23869\">@Serg  Grishchenko</span> <span class=\"user-mention\" data-user-id=\"9287\">@Antti Kanes</span> can you talk about the past upgrade history of your server -- what version it was originally installed with? I think it's quite likely that the exception the database migration has to do with that history.</p>",
+        "id": 1583270,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685647727
+    },
+    {
+        "content": "<p>Like, it might be something that only fails for users who originally installed 4.0 and continuously upgraded that, and it'd be very helpful to know what your situation is so we can try to debug.</p>",
+        "id": 1583271,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685647765
+    },
+    {
+        "content": "<p>Maybe I'm too late to catch you folks today; <span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> It's probably worth you looking at whether you have any theories for the migration issue.</p>",
+        "id": 1583290,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685648258
+    },
+    {
+        "content": "<p>We've also seen other reports of folks thinking they need to change the postgres version; see <a class=\"stream-topic\" data-stream-id=\"31\" href=\"/#narrow/stream/31-production-help/topic/postgres.20version.20issue.20upgrading.206.2E1.20to.206.2E2\">#production help &gt; postgres version issue upgrading 6.1 to 6.2</a>, for example. I don't understand that, but it seems like a separate problem that we can debug there.</p>",
+        "id": 1583292,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685648335
+    },
+    {
+        "content": "<p>Some debugging in <a class=\"stream-topic\" data-stream-id=\"31\" href=\"/#narrow/stream/31-production-help/topic/postgres.20version.20issue.20upgrading.206.2E1.20to.206.2E2\">#production help &gt; postgres version issue upgrading 6.1 to 6.2</a> suggests a theory for the issue <span class=\"user-mention silent\" data-user-id=\"9287\">Antti Kanes</span> had of ending up with multiple postgres versions may be the result of having <code>/etc/zulip/zulip.conf</code> recording a different <code>postgresql</code> version than the one the system was actually using.</p>\n<p>I don't think it's related to the migration failure.</p>",
+        "id": 1583317,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685649163
+    },
+    {
+        "content": "<p>OK so we can see clearly from upgrade the logs for <span class=\"user-mention silent\" data-user-id=\"23869\">Serg  Grishchenko</span> that this failed the first time migrations were applied, so it's not something weird with incomplete migrations:</p>\n<div class=\"codehilite\"><pre><span></span><code>Running migrations:\n  Applying zerver.0423_fix_email_gateway_attachment_owner... OK\n  Applying zerver.0424_realm_move_messages_within_stream_limit_seconds... OK\n  Applying zerver.0425_realm_move_messages_between_streams_limit_seconds... OK\n  Applying zerver.0426_add_email_address_visibility_setting... OK\n  Applying zerver.0427_migrate_to_user_level_email_address_visibility_setting... OK\n  Applying zerver.0428_remove_realm_email_address_visibility... OK\n  Applying zerver.0429_user_topic_case_insensitive_unique_toghether... OK\n  Applying zerver.0430_fix_audit_log_objects_for_group_based_stream_settings... OK\n  Applying zerver.0431_alter_archivedreaction_unique_together_and_more... OK\n  Applying zerver.0432_alter_and_migrate_realm_name_in_notifications... OK\n  Applying zerver.0433_preregistrationrealm... OK\n  Applying zerver.0434_create_nobody_system_group... OK\n  Applying zerver.0435_scheduledmessage_rendered_content... OK\n  Applying zerver.0436_realmauthenticationmethods... OK\n  Applying zerver.0437_remove_realm_authentication_methods... OK\n  Applying zerver.0438_add_web_mark_read_on_scroll_policy_setting... OK\n  Applying zerver.0439_fix_deleteduser_email... OK\n  Applying zerver.0440_realmfilter_url_template... OK\n  Applying zerver.0441_backfill_realmfilter_url_template... OK\n  Applying zerver.0442_remove_realmfilter_url_format_string... OK\n  Applying zerver.0443_userpresence_new_table_schema...Traceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/utils.py&quot;, line 87, in _execute\n    return self.cursor.execute(sql)\n  File &quot;/home/zulip/deployments/2023-06-01-08-51-18/zerver/lib/db.py&quot;, line 35, in execute\n    wrapper_execute(self, super().execute, query, vars)\n  File &quot;/home/zulip/deployments/2023-06-01-08-51-18/zerver/lib/db.py&quot;, line 20, in wrapper_execute\n    action(sql, params)\npsycopg2.errors.DuplicateObject: constraint &quot;zerver_userpresenceo_user_profile_id_d75366d6_fk_zerver_us&quot; for relation &quot;zerver_userpresence&quot; already exists\n</code></pre></div>",
+        "id": 1583324,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685649361
+    },
+    {
+        "content": "<p>OK I have a theory that the issue is that this block in <code>0443_userpresence_new_table_schema.py</code> just needs to be skipped if the migration already has that name:</p>\n<div class=\"codehilite\"><pre><span></span><code>                    raw_query = SQL(\n                        &quot;ALTER TABLE {old_table} RENAME CONSTRAINT {old_name} TO {new_name}&quot;\n                    ).format(\n                        old_table=Identifier(old_table),\n                        old_name=Identifier(old_name),\n                        new_name=Identifier(new_name),\n                    )\n</code></pre></div>",
+        "id": 1583325,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685649436
+    },
+    {
+        "content": "<p>That would at least generate this exact exception:</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip=&gt; ALTER TABLE zerver_userpresence RENAME CONSTRAINT zerver_userpresence_user_profile_id_b67b4092_fk_zerver_us to zerver_userpresence_user_profile_id_b67b4092_fk_zerver_us;\nERROR:  constraint &quot;zerver_userpresence_user_profile_id_b67b4092_fk_zerver_us&quot; for relation &quot;zerver_userpresence&quot; already exists\n</code></pre></div>",
+        "id": 1583326,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685649566
+    },
+    {
+        "content": "<p>I don't understand this migration well enough to say why it might be possible for that to happen, but I'm guessing this is the fix for the issue:</p>\n<div class=\"codehilite\"><pre><span></span><code>diff --git a/zerver/migrations/0443_userpresence_new_table_schema.py b/zerver/migrations/0443_userpresence_new_table_schema.py\nindex e4a7d3ca10..d1e5f3bdfe 100644\n--- a/zerver/migrations/0443_userpresence_new_table_schema.py\n+++ b/zerver/migrations/0443_userpresence_new_table_schema.py\n@@ -33,6 +33,11 @@ def rename_indexes_constraints(\n                     suffix = &quot;_idx&quot; if len(infodict[&quot;columns&quot;]) &gt; 1 else &quot;&quot;\n                     is_index = True\n                 new_name = schema_editor._create_index_name(new_table, infodict[&quot;columns&quot;], suffix)\n+\n+                if old_name == new_name:\n+                    # Don&#39;t crash if these already have the right names.\n+                    continue\n+\n                 if is_index:\n                     raw_query = SQL(&quot;ALTER INDEX {old_name} RENAME TO {new_name}&quot;).format(\n                         old_name=Identifier(old_name), new_name=Identifier(new_name)\n</code></pre></div>",
+        "id": 1583327,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685649611
+    },
+    {
+        "content": "<p>Opened <a href=\"https://github.com/zulip/zulip/pull/25869\">https://github.com/zulip/zulip/pull/25869</a>; review appreciated. I would feel most comfortable with this if we had a theory for how this failure mode might be possible.</p>",
+        "id": 1583453,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1685654583
+    }
+]

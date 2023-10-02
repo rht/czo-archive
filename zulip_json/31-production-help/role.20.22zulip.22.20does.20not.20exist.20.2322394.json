@@ -1,0 +1,278 @@
+[
+    {
+        "content": "<p>Posting <a href=\"https://github.com/zulip/zulip/pull/22394\">#22394</a> here for visibility:</p>\n<blockquote>\n<p>Hello,<br>\nI had a zulip instance running on a Ubuntu 20.04 machine and I wanted to move it to a different machine running Ubuntu 22.04. I upgraded the old server to latest stable version of Zulip, then made a backup.tar.gz of the old server and installed latest stable Zulip on new machine.<br>\nThen I noticed the docs said the OS versions should be the same.<br>\nI decided to try importing anyway. The first time the import script failed, but I ran it again and then it went thru and everything seemed to be working, except I was occasionally getting an Internal Server Error after running <code>restart-server</code>. Rebooting the machine usually took care of the problem.</p>\n<p>I thought maybe if I upgraded to main, it would fix the issue, so I ran <code>upgrade-zulip-from-git main</code>. But it fails with this error<br>\n<code>django.db.utils.OperationalError: connection to server on socket \"/var/run/postgresql/.s.PGSQL.5432\" failed: FATAL:  role \"zulip\" does not exist</code></p>\n<p>So I wanted to do a backup of my new server, reinstall Zulip and try to re-import my data, but now it will not allow me to do the backup either. Gives the same <code>role \"zulip\" does not exist</code>. It seems my postgres db configuration has been broken.<br>\nI ran <code>scripts/setup/upgrade-postgresql</code> but that didn't fix anything.<br>\nHow can I re-configure my database?</p>\n</blockquote>",
+        "id": 1401261,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1657229312
+    },
+    {
+        "content": "<p>If I'm reading this right, upgrades and backups are broken, but the live server is working, just occasionally errors after running <code>restart-server</code>?</p>\n<p>Two questions:</p>\n<ol>\n<li>What is in <code>/var/log/zulip/errors.log</code></li>\n<li>What does running <code>pg_lsclusters</code> as root show?</li>\n</ol>",
+        "id": 1401267,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1657229649
+    },
+    {
+        "content": "<p>As a sidenote, I wonder if we need to change that text about \"same OS\" to instead (or also) say \"same postgres version\"?</p>",
+        "id": 1401381,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1657236396
+    },
+    {
+        "content": "<p>Thanks for the response.</p>\n<blockquote>\n<p>but the live server is working</p>\n</blockquote>\n<p>I was working after the import, but since I attempted to upgrade-zulip-from-git main, it gives Internal Server Error and I cannot get it to work.</p>\n<p>My organization is small and I have a backup that is a few days old, so if this turns out to be complicated, I will just reinstall, matching the versions this time.<br>\nBut I am curious what happened and thought maybe I could learn...</p>\n<p><code>tail /var/log/zulip/errors.log</code> shows this. Let me know if more would be helpful</p>\n<div class=\"codehilite\"><pre><span></span><code>  File &quot;/srv/zulip-venv-cache/ee233d2d93cbdcac206a4639d168ec0986a04278/zulip-py3-venv/lib/python3.10/site-packages/django/utils/asyncio.py&quot;, line 33, in inner\n    return func(*args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/ee233d2d93cbdcac206a4639d168ec0986a04278/zulip-py3-venv/lib/python3.10/site-packages/django/db/backends/postgresql/base.py&quot;, line 187, in get_new_connection\n    connection = Database.connect(**conn_params)\n  File &quot;/srv/zulip-venv-cache/ee233d2d93cbdcac206a4639d168ec0986a04278/zulip-py3-venv/lib/python3.10/site-packages/psycopg2/__init__.py&quot;, line 122, in connect\n    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)\n  File &quot;/home/zulip/deployments/2022-06-23-01-21-48/./zerver/lib/db.py&quot;, line 60, in __init__\n    super().__init__(*args, **kwargs)\ndjango.db.utils.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n</code></pre></div>\n<p><code>sudo pg_lsclusters</code> returns this:</p>\n<div class=\"codehilite\"><pre><span></span><code>14  main    5432 online postgres /var/lib/postgresql/14/main /var/log/postgresql/postgresql-%Y-%m-%d_%H%M%S.log\n</code></pre></div>",
+        "id": 1401394,
+        "sender_full_name": "Kendall Martin",
+        "timestamp": 1657237269
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"14101\">@Kendall Martin</span>:  As far as I can tell from this output, you have a postgresql database that is empty.</p>\n<p>I'm having a vary hard time understanding how you could have gotten into this position.  Possibly <code>upgrade-postgresql</code> could have eliminated some evidence that would be helpful here.</p>\n<p>But at this point we're like 5 steps down the road from the first error (\"the first time the import script failed\") so it's very hard to reason about what state the system might be in.</p>\n<p>I expect you've done so already by this point, but restoring from backup is your best bet.  If you run into errors when following steps that are <em>expected</em> to work, please do tell us when you first see them, and we can hopefully get them sorted out. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>\n<p>I'm going to close <a href=\"https://github.com/zulip/zulip/pull/22394\">#22394</a> for now, but don't hesitate to open it again if you find more details.</p>",
+        "id": 1407256,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1658276389
+    },
+    {
+        "content": "<p>Thank-you for your reply. Yes, I did restore my backup on a fresh instance running on the same Ubuntu version as my old server. However, the restore script again failed on the first try and then worked on the second. The server has been working perfectly since, so I didn't investigate further. I copied off this error when it failed the first time... not sure if it tells you anything or not.</p>\n<div class=\"codehilite\" data-code-language=\"notice\"><pre><span></span><code>Notice: /Stage[main]/Zulip::Profile::Memcached/File[/etc/sasl2/memcached-sasldb2]/mode: mode changed '0640' to '0600'\nNotice: /Stage[main]/Zulip::Profile::Rabbitmq/File[/etc/rabbitmq]/owner: owner changed 'rabbitmq' to 'root'\nNotice: /Stage[main]/Zulip::Profile::Rabbitmq/File[/etc/rabbitmq]/group: group changed 'rabbitmq' to 'root'\nNotice: /Stage[main]/Zulip::Nginx/Service[nginx]: Triggered 'refresh' from 2 events\nNotice: /Stage[main]/Zulip::Postgresql_common/Zulip::Safepackage[postgresql-13]/Package[postgresql-13]/ensure: created\nNotice: /Stage[main]/Zulip::Postgresql_base/File[/usr/share/postgresql/13/tsearch_data/zulip_english.stop]/ensure: defined content as '{md5}34e771a8f53b4ae2e8b43affd3f820b2'\nNotice: /Stage[main]/Zulip::Profile::Postgresql/File[/etc/postgresql/13/main/postgresql.conf]/content: content changed '{md5}df8b048eb63f4d3860c8b8f8a0adb7d6' to '{md5}06b05afb053f2db50f3d72178c00b164'\nNotice: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 13 main restart]/returns: Job for postgresql@13-main.service failed because the service did not take the steps required by its unit configuration.\nNotice: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 13 main restart]/returns: See \"systemctl status postgresql@13-main.service\" and \"journalctl -xe\" for details.\nError: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 13 main restart]: Failed to call refresh: 'pg_ctlcluster 13 main restart' returned 1 instead of one of [0]\nError: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 13 main restart]: 'pg_ctlcluster 13 main restart' returned 1 instead of one of [0]\nNotice: /Stage[main]/Zulip::Supervisor/Service[supervisor]: Triggered 'refresh' from 2 events\nNotice: Applied catalog in 102.38 seconds\n</code></pre></div>",
+        "id": 1407270,
+        "sender_full_name": "Kendall Martin",
+        "timestamp": 1658276997
+    },
+    {
+        "content": "<p>It looks like something failed to set up postgresql at all, when you first installed the server.  That's not a failure mode I've ever seen before.  But knowing more would take looking at /var/log/postgresql/, and I understand you've cleaned up and reinstalled the machine now?</p>",
+        "id": 1407283,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1658277306
+    },
+    {
+        "content": "<p>Well, i don't know how that could have happened; I thought my install was about as straight-forward as they come. Spun up a new Ubuntu 20.04 CT on Proxmox, <code>apt upgrade</code>, download and extract zulip server tarball, run installation script with certbot. That all worked fine; it was when I ran the import script with the backup from my old server that it failed. I right away re-ran the same command, and then it completed successfully.<br>\nBeen working good since.<br>\nRight now there are several log files in <code>/var/log/postgresql</code></p>\n<div class=\"codehilite\"><pre><span></span><code>root@ps-zulip-server-ct:/var/log/postgresql# ls\npostgresql-13-main.log            postgresql-2022-07-14_000000.log  postgresql-2022-07-14_145522.log  postgresql-2022-07-15_115726.log\npostgresql-14-main.log            postgresql-2022-07-14_003712.log  postgresql-2022-07-15_003912.log  postgresql-2022-07-15_190409.log\npostgresql-2022-07-09_003924.log  postgresql-2022-07-14_145521.log  postgresql-2022-07-15_115725.log  postgresql-2022-07-16_182230.log\n</code></pre></div>\n<p>I'm guessing from the contents of the <code>postgresql-2022-07-09-003924.log</code> that that's the day I installed (don't recall exactly). I attached what looks to me like the relevant portion of that log.  <a href=\"/user_uploads/2/a/B0-em-cPJX7d09BbFofZi0eb/postgresql-log.txt\">postgresql-log.txt</a></p>",
+        "id": 1407475,
+        "sender_full_name": "Kendall Martin",
+        "timestamp": 1658318802
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"14101\">@Kendall Martin</span> glad it's working! Can you give the error message you got when running the restore script the first time today?</p>",
+        "id": 1407549,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1658336440
+    },
+    {
+        "content": "<p>It seems like this problem is back <span aria-label=\"frown\" class=\"emoji emoji-1f641\" role=\"img\" title=\"frown\">:frown:</span></p>",
+        "id": 1467023,
+        "sender_full_name": "Kendall Martin",
+        "timestamp": 1668730263
+    },
+    {
+        "content": "<p>I ran <code>upgrade-from-git 6.0</code> on this server (It had been working fine; just wanted to upgrade to latest release.) <br>\nThe upgrade script failed with an error similar to what I was getting before...<br>\n<code>psycopg2.OperationalError: connection to server on socket \"/var/run/postgresql/.s.PGSQL.5432\" failed: FATAL:  role \"zulip\" does not exist</code><br>\nNow the server does not restart</p>\n<div class=\"codehilite\"><pre><span></span><code>process-fts-updates: ERROR (spawn error)\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/restart-server&quot;, line 135, in &lt;module&gt;\n    restart_or_start(worker)\n  File &quot;/home/zulip/deployments/current/scripts/restart-server&quot;, line 119, in restart_or_start\n    subprocess.check_call([&quot;supervisorctl&quot;, our_verb, service])\n  File &quot;/usr/lib/python3.8/subprocess.py&quot;, line 364, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;supervisorctl&#39;, &#39;start&#39;, &#39;process-fts-updates&#39;]&#39; returned non-zero exit status 7.\n</code></pre></div>\n<p>I had failed to make a backup of my server before attempting the upgrade <span aria-label=\"confounded\" class=\"emoji emoji-1f616\" role=\"img\" title=\"confounded\">:confounded:</span> (It's normally very simple.) At this point the backup script is failing with the same error</p>\n<div class=\"codehilite\"><pre><span></span><code>django.db.utils.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n</code></pre></div>\n<p><code>tail /var/log/zulip/errors.log</code> gives me</p>\n<div class=\"codehilite\"><pre><span></span><code>  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/utils/asyncio.py&quot;, line 33, in inner\n    return func(*args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/postgresql/base.py&quot;, line 187, in get_new_connection\n    connection = Database.connect(**conn_params)\n  File &quot;/srv/zulip-venv-cache/e5128e116bae759c7692fa7c8bd0a48e9970619d/zulip-py3-venv/lib/python3.8/site-packages/psycopg2/__init__.py&quot;, line 122, in connect\n    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)\n  File &quot;/home/zulip/deployments/2022-08-25-00-20-30/./zerver/lib/db.py&quot;, line 48, in __init__\n    super().__init__(*args, **kwargs)\ndjango.db.utils.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n</code></pre></div>\n<p>Here are two log files from<code>/var/log/postgres</code> with today's date.<br>\n<a href=\"/user_uploads/2/74/MLNTbQFupioGX1YaL1Mx4U9e/postgresql-2022-11-17_000000.log\">postgresql-2022-11-17_000000.log</a> <a href=\"/user_uploads/2/d8/6djBem5hiPyd5lR6ZM3b0ldw/postgresql-2022-11-17_230949.log\">postgresql-2022-11-17_230949.log</a> </p>\n<p>running <code>pg_lsclusters</code> as root returns this</p>\n<div class=\"codehilite\"><pre><span></span><code>Ver Cluster Port Status Owner    Data directory              Log file\n13  main    5432 online postgres /var/lib/postgresql/13/main /var/log/postgresql/postgresql-%Y-%m-%d_%H%M%S.log\n14  main    5432 down   postgres /var/lib/postgresql/14/main /var/log/postgresql/postgresql-%Y-%m-%d_%H%M%S.log\n</code></pre></div>\n<p>Is it possible to recover my data at least?? Wanted to reach out here before I do something that destroys it...</p>",
+        "id": 1467029,
+        "sender_full_name": "Kendall Martin",
+        "timestamp": 1668731685
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Any thoughts? Thanks in advance</p>",
+        "id": 1467030,
+        "sender_full_name": "Kendall Martin",
+        "timestamp": 1668731822
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"14101\">@Kendall Martin</span> the error is telling you that your Postgres 14 instance is down; I suspect debugging that is what you need to do.</p>",
+        "id": 1467031,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668731981
+    },
+    {
+        "content": "<p>Did you figure out which version of postgres you were actually using?</p>",
+        "id": 1467033,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668732015
+    },
+    {
+        "content": "<p>My guess is that probably <code>apt upgrade</code> on your system installed a second copy of postgres, or restarted it, or something ...</p>",
+        "id": 1467034,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668732044
+    },
+    {
+        "content": "<p>I think you want to shut down the postgres instance that doesn't have a <code>zulip</code> database in it, and start up the one that does.</p>",
+        "id": 1467035,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668732089
+    },
+    {
+        "content": "<p>(It looks like they are both configured to use port <code>5432</code>, and that's probably part of your problem)</p>",
+        "id": 1467036,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668732104
+    },
+    {
+        "content": "<p>ok that's making sense. From the output of <code>pg_lsclusters</code> it looks like I somehow have both version 13 and 14. Perhaps it's trying to use v14 and that's not configured?? How do I tell it to use v13?</p>",
+        "id": 1467042,
+        "sender_full_name": "Kendall Martin",
+        "timestamp": 1668732314
+    },
+    {
+        "content": "<p>OK I stopped and restarted postgres and it appears v14 came back online instead of 13. Currently trying the upgrade again...</p>",
+        "id": 1467049,
+        "sender_full_name": "Kendall Martin",
+        "timestamp": 1668732742
+    },
+    {
+        "content": "<p>Thanks! <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> I was able to complete the upgrade once Postgres 14 was online instead of 13. Running <code>pg_lsclusters</code> still shows the two versions. Should I remove version 13?</p>",
+        "id": 1467063,
+        "sender_full_name": "Kendall Martin",
+        "timestamp": 1668733264
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"14101\">@Kendall Martin</span> yeah, I'd remove it, if you aren't using it for something else, since it'll avoid this happening again <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1467065,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668733341
+    },
+    {
+        "content": "<p>i'm seeing multiple of this errors in a totally fresh installed zulip on debian bullseye (not being used for anything but creating the initial organization and one admin user):</p>\n<div class=\"codehilite\"><pre><span></span><code># grep -ri &quot;does not exist&quot; .\n./fts-updates.log:psycopg2.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./fts-updates.log:psycopg2.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./fts-updates.log:psycopg2.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./fts-updates.log:psycopg2.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./fts-updates.log:psycopg2.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./fts-updates.log:psycopg2.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./fts-updates.log:psycopg2.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./fts-updates.log:psycopg2.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./events_deliver_scheduled_messages.log:psycopg2.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./events_deliver_scheduled_messages.log:django.db.utils.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./events_deliver_scheduled_messages.log:psycopg2.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./events_deliver_scheduled_messages.log:django.db.utils.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./events_deliver_scheduled_messages.log:psycopg2.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./events_deliver_scheduled_messages.log:django.db.utils.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./install.log:psql: error: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  database &quot;zulip&quot; does not exist\n./install.log:NOTICE:  database &quot;zulip&quot; does not exist, skipping\n./events_deliver_scheduled_emails.log:psycopg2.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./events_deliver_scheduled_emails.log:django.db.utils.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./events_deliver_scheduled_emails.log:psycopg2.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./events_deliver_scheduled_emails.log:django.db.utils.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./events_deliver_scheduled_emails.log:psycopg2.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n./events_deliver_scheduled_emails.log:django.db.utils.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n</code></pre></div>",
+        "id": 1477969,
+        "sender_full_name": "RolandK",
+        "timestamp": 1670788767
+    },
+    {
+        "content": "<p>(deleted)</p>",
+        "id": 1477970,
+        "sender_full_name": "RolandK",
+        "timestamp": 1670789037
+    },
+    {
+        "content": "<p>this command can check without error message if a database exists. maybe it's useful for the installer scripting</p>\n<div class=\"codehilite\"><pre><span></span><code><span class=\"ch\">#!/bin/bash</span>\n<span class=\"k\">if</span> psql -l <span class=\"p\">|</span> grep <span class=\"s1\">&#39;^ zulip\\b&#39;</span> &gt; /dev/null <span class=\"p\">;</span> <span class=\"k\">then</span>\n  <span class=\"nb\">echo</span> <span class=\"s2\">&quot;Database exists already.&quot;</span>\n  <span class=\"nb\">exit</span>\n<span class=\"k\">fi</span>\n</code></pre></div>",
+        "id": 1477972,
+        "sender_full_name": "RolandK",
+        "timestamp": 1670790362
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"11088\">@RolandK</span> well, it's certainly a major problem that should be logged if the <code>zulip</code> database does not exist; so I'm not sure what change you're proposing. Is the point that you think these errors only occur during the installation process?</p>",
+        "id": 1478302,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1670866420
+    },
+    {
+        "content": "<p>I think what's tricky is most of those logs are written by services managed by <code>supervisord</code>; so the problem is more likely that those services are started before the database is created in the installation sequence.</p>",
+        "id": 1478303,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1670866461
+    },
+    {
+        "content": "<p>If we wanted to avoid that logging, which might be nice, we'd need to do something in supervisord to avoid services that depend on the database being started when we run <code>zulip-puppet-apply</code> to install dependencies.</p>",
+        "id": 1478304,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1670866511
+    },
+    {
+        "content": "<p>(And then start them explicitly later)</p>",
+        "id": 1478305,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1670866526
+    },
+    {
+        "content": "<blockquote>\n<p>so I'm not sure what change you're proposing.</p>\n</blockquote>\n<p>what i'm trying to propose is to not blindly try to connect to a non existing database and produce weird / fatal errors to a log which leave a bad taste that something is wrong.  my freshly installed zulip is up and running and looks fine, so i'm wondering why i have logs full of errors.  that leaves some bad taste that something is wrong with the installation.</p>\n<p>i'm trying to propose to do sane/proper checking of installation requirements / database existance/connectivity without producing errors in logs which may led to questions or false assumptions.</p>",
+        "id": 1478316,
+        "sender_full_name": "RolandK",
+        "timestamp": 1670868083
+    },
+    {
+        "content": "<p>i can setup another debian bullseye and install zulip  for another round, to see if errors pile up again, maybe it's helpful if this want to be enhanced</p>",
+        "id": 1478319,
+        "sender_full_name": "RolandK",
+        "timestamp": 1670868140
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"11088\">RolandK</span> <a href=\"#narrow/stream/31-production-help/topic/role.20.22zulip.22.20does.20not.20exist.20.2322394/near/1478316\">said</a>:</p>\n<blockquote>\n<p>what i'm trying to propose is to not blindly try to connect to a non existing database and produce weird / fatal errors to a log which leave a bad taste that something is wrong.  my freshly installed zulip is up and running and looks fine, so i'm wondering why i have logs full of errors.  that leaves some bad taste that something is wrong with the installation.</p>\n</blockquote>\n<p>It's reasonable to expect that a clean install would not have errors in the error log.</p>\n<p>It's also reasonable that a failure to have a properly-configured database will produce errors in the error log.</p>\n<p>Our issue is that during installation we start serivces before creating the database.  I'm not sure if there's any reason we can't reorder those two steps.</p>",
+        "id": 1478331,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670869960
+    },
+    {
+        "content": "<p>OK, glancing at it, the problem is that we need the database/user to be created, and the tables to exist, before we can start the services.  Creating the tables uses <code>./manage.py migrate</code> so requires a configured environment (i.e. <code>/home/zulip/deployments/current</code>, etc) which we currently do outside and after Puppet runs.</p>\n<p>However, we install PostgreSQL and start the services in Puppet.  So we either need to:</p>\n<ol>\n<li>Move the database creation into puppet</li>\n<li>Not start the services in puppet, but do them explicitly after we've created the database.</li>\n</ol>",
+        "id": 1478359,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670871097
+    },
+    {
+        "content": "<p>thank you for looking at it <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> . should we create an issue for it on github, so it won't get lost if not resolved instantly?</p>",
+        "id": 1478388,
+        "sender_full_name": "RolandK",
+        "timestamp": 1670874389
+    },
+    {
+        "content": "<p>Please do!</p>",
+        "id": 1478389,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670874456
+    },
+    {
+        "content": "<p>here we go: <a href=\"https://github.com/zulip/zulip/issues/23841\">https://github.com/zulip/zulip/issues/23841</a></p>",
+        "id": 1478392,
+        "sender_full_name": "RolandK",
+        "timestamp": 1670874868
+    },
+    {
+        "content": "<p>thank you for listening and positive reaction!</p>",
+        "id": 1478395,
+        "sender_full_name": "RolandK",
+        "timestamp": 1670874877
+    },
+    {
+        "content": "<p>Hm -- one note.  I would <em>not</em> expect there to be errors about this in <code>/var/log/install.log</code> after a clean installation.</p>\n<p>Can you show:</p>\n<div class=\"codehilite\"><pre><span></span><code>git grep -C10 &quot;does not exist&quot; /var/log/zulip/install.log\n</code></pre></div>",
+        "id": 1478398,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670874988
+    },
+    {
+        "content": "<p>I thought <code>install.log</code> shows errors about the database not existing in the script to create the database -- because it does a <code>DROP DATABASE</code> command that will print an error if the database doesn't exist. Maybe there's a good way to suppress that.</p>",
+        "id": 1479345,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1670971780
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> </p>\n<div class=\"codehilite\"><pre><span></span><code># grep -C10 &quot;does not exist&quot; /var/log/zulip/install.log\n+ /home/zulip/deployments/current/scripts/setup/create-database\n+ POSTGRES_USER=postgres\n++ crudini --get /etc/zulip/zulip.conf postgresql database_name\n++ echo zulip\n+ DATABASE_NAME=zulip\n++ crudini --get /etc/zulip/zulip.conf postgresql database_user\n++ echo zulip\n+ DATABASE_USER=zulip\n++ cd /\n++ su postgres -c &#39;psql -v ON_ERROR_STOP=1 -Atc &#39;\\&#39;&#39;SELECT COUNT(*) FROM zulip.zerver_message;&#39;\\&#39;&#39; zulip&#39;\npsql: error: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  database &quot;zulip&quot; does not exist\n+ records=\n+ &#39;[&#39; -e /var/run/supervisor.sock &#39;]&#39;\n++ dirname /home/zulip/deployments/current/scripts/setup/create-database\n+ su zulip -c /home/zulip/deployments/current/scripts/setup/../stop-server\nzulip-django: stopped\nzulip-tornado: stopped\nzulip-workers:zulip_events_deferred_work: stopped\nzulip-workers:zulip_events_digest_emails: stopped\nzulip-workers:zulip_events_email_mirror: stopped\nzulip-workers:zulip_events_email_senders: stopped\n--\n----------------------\n(0 Zeilen)\n\n++ dirname /home/zulip/deployments/current/scripts/setup/create-database\n+ cd /\n+ su postgres -c &#39;psql -v ON_ERROR_STOP=1 -v dbname=zulip -v dbuser=zulip -e&#39;\nSELECT CASE WHEN &#39;zulip&#39; = &#39;:dbuser&#39; THEN &#39;zulip&#39; ELSE &#39;zulip&#39; END AS dbuser\nSELECT CASE WHEN &#39;zulip&#39; = &#39;:dbname&#39; THEN &#39;zulip&#39; ELSE &#39;zulip&#39; END AS dbname\nYou are now connected to database &quot;postgres&quot; as user &quot;postgres&quot;.\nDROP DATABASE IF EXISTS &quot;zulip&quot;;\nNOTICE:  database &quot;zulip&quot; does not exist, skipping\nDROP DATABASE\nSELECT format($$BEGIN\n    CREATE USER %I;\nEXCEPTION WHEN duplicate_object THEN\n    RAISE NOTICE &#39;user already exists&#39;;\nEND$$, &#39;zulip&#39;) AS code\nDO &#39;BEGIN\n    CREATE USER zulip;\nEXCEPTION WHEN duplicate_object THEN\n    RAISE NOTICE &#39;&#39;user already exists&#39;&#39;;\n</code></pre></div>",
+        "id": 1480557,
+        "sender_full_name": "RolandK",
+        "timestamp": 1671103112
+    },
+    {
+        "content": "<p>it seems that non existing database is first queried for zulip.zerver_message which causing connection error and then later on,  database existance is queried in a sane way which is NOT causing an error. </p>\n<p>think before quering database there should be another check if it exists at all and then quering for messages should be skipped</p>",
+        "id": 1480561,
+        "sender_full_name": "RolandK",
+        "timestamp": 1671103664
+    },
+    {
+        "content": "<p>I don't really see this as a bug. This is the output, in context:</p>\n<div class=\"codehilite\"><pre><span></span><code>DROP DATABASE IF EXISTS &quot;zulip&quot;;\nNOTICE:  database &quot;zulip&quot; does not exist, skipping\n</code></pre></div>\n<p>Arguably postgres shouldn't bother printing something in that case, but fundamentally, we asked to delete the database if it existed and postgres told us it didn't exist and that it's not erroring out. My advice would be to look at notice output like this in context via a tool like <code>less</code>, not via <code>grep</code>.</p>",
+        "id": 1484094,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1672694483
+    },
+    {
+        "content": "<p>That one I think does a good job of being clear about being a NOTICE.  But there's also:</p>\n<div class=\"codehilite\"><pre><span></span><code>++ su postgres -c &#39;psql -v ON_ERROR_STOP=1 -Atc &#39;\\&#39;&#39;SELECT COUNT(*) FROM zulip.zerver_message;&#39;\\&#39;&#39; zulip&#39;\npsql: error: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  database &quot;zulip&quot; does not exist\n</code></pre></div>\n<p>...which claims to be FATAL, but is expected in most cases.  We can wrap that in a <code>2&gt;/dev/null</code> since errors there are harmless.</p>",
+        "id": 1484369,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1672762480
+    },
+    {
+        "content": "<p>Yeah, that seems like a reasonable improvement.</p>",
+        "id": 1484558,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1672775158
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/23968\">#23968</a>, untested.</p>",
+        "id": 1484729,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1672782489
+    },
+    {
+        "content": "<p>Let me see if those messages show up in CI as a way to verify.</p>",
+        "id": 1484731,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1672782505
+    },
+    {
+        "content": "<p>Yup, the production install logs should contain (or, now, not contain) that message.</p>",
+        "id": 1484732,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1672782592
+    }
+]

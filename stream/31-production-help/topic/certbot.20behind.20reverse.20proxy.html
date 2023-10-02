@@ -1,0 +1,257 @@
+<html>
+<head><meta charset="utf-8"><title>certbot behind reverse proxy · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html">certbot behind reverse proxy</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="564653"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564653" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Predrag Mijatovic <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564653">(Apr 18 2018 at 18:10)</a>:</h4>
+<p>Hi, I'm trying to install ZULIP behind reverse proxy with --certbot option, but it tries to get certificate by using local IP address instead of the public one (the local IP address of LXC container instead of the address of --hostname I provided which points to reverse proxy and is public obviously) - what do I need to do in order to change the behavior of --certbot option so that it uses public IP? Thanks</p>
+
+
+
+<a name="564668"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564668" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564668">(Apr 18 2018 at 18:15)</a>:</h4>
+<p><span class="user-mention" data-user-id="7115">@Predrag Mijatovic</span> hmm, I don't know the answer to that off the top of my head, but I'd try googling around for certbot's instructions for using a proxy; we have a pretty thin wrapper for it (<code>scripts/setup/setup-certbot</code>).  Or just try using cerbot directly to get a cert on the reverse proxy machine, and use a self-signed cert behind the proxy.</p>
+
+
+
+<a name="564670"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564670" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564670">(Apr 18 2018 at 18:16)</a>:</h4>
+<p>(<code>nginx</code> doesn't check certificates behind reverse proxies anyway)</p>
+
+
+
+<a name="564673"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564673" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564673">(Apr 18 2018 at 18:16)</a>:</h4>
+<p>BTW, if you're using that model, you'll want to make sure you've configured the reverse proxy properly; did you find our <code>nginx</code> config for that?</p>
+
+
+
+<a name="564685"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564685" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Predrag Mijatovic <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564685">(Apr 18 2018 at 18:18)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span>  Errm no :) I actually have a proper wildcard certificate on that NGINX, but I was not able to run ZULIP installation script without specifying --certbot option...is there a way to do it? I'm perfectly fine with running ZULIP on port 80 because it's in safe env (LXC) and the only way to access it would be through that reverse proxy (which is listening only on 443, and then proxy_pass to local_ip:80)</p>
+
+
+
+<a name="564695"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564695" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564695">(Apr 18 2018 at 18:21)</a>:</h4>
+<p>Oh, I see.  You should be able to just leave off the <code>--certbot</code> option -- that definitely isn't intended to be required.</p>
+
+
+
+<a name="564699"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564699" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564699">(Apr 18 2018 at 18:21)</a>:</h4>
+<p>Try using <code>--self-signed-cert</code> instead?</p>
+
+
+
+<a name="564707"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564707" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Predrag Mijatovic <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564707">(Apr 18 2018 at 18:23)</a>:</h4>
+<p>It fails if you don't provide either --certbot or --self-signed-cert. Running script with --self-signed-cert now, moved past the first step, will report with final results</p>
+
+
+
+<a name="564724"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564724" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564724">(Apr 18 2018 at 18:26)</a>:</h4>
+<p><span class="user-mention" data-user-id="2187">@Greg Price</span> is this the intended model, that you need to pass one of those options?  I suspect maybe we need to improve the error message for not including <code>--certbot</code> to suggest <code>--self-signed-cert</code>?</p>
+
+
+
+<a name="564729"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564729" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Predrag Mijatovic <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564729">(Apr 18 2018 at 18:28)</a>:</h4>
+<p>It actually suggests that :) but there's nothing about running without it (which would be perfectly fine in my case)</p>
+
+
+
+<a name="564731"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564731" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564731">(Apr 18 2018 at 18:28)</a>:</h4>
+<p>Hmm, we can probably improve the error message.</p>
+<p>The current model is based on what it was before -- we'd give an error if you didn't seem to have SSL certs in place. Now, we (intend to) give an error if you don't have SSL certs in place, and also haven't passed one of the options to ask the installer to obtain them for you.</p>
+
+
+
+<a name="564785"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564785" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Predrag Mijatovic <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564785">(Apr 18 2018 at 18:45)</a>:</h4>
+<p>Got few errors during installation...failed to install Redis (and laster start the service), and then</p>
+<div class="codehilite"><pre><span></span>Errors were encountered while processing:
+ redis-server
+E: Sub-process /usr/bin/dpkg returned an error code (1)
+Notice: /Stage[main]/Zulip::Supervisor/File[/etc/supervisor/supervisord.conf]: Dependency Package[supervisor] has failures: true
+Warning: /Stage[main]/Zulip::Supervisor/File[/etc/supervisor/supervisord.conf]: Skipping because of failed dependencies
+Notice: /Stage[main]/Zulip::App_frontend_base/File[/etc/zulip/uwsgi.ini]: Dependency Package[supervisor] has failures: true
+Warning: /Stage[main]/Zulip::App_frontend_base/File[/etc/zulip/uwsgi.ini]: Skipping because of failed dependencies
+Notice: /Stage[main]/Zulip::Supervisor/Exec[enable supervisor]: Dependency Package[supervisor] has failures: true
+Warning: /Stage[main]/Zulip::Supervisor/Exec[enable supervisor]: Skipping because of failed dependencies
+Notice: /Stage[main]/Zulip::Postgres_appdb_base/File[/etc/supervisor/conf.d/zulip_db.conf]: Dependency Package[supervisor] has failures: true
+Warning: /Stage[main]/Zulip::Postgres_appdb_base/File[/etc/supervisor/conf.d/zulip_db.conf]: Skipping because of failed dependencies
+Notice: /Stage[main]/Zulip::App_frontend_base/File[/etc/supervisor/conf.d/zulip.conf]: Dependency Package[supervisor] has failures: true
+Warning: /Stage[main]/Zulip::App_frontend_base/File[/etc/supervisor/conf.d/zulip.conf]: Skipping because of failed dependencies
+Notice: /Stage[main]/Zulip::Supervisor/Service[supervisor]: Dependency Package[supervisor] has failures: true
+Warning: /Stage[main]/Zulip::Supervisor/Service[supervisor]: Skipping because of failed dependencies
+</pre></div>
+
+
+
+<a name="564801"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564801" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Predrag Mijatovic <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564801">(Apr 18 2018 at 18:47)</a>:</h4>
+<p>I know this diverges from subject, but I said I'll report back :)</p>
+
+
+
+<a name="564809"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564809" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564809">(Apr 18 2018 at 18:48)</a>:</h4>
+<p>OK -- we can debug why <code>redis-server</code> didn't start and then you just rerun the installer (it's idempotent, so rerunning is safe -- it'll pick up where it left off)</p>
+
+
+
+<a name="564845"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564845" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Predrag Mijatovic <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564845">(Apr 18 2018 at 18:54)</a>:</h4>
+<p>I'll try to figure it out</p>
+
+
+
+<a name="564881"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564881" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Predrag Mijatovic <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564881">(Apr 18 2018 at 18:58)</a>:</h4>
+<p>It has something to do with systemd and LXC, particularly "PrivateDevice" line in redis' .service file</p>
+
+
+
+<a name="564910"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564910" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Predrag Mijatovic <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564910">(Apr 18 2018 at 19:14)</a>:</h4>
+<p>Can't get it to work...found this - <a href="https://github.com/lxc/lxd/issues/3799#issuecomment-337248682" target="_blank" title="https://github.com/lxc/lxd/issues/3799#issuecomment-337248682">https://github.com/lxc/lxd/issues/3799#issuecomment-337248682</a> - but it still fails...</p>
+
+
+
+<a name="564917"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/564917" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Predrag Mijatovic <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#564917">(Apr 18 2018 at 19:17)</a>:</h4>
+<p>Yeah I think I'll move away from LXC :)</p>
+
+
+
+<a name="565247"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/565247" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#565247">(Apr 18 2018 at 23:18)</a>:</h4>
+<p>I'm revising that error message. <span class="user-mention" data-user-id="7115">@Predrag Mijatovic</span>, if you'd gotten the message below instead, do you think this would have told you what you needed to know?</p>
+<div class="codehilite"><pre><span></span>No SSL certificate found.  One or both required files is missing:
+    /etc/ssl/private/zulip.key
+    /etc/ssl/certs/zulip.combined-chain.crt
+
+Suggested solutions:
+ * For most sites, the --certbot option is recommended.
+ * If you have your own key and cert, see docs linked below
+   for how to install them.
+ * For non-production testing, try the --self-signed-cert option.
+
+For help and more details, see our SSL documentation:
+  https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html
+
+Once fixed, just rerun scripts/setup/install; it&#39;ll pick up from here!
+</pre></div>
+
+
+
+<a name="565259"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/565259" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#565259">(Apr 18 2018 at 23:20)</a>:</h4>
+<p>One thing that I realize on re-reading this thread you might not have seen yet: given that you have your own cert already, Zulip definitely supports using that and you don't need to use a self-signed cert (nor Certbot) <span class="emoji emoji-1f603" title="smiley">:smiley:</span> -- you just need to stick the cert and key (or symlinks to them) at the paths that Zulip expects. (Our nginx config expects to find them there.)</p>
+<p>Details in <a href="https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html" target="_blank" title="https://zulip.readthedocs.io/en/latest/production/ssl-certificates.html">our SSL doc</a>, linked from the error message.</p>
+
+
+
+<a name="565574"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/565574" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Predrag Mijatovic <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#565574">(Apr 19 2018 at 07:15)</a>:</h4>
+<p><span class="user-mention" data-user-id="2187">@Greg Price</span> Yes, thank you for the details :) I will probably test it on another server without NGINX reverse proxy, due to issues with systemd, LXC, and Redis...didn't found a solution for that one, so Redis service won't start (although manually running it with <code>-c</code> works, I don't like that :P)</p>
+
+
+
+<a name="565990"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/565990" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Bryan Larsen <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#565990">(Apr 19 2018 at 16:31)</a>:</h4>
+<p>I hacked up /etc/nginx/sites-enabled/zulip-enterprise to listen on 80 rather than 443 to get things working for us using a Kubernetes ingress with cert-manager.   I was planning on basing off <span class="user-mention" data-user-id="77">@Alexander Trost</span>'s Dockerfile to do that, so it doesn't necessarily have to be done in your install script, but I suspect a reverse proxy is not an uncommon scenario.</p>
+
+
+
+<a name="565993"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/565993" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#565993">(Apr 19 2018 at 16:32)</a>:</h4>
+<p><span class="user-mention" data-user-id="5545">@Bryan Larsen</span> if you're interested in contributing a patch to make that a configuration that doesn't require hacking up, I think we could add a puppet variable controlled by a flag in <code>/etc/zulip/zulip.conf</code></p>
+
+
+
+<a name="566030"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/566030" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Bryan Larsen <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#566030">(Apr 19 2018 at 17:09)</a>:</h4>
+<p>That's a little bit early yet.   I'm still at the stage of figuring out why send_test_email throws SMTPAuthenticationError   :)</p>
+
+
+
+<a name="566197"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/566197" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> nuclearsandwich <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#566197">(Apr 19 2018 at 19:33)</a>:</h4>
+<p>I'm in the same boat as <span class="user-mention" data-user-id="7115">@Predrag Mijatovic</span>  but I had to shelve it after the Redis issues as I'm about to fly.</p>
+
+
+
+<a name="566210"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/566210" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#566210">(Apr 19 2018 at 19:43)</a>:</h4>
+<p><span class="user-mention" data-user-id="6338">@nuclearsandwich</span> interesting; I don't think we've seen that redis issue before, so I'd love to hear what it ends up being.</p>
+
+
+
+<a name="566241"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/566241" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> nuclearsandwich <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#566241">(Apr 19 2018 at 20:01)</a>:</h4>
+<p>I'm also in an lxc container so I expect it's related to container privileges. There's more info o haven't yet read as I'm on mobile.</p>
+
+
+
+<a name="566245"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/566245" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> nuclearsandwich <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#566245">(Apr 19 2018 at 20:17)</a>:</h4>
+<p>I'm also in an lxc container so I expect it's related to container privileges. There's more info o haven't yet read as I'm on mobile.</p>
+
+
+
+<a name="567186"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/567186" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> nuclearsandwich <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#567186">(Apr 20 2018 at 18:26)</a>:</h4>
+<p>Interesting, it looks like the mobile client has some double-post issues?</p>
+
+
+
+<a name="567189"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/567189" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#567189">(Apr 20 2018 at 18:28)</a>:</h4>
+<p><span class="user-mention" data-user-id="6338">@nuclearsandwich</span> apparently yes.  <span class="user-mention" data-user-id="703">@Vishwesh Jainkuniya</span> is that a known issue?</p>
+
+
+
+<a name="567200"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/567200" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vishwesh Jainkuniya <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#567200">(Apr 20 2018 at 18:32)</a>:</h4>
+<p>ya! there is something wrong in out outbox implementation. <br>
+(It is very hard to reproduce, so still persists) <br>
+Now I guess I have some cases which might be causing this. Will fix it next.</p>
+
+
+
+<a name="567220"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/567220" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#567220">(Apr 20 2018 at 18:46)</a>:</h4>
+<p>Cool <span class="emoji emoji-1f603" title="smiley">:smiley:</span></p>
+
+
+
+<a name="567255"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/567255" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> nuclearsandwich <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#567255">(Apr 20 2018 at 19:22)</a>:</h4>
+<blockquote>
+<p>ya! there is something wrong in out outbox implementation. <br>
+(It is very hard to reproduce, so still persists) <br>
+Now I guess I have some cases which might be causing this. Will fix it next.</p>
+</blockquote>
+<p>If I can provide any info that will help I'll be glad to. If there's an issue I can follow let me know.</p>
+
+
+
+<a name="567271"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/certbot%20behind%20reverse%20proxy/near/567271" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/certbot.20behind.20reverse.20proxy.html#567271">(Apr 20 2018 at 19:29)</a>:</h4>
+<p><span class="user-mention" data-user-id="6338">@nuclearsandwich</span> Thanks! Just filed one, as <a href="https://github.com/zulip/zulip-mobile/pull/2374" target="_blank" title="https://github.com/zulip/zulip-mobile/pull/2374">#M2374</a>.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,122 @@
+[
+    {
+        "content": "<p>I've just moved a KVM installation of Zulip over to an LXD based one... There are only a handful of users so I thought I'd see what limits I could get away with using LXD's <code>lxc config set zulip limits.memory 2048MB</code> command...</p>\n<ul>\n<li>Lesson 1 - I installed Zulip in an LXD container with no limits... the install ran fine but when I retroactively applied memory limits, the load shot up and basically Zulip didn't really want to work... I got a bunch of error 500 errors in the browser as well</li>\n<li>Lesson 2 -  If you limit a container to less than 2GB of ram, the installation script stops almost immediately complaining that there's not enough ram</li>\n<li>Lesson 3 - If you limit ram on the container before installation to 2GB, everything installs and runs fine... you can then adjust the allocated ram to suit. Right now I've set it to 1GB but YMMV...</li>\n</ul>",
+        "id": 661808,
+        "sender_full_name": "Bruce Lewin",
+        "timestamp": 1542276283
+    },
+    {
+        "content": "<p>Thanks <span class=\"user-mention\" data-user-id=\"133\">@Bruce Lewin</span> for these notes!</p>\n<p>A couple of points we can add background on:</p>\n<ul>\n<li>\n<p>Our docs on <a href=\"https://zulip.readthedocs.io/en/stable/production/requirements.html#hardware-specifications\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/stable/production/requirements.html#hardware-specifications\">system requirements</a> say</p>\n<blockquote>\n<p>For installations with fewer users, 1 CPU and 2GB RAM is sufficient. We strongly recommend against installing with less than 2GB of RAM, as you will likely experience out of memory issues installing dependencies.</p>\n</blockquote>\n<p>I guess we added a check for that in the installer -- the error is friendlier than hitting out-of-memory in the middle of <code>pip install</code>. We don't seem to have notes on how little RAM you can get away with <em>after</em> the install, so that's interesting to hear.</p>\n</li>\n<li>\n<p>From <a href=\"https://zulip.readthedocs.io/en/stable/production/maintain-secure-upgrade.html#scalability\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/stable/production/maintain-secure-upgrade.html#scalability\">elsewhere in our docs</a>:</p>\n<blockquote>\n<p>Zulip will install on a system with 2GB of RAM, but with less than 3.5GB of RAM, it will run its queue processors multithreaded to conserve memory; this creates a significant performance bottleneck.</p>\n</blockquote>\n<p>I think what happened in your Lesson 1 is that the installer saw there was plenty of RAM, and configured things to run each queue processor as its own process -- then when there was less RAM available, that didn't work out.</p>\n</li>\n</ul>",
+        "id": 661848,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542306360
+    },
+    {
+        "content": "<p>In both cases, I think we hadn't previously considered a situation where the system has less RAM in operation than it did at install time. <span class=\"emoji emoji-1f642\" title=\"slight smile\">:slight_smile:</span></p>",
+        "id": 661849,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542306412
+    },
+    {
+        "content": "<p>Well, you just need to run <code>scripts/setup/zulip-puppet-apply</code> to have it reset the memory usage decisions after changing the system memory size.  We should probably document this, though I'm not sure where.</p>",
+        "id": 661879,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542312028
+    },
+    {
+        "content": "<p>Maybe we can just add a sentence or two on the \"system requirements\" pages?</p>",
+        "id": 661880,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542312039
+    },
+    {
+        "content": "<p>Yeah, that'd be good to document. Maybe in <a href=\"https://zulip.readthedocs.io/en/stable/production/troubleshooting.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/stable/production/troubleshooting.html\">Troubleshooting</a>? I feel like the Requirements page is already wordier than we'd like.</p>",
+        "id": 661948,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542314221
+    },
+    {
+        "content": "<p>I'd probably do a \"If you're planning to install with different RAM than what you use at runtime, see [answer]` kind of thing in requirements.</p>",
+        "id": 661985,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542315631
+    },
+    {
+        "content": "<p>Yeah, that'd help, though even that feels like it contributes to the problem of that page being a lot of text.</p>",
+        "id": 662021,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542316776
+    },
+    {
+        "content": "<p>Yeah, that may be solvable with just bolding the key bits.</p>",
+        "id": 662025,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1542316852
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span> Yeah... you're right about Lesson 1 - trying to restart the container was not a pretty sight!</p>",
+        "id": 662204,
+        "sender_full_name": "Bruce Lewin",
+        "timestamp": 1542348623
+    },
+    {
+        "content": "<blockquote>\n<p>We don't seem to have notes on how little RAM you can get away with <em>after</em> the install, so that's interesting to hear.</p>\n</blockquote>\n<p><span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span> The attached screenshot shows 683M used of 977M. I'm not sure why this lxd container reports 977M instead of the 1024M I allocated but either way, I'm guessing you're looking at a 1024M minimum having restarted Zulip several times and rebooted the container. Sure, you might be able to make more optimisations but getting to 512M might be too ambitious?</p>\n<p><a href=\"/user_uploads/2/f3/_K7Wwvwkcy8_GyJ4haOR55UG/Screenshot_2018-11-16_08-45-19.png\" target=\"_blank\" title=\"Screenshot_2018-11-16_08-45-19.png\">Screenshot_2018-11-16_08-45-19.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/f3/_K7Wwvwkcy8_GyJ4haOR55UG/Screenshot_2018-11-16_08-45-19.png\" target=\"_blank\" title=\"Screenshot_2018-11-16_08-45-19.png\"><img data-src-fullsize=\"/thumbnail?url=user_uploads%2F2%2Ff3%2F_K7Wwvwkcy8_GyJ4haOR55UG%2FScreenshot_2018-11-16_08-45-19.png&amp;size=full\" src=\"/thumbnail?url=user_uploads%2F2%2Ff3%2F_K7Wwvwkcy8_GyJ4haOR55UG%2FScreenshot_2018-11-16_08-45-19.png&amp;size=thumbnail\"></a></div>",
+        "id": 662210,
+        "sender_full_name": "Bruce Lewin",
+        "timestamp": 1542350947
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"133\">@Bruce Lewin</span>   The amount of used ram you see does not always represent the minimum that it actually needs.  Linux will use as much as possible if it is available.  You might see more memory being used if you ad more.   (it will free up memory less often)</p>",
+        "id": 662254,
+        "sender_full_name": "Alex-CL",
+        "timestamp": 1542381747
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9830\">@Alex</span> Yes, true, I forgot about that...</p>",
+        "id": 662267,
+        "sender_full_name": "Bruce Lewin",
+        "timestamp": 1542389328
+    },
+    {
+        "content": "<blockquote>\n<p>I'm not sure why this lxd container reports 977M instead of the 1024M I allocated</p>\n</blockquote>\n<p>I think the allocation must have been in (decimal) megabytes, MB, and the <code>htop</code> report you're looking at in (binary) mebibytes, MiB.</p>\n<p>Indeed, the numbers check out:</p>\n<div class=\"codehilite\"><pre><span></span>$ qalc &#39;1024 * 10^6 / 1024^2&#39;\n(1024 * (10^6)) / (1024^2) = 976.5625\n</pre></div>\n\n\n<p>Which to the nearest MiB is 977 MiB.</p>",
+        "id": 662464,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542427675
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"133\">@Bruce Lewin</span> And thanks for that <code>htop</code> screenshot! That's very helpful additional data.</p>\n<p>The 683M figure there is for memory used directly by user processes, not including the kernel's page cache; so although it's possible everything would be <em>able</em> to run with less memory than that (with no new optimizations), it'd almost surely mean swapping, which is likely to make things very slow.</p>\n<p>... Hmm, and the next line says that in fact there's also a lot of swap in use! So I'm curious now -- in your installation, does it feel like Zulip is nice and responsive, or do you notice some lag -- compared to this server, say?</p>",
+        "id": 662466,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1542428207
+    },
+    {
+        "content": "<blockquote>\n<p>and the next line says that in fact there's also a lot of swap in use!</p>\n</blockquote>\n<p><span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span>  so this is as a result of when I setup the original host machine for LXD. I must have started with a small instance with 765M or whatever and so Debian created the swap partition to match the available ram. I've now upgraded the machine to run with 6G of ram but have only given Zulip 1G. Anyway, Zulip runs fine with a handful of users in this scenario and as you'll appreciate, the swap partition hasn't grown in line with the ram on the system.</p>",
+        "id": 662472,
+        "sender_full_name": "Bruce Lewin",
+        "timestamp": 1542432570
+    },
+    {
+        "content": "<p>So over the past few days, Zulip has sent me a bunch of odd error messages... restarting the server didn't help, so I upgraded the ram to 1.5GB and they've all gone away, fingers crossed... here are some of the errors...</p>\n<div class=\"codehilite\"><pre><span></span>Mon, 19 Nov, 15:46 (14 hours ago)\n\nto me\nLogger django.request, from module django.core.handlers.exception line 135:\nError generated by Anonymous user (not logged in) on zulip.brandreflections.com deployment\n\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/core/handlers/exception.py&quot;, line 41, in inner\n    response = get_response(request)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/core/handlers/base.py&quot;, line 217, in _get_response\n    response = self.process_exception_by_middleware(e, request)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/core/handlers/base.py&quot;, line 215, in _get_response\n    response = response.render()\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/template/response.py&quot;, line 107, in render\n    self.content = self.rendered_content\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/template/response.py&quot;, line 84, in rendered_content\n    content = template.render(context, self._request)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/template/backends/jinja2.py&quot;, line 81, in render\n    return self.template.render(context)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/jinja2/environment.py&quot;, line 1008, in render\n    return self.environment.handle_exception(exc_info, True)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/jinja2/environment.py&quot;, line 780, in handle_exception\n    reraise(exc_type, exc_value, tb)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/jinja2/_compat.py&quot;, line 37, in reraise\n    raise value.with_traceback(tb)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zproject/../templates/zerver/login.html&quot;, line 1, in top-level template code\n    {% extends &quot;zerver/portico.html&quot; %}\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zproject/../templates/zerver/portico.html&quot;, line 1, in top-level template code\n    {% extends &quot;zerver/base.html&quot; %}\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zproject/../templates/zerver/base.html&quot;, line 30, in top-level template code\n    {% block commonjs %}\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zproject/../templates/zerver/base.html&quot;, line 31, in block &quot;commonjs&quot;\n    {{ render_bundle(&#39;common&#39;, attrs=&#39;nonce=&quot;%s&quot;&#39; % (csp_nonce)) }}\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/webpack_loader/contrib/jinja2ext.py&quot;, line 9, in &lt;lambda&gt;\n    environment.globals[&quot;render_bundle&quot;] = lambda *a, **k: jinja2.Markup(render_bundle(*a, **k))\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/webpack_loader/templatetags/webpack_loader.py&quot;, line 12, in render_bundle\n    tags = utils.get_as_tags(bundle_name, extension=extension, config=config, attrs=attrs)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/webpack_loader/utils.py&quot;, line 47, in get_as_tags\n    for chunk in bundle:\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/webpack_loader/loader.py&quot;, line 46, in filter_chunks\n    chunk[&#39;url&#39;] = self.get_chunk_url(chunk)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/webpack_loader/loader.py&quot;, line 57, in get_chunk_url\n    return staticfiles_storage.url(relpath)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/contrib/staticfiles/storage.py&quot;, line 162, in url\n    return self._url(self.stored_name, name, force)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/contrib/staticfiles/storage.py&quot;, line 141, in _url\n    hashed_name = hashed_name_func(*args)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/contrib/staticfiles/storage.py&quot;, line 432, in stored_name\n    raise ValueError(&quot;Missing staticfiles manifest entry for &#39;%s&#39;&quot; % clean_name)\nValueError: Missing staticfiles manifest entry for &#39;webpack-bundles/common.c08be8003b0dc40f47e0.css&#39;\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/core/handlers/exception.py&quot;, line 41, in inner\n    response = get_response(request)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/utils/deprecation.py&quot;, line 140, in __call__\n    response = self.get_response(request)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/core/handlers/exception.py&quot;, line 43, in inner\n    response = response_for_exception(request, exc)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/core/handlers/exception.py&quot;, line 93, in response_for_exception\n    response = handle_uncaught_exception(request, get_resolver(get_urlconf()), sys.exc_info())\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/core/handlers/exception.py&quot;, line 143, in handle_uncaught_exception\n    return callback(request, **param_dict)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/utils/decorators.py&quot;, line 149, in _wrapped_view\n    response = view_func(request, *args, **kwargs)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/views/defaults.py&quot;, line 74, in server_error\n    return http.HttpResponseServerError(template.render())\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/template/backends/jinja2.py&quot;, line 81, in render\n    return self.template.render(context)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/jinja2/environment.py&quot;, line 1008, in render\n    return self.environment.handle_exception(exc_info, True)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/jinja2/environment.py&quot;, line 780, in handle_exception\n    reraise(exc_type, exc_value, tb)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/jinja2/_compat.py&quot;, line 37, in reraise\n    raise value.with_traceback(tb)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zproject/../templates/500.html&quot;, line 1, in top-level template code\n    {% extends &quot;zerver/portico.html&quot; %}\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zproject/../templates/zerver/portico.html&quot;, line 1, in top-level template code\n    {% extends &quot;zerver/base.html&quot; %}\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zproject/../templates/zerver/base.html&quot;, line 30, in top-level template code\n    {% block commonjs %}\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zproject/../templates/zerver/base.html&quot;, line 31, in block &quot;commonjs&quot;\n    {{ render_bundle(&#39;common&#39;, attrs=&#39;nonce=&quot;%s&quot;&#39; % (csp_nonce)) }}\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/webpack_loader/contrib/jinja2ext.py&quot;, line 9, in &lt;lambda&gt;\n    environment.globals[&quot;render_bundle&quot;] = lambda *a, **k: jinja2.Markup(render_bundle(*a, **k))\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/webpack_loader/templatetags/webpack_loader.py&quot;, line 12, in render_bundle\n    tags = utils.get_as_tags(bundle_name, extension=extension, config=config, attrs=attrs)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/webpack_loader/utils.py&quot;, line 47, in get_as_tags\n    for chunk in bundle:\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/webpack_loader/loader.py&quot;, line 46, in filter_chunks\n    chunk[&#39;url&#39;] = self.get_chunk_url(chunk)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/webpack_loader/loader.py&quot;, line 57, in get_chunk_url\n    return staticfiles_storage.url(relpath)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/contrib/staticfiles/storage.py&quot;, line 162, in url\n    return self._url(self.stored_name, name, force)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/contrib/staticfiles/storage.py&quot;, line 141, in _url\n    hashed_name = hashed_name_func(*args)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/contrib/staticfiles/storage.py&quot;, line 432, in stored_name\n    raise ValueError(&quot;Missing staticfiles manifest entry for &#39;%s&#39;&quot; % clean_name)\nValueError: Missing staticfiles manifest entry for &#39;webpack-bundles/common.c08be8003b0dc40f47e0.css&#39;\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/core/handlers/exception.py&quot;, line 41, in inner\n    response = get_response(request)\n  File &quot;/home/zulip/deployments/2018-11-15-11-11-00/zulip-py3-venv/lib/python3.5/site-packages/django/utils/deprecation.py&quot;, line 140, in __call__\n    response = self.get_response(request)\n</pre></div>",
+        "id": 663099,
+        "sender_full_name": "Bruce Lewin",
+        "timestamp": 1542689311
+    },
+    {
+        "content": "<blockquote>\n<p>Well, you just need to run <code>scripts/setup/zulip-puppet-apply</code> to have it reset the memory usage decisions after changing the system memory size.  We should probably document this, though I'm not sure where.</p>\n</blockquote>\n<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Hi Tim, I found the script to be located here <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code> Maybe we need a small section in the docs on LXD?</p>",
+        "id": 663714,
+        "sender_full_name": "Bruce Lewin",
+        "timestamp": 1542864210
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"133\">@Bruce Lewin</span> sorry, yeah, I just had a typo in the path.  When you say a section in the doc on LXD, what are you imagining should be in there?</p>",
+        "id": 664298,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1543258107
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> I think we should add something on the <a href=\"https://zulip.readthedocs.io/en/stable/production/deployment.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/stable/production/deployment.html\">deployment.html page</a> to talk about the <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code> command, either as a standalone section or under LXD as it's very quick to update ram availability with LXD... equally, it could be it's own section under <code>Altering the available RAM</code> or whatever as I bet docker and other containerisation tools allow for something similar...</p>",
+        "id": 664620,
+        "sender_full_name": "Bruce Lewin",
+        "timestamp": 1543305510
+    }
+]

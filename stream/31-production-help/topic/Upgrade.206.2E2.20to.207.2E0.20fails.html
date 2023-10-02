@@ -1,0 +1,388 @@
+<html>
+<head><meta charset="utf-8"><title>Upgrade 6.2 to 7.0 fails · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html">Upgrade 6.2 to 7.0 fails</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1583960"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1583960" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Philipp Huebner <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1583960">(Jun 02 2023 at 05:44)</a>:</h4>
+<p>Hi,<br>
+I just upgraded Zulip Server 6.1. to 6.2 without a hitch, but going from 6.2 to 7.0 migrations fail catastrophically with a stack trace and <code>AttributeError: 'Realm' object has no attribute 'host'</code>. I have reverted to a snapshot I took of 6.2.<br>
+Here's the complete upgrade.log: <a href="/user_uploads/2/3b/-nsmv9yulkiwGnOhXtPIC3bk/zulip-upgrade.log">zulip-upgrade.log</a></p>
+
+
+
+<a name="1584049"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1584049" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Meyer <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1584049">(Jun 02 2023 at 07:52)</a>:</h4>
+<p>Hi, I have exactly the same problem when updating from 6.2 to 7.0. (My installation runs on Debian 11)</p>
+
+
+
+<a name="1584108"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1584108" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1584108">(Jun 02 2023 at 08:48)</a>:</h4>
+<p>Ah, I think I see what the problem is, thanks for reporting!</p>
+<p><span class="user-mention" data-user-id="12178">@Alex Vandiver</span> I think this chunk in <code>zerver/migrations/0439_fix_deleteduser_email.py</code> was intended to be doing just <code>return host</code> and should be the only fix we need, am I correct?</p>
+<div class="codehilite"><pre><span></span><code>def get_fake_email_domain(apps: StateApps, realm_id: int) -&gt; str:
+    Realm = apps.get_model(&quot;zerver&quot;, &quot;Realm&quot;)
+    realm = Realm.objects.get(id=realm_id)
+
+    # Build out realm.host
+    subdomain = realm.string_id
+    if subdomain == &quot;&quot;:
+        host = settings.EXTERNAL_HOST
+    else:
+        default_host = f&quot;{subdomain}.{settings.EXTERNAL_HOST}&quot;
+        host = settings.REALM_HOSTS.get(subdomain, default_host)
+
+    # Implement get_fake_email_domain
+    try:
+        validate_email(Address(username=&quot;bot&quot;, domain=host).addr_spec)
+        return realm.host
+</code></pre></div>
+
+
+
+<a name="1584298"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1584298" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1584298">(Jun 02 2023 at 14:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> yes, that sounds correct to me.</p>
+
+
+
+<a name="1584602"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1584602" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> GervaisdeM <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1584602">(Jun 03 2023 at 00:50)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span>  Should I be able to update to 7.0?<br>
+6.2 to 7.0 upgrade is failing for me also:</p>
+<div class="codehilite"><pre><span></span><code>ulip stopped successfully!
+2023-06-02 23:51:20,801 upgrade-zulip-stage-2: Applying database migrations...
+Operations to perform:
+  Apply all migrations: analytics, auth, confirmation, contenttypes, otp_static, otp_totp, phonenumber, sessions, social_django, two_factor, zerver
+Running migrations:
+  Applying zerver.0423_fix_email_gateway_attachment_owner...Traceback (most recent call last):
+  File &quot;./manage.py&quot;, line 150, in &lt;module&gt;
+    execute_from_command_line(sys.argv)
+  File &quot;./manage.py&quot;, line 115, in execute_from_command_line
+    utility.execute()
+  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/__init__.py&quot;, line 436, in execute
+    self.fetch_command(subcommand).run_from_argv(self.argv)
+  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 412, in run_from_argv
+    self.execute(*args, **cmd_options)
+  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 458, in execute
+    output = self.handle(*args, **options)
+  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 106, in wrapper
+    res = handle_func(*args, **kwargs)
+  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/commands/migrate.py&quot;, line 356, in handle
+    post_migrate_state = executor.migrate(
+  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/migrations/executor.py&quot;, line 135, in migrate
+    state = self._migrate_all_forwards(
+  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/migrations/executor.py&quot;, line 167, in _migrate_all_forwards
+    state = self.apply_migration(
+  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/migrations/executor.py&quot;, line 252, in apply_migration
+    state = migration.apply(state, schema_editor)
+  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/migrations/migration.py&quot;, line 132, in apply
+    operation.database_forwards(
+  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/migrations/operations/special.py&quot;, line 193, in database_forwards
+    self.code(from_state.apps, schema_editor)
+  File &quot;/home/zulip/deployments/2023-06-02-20-15-43/zerver/migrations/0423_fix_email_gateway_attachment_owner.py&quot;, line 25, in fix_email_gateway_attachment_owner
+    mail_gateway_bot = UserProfile.objects.get(email__iexact=settings.EMAIL_GATEWAY_BOT)
+  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/manager.py&quot;, line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py&quot;, line 637, in get
+    raise self.model.DoesNotExist(
+__fake__.DoesNotExist: UserProfile matching query does not exist.
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2023-06-02-20-15-43/scripts/lib/upgrade-zulip-stage-2&quot;, line 531, in &lt;module&gt;
+    subprocess.check_call(
+  File &quot;/usr/lib/python3.8/subprocess.py&quot;, line 364, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;./manage.py&#39;, &#39;migrate&#39;, &#39;--noinput&#39;, &#39;--skip-checks&#39;]&#39; returned non-zero exit status 1.
+
+Zulip upgrade failed (exit code 1)!
+
+The upgrade process is designed to be idempotent, so you can retry after resolving whatever issue caused the failure (there should be a traceback above). A log of this installation is available in /var/log/zulip/upgrade.log
+</code></pre></div>
+<hr>
+<p><a href="/user_uploads/2/46/beEoKpQBLiBOazADSzPeCALj/upgrade.log">upgrade.log</a></p>
+
+
+
+<a name="1584961"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1584961" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Lee Harris <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1584961">(Jun 04 2023 at 14:19)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> I get the identical error to <span class="user-mention" data-user-id="70">@GervaisdeM</span> after making the edit highlighted by <span class="user-mention" data-user-id="10349">@Mateusz Mandera</span>  :(</p>
+
+
+
+<a name="1585140"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585140" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea Soc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585140">(Jun 05 2023 at 08:20)</a>:</h4>
+<p>Should I wait before upgrading? I have 6.2 too</p>
+
+
+
+<a name="1585149"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585149" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585149">(Jun 05 2023 at 09:28)</a>:</h4>
+<p><span class="user-mention" data-user-id="10544">@Andrea Soc</span> My fix for the <code>0439</code> migration issue above hasn't been merged yet (<a href="https://github.com/zulip/zulip/pull/25876">https://github.com/zulip/zulip/pull/25876</a>) so I'd hold off unless you want to tweak things manually.</p>
+<p>For the new issue popping in this thread, you can just check in <code>manage.py shell</code> to see if running <code>UserProfile.objects.get(email__iexact=settings.EMAIL_GATEWAY_BOT)</code> works fine. If it does, you should be good. It's actually quite unclear to me how servers might not have this bot, since it's a system bot and we generally assume in various places in the code that these just exist. So at least this should be a pretty rare problem.</p>
+
+
+
+<a name="1585150"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585150" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585150">(Jun 05 2023 at 09:30)</a>:</h4>
+<p><span class="user-mention" data-user-id="70">@GervaisdeM</span> <span class="user-mention" data-user-id="18378">@Lee Harris</span> Can either (or both) of you show the output of <code>manage.py list_realms</code>? There's clearly something irregular about these deployments, since the migration is crashing upon not finding a system bot that should always exist.</p>
+
+
+
+<a name="1585151"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585151" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea Soc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585151">(Jun 05 2023 at 09:32)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="10349">Mateusz Mandera</span> <a href="#narrow/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails/near/1585149">said</a>:</p>
+<blockquote>
+<p>For the new issue popping in this thread, you can just check in <code>manage.py shell</code> to see if running <code>UserProfile.objects.get(email__iexact=settings.EMAIL_GATEWAY_BOT)</code> works fine.</p>
+</blockquote>
+<p>I don't know technically what to do.. I'm not familiar with this script</p>
+
+
+
+<a name="1585152"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585152" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea Soc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585152">(Jun 05 2023 at 09:33)</a>:</h4>
+<p>I feel like trying on the replica VM</p>
+
+
+
+<a name="1585153"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585153" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Lee Harris <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585153">(Jun 05 2023 at 09:37)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> - I edited the 0439 file within the tarball and was then able to update. Prior to that however, the rollback procedure didn't work :(  That made it hard to hold off updating....</p>
+<p>Here's the output of manage.py list_realms:</p>
+<p>id    string_id            name                           domain                                            <br>
+--    ---------            ----                           ------                                            <br>
+2     ''                   Trading Research Group         <a href="https://pit.tradingresearchgroup.com">https://pit.tradingresearchgroup.com</a>              <br>
+1     zulipinternal        System bot realm               <a href="https://zulipinternal.pit.tradingresearchgroup.com">https://zulipinternal.pit.tradingresearchgroup.com</a></p>
+<p>We haven't done anything 'clever' in terms of our install/setup. Just followed things step by step. We've been running a self-hosted environment for around 2 years. I can't recall what release we started with though.</p>
+
+
+
+<a name="1585154"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585154" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585154">(Jun 05 2023 at 09:55)</a>:</h4>
+<p><span class="user-mention" data-user-id="18378">@Lee Harris</span> Then I assume your issue must have been the original issue with migration <code>0439</code> rather than <span class="user-mention silent" data-user-id="70">GervaisdeM</span>'s issue which is with migration <code>0423</code>. So all should be good</p>
+
+
+
+<a name="1585210"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585210" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> GervaisdeM <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585210">(Jun 05 2023 at 11:57)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> I think my install may predate the existence of realms. I haven't ever tried to change or set one as I have only one organization using Zulip. Here is the output of list_realms:</p>
+<div class="codehilite"><pre><span></span><code>zulip@zulip:~/deployments/current$ ./manage.py list_realms
+id    string_id            name                           domain
+--    ---------            ----                           ------
+1     zulipinternal        System use only                https://zulipinternal.zulip.demontbrun.com
+2     &#39;&#39;                   demontbrun.com                 https://zulip.demontbrun.com
+</code></pre></div>
+
+
+
+<a name="1585218"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585218" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Philipp Huebner <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585218">(Jun 05 2023 at 12:28)</a>:</h4>
+<p>Same here.</p>
+
+
+
+<a name="1585222"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585222" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585222">(Jun 05 2023 at 12:43)</a>:</h4>
+<p><span class="user-mention" data-user-id="70">@GervaisdeM</span> Hmm, so the system realm exists, let's see what bots exist or are missing. Can you show the output of</p>
+<div class="codehilite"><pre><span></span><code>UserProfile.objects.filter(realm_id=1)
+</code></pre></div>
+<p>run in <code>manage.py shell</code>?</p>
+
+
+
+<a name="1585231"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585231" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> GervaisdeM <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585231">(Jun 05 2023 at 13:12)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> </p>
+<div class="codehilite"><pre><span></span><code>In [1]: UserProfile.objects.filter(realm_id=1)
+Out[1]: &lt;QuerySet [&lt;UserProfile: &lt;UserProfile: nagios-send-bot@zulip.com &lt;Realm: zulipinternal 1&gt;&gt;&gt;, &lt;UserProfile: &lt;UserProfile: welcome-bot@zulip.com &lt;Realm: zulipinternal 1&gt;&gt;&gt;, &lt;UserProfile: &lt;UserProfile: notification-bot@zulip.com &lt;Realm: zulipinternal 1&gt;&gt;&gt;, &lt;UserProfile: &lt;UserProfile: emailgateway@zulip.com &lt;Realm: zulipinternal 1&gt;&gt;&gt;, &lt;UserProfile: &lt;UserProfile: nagios-receive-bot@zulip.com &lt;Realm: zulipinternal 1&gt;&gt;&gt;, &lt;UserProfile: &lt;UserProfile: reminder-bot@zulip.com &lt;Realm: zulipinternal 1&gt;&gt;&gt;]&gt;
+</code></pre></div>
+
+
+
+<a name="1585232"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585232" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585232">(Jun 05 2023 at 13:31)</a>:</h4>
+<p><span class="user-mention" data-user-id="70">@GervaisdeM</span>  Hmm, so that looks good too. perhaps the setting value is wrong? Can you check the output</p>
+<div class="codehilite"><pre><span></span><code>settings.EMAIL_GATEWAY_BOT
+</code></pre></div>
+<p>in <code>manage.py shell</code> again? </p>
+<p>And you can try to also run the <code>UserProfile.objects.get(email__iexact=settings.EMAIL_GATEWAY_BOT)</code> line in the shell -  that's the one failing in the migration</p>
+
+
+
+<a name="1585236"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585236" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> GervaisdeM <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585236">(Jun 05 2023 at 14:02)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> </p>
+<div class="codehilite"><pre><span></span><code>Successfully imported Zulip settings, models, and actions functions.
+
+In [1]: settings.EMAIL_GATEWAY_BOT
+Out[1]: &#39;&#39;
+
+In [2]: UserProfile.objects.get(email__iexact=settings.EMAIL_GATEWAY_BOT)
+---------------------------------------------------------------------------
+DoesNotExist                              Traceback (most recent call last)
+Cell In[2], line 1
+----&gt; 1 UserProfile.objects.get(email__iexact=settings.EMAIL_GATEWAY_BOT)
+
+File /srv/zulip-venv-cache/7c7e8b6d088683db3cf8cd889cf024a79ffba11a/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/manager.py:85, in BaseManager._get_queryset_methods.&lt;locals&gt;.create_method.&lt;locals&gt;.manager_method(self, *args, **kwargs)
+     84 def manager_method(self, *args, **kwargs):
+---&gt; 85     return getattr(self.get_queryset(), name)(*args, **kwargs)
+
+File /srv/zulip-venv-cache/7c7e8b6d088683db3cf8cd889cf024a79ffba11a/zulip-py3-venv/lib/python3.8/site-packages/django/db/models/query.py:650, in QuerySet.get(self, *args, **kwargs)
+    648     return clone._result_cache[0]
+    649 if not num:
+--&gt; 650     raise self.model.DoesNotExist(
+    651         &quot;%s matching query does not exist.&quot; % self.model._meta.object_name
+    652     )
+    653 raise self.model.MultipleObjectsReturned(
+    654     &quot;get() returned more than one %s -- it returned %s!&quot;
+    655     % (
+   (...)
+    658     )
+    659 )
+
+DoesNotExist: UserProfile matching query does not exist.
+
+In [3]:
+</code></pre></div>
+
+
+
+<a name="1585246"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585246" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585246">(Jun 05 2023 at 14:41)</a>:</h4>
+<p>Ah, so that's the problem. <span class="user-mention" data-user-id="70">@GervaisdeM</span> Can you check if you have an override for <code>EMAIL_GATEWAY_BOT = ""</code> or such in your <code>/etc/zulip/settings.py</code>? If so, just delete it from there. It's set to a proper default by Zulip</p>
+
+
+
+<a name="1585292"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585292" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585292">(Jun 05 2023 at 16:16)</a>:</h4>
+<p>I don't think we've ever documented changing <code>EMAIL_GATEWAY_BOT</code>, so I'm also curious what led to that change, if it exists.</p>
+
+
+
+<a name="1585312"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585312" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> GervaisdeM <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585312">(Jun 05 2023 at 16:36)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span>  I have never made any changes around the EMAIL_GATEWAY_BOT in my settings.py, so they are all set to whatever the defaults were when I installed Zulip... Should I comment out all the entries about EMAIL_GATEWAY?</p>
+<div class="codehilite"><pre><span></span><code># Example: zulip+%s@example.com
+EMAIL_GATEWAY_PATTERN = &quot;&quot;
+
+
+# The following options are relevant if you&#39;re using mail polling.
+#
+# A sample cron job for mail polling is available at puppet/zulip/files/cron.d/email-mirror
+#
+# The Zulip username of the bot that the email pattern should post as.
+# Example: emailgateway@example.com
+EMAIL_GATEWAY_BOT = &quot;&quot;
+
+# Configuration of the email mirror mailbox
+# The IMAP login and password
+EMAIL_GATEWAY_LOGIN = &quot;&quot;
+EMAIL_GATEWAY_PASSWORD = &quot;&quot;
+# The IMAP server &amp; port to connect to
+EMAIL_GATEWAY_IMAP_SERVER = &quot;&quot;
+EMAIL_GATEWAY_IMAP_PORT = 993
+# The IMAP folder name to check for emails. All emails sent to EMAIL_GATEWAY_PATTERN above
+# must be delivered to this folder
+EMAIL_GATEWAY_IMAP_FOLDER = &quot;INBOX&quot;
+</code></pre></div>
+
+
+
+<a name="1585400"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585400" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585400">(Jun 05 2023 at 18:07)</a>:</h4>
+<p>Yeah, since this is a very old installation, I guess it's just a thing that we used to have in <code>settings.py</code> template in very ancient Zulip. <span class="user-mention" data-user-id="70">@GervaisdeM</span> Yeah just comment out the <code>EMAIL_GATEWAY_BOT = ""</code> line and you should be good to go</p>
+
+
+
+<a name="1585456"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585456" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585456">(Jun 05 2023 at 18:41)</a>:</h4>
+<p>Do we want to attempt to address this in a general way in the upgrade?  I think the only way to do so would be to use a hardcoded email address rather than reading <code>EMAIL_GATEWAY_BOT</code></p>
+
+
+
+<a name="1585496"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585496" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585496">(Jun 05 2023 at 19:08)</a>:</h4>
+<p>One idea would be, if the previous version is below 7.1, to check whether <code>get-django-setting </code>EMAIL_GATEWAY_BOT` is another other than the expected value, and abort before doing that if so.</p>
+
+
+
+<a name="1585500"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585500" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585500">(Jun 05 2023 at 19:08)</a>:</h4>
+<p>I don't think that being configurable was ever a good idea, but I think it might have been documented at some point 5+ years ago as a thing you can do (with no clear description of why you'd want to do it).</p>
+
+
+
+<a name="1585695"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585695" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> GervaisdeM <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585695">(Jun 05 2023 at 22:44)</a>:</h4>
+<p>Success!<br>
+<a href="/user_uploads/2/1f/28mp8ptae_1I7e-7mLsyoPkU/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/1f/28mp8ptae_1I7e-7mLsyoPkU/image.png" title="image.png"><img src="/user_uploads/2/1f/28mp8ptae_1I7e-7mLsyoPkU/image.png"></a></div>
+
+
+
+<a name="1585698"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585698" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585698">(Jun 05 2023 at 22:52)</a>:</h4>
+<p>You may want to give upgrading your settings.py a shot:</p>
+<p><a href="https://zulip.readthedocs.io/en/latest/production/upgrade.html#updating-settings-py-inline-documentation">https://zulip.readthedocs.io/en/latest/production/upgrade.html#updating-settings-py-inline-documentation</a></p>
+
+
+
+<a name="1585699"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585699" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585699">(Jun 05 2023 at 22:52)</a>:</h4>
+<p>But it may be so old that that doesn't work.</p>
+
+
+
+<a name="1585713"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585713" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> GervaisdeM <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585713">(Jun 05 2023 at 23:05)</a>:</h4>
+<p>Thanks Alex. I'll check it out.</p>
+
+
+
+<a name="1585851"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1585851" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> GervaisdeM <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1585851">(Jun 06 2023 at 02:11)</a>:</h4>
+<p>Compared my settings.py to latest version and moved settings across... Believe averything is up-to-date and working. Thanks for the tip <span class="user-mention" data-user-id="12178">@Alex Vandiver</span></p>
+
+
+
+<a name="1586801"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1586801" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> GervaisdeM <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1586801">(Jun 06 2023 at 22:11)</a>:</h4>
+<p>Fun Fact!<br>
+The tool that tries to identify what version of the settings.py you are using, identified mine at version 1.3.6!<br>
+Ha!</p>
+
+
+
+<a name="1586802"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1586802" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1586802">(Jun 06 2023 at 22:12)</a>:</h4>
+<p>Dang!  That's an old instance. <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<a name="1586873"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1586873" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1586873">(Jun 06 2023 at 23:52)</a>:</h4>
+<p>Wow that's about as old as it gets! 1.3.0 was the first version number for the Zulip server.</p>
+
+
+
+<a name="1587062"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1587062" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Muhammad Laique <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1587062">(Jun 07 2023 at 07:14)</a>:</h4>
+<p>I upgraded to 7.0 and it wend smoothly without any problem. <br>
+I upgraded to 6.2 last week luckily!</p>
+
+
+
+<a name="1588550"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%206.2%20to%207.0%20fails/near/1588550" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Andrea Soc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.206.2E2.20to.207.2E0.20fails.html#1588550">(Jun 08 2023 at 13:43)</a>:</h4>
+<p>i upgraded to 7.0 from 6.2 and all work fine, in 10 minutes.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,92 @@
+[
+    {
+        "content": "<p>I am running Zulip 4.9 (just upgraded this morning from 4.5 -- no issues with that) on Ubuntu 18.04.</p>\n<p>I followed &lt;<a href=\"https://zulip.readthedocs.io/en/4.9/production/upgrade-or-modify.html#upgrading-from-ubuntu-18-04-bionic-to-20-04-focal\">https://zulip.readthedocs.io/en/4.9/production/upgrade-or-modify.html#upgrading-from-ubuntu-18-04-bionic-to-20-04-focal</a>&gt; and all is well until step 5, the reindexing step. For step 4, upgrading postgresql, I get:</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip:~# /home/zulip/deployments/current/scripts/setup/upgrade-postgresql\nAlready running PostgreSQL 13!\n</code></pre></div>\n<p>and then for the index regeneration, I get</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip:~# /home/zulip/deployments/current/scripts/setup/reindex-textual-data --force\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/setup/reindex-textual-data&quot;, line 9, in &lt;module&gt;\n    import psycopg2\nModuleNotFoundError: No module named &#39;psycopg2&#39;\n</code></pre></div>\n<p>What should I do at this point? Do I just <code>pip install psycopg2</code> and try again? It seems like this error is unexpected and may be indicative of errors down the line. Has anyone else encountered this? Advice?</p>",
+        "id": 1316338,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1643206942
+    },
+    {
+        "content": "<p>As a follow-up, I ran <code>pip install psycopg2</code> and tried again, and got this error:</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip:~# /home/zulip/deployments/current/scripts/setup/reindex-textual-data --force\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/setup/reindex-textual-data&quot;, line 16, in &lt;module&gt;\n    setup_path()\n  File &quot;/home/zulip/deployments/current/scripts/setup/../../scripts/lib/setup_path.py&quot;, line 20, in setup_path\n    raise RuntimeError(venv + &quot; was not set up for this Python version&quot;)\nRuntimeError: /home/zulip/deployments/current/zulip-py3-venv was not set up for this Python version\n</code></pre></div>\n<p>So the pip install was not a quick fix.</p>",
+        "id": 1316339,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1643207192
+    },
+    {
+        "content": "<p>After the pip install, I tried did <code>rm -rf /srv/zulip-venv-cache/</code> followed by <code>/home/zulip/deployments/current/scripts/lib/create-production-venv /home/zulip/deployments/current</code> as suggested <a href=\"https://github.com/zulip/zulip/issues/12065#issuecomment-495963297\">here</a>. After than, the <code>reindex-textual-data</code> command worked. Now on to step 6...</p>",
+        "id": 1316342,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1643207836
+    },
+    {
+        "content": "<p>Darn, another error:</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip:~# /home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 \\\n&gt;     /home/zulip/deployments/current/ --ignore-static-assets --audit-fts-indexes\n...\nError: Execution of &#39;/usr/bin/apt-get -q -y -o DPkg::Options::=--force-confold install python3-psycopg2&#39; returned 100: Reading package lists...\nBuilding dependency tree...\nReading state information...\nSome packages could not be installed. This may mean that you have\nrequested an impossible situation or if you are using the unstable\ndistribution that some required packages have not yet been created\nor been moved out of Incoming.\nThe following information may help to resolve the situation:\n\nThe following packages have unmet dependencies:\n python3-psycopg2 : Depends: python3 (&lt; 3.7) but 3.8.2-0ubuntu2 is to be installed\nE: Unable to correct problems, you have held broken packages.\nError: /Stage[main]/Zulip::Process_fts_updates/Zulip::Safepackage[python3-psycopg2]/Package[python3-psycopg2]/ensure: change from &#39;purged&#39; to &#39;present&#39; failed: Execution of &#39;/usr/bin/apt-get -q -y -o DPkg::Options::=--force-confold install python3-psycopg2&#39; returned 100: Reading package lists...\nBuilding dependency tree...\nReading state information...\nSome packages could not be installed. This may mean that you have\nrequested an impossible situation or if you are using the unstable\ndistribution that some required packages have not yet been created\nor been moved out of Incoming.\nThe following information may help to resolve the situation:\n\nThe following packages have unmet dependencies:\n python3-psycopg2 : Depends: python3 (&lt; 3.7) but 3.8.2-0ubuntu2 is to be installed\nE: Unable to correct problems, you have held broken packages.\nNotice: /Stage[main]/Zulip::Process_fts_updates/File[/etc/supervisor/conf.d/zulip/zulip_db.conf]: Dependency Package[python3-psycopg2] has failures: true\nWarning: /Stage[main]/Zulip::Process_fts_updates/File[/etc/supervisor/conf.d/zulip/zulip_db.conf]: Skipping because of failed dependencies\nWarning: /Stage[main]/Zulip::Supervisor/Service[supervisor]: Skipping because of failed dependencies\nWarning: /Stage[main]/Zulip::Supervisor/Exec[supervisor-restart]: Skipping because of failed dependencies\nNotice: Applied catalog in 3.58 seconds\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2&quot;, line 352, in &lt;module&gt;\n    subprocess.check_call([&quot;./scripts/zulip-puppet-apply&quot;, &quot;--force&quot;])\n  File &quot;/usr/lib/python3.8/subprocess.py&quot;, line 364, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./scripts/zulip-puppet-apply&#39;, &#39;--force&#39;]&#39; returned non-zero exit status 1.\n</code></pre></div>",
+        "id": 1316344,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1643207980
+    },
+    {
+        "content": "<p>I get the same error as above if I precede the <code>upgrade-zulip-stage-2</code> command with <code>rm -rf /srv/zulip-venv-cache/*</code>. Darn. Any suggestions?</p>",
+        "id": 1316345,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1643208140
+    },
+    {
+        "content": "<p>Another note for troubleshooting: I am using the Zulip Digital Ocean droplet (<a href=\"https://marketplace.digitalocean.com/apps/zulip\">https://marketplace.digitalocean.com/apps/zulip</a>). Well, the one that was configured for zulip 4.5 on ubuntu 18.04.</p>",
+        "id": 1316349,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1643209625
+    },
+    {
+        "content": "<p>when I get apt info for python3-psycopg2, I see</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip:~# apt info python3-psycopg2 -a\nPackage: python3-psycopg2\nVersion: 2.8.6-2~pgdg18.04+1\nDepends: python3 (&lt;&lt; 3.7), python3 (&gt;= 3.6~), python3:any (&gt;= 3.3.2-2~), libc6 (&gt;= 2.15), libpq5 (&gt;= 10~~)\nAPT-Sources: http://apt.postgresql.org/pub/repos/apt bionic-pgdg/main amd64 Packages\n...\nPackage: python3-psycopg2\nVersion: 2.8.4-2\nDepends: python3 (&lt;&lt; 3.9), python3 (&gt;= 3.8~), python3:any, libc6 (&gt;= 2.15), libpq5 (&gt;= 10~~)\nAPT-Sources: http://mirrors.digitalocean.com/ubuntu focal/main amd64 Packages\n...\n</code></pre></div>\n<p>and then</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip:~# apt-cache policy python3-psycopg2\npython3-psycopg2:\n  Installed: (none)\n  Candidate: 2.8.6-2~pgdg18.04+1\n  Version table:\n     2.8.6-2~pgdg18.04+1 500\n        500 http://apt.postgresql.org/pub/repos/apt bionic-pgdg/main amd64 Packages\n     2.8.4-2 500\n        500 http://mirrors.digitalocean.com/ubuntu focal/main amd64 Packages\n</code></pre></div>\n<p>It seems that zulip is preferring the <a href=\"http://postgresql.org\">postgresql.org</a> version:</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip:~# cat /etc/apt/sources.list.d/zulip.list.distUpgrade\ndeb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main\ndeb-src http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main\n\ndeb http://ppa.launchpad.net/groonga/ppa/ubuntu bionic main\ndeb-src http://ppa.launchpad.net/groonga/ppa/ubuntu bionic main\n</code></pre></div>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip:~# cat /etc/apt/sources.list.d/zulip.list\ndeb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main\ndeb-src http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main\n\ndeb http://ppa.launchpad.net/groonga/ppa/ubuntu focal main\ndeb-src http://ppa.launchpad.net/groonga/ppa/ubuntu focal main\n</code></pre></div>\n<p>This seems normally fine, but in this case, the candidate python3-psycopg2 package appears to require python &lt; 3.7 ? Not sure what to do here. Temporarily disable  <code>/etc/apt/sources.list.d/zulip.list*</code> ?</p>",
+        "id": 1316373,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1643212388
+    },
+    {
+        "content": "<p>Okay, disabling the zulip apt sources appears to have solved the problem. I did this:</p>\n<div class=\"codehilite\"><pre><span></span><code># as root\nmv /etc/apt/sources.list.d/zulip.list* ~/\napt-get update\napt-cache policy python3-psycopg2 # verify by eye that the right package will be fetched\n/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 /home/zulip/deployments/current/ --ignore-static-assets --audit-fts-indexes\n</code></pre></div>\n<p>and my server is up and running. I then ran</p>\n<div class=\"codehilite\"><pre><span></span><code>mv ~/zulip.list* /etc/apt/sources.list.d/\napt-get update\n</code></pre></div>\n<p>to restore that stuff as before. But, I guess I may need to move them again on the next dist upgrade.</p>\n<p>I hope this helps others. Any advice that is less convoluted than my procedure is appreciated. :)</p>",
+        "id": 1316377,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1643212859
+    },
+    {
+        "content": "<p>Try <code>/srv/zulip-py3-venv/bin/python /home/zulip/deployments/current/scripts/setup/reindex-textual-data</code>.</p>\n<p>(Opened <a href=\"https://github.com/zulip/zulip/pull/20933\">#20933</a> to make that unnecessary.)</p>",
+        "id": 1316435,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1643225222
+    },
+    {
+        "content": "<p>We should backport those commits to <code>4.x</code>, right?</p>",
+        "id": 1316454,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1643227824
+    },
+    {
+        "content": "<p>They're flagged for backport, yes.</p>",
+        "id": 1316459,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1643228043
+    },
+    {
+        "content": "<p>I figure we can backport the first one, and revert the second one when we make the next release.</p>",
+        "id": 1316468,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1643228380
+    },
+    {
+        "content": "<p>Unless we want to update <a href=\"https://zulip.readthedocs.io/en/stable/\">https://zulip.readthedocs.io/en/stable/</a> from the 4.x branch?</p>",
+        "id": 1316473,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1643228687
+    },
+    {
+        "content": "<p>We <a href=\"https://docs.readthedocs.io/en/stable/versions.html\">could do that</a> if our 4.x branch was named <code>stable</code>.</p>",
+        "id": 1316483,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1643229069
+    },
+    {
+        "content": "<p>I think we're probably going to do a 4.10 release soon enough that it's not worth extra gymnastics.</p>",
+        "id": 1316489,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1643229247
+    }
+]

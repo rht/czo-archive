@@ -1,0 +1,56 @@
+[
+    {
+        "content": "<p>Posting here for visibility; see issue for details.</p>\n<blockquote>\n<p>It seems that after switching to version 5.1, the LDAP_DEACTIVATE_NON_MATCHING_USERS setting stopped working correctly for me.</p>\n</blockquote>",
+        "id": 1361750,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1649312388
+    },
+    {
+        "content": "<p>I created this issue. I am ready to provide the necessary clarifying information.<br>\n<span class=\"user-mention\" data-user-id=\"19257\">@Alya Abbott</span> , thank you for posting the link here.</p>",
+        "id": 1361755,
+        "sender_full_name": "Aggr",
+        "timestamp": 1649313431
+    },
+    {
+        "content": "<p>Mmm.  This relates to <a href=\"https://blog.zulip.com/2022/03/15/zulip-server-4-11-security-release/#notable-changes\">CVE-2022-24751</a>, and <a class=\"stream-topic\" data-stream-id=\"3\" href=\"/#narrow/stream/3-backend/topic/transaction.2Eatomic\">#backend &gt; transaction.atomic</a> -- we now prohibit session modifications inside a transaction.  <code>sync_ldap_user_data</code> runs in a transaction and deletes users, which tries to purge their sessions -- but now throws an assert because it's in a transaction.</p>",
+        "id": 1361756,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649313459
+    },
+    {
+        "content": "<p>I don't think there's a clear solution here, besides the more complex solutions in <a class=\"stream-topic\" data-stream-id=\"3\" href=\"/#narrow/stream/3-backend/topic/transaction.2Eatomic\">#backend &gt; transaction.atomic</a> .  We're running the ldap sync inside a transaction so that we can roll back <em>all</em> of the user changes atomically, in case we disabled all admins accidentally.  If we drop that feature, we can remove the <code>@transaction.atomic</code> around <code>sync_user_from_ldap</code> and things will work fine.</p>",
+        "id": 1361763,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649313861
+    },
+    {
+        "content": "<p>For a short-term fix, <span class=\"user-mention\" data-user-id=\"10714\">@Aggr</span>, you can remove the <code>@transaction.atomic</code> line in <code>zerver/management/commands/sync_ldap_user_data.py</code> and re-run the import.</p>",
+        "id": 1361765,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649313931
+    },
+    {
+        "content": "<p>As long as you don't need that safety protection against disabling all of the admins accidentally (which generally isn't necessary unless the LDAP tree changes, or you're setting things up and you wrote the query wrong), that should work fine.</p>",
+        "id": 1361767,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649313988
+    },
+    {
+        "content": "<p>Yes, with the commented <code>@transaction.atomic</code> everything works as before. Thanks. <span aria-label=\"fireworks\" class=\"emoji emoji-1f386\" role=\"img\" title=\"fireworks\">:fireworks:</span></p>",
+        "id": 1361782,
+        "sender_full_name": "Aggr",
+        "timestamp": 1649317983
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> should we fix this by moving the session purge to <code>transaction.on_commit</code> hooks?</p>",
+        "id": 1362304,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1649370089
+    },
+    {
+        "content": "<p>I believe the canonical problem with moving to <code>transaction.on_commit</code> hooks, discussed in <a class=\"stream-topic\" data-stream-id=\"3\" href=\"/#narrow/stream/3-backend/topic/transaction.2Eatomic\">#backend &gt; transaction.atomic</a>, is that they never run in tests, since we never commit in tests.</p>\n<p><code>sync_ldap_user_data</code> doesn't have any test coverage, so switching to it there isn't going to cause problems until we add test coverage.</p>",
+        "id": 1385052,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1653601463
+    }
+]

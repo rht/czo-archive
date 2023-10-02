@@ -1,0 +1,398 @@
+[
+    {
+        "content": "<p>After the update to 5.3, the reported installed version is <code>5.2-51-g3c7fdf8a82</code> (both via <code>SERVERURL//api/v1/server_settings</code> and via <code>Settings Cog -&gt; About Zulip</code> from the web interface).</p>\n<p>Should I be worried?</p>",
+        "id": 1394981,
+        "sender_full_name": "Hans Fangohr",
+        "timestamp": 1655885206
+    },
+    {
+        "content": "<p>More details:</p>\n<ul>\n<li>\n<p>I followed instructions on <a href=\"https://zulip.readthedocs.io/en/stable/production/upgrade-or-modify.html#upgrading-to-a-release\">https://zulip.readthedocs.io/en/stable/production/upgrade-or-modify.html#upgrading-to-a-release</a>, run this command to download the latest server (<code>curl -fLO https://download.zulip.com/server/zulip-server-latest.tar.gz</code>) followed by (<code>/home/zulip/deployments/current/scripts/upgrade-zulip zulip-server-latest.tar.gz</code>). This runs through fine. The confusion arises when I check the version of the upgraded server:</p>\n</li>\n<li>\n<p>I am upgrading from <code>5.2</code>.</p>\n</li>\n<li>\n<p>The tarball, when unpacked, creates a directory <code>zulip-server-5.3</code>. In that directory, there is a <code>version</code> file, containining <code>5.3</code>. </p>\n</li>\n<li>\n<p>When grepping for the displayed version number, I find that it is stored in <code>zulip-server-5.3/zulip-git-version</code>: </p>\n</li>\n</ul>\n<div class=\"codehilite\"><pre><span></span><code>cat zulip-server-5.3/zulip-git-version\n5.2-51-g3c7fdf8a82\n5.2-49-g9d3fb85897\n</code></pre></div>\n<ul>\n<li>More detailed output from <code>SERVERURL//api/v1/server_settings</code>: </li>\n</ul>\n<div class=\"codehilite\"><pre><span></span><code>{&quot;result&quot;:&quot;success&quot;,&quot;msg&quot;:&quot;&quot;,&quot;authentication_methods&quot;:\n  { ... },\n&quot;zulip_version&quot;:&quot;5.2-51-g3c7fdf8a82&quot;,\n&quot;zulip_merge_base&quot;:&quot;5.2-49-g9d3fb85897&quot;,\n&quot;zulip_feature_level&quot;:122,\n&quot;push_notifications_enabled&quot;:true,\n... ...}\n</code></pre></div>",
+        "id": 1394982,
+        "sender_full_name": "Hans Fangohr",
+        "timestamp": 1655885315
+    },
+    {
+        "content": "<p>There was a misstep in the release process, and the minor version wasn't incremented at the correct point. You are all set. <span class=\"user-mention\" data-user-id=\"16098\">@Hans Fangohr</span></p>",
+        "id": 1395026,
+        "sender_full_name": "Matt",
+        "timestamp": 1655898367
+    },
+    {
+        "content": "<p>Okay, thanks.</p>",
+        "id": 1395031,
+        "sender_full_name": "Hans Fangohr",
+        "timestamp": 1655899335
+    },
+    {
+        "content": "<p>I logged in as root and ran <code>curl -fLO https://download.zulip.com/server/zulip-server-latest.tar.gz</code> and then <code>/home/zulip/deployments/current/scripts/upgrade-zulip zulip-server-latest.tar.gz</code> as per &lt;<a href=\"https://zulip.readthedocs.io/en/stable/production/upgrade-or-modify.html#upgrading-to-a-release\">https://zulip.readthedocs.io/en/stable/production/upgrade-or-modify.html#upgrading-to-a-release</a>&gt;.</p>\n<p>I get this error:</p>\n<div class=\"codehilite\"><pre><span></span><code>The following packages will be DOWNGRADED:\n  postgresql-13\n39 upgraded, 7 newly installed, 1 downgraded, 0 to remove and 0 not upgraded.\n3 standard security updates\nE: Packages were downgraded and -y was used without --allow-downgrades.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2022-06-22-14-23-28/scripts/lib/upgrade-zulip-stage-2&quot;, line 231, in &lt;module&gt;\n    subprocess.check_call([&quot;apt-get&quot;, &quot;-y&quot;, &quot;--with-new-pkgs&quot;, &quot;upgrade&quot;])\n  File &quot;/usr/lib/python3.8/subprocess.py&quot;, line 364, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;apt-get&#39;, &#39;-y&#39;, &#39;--with-new-pkgs&#39;, &#39;upgrade&#39;]&#39; returned non-zero exit status 100.\n\nZulip upgrade failed (exit code 1)!\n</code></pre></div>\n<p>I'd like to confirm that I should run <code>apt-get -y --with-new-pkgs --allow-downgrades upgrade</code> here and then try again.</p>",
+        "id": 1395040,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1655907919
+    },
+    {
+        "content": "<p>I am currently running 5.2 without issue via the digital ocean droplet &lt;<a href=\"https://marketplace.digitalocean.com/apps/zulip\">https://marketplace.digitalocean.com/apps/zulip</a>&gt;.</p>",
+        "id": 1395043,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1655908085
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19442\">@Donny Winston</span>: Can you show the output of <code>apt-cache policy postgresql-13</code>?</p>",
+        "id": 1395057,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655913805
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> </p>\n<div class=\"codehilite\"><pre><span></span><code>postgresql-13:\n  Installed: 13.6-1.pgdg18.04+1\n  Candidate: 13.5-2.pgdg20.04+1\n  Version table:\n     13.7-1.pgdg20.04+1 500\n        500 http://apt.postgresql.org/pub/repos/apt focal-pgdg/main amd64 Packages\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     13.6-1.pgdg20.04+1+b1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     13.6-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n *** 13.6-1.pgdg18.04+1 100\n        100 /var/lib/dpkg/status\n     13.5-2.pgdg20.04+1 1000\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     13.5-1.pgdg20.04+1 1000\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     13.4-4.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     13.4-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     13.3-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     13.2-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     13.1-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     13.0-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     13~rc1-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     13~beta3-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     13~beta2-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n     13~beta1-1.pgdg20.04+1 500\n        500 http://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 Packages\n</code></pre></div>",
+        "id": 1395059,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1655914055
+    },
+    {
+        "content": "<p>What's your <code>lsb_release -a</code>?</p>",
+        "id": 1395062,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655914345
+    },
+    {
+        "content": "<p>And I think it'd be helpful to see the upgrade logs up to the point it failed.</p>\n<p>On 5.2, we had a pin, and switched to the <code>apt-archive.postgresql.org</code> to prevent upgrades to versions of PostgreSQL that were incompatible with pgroonga.  But we do not expect 5.3 to do any downgrades.</p>",
+        "id": 1395064,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655914528
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span>: Any thoughts?</p>",
+        "id": 1395065,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655914536
+    },
+    {
+        "content": "<p>Well, that first <code>apt-get upgrade</code> happens before the <code>zulip-puppet-apply</code> that would remove the pin, so it’s still in place at that time. I wouldn’t have expected that to lead to a failure, though.</p>",
+        "id": 1395066,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655914654
+    },
+    {
+        "content": "<p>I don't know if the 18.04 vs 20.04 is a red herring, but that looks weird to me.</p>",
+        "id": 1395067,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655914729
+    },
+    {
+        "content": "<p>That does look weird, as does the fact that 13.6-1.pgdg18.04+1 is only available locally and not in APT.</p>",
+        "id": 1395068,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655914782
+    },
+    {
+        "content": "<p>For that matter, why is it 13?</p>",
+        "id": 1395070,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655914824
+    },
+    {
+        "content": "<p>Default is 12 on Ubuntu 20.04 and 14 on Ubuntu 22.04.</p>",
+        "id": 1395071,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655914859
+    },
+    {
+        "content": "<p><code>lsb_release -a</code>:</p>\n<div class=\"codehilite\"><pre><span></span><code>No LSB modules are available.\nDistributor ID: Ubuntu\nDescription:    Ubuntu 20.04.4 LTS\nRelease:    20.04\nCodename:   focal\n</code></pre></div>",
+        "id": 1395084,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1655919081
+    },
+    {
+        "content": "<p>Did you explicitly <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-postgresql\">upgrade to PostgreSQL 13</a> at some point?</p>",
+        "id": 1395087,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655919237
+    },
+    {
+        "content": "<p>I started with a pre-5.0 ubuntu 18.04 offering of a zulip \"app\" on the Digital Ocean marketplace. IIRC I followed Zulip docs to upgrade to 20.04 and then upgraded to 5.0.</p>",
+        "id": 1395088,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1655919300
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span>: I think we installed 13 from <a href=\"https://github.com/zulip/zulip/commit/ae2c377d13ac23c9e72a6f11b61b6e64e76b5947\">ae2c377d13ac23c9e72a6f11b61b6e64e76b5947</a> to <a href=\"https://github.com/zulip/zulip/commit/544e8c569e8ffb788d70119e5834d42134524b42\">544e8c569e8ffb788d70119e5834d42134524b42</a></p>",
+        "id": 1395089,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655919360
+    },
+    {
+        "content": "<p>re: explicitly upgrading postgres, I don't recall, but I may have in direct response to some kind of error, in an attempt to remedy, but not electively.</p>",
+        "id": 1395091,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1655919420
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> do you think following &lt;<a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-postgresql\">https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-postgresql</a>&gt; to get to postgres 14 and then re-running the 5.3 installer will do the trick?</p>",
+        "id": 1395092,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1655919488
+    },
+    {
+        "content": "<p>That seems likely to work.</p>",
+        "id": 1395093,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655919566
+    },
+    {
+        "content": "<p>But to be clear, none of the steps you've mentioned so far is all that weird, hence all of our questions trying to figure out if this is going to bite other folks.</p>",
+        "id": 1395094,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655919629
+    },
+    {
+        "content": "<p>cool, it did work to upgrade postgres using that procedure and then run the upgrade process as normal. I do see what <span class=\"user-mention\" data-user-id=\"16098\">@Hans Fangohr</span> saw wrt. it not identifying as  \"5.3\":</p>\n<p><a href=\"/user_uploads/2/e9/juLyhCo2z3BCsdDdtwl_RTxz/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/e9/juLyhCo2z3BCsdDdtwl_RTxz/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/e9/juLyhCo2z3BCsdDdtwl_RTxz/image.png\"></a></div>",
+        "id": 1395101,
+        "sender_full_name": "Donny Winston",
+        "timestamp": 1655920222
+    },
+    {
+        "content": "<p>Yes, that's expected for all 5.3 installs, because the tag was made after the tarball was, effectively.  But it's the right commit, as one can verify with:</p>\n<div class=\"codehilite\" data-code-language=\"Bash Session\"><pre><span></span><code><span class=\"gp\">$ </span>git rev-parse <span class=\"m\">5</span>.3\n<span class=\"go\">3c7fdf8a82004627afb21185a2066f18522273bb</span>\n</code></pre></div>\n<p>...which matches the <code>-g3c7fdf8a82</code> on the identifier.</p>",
+        "id": 1395102,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655920401
+    },
+    {
+        "content": "<p>And the \"forked from upstream\" is because of the security commit being private when we rolled the release.</p>",
+        "id": 1395103,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655920433
+    },
+    {
+        "content": "<p>We should probably add an end-to-end check in <code>build-release-tarball</code> that if you used a tag to generate the release, the contents of the version file match the tag that one requested.</p>",
+        "id": 1395143,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655925291
+    },
+    {
+        "content": "<p>What does \"used a tag to generate the release\" mean?  That's not really a concept the tool has currently.</p>\n<p><a href=\"https://github.com/zulip/zulip/pull/22280\">#22280</a> makes it make the tag right before building the tarball.  We can double-check that the tag matches the cached file, but I don't see any way it won't, if it made the tag.</p>",
+        "id": 1395146,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655925614
+    },
+    {
+        "content": "<p>Well, I'd been imagining checking the format of the name you provided -- if it's <code>[0-9][.][0-9]</code>, that's likely an official release.</p>",
+        "id": 1395147,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655925673
+    },
+    {
+        "content": "<p>What I had in mind for the check is checking that the <code>zulip-git-version</code> file does not have a format with <code>-</code>s in it, like it does when building off a fork:</p>\n<div class=\"codehilite\"><pre><span></span><code>$ cat zulip-git-version\n6.0-dev-585-gae1bc33d2c\n6.0-dev-582-gacfa55138e\n</code></pre></div>",
+        "id": 1395149,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655925723
+    },
+    {
+        "content": "<p>So perhaps \"If there's no <code>-</code> in the version specified on the command line, there's no dash in <code>zulip-git-version</code>\", would be a version of this check that would have caught this bug.</p>",
+        "id": 1395150,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655925777
+    },
+    {
+        "content": "<p>But wouldn't catch <code>zulip-server-5.0-rc1</code>.</p>\n<p>We should make it impossible to do this wrong, not rely on heuristics.</p>",
+        "id": 1395151,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655925856
+    },
+    {
+        "content": "<p>It also wouldn’t catch, you know, <code>4.11</code>.</p>",
+        "id": 1395157,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655925963
+    },
+    {
+        "content": "<p>That's a one-character fix, but yes. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>\n<p>My intent with <a href=\"https://github.com/zulip/zulip/pull/22280\">#22280</a> was to remove any manual <code>git tag</code> step -- making it happen as part of the tarball build means there's no space between those steps to reorder them or have them point to different places.  Which seems like it solves the problem without having to pattern-match on anything.</p>",
+        "id": 1395159,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655926068
+    },
+    {
+        "content": "<p>Well, we can do both -- this isn't the first time we've had a bug in the tooling result a version string like this, and we fixed the previous issue too. (The previous one had to do with the version caching script having a bug in its output, IIRC).</p>",
+        "id": 1395160,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655926102
+    },
+    {
+        "content": "<p>So I think it's not unwarranted to add some sort of assertion in addition to trying to eliminate the failure mode; I'm not particular about the details.</p>",
+        "id": 1395161,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655926176
+    },
+    {
+        "content": "<p>Are you referring to the bug where we weren’t fetching tags from zulip/zulip before computing the version in <code>upgrade-zulip-from-git</code>? An assertion in <code>build-release-tarball</code> wouldn’t have helped there.</p>",
+        "id": 1395166,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655926389
+    },
+    {
+        "content": "<p>I think we had another one too, but in some sense it doesn't matter. If others don't think an added assertion is useful, I won't insist on it, but I generally think when we have a class of error that has some permanent harm (in this case, a release that confusingly describes its version), it's generally good to have an independent test or assertion for it, even if we think that we've designed the workflow in a way that prevents it.</p>",
+        "id": 1395168,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655926555
+    },
+    {
+        "content": "<p><code>ZULIP_MERGE_BASE</code> has been wrong in all our minor releases since 4.1, because it’s computed as the merge base with zulip/zulip before we push to zulip/zulip.</p>",
+        "id": 1395183,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655928462
+    },
+    {
+        "content": "<p><code>ZULIP_VERSION</code> was wrong in 2.1.1 (2.1.0-5-g49ff894d6a), 2.1.3 (2.1.x), and 2.1.4 (2.1.3-9-g2b95f54593).</p>",
+        "id": 1395184,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655928571
+    },
+    {
+        "content": "<p>Also the tarballs for 1.8.0-rc1, 1.9.0-rc1, 1.9.0-rc3, 1.9.2, 2.0.6, 3.0-rc2 are missing on GitHub.</p>",
+        "id": 1395186,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655928744
+    },
+    {
+        "content": "<p>So I can retroactively feel good about having done this silly audit.</p>",
+        "id": 1395187,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655928761
+    },
+    {
+        "content": "<p>There are no GitHub releases or tags at all for 1.6.0-rc1, 1.7.0-rc1, 1.7.0-rc2.</p>",
+        "id": 1395188,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655929064
+    },
+    {
+        "content": "<p>And here’s an interesting one…the checksum for zulip-server-5.0-rc2.tar.gz in <a href=\"https://download.zulip.com/server/SHA256SUMS.txt\">SHA256SUMS.txt</a> doesn’t match.</p>",
+        "id": 1395189,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655929211
+    },
+    {
+        "content": "<p>2.1.1 and 2.1.3 are the same as 5.3, in that the commit hash is right, but the tag wasn't there when the describe happened.</p>",
+        "id": 1395193,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655930317
+    },
+    {
+        "content": "<p>The SHA256SUMs are cached in metadata on the objects in S3, which is what we build the SHA256SUMS.txt from</p>",
+        "id": 1395194,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655930394
+    },
+    {
+        "content": "<p>For the missing tags, it seems:</p>\n<ul>\n<li>1.6.0-rc1 might be <a href=\"https://github.com/zulip/zulip/commit/23baaae98075e19f51dab40affb5a94998389a50\">23baaae98075e19f51dab40affb5a94998389a50</a>,</li>\n<li>1.7.0-rc1 might be <a href=\"https://github.com/zulip/zulip/commit/88245d2cd66c75e1096eec53882a2750826f03be\">88245d2cd66c75e1096eec53882a2750826f03be</a>,</li>\n<li>1.7.0-rc2 doesn’t match any commit I can find; it might be <a href=\"https://github.com/zulip/zulip/commit/79d0f13885282442a30b65071affbef2a79714ca\">79d0f13885282442a30b65071affbef2a79714ca</a> with <a href=\"https://github.com/zulip/zulip/commit/11ab545f3b989c667d337b11000514bcc2dad43d\">11ab545f3b989c667d337b11000514bcc2dad43d</a> cherry-picked?</li>\n</ul>\n<p>Tim, do you have these tags locally somewhere?</p>",
+        "id": 1395195,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655930744
+    },
+    {
+        "content": "<p>The S3 metadata is equally wrong.</p>\n<div class=\"codehilite\" data-code-language=\"Bash Session\"><pre><span></span><code><span class=\"gp\">$ </span>aws s3api head-object --bucket zulip-download --key server/zulip-server-5.0-rc2.tar.gz\n<span class=\"go\">{</span>\n<span class=\"go\">    \"AcceptRanges\": \"bytes\",</span>\n<span class=\"go\">    \"LastModified\": \"Fri, 25 Mar 2022 04:39:12 GMT\",</span>\n<span class=\"go\">    \"ContentLength\": 94002279,</span>\n<span class=\"go\">    \"ETag\": \"\\\"7b1159d4c309260d221e46e33adf6abe-12\\\"\",</span>\n<span class=\"go\">    \"VersionId\": \"null\",</span>\n<span class=\"go\">    \"ContentType\": \"application/gzip\",</span>\n<span class=\"go\">    \"Metadata\": {</span>\n<span class=\"go\">        \"sha256sum\": \"5a40e181bf3cbd27c704a2ec34bbfac2e5479c177e4fc2c9a6824f58501e9c5e\"</span>\n<span class=\"go\">    }</span>\n<span class=\"go\">}</span>\n<span class=\"gp\">$ </span>aws s3 cp s3://zulip-download/server/zulip-server-5.0-rc2.tar.gz - <span class=\"p\">|</span> sha256sum\n<span class=\"go\">2c0eec79e7ae60c1ae3e29917ba4906412d6154df89bd4c651b735d1a74d069f  -</span>\n</code></pre></div>",
+        "id": 1395197,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655931464
+    },
+    {
+        "content": "<p>The SHA256SUMs file is produced from the metadata, so there's no way it could be right. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>\n<p>I've updated the metadata.  I don't understand how it was wrong, though.</p>",
+        "id": 1395222,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1655933713
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"699\">Anders Kaseorg</span> <a href=\"#narrow/stream/31-production-help/topic/upgrade.20to.205.2E3/near/1395195\">said</a>:</p>\n<blockquote>\n<p>For the missing tags, it seems:</p>\n<ul>\n<li>1.6.0-rc1 might be <a href=\"https://github.com/zulip/zulip/commit/23baaae98075e19f51dab40affb5a94998389a50\">23baaae98075e19f51dab40affb5a94998389a50</a>,</li>\n<li>1.7.0-rc1 might be <a href=\"https://github.com/zulip/zulip/commit/88245d2cd66c75e1096eec53882a2750826f03be\">88245d2cd66c75e1096eec53882a2750826f03be</a>,</li>\n<li>1.7.0-rc2 doesn’t match any commit I can find; it might be <a href=\"https://github.com/zulip/zulip/commit/79d0f13885282442a30b65071affbef2a79714ca\">79d0f13885282442a30b65071affbef2a79714ca</a> with <a href=\"https://github.com/zulip/zulip/commit/11ab545f3b989c667d337b11000514bcc2dad43d\">11ab545f3b989c667d337b11000514bcc2dad43d</a> cherry-picked?</li>\n</ul>\n<p>Tim, do you have these tags locally somewhere?</p>\n</blockquote>\n<p>Good question. It seems plausible that I do on the hard drive of a previous computer; I don't have them on my current laptop.</p>",
+        "id": 1395317,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655939692
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"699\">Anders Kaseorg</span> <a href=\"#narrow/stream/31-production-help/topic/upgrade.20to.205.2E3/near/1395186\">said</a>:</p>\n<blockquote>\n<p>Also the tarballs for 1.8.0-rc1, 1.9.0-rc1, 1.9.0-rc3, 1.9.2, 2.0.6, 3.0-rc2 are missing on GitHub.</p>\n</blockquote>\n<p>This we should be able to fix by just uploading those to GitHub, right? </p>\n<p>I do have an archive directory in my personal Dropbox where I have original copies of every release I've personally uploaded; not sure if that's useful for any of this.</p>",
+        "id": 1395320,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655939823
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"699\">Anders Kaseorg</span> <a href=\"#narrow/stream/31-production-help/topic/upgrade.20to.205.2E3/near/1395187\">said</a>:</p>\n<blockquote>\n<p>So I can retroactively feel good about having done this silly audit.</p>\n</blockquote>\n<p>Yeah, thanks for doing this!</p>",
+        "id": 1395321,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655939855
+    },
+    {
+        "content": "<p>I uploaded 2.0.6, which already had a release, but for the others we’d need to create one; the annoying part of that is that releases can’t be backdated.</p>",
+        "id": 1395378,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655944463
+    },
+    {
+        "content": "<p>Are you sure there's no way to backdate? I seem to recall uploading all our old releases to GitHub at some point, since we didn't use their release feature at first.</p>",
+        "id": 1395392,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655945445
+    },
+    {
+        "content": "<p><a href=\"https://github.com/orgs/github-community/discussions/5447\">https://github.com/orgs/github-community/discussions/5447</a></p>",
+        "id": 1395393,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655945496
+    },
+    {
+        "content": "<p>That suggests you're right, sight.</p>",
+        "id": 1395394,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655945506
+    },
+    {
+        "content": "<p>That’s why <a href=\"https://github.com/zulip/zulip/releases/1.3.0\">https://github.com/zulip/zulip/releases/1.3.0</a> is dated 2017-02-01 for a tag from 2015-09-25.</p>",
+        "id": 1395395,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655945506
+    },
+    {
+        "content": "<p>The most visible effects would be that the order in <a href=\"https://github.com/zulip/zulip/releases\">https://github.com/zulip/zulip/releases</a> would be wacky, and 5.3 would be displaced as “Latest” on <a href=\"https://github.com/zulip/zulip\">https://github.com/zulip/zulip</a> unless we marked them all as pre-releases.</p>",
+        "id": 1395398,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655945577
+    },
+    {
+        "content": "<p>Well the release candidates probably should be marked as pre releases, so that may help?</p>",
+        "id": 1395399,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1655945605
+    },
+    {
+        "content": "<p>Yeah, I mean, we could pretend 1.9.2 is a pre-release until we release 5.4 to work around the latter problem.</p>",
+        "id": 1395400,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1655945652
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/upgrade.20to.205.2E3/near/1395143\">said</a>:</p>\n<blockquote>\n<p>We should probably add an end-to-end check in <code>build-release-tarball</code> that if you used a tag to generate the release, the contents of the version file match the tag that one requested.</p>\n</blockquote>\n<p>Repushed <a href=\"https://github.com/zulip/zulip/pull/22280\">#22280</a> with some additional security in it, and the signature bits dropped.</p>",
+        "id": 1395840,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1656031926
+    },
+    {
+        "content": "<p>quick check: The IETF Zulip instance is currently at 5.0-dev-2368-gebeb9c4440. Are there any special considerations we need to take into account moving to 5.3? (And if such things are in a well-known place beyond upgrade-or-modfy.md please point me to it?)</p>",
+        "id": 1397231,
+        "sender_full_name": "Robert Sparks",
+        "timestamp": 1656353066
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24296\">@Robert Sparks</span> I don't expect so!</p>",
+        "id": 1397234,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1656353687
+    },
+    {
+        "content": "<p>I believe you folks are running a development version between 4.x and 5.0 because you wanted the OpenID connect authentication backend, which was released as part of 5.0.</p>",
+        "id": 1397235,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1656353710
+    },
+    {
+        "content": "<p>thanks Tim!</p>",
+        "id": 1397236,
+        "sender_full_name": "Robert Sparks",
+        "timestamp": 1656353739
+    }
+]

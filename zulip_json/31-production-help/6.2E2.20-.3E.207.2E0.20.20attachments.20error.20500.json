@@ -1,0 +1,182 @@
+[
+    {
+        "content": "<p>Hi, <br>\nI've upgraded to 7.0 some days ago, and I've been trying to sort out why attachments (new or old) give a 500 internal server error when trying to view them. Another thing is, despite the file being saved on s3, new files uploaded won't appear on the list of the user's uploaded files.</p>\n<p>I have already:</p>\n<ul>\n<li>upgraded settings.py    <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade.html#updating-settings-py-inline-documentation\">https://zulip.readthedocs.io/en/latest/production/upgrade.html#updating-settings-py-inline-documentation</a></li>\n<li>verified that the files are in fact written to S3 storage and that the links correspond to folders on S3</li>\n<li>I have also switch between using s3_key and IAM role for EC2, and everything remains the same.</li>\n<li>According to the upgrades notes, this deployment is not heavy in attachments and has less than 50 users, so I didn't change s3 cache</li>\n</ul>\n<p>What am I missing?</p>\n<p>Thank you!</p>",
+        "id": 1588138,
+        "sender_full_name": "Cláudio Martins",
+        "timestamp": 1686182133
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"27166\">@Cláudio Martins</span>: Can you show any recent errors in <code>/var/log/zulip/errors.log</code> or <code>/var/log/nginx/error.log</code> ?</p>",
+        "id": 1588646,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686240002
+    },
+    {
+        "content": "<p>Thank you <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> , in nginx error log, there is one repeating:</p>\n<p>' 2023/06/08 11:51:37 [error] 720#720: *1254 <a href=\"http://XXXX-uploaded-files.s3.amazonaws.com\">XXXX-uploaded-files.s3.amazonaws.com</a> could not be resolved (110: Operation timed out), client: [MY IP ADDRESS], server: , request: \"GET /user_uploads/2/_4MFBCSqaLpJHicpdYOjYO3m/filename.txt HTTP/2.0\", host: \"<a href=\"http://zulip.mydomain.org\">zulip.mydomain.org</a>\"'</p>\n<p>from the zulip error log is harder for me to pinpoint, but the errors I see there I cannot correlate with the hours I experiment with uploading or trying to access the link. Nevertheless, I noticed 11 lines there like:<br>\n\"2023-06-02 05:00:17.179 WARN [] [DIFFERENT FILES NAMES HERE] does not exist. Its entry in the database will be removed.\"<br>\nAnd its on the night after I did the upgrade</p>\n<p>After that I have errors that I think to be connect to reboots I did on the server. (<a href=\"/user_uploads/2/53/vOKjC7ERop4jLD7Id5zjVLo6/zulipErrors.txt\">zulipErrors.txt</a><br>\n)</p>",
+        "id": 1588772,
+        "sender_full_name": "Cláudio Martins",
+        "timestamp": 1686245961
+    },
+    {
+        "content": "<p>Is <code>XXXX-uploaded-files</code> the name of your S3 bucket?  Does that hostname resolve for you if you enter it in your browser, or run:</p>\n<div class=\"codehilite\"><pre><span></span><code>host XXXX-uploaded-files.s3.amazonaws.com\n</code></pre></div>",
+        "id": 1588778,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686247346
+    },
+    {
+        "content": "<p>Yes, it is the name of the bucket and it resolves</p>",
+        "id": 1588779,
+        "sender_full_name": "Cláudio Martins",
+        "timestamp": 1686247471
+    },
+    {
+        "content": "<p>The \"does not exist. Its entry in the database will be removed\" warning is fine.  In 7.0 we started cleaning up attachments that were uploaded but were never referenced in messages, so were inaccessible.  In some cases when we go to clean those up, we find that the file never actually got stored in S3 at all -- that's what that warning is.</p>",
+        "id": 1588780,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686247478
+    },
+    {
+        "content": "<p>Does it resolve if you run that command from on the Zulip server?</p>",
+        "id": 1588781,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686247525
+    },
+    {
+        "content": "<p>Does it resolve if you run:</p>\n<div class=\"codehilite\"><pre><span></span><code>dig XXXX-uploaded-files.s3.amazonaws.com @127.0.0.53\n</code></pre></div>",
+        "id": 1588782,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686247592
+    },
+    {
+        "content": "<p>The host command resolves either running from the server, or from my desktop. But the dig doesn't.</p>",
+        "id": 1588784,
+        "sender_full_name": "Cláudio Martins",
+        "timestamp": 1686247765
+    },
+    {
+        "content": "<p>OK, that's helpful.</p>\n<p>What version of Ubuntu / Debian?</p>",
+        "id": 1588785,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686247891
+    },
+    {
+        "content": "<p>Debian 11</p>",
+        "id": 1588786,
+        "sender_full_name": "Cláudio Martins",
+        "timestamp": 1686247930
+    },
+    {
+        "content": "<p>Can you show <code>resolvectl status</code> ?</p>",
+        "id": 1588787,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686247951
+    },
+    {
+        "content": "<p>Failed to get global data: Unit dbus-org.freedesktop.resolve1.service not found.</p>",
+        "id": 1588788,
+        "sender_full_name": "Cláudio Martins",
+        "timestamp": 1686247981
+    },
+    {
+        "content": "<p>That smells likely relevant.  Anything interesting about this install, network-wise?  What's your <code>/etc/resolve.conf</code>?</p>",
+        "id": 1588789,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686248038
+    },
+    {
+        "content": "<p>Hm, OK.  I can replicate this with a stock Debian 11.</p>",
+        "id": 1588790,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686248213
+    },
+    {
+        "content": "<p>my '''/etc/resolv.conf''' :<br>\ndomain eu-central-1.compute.internal<br>\nsearch eu-central-1.compute.internal<br>\nnameserver 172.31.0.2</p>",
+        "id": 1588793,
+        "sender_full_name": "Cláudio Martins",
+        "timestamp": 1686248309
+    },
+    {
+        "content": "<p>This install is a stock debian, and strictly followed the documentation for installations and upgrades.</p>",
+        "id": 1588794,
+        "sender_full_name": "Cláudio Martins",
+        "timestamp": 1686248409
+    },
+    {
+        "content": "<p>It's on EC2.</p>",
+        "id": 1588795,
+        "sender_full_name": "Cláudio Martins",
+        "timestamp": 1686248459
+    },
+    {
+        "content": "<p>Try <code>service systemd-resolved start</code> ?</p>",
+        "id": 1588796,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686248666
+    },
+    {
+        "content": "<p>I think it’s expected that a system upgraded from Debian 10 to Debian 11 isn’t using systemd-resolved/resolvectl/127.0.0.53. That isn’t necessarily a problem.</p>",
+        "id": 1588798,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1686249287
+    },
+    {
+        "content": "<p>Even fresh installs of Debian 11 don't run systemd-resolved, apparently.</p>",
+        "id": 1588799,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686249315
+    },
+    {
+        "content": "<p>Oh I see, our nginx configuration assumes 127.0.0.53.</p>",
+        "id": 1588800,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1686249351
+    },
+    {
+        "content": "<p>Because Ubuntu <em>does</em> always run it, I made the assumption in the nginx code (which requires an explicit nameserver to point to) that we could use 127.0.0.53.</p>",
+        "id": 1588801,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686249358
+    },
+    {
+        "content": "<p>Yeah.  So I think it seems reasonable to make that dependency explicit in puppet, rather than trying to put anything else in the nginx config.</p>",
+        "id": 1588802,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686249431
+    },
+    {
+        "content": "<p>It might depend on installation method? A freshly created container from <code>lxc launch images:debian/11</code> does run it, but <code>lxc launch images:debian/10</code> upgraded to 11 does not.</p>",
+        "id": 1588803,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1686249576
+    },
+    {
+        "content": "<p>Huh.  I installed a fresh Debian 11 on DO and didn't get one.</p>",
+        "id": 1588804,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686249658
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/6.2E2.20-.3E.207.2E0.20.20attachments.20error.20500/near/1588796\">disse</a>:</p>\n<blockquote>\n<p>Try <code>service systemd-resolved start</code> ?</p>\n</blockquote>\n<p>That WORKS!</p>",
+        "id": 1588806,
+        "sender_full_name": "Cláudio Martins",
+        "timestamp": 1686249695
+    },
+    {
+        "content": "<p>Great, and thanks for the report.  We'll get this into 7.1.</p>",
+        "id": 1588808,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686249717
+    },
+    {
+        "content": "<p>Thank you for your help!</p>",
+        "id": 1588809,
+        "sender_full_name": "Cláudio Martins",
+        "timestamp": 1686249736
+    },
+    {
+        "content": "<p>Pushed <a href=\"https://github.com/zulip/zulip/pull/25944\">#25944</a>.</p>",
+        "id": 1588850,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686253999
+    }
+]

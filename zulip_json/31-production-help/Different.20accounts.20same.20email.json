@@ -1,0 +1,152 @@
+[
+    {
+        "content": "<p>Hello,  I'm using LDAP Backend for authentication.<br>\nI'm seeing that it is possible to login in to Zulip either using the unique id (as per ldap) or the email.<br>\nThis is problematic for me because I know that there will be different accounts with the same email field. </p>\n<p>To me is very important to identify the account by id and not be email, is it possible to use and configure zulip this way?<br>\nIs it possible to only allow login only with the account id?</p>",
+        "id": 844465,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585639089
+    },
+    {
+        "content": "<p>I believe the LDAP filter is configurable. Can't you make sure it picks up the correct field?</p>",
+        "id": 844677,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1585669186
+    },
+    {
+        "content": "<p>Zulip uses email as the user identifier, so it would be hard to do this I think</p>",
+        "id": 844744,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1585671192
+    },
+    {
+        "content": "<p>This is a good info, I didn't catch that from the docs. Then it would be impossible to have to different users with the same email.</p>",
+        "id": 844931,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585685878
+    },
+    {
+        "content": "<p>This is going to be a big problem for me. Because I can guarantee unique username in ldap but not unique email.</p>",
+        "id": 844933,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585685990
+    },
+    {
+        "content": "<p>If I understood correctly I either find a way to have unique emails or I can't use Zulip. Is this correct?</p>",
+        "id": 844934,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585686038
+    },
+    {
+        "content": "<p>Or I could do as suggested by <span class=\"user-mention\" data-user-id=\"4703\">@Oktay X</span>  and bend the LDAP REVERSE EMAIL QUERY to use a special ldap attribute were I guarantee it to be unique.<br>\nI don't like it much but it could be a workaround.</p>",
+        "id": 844937,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585686374
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15289\">@Francesco</span> can you talk about how your situation is that you have multiple users with the same email address?</p>",
+        "id": 845083,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1585698007
+    },
+    {
+        "content": "<p>How does email get route to those users?</p>",
+        "id": 845084,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1585698014
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> I have this two cases:</p>\n<p><strong>Two users that share email</strong></p>\n<div class=\"codehilite\"><pre><span></span>dn: uid=elizabethmcphee,ou=users,dc=mydomain,dc=org\nobjectClass: inetOrgPerson\nuid: elizabethmcphee\ncn: McPhee, Elizabeth\ngivenName: Elizabeth\nsn: McPhee\nmail: family.mckenzie@email.com\n\ndn: uid=johnmckenzie,ou=users,dc=mydomain,dc=org\nobjectClass: inetOrgPerson\nuid: johnmckenzie\ncn: McKenzie, John\ngivenName: John\nsn: McKenzie\nmail: family.mckenzie@email.com\n</pre></div>\n\n\n<p><strong>Two users with different emails but that also share an email</strong></p>\n<div class=\"codehilite\"><pre><span></span>dn: uid=miguelrivera,ou=users,dc=mydomain,dc=org\nobjectClass: inetOrgPerson\nuid: miguelrivera\ncn: Rivera, Miguel\ngivenName: Miguel\nsn: Rivera\nmail: miguelrivera@mydomain.org\nmail: wemakeshoes@rivera.com\n\ndn: uid=enriquerivera,ou=users,dc=mydomain,dc=org\nobjectClass: inetOrgPerson\nuid: enriquerivera\ncn: Rivera, Enrique\ngivenName: Enrique\nsn: Rivera\nmail: enriquerivera@mydomain.org\nmail: wemakeshoes@rivera.com\n</pre></div>",
+        "id": 845281,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585725885
+    },
+    {
+        "content": "<p>The configuration is something like this:</p>\n<div class=\"codehilite\"><pre><span></span>AUTH_LDAP_USER_SEARCH = LDAPSearch(&quot;ou=users,dc=mydomain,dc=org&quot;,\n        ldap.SCOPE_SUBTREE, &quot;(uid=%(user)s)&quot;)\nLDAP_APPEND_DOMAIN = None\nLDAP_EMAIL_ATTR = &quot;mail&quot;\nAUTH_LDAP_REVERSE_EMAIL_SEARCH = LDAPSearch(&quot;ou=users,dc=mydomain,dc=org&quot;,\n        ldap.SCOPE_SUBTREE, &quot;(mail=%(email)s)&quot;)\nAUTH_LDAP_USERNAME_ATTR = &quot;uid&quot;\n</pre></div>",
+        "id": 845290,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585726137
+    },
+    {
+        "content": "<p>As you can see we don't use email as a unique identifier.</p>",
+        "id": 845291,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585726453
+    },
+    {
+        "content": "<p>Also, many emails are not <code>mydomain.org</code>.</p>",
+        "id": 845292,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585726691
+    },
+    {
+        "content": "<p>Then if I login with <code>family.mckenzie@email.com</code> zulip will choose the first result it gets from the ldap query, the same if I login with <code>wemakeshoes@rivera.com</code></p>",
+        "id": 845294,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585727012
+    },
+    {
+        "content": "<p>This is why I asked if I could restrict login only to username, this way I'm already certain that it is unique.</p>",
+        "id": 845295,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585727133
+    },
+    {
+        "content": "<p>To put this in to perspective, of about 3000 users there are 360 emails which are used in more than one user, some up to four times.</p>",
+        "id": 845297,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585728636
+    },
+    {
+        "content": "<p>Interesting setup. How come they share email addresses like this? Are they actually using a shared mailbox ?</p>",
+        "id": 845398,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1585743794
+    },
+    {
+        "content": "<p>The first case may be just older people that share an email, think a wife and husband where they just rarely use email and the share the same email address.</p>\n<p>The second case its more close to the shared mailbox case.</p>",
+        "id": 845409,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585744862
+    },
+    {
+        "content": "<p>I have made some testing, and when using LDAP the change of email should be disabled. This is stated in the docs for the Name but not for the email.</p>\n<p>This is the test I did.<br>\n<strong>the user</strong></p>\n<div class=\"codehilite\"><pre><span></span>dn: uid=enriquerivera,ou=users,dc=mydomain,dc=org\nobjectClass: inetOrgPerson\nuid: enriquerivera\ncn: Rivera, Enrique\ngivenName: Enrique\nsn: Rivera\nmail: enriquerivera@mydomain.org\nmail: enriquerivera@gmail.com\n</pre></div>\n\n\n<p>I can succesfully login with the same password using as a username either <code>enriquerivera</code> or <code>enriquerivera@mydomain.org</code> or <code>enriquerivera@gmail.com</code>. This is possible because the <code>AUTH_LDAP_REVERSE_EMAIL_SEARCH</code> query will find the user with either email.</p>\n<p>The problem is that if I change the email only in to Zulip with <code>enriquerivera@hotmail.com</code> aftewards  is impossible to login with username <code>enriquerivera@hotmail.com</code>, and loggin in with <code>enriquerivera</code> creates a new user in Zulip.</p>",
+        "id": 845415,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585745130
+    },
+    {
+        "content": "<p>I think that for now I'll just tell everybody to use the <code>username</code> to login. If someone logins with the email it's fine; I'll just not officially support it because it can be a problem in some cases.<br>\nI'll also disable the change of email.</p>",
+        "id": 845417,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585745389
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15289\">@Francesco</span> If you have two different people with the same email log into zulip with their individual <code>uid+password</code>, it'll indeed log them in, but it'll be a single zulip account. Because to zulip, the identity of a user is their email address.</p>",
+        "id": 845465,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1585753589
+    },
+    {
+        "content": "<p>Zulip doesn't care about the uid, when you log in with uid:<br>\nIt finds the entry in the ldap directory with the uid and verifies the password -&gt; \"Okay, this user is authenticated to this ldap account\" -&gt; Searches for email to figure out to which Zulip account to authenticate you -&gt; Authenticates you to the unique zulip account in the orgniazation with the found email</p>",
+        "id": 845468,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1585753778
+    },
+    {
+        "content": "<p>Auch! Thanks for making that clear. Then I MUST have unique email per account on LDAP. I'll figure something out.</p>",
+        "id": 845471,
+        "sender_full_name": "Francesco",
+        "timestamp": 1585753830
+    },
+    {
+        "content": "<p>If they are sharing emails they might as well share zulip too I'd say. Saves you a whole lot of trouble. :)</p>",
+        "id": 845820,
+        "sender_full_name": "Oktay X",
+        "timestamp": 1585772060
+    },
+    {
+        "content": "<p>Yeah, that's a reasonable conclusion.</p>",
+        "id": 845826,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1585772258
+    }
+]

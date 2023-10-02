@@ -1,0 +1,415 @@
+<html>
+<head><meta charset="utf-8"><title>Registering new users with AzureAD · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html">Registering new users with AzureAD</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="764068"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/764068" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#764068">(Jul 05 2019 at 13:02)</a>:</h4>
+<p>We have changed our server from LDAP authentication to use the AzureAD social auth.<br>
+This works perfectly for existing users, but new users are unable to join.<br>
+The symptoms look like <a href="https://github.com/zulip/zulip/issues/9127#issuecomment-385125472" target="_blank" title="https://github.com/zulip/zulip/issues/9127#issuecomment-385125472">https://github.com/zulip/zulip/issues/9127#issuecomment-385125472</a><br>
+Continuing to register or using the "sign up" link on the home page produces a page with just the realm description - all authentication methods except for AzureAD are disabled in <code>settings.py</code></p>
+
+
+
+<a name="764069"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/764069" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#764069">(Jul 05 2019 at 13:09)</a>:</h4>
+<p>Using release 2.0.4</p>
+
+
+
+<a name="764832"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/764832" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#764832">(Jul 08 2019 at 05:04)</a>:</h4>
+<p><span class="user-mention" data-user-id="2772">@Shane Kearns</span> thanks for the report!  That backend is relatively new and not used extensively, so it's possible there's a bug here.  It's also possible you have some security configuration in "organization permissions" limiting users to a given email domain that doesn't match the users you're trying to add, or requiring that users have an invtation.  Can you check that isn't the case?</p>
+
+
+
+<a name="764959"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/764959" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#764959">(Jul 08 2019 at 12:21)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> Invites are not required, there is a domain restriction but it matches the domain in use.<br>
+The other aspect is that AzureAD is "federated", and chains onto SAML authentication. So it's possible that an API we call after receiving an authenticated user does not behave as expected. (I didn't see anything in the error logs though)</p>
+
+
+
+<a name="765026"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765026" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765026">(Jul 08 2019 at 19:32)</a>:</h4>
+<p><span class="user-mention" data-user-id="2772">@Shane Kearns</span> are you a programmer?  If so, I can provide some advice on where to add print statements to debug where this is failing for you.</p>
+
+
+
+<a name="765298"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765298" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765298">(Jul 09 2019 at 12:13)</a>:</h4>
+<p>I am. Yes please, I found some things in zerver/backends.py but not where it ties in with new user provisioning</p>
+
+
+
+<a name="765465"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765465" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765465">(Jul 09 2019 at 19:27)</a>:</h4>
+<p><span class="user-mention" data-user-id="2772">@Shane Kearns</span> great!  The key function for this flow is <code>social_auth_finish</code> in that file.  There's two possibilities.  The first is that it is failing somewhere early in that function (or not getting there); you should be able to print-debug that without too much trouble.  And then this block at the end of <code>social_auth_finish</code> has arguments that are a nice summary of the authentication result:</p>
+<div class="codehilite"><pre><span></span>    return redirect_and_log_into_subdomain(realm, full_name, email_address,
+                                           is_signup=is_signup,
+                                           redirect_to=redirect_to,
+                                           multiuse_object_key=multiuse_object_key)
+</pre></div>
+
+
+<p>I would add a print statement for all those arguments, restart the server, try the signup flow, and then find it (and any other print output) in <code>/var/log/zulip/django.log</code>.</p>
+
+
+
+<a name="765466"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765466" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765466">(Jul 09 2019 at 19:29)</a>:</h4>
+<p>That will likely tell us where the wrong thing is happening.</p>
+
+
+
+<a name="765468"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765468" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765468">(Jul 09 2019 at 19:30)</a>:</h4>
+<p>this part is the same for login and new user creation?</p>
+
+
+
+<a name="765470"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765470" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765470">(Jul 09 2019 at 19:31)</a>:</h4>
+<p>other than is_signup</p>
+
+
+
+<a name="765471"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765471" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765471">(Jul 09 2019 at 19:31)</a>:</h4>
+<p>Yes, exactly, it's the same code path, and which page you were on just determines the <code>is_signup</code> bit.</p>
+
+
+
+<a name="765473"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765473" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765473">(Jul 09 2019 at 19:31)</a>:</h4>
+<p>So the key thing we'll see here is whether it gets to this point and <code>email_address</code> is set to the right value.</p>
+
+
+
+<a name="765475"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765475" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765475">(Jul 09 2019 at 19:32)</a>:</h4>
+<p>although there's no social buttons on the sign up page</p>
+
+
+
+<a name="765476"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765476" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765476">(Jul 09 2019 at 19:32)</a>:</h4>
+<p>There aren't?</p>
+
+
+
+<a name="765477"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765477" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765477">(Jul 09 2019 at 19:32)</a>:</h4>
+<p>no, there's nothing at all when email &amp; password is disabled except the realm description</p>
+
+
+
+<a name="765478"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765478" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765478">(Jul 09 2019 at 19:33)</a>:</h4>
+<p>Hmm, that's not expected.</p>
+
+
+
+<a name="765479"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765479" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765479">(Jul 09 2019 at 19:33)</a>:</h4>
+<p>Oh, I see what's going on.</p>
+
+
+
+<a name="765480"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765480" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765480">(Jul 09 2019 at 19:34)</a>:</h4>
+<p><code>&lt;div class="right side"&gt;</code> has no content</p>
+
+
+
+<a name="765481"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765481" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765481">(Jul 09 2019 at 19:34)</a>:</h4>
+<p>Yeah, OK, in 2.0.x, we are missing a block for azuread in the templates for that page.</p>
+
+
+
+<a name="765482"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765482" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765482">(Jul 09 2019 at 19:34)</a>:</h4>
+<p>Are you running 2.0.4?</p>
+
+
+
+<a name="765483"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765483" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765483">(Jul 09 2019 at 19:34)</a>:</h4>
+<p>yes</p>
+
+
+
+<a name="765485"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765485" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765485">(Jul 09 2019 at 19:35)</a>:</h4>
+<p>OK let me backport the missing template change onto our for-2.0.5 branch and push it so you can test-install that.</p>
+
+
+
+<a name="765486"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765486" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765486">(Jul 09 2019 at 19:36)</a>:</h4>
+<p>(Since 2.0.x we changed it to be all generated by a loop, but apparently in 2.0.x it's still manual blocks for each backend, and we apparently have azuread on /login and not /register)</p>
+
+
+
+<a name="765487"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765487" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765487">(Jul 09 2019 at 19:37)</a>:</h4>
+<p>I see.. didn't it use to auto create users on login?</p>
+
+
+
+<a name="765488"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765488" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765488">(Jul 09 2019 at 19:37)</a>:</h4>
+<p>or was that only for LDAP</p>
+
+
+
+<a name="765489"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765489" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765489">(Jul 09 2019 at 19:38)</a>:</h4>
+<p>Only the LDAP setup will do that.  Though the other ones should take you to a page offering to let you create an account, it's possible that feature is since 2.0.x</p>
+
+
+
+<a name="765497"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765497" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765497">(Jul 09 2019 at 20:00)</a>:</h4>
+<p><span class="user-mention" data-user-id="2772">@Shane Kearns</span> OK, you should be able to do an <code>upgrade-zulip-from-git 2.0.0-series</code> and get that /register form added.  </p>
+<p>(You'll also get a handful of other bugfixes scheduled for 2.0.5)</p>
+
+
+
+<a name="765498"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765498" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765498">(Jul 09 2019 at 20:00)</a>:</h4>
+<p>checking...</p>
+
+
+
+<a name="765508"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765508" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765508">(Jul 09 2019 at 20:14)</a>:</h4>
+<p>signup button is there</p>
+
+
+
+<a name="765509"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765509" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765509">(Jul 09 2019 at 20:14)</a>:</h4>
+<p>but goes to a 404 page</p>
+
+
+
+<a name="765510"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765510" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765510">(Jul 09 2019 at 20:14)</a>:</h4>
+<p><code>/login/azuread/?subdomain=&amp;is_signup=1&amp;multiuse_object_key=</code></p>
+
+
+
+<a name="765511"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765511" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765511">(Jul 09 2019 at 20:17)</a>:</h4>
+<p>login button goes to <code>/login/azuread-oauth2/?subdomain=&amp;is_signup=0&amp;multiuse_object_key=</code> which redirects to azure as it should</p>
+
+
+
+<a name="765512"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765512" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765512">(Jul 09 2019 at 20:17)</a>:</h4>
+<p><strong>-oauth2</strong> differs</p>
+
+
+
+<a name="765520"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765520" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765520">(Jul 09 2019 at 20:28)</a>:</h4>
+<p>Oops, fixed.  That's the trouble with backporting changes that use variables; you get to introduce typos again.</p>
+
+
+
+<a name="765521"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765521" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765521">(Jul 09 2019 at 20:28)</a>:</h4>
+<p><span class="user-mention" data-user-id="2772">@Shane Kearns</span> try again?</p>
+
+
+
+<a name="765524"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765524" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765524">(Jul 09 2019 at 20:34)</a>:</h4>
+<div class="codehilite"><pre><span></span>    {% block content %}
+  File &quot;/home/zulip/deployments/2019-07-09-21-28-29/zproject/../templates/zerver/portico.html&quot;, line 20, in block &quot;content&quot;
+    {% block portico_content %}
+  File &quot;/home/zulip/deployments/2019-07-09-21-28-29/zproject/../templates/zerver/accounts_home.html&quot;, line 103, in block &quot;portico_content&quot;
+    &lt;form class=&quot;form-inline azure-wrapper&quot; action=&quot;{{ url(&#39;signup-social&#39;, args=(&#39;azuread-oauth2&#39;,)) }}&quot; method=&quot;get&quot;&gt;
+  File &quot;/home/zulip/deployments/2019-07-09-21-28-29/zulip-py3-venv/lib/python3.6/site-packages/django/urls/base.py&quot;, line 91, in reverse
+    return force_text(iri_to_uri(resolver._reverse_with_prefix(view, prefix, *args, **kwargs)))
+  File &quot;/home/zulip/deployments/2019-07-09-21-28-29/zulip-py3-venv/lib/python3.6/site-packages/django/urls/resolvers.py&quot;, line 497, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for &#39;signup-social&#39; with arguments &#39;(&#39;azuread-oauth2&#39;,)&#39; not found. 2 pattern(s) tried: [&#39;accounts/register/social/(\\w+)$&#39;, &#39;en/accounts/register/social/(\\w+)$&#39;]
+</pre></div>
+
+
+
+<a name="765525"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765525" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765525">(Jul 09 2019 at 20:36)</a>:</h4>
+<p>Interesting.  Maybe backporting this is going to be annoying.</p>
+
+
+
+<a name="765526"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765526" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765526">(Jul 09 2019 at 20:36)</a>:</h4>
+<p>Would you be up for upgrading to a 2.1-beta branch?</p>
+
+
+
+<a name="765527"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765527" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765527">(Jul 09 2019 at 20:36)</a>:</h4>
+<p>on my test server, yes</p>
+
+
+
+<a name="765528"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765528" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765528">(Jul 09 2019 at 20:36)</a>:</h4>
+<p>My guess is that'll fix this, but I'm not sure it's worth spending more time trying to backport the change to 2.0.x</p>
+
+
+
+<a name="765529"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765529" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765529">(Jul 09 2019 at 20:36)</a>:</h4>
+<p>OK, great, can you try just upgrading to master there?  My belief is that should resolve at least this <code>/register</code> issue for you.</p>
+
+
+
+<a name="765530"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765530" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765530">(Jul 09 2019 at 20:37)</a>:</h4>
+<p>master will become 2.1?</p>
+
+
+
+<a name="765531"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765531" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765531">(Jul 09 2019 at 20:38)</a>:</h4>
+<p>Yes, exactly.</p>
+
+
+
+<a name="765532"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765532" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765532">(Jul 09 2019 at 20:38)</a>:</h4>
+<p>It's what we run on this server as well as <a href="http://zulipchat.com" target="_blank" title="http://zulipchat.com">zulipchat.com</a></p>
+
+
+
+<a name="765533"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765533" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765533">(Jul 09 2019 at 20:39)</a>:</h4>
+<p>downgrading is a bit inconvenient, so if it's hard to recreate your test server, you may want to do a backup+restore and do it there.</p>
+
+
+
+<a name="765534"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765534" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765534">(Jul 09 2019 at 20:42)</a>:</h4>
+<p>Invite links did seem to get around the problem, test server is running a backup from a couple of weeks ago so I was going to ask the affected user to try again there</p>
+
+
+
+<a name="765535"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765535" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765535">(Jul 09 2019 at 20:46)</a>:</h4>
+<p>That'll be tomorrow, assuming upgrade to master works</p>
+
+
+
+<a name="765537"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765537" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765537">(Jul 09 2019 at 20:51)</a>:</h4>
+<p>Getting the same python exception on master</p>
+
+
+
+<a name="765539"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765539" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765539">(Jul 09 2019 at 20:58)</a>:</h4>
+<p>The <code>reverse</code> one?</p>
+
+
+
+<a name="765540"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765540" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765540">(Jul 09 2019 at 20:58)</a>:</h4>
+<p>Interesting.</p>
+
+
+
+<a name="765541"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765541" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765541">(Jul 09 2019 at 20:59)</a>:</h4>
+<p>yes</p>
+
+
+
+<a name="765542"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765542" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765542">(Jul 09 2019 at 20:59)</a>:</h4>
+<p>OK let me investigate.</p>
+
+
+
+<a name="765543"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765543" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765543">(Jul 09 2019 at 21:00)</a>:</h4>
+<p>(I'm only aware of ~1 other site using the azuread backend, so I'm not surprised there may be bugs here)</p>
+
+
+
+<a name="765544"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765544" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765544">(Jul 09 2019 at 21:00)</a>:</h4>
+<p>Yeah what we really want is SAML, but azureAD is a proxy for that</p>
+
+
+
+<a name="765545"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765545" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765545">(Jul 09 2019 at 21:01)</a>:</h4>
+<p>And too many people have failed to add SAML support to take it on lightly</p>
+
+
+
+<a name="765546"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765546" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765546">(Jul 09 2019 at 21:03)</a>:</h4>
+<p>I'm about to head home, let me know if there's another version to try</p>
+
+
+
+<a name="765553"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765553" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765553">(Jul 09 2019 at 21:19)</a>:</h4>
+<p>OK just merged <a href="https://github.com/zulip/zulip/commit/6758b016ac6f332cc9f0f246753b1ba20b3a514c" target="_blank" title="https://github.com/zulip/zulip/commit/6758b016ac6f332cc9f0f246753b1ba20b3a514c">6758b016ac6f332cc9f0f246753b1ba20b3a514c</a>, which should fix the /register thing in master.  So if you re-deploy master, you should get past that exception.</p>
+
+
+
+<a name="765554"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/765554" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#765554">(Jul 09 2019 at 21:19)</a>:</h4>
+<p>I'm suspicious that caused the whole issue.</p>
+
+
+
+<a name="766030"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/766030" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#766030">(Jul 10 2019 at 14:08)</a>:</h4>
+<p>Almost successful - the registration workflow worked with azureAD, but the registration page asked for the user to enter a password</p>
+
+
+
+<a name="766032"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/766032" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#766032">(Jul 10 2019 at 14:10)</a>:</h4>
+<p>This might be a configuration issue as the test server still had LDAP configured, even though LDAP authentication was disabled.</p>
+
+
+
+<a name="766133"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/766133" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#766133">(Jul 10 2019 at 16:54)</a>:</h4>
+<p><span class="user-mention" data-user-id="2772">@Shane Kearns</span> OK -- keep my updated.  The next thing in my plans for the codebase is to run our unit tests for the GitHub auth backend against the AzureAD one, which would make any potential issues with that flow easily reproducible with tests.</p>
+
+
+
+<a name="770927"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/770927" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Shane Kearns <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#770927">(Jul 22 2019 at 12:38)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> sorry it took a while to get back to you. The fix you made on master is working correctly - after I removed the LDAP configuration on staging and restarted, a new new user going through the signup workflow was prompted for their full name instead of a password at the last step.<br>
+Sending invite links is a workaround for production.</p>
+
+
+
+<a name="771071"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Registering%20new%20users%20with%20AzureAD/near/771071" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Registering.20new.20users.20with.20AzureAD.html#771071">(Jul 22 2019 at 17:48)</a>:</h4>
+<p>OK, great.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

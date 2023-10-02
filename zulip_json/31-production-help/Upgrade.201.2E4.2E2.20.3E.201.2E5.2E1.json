@@ -1,0 +1,128 @@
+[
+    {
+        "content": "<p>ok, I just created a Hyper-V export of the Zulip VM as a backup. Because it worked much faster than expected I also created a checkpoint and run the upgrade of zulip. But installing all those ubuntu updates takes a long time. Are those ubuntu updates done after the zulip upgrade or prior to it. <br>\nin the home/deployment folder I can already see the new folder of 1.5.1</p>",
+        "id": 163781,
+        "sender_full_name": "Matthias",
+        "timestamp": 1488886068
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>Traceback (most recent call last):\n  File &quot;/home/zulip/deployments/2017-03-07-12-09-51/scripts/lib/upgrade-zulip-stage-2&quot;, line 47, in &lt;module&gt;\n    subprocess.check_call([&quot;apt-get&quot;, &quot;-y&quot;, &quot;upgrade&quot;])\n  File &quot;/usr/lib/python2.7/subprocess.py&quot;, line 541, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;apt-get&#39;, &#39;-y&#39;, &#39;upgrade&#39;]&#39; returned non-zero exit status 100\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip&quot;, line 53, in &lt;module&gt;\n    subprocess.check_call([os.path.abspath(&quot;./scripts/lib/upgrade-zulip-stage-2&quot;), deploy_path])\n  File &quot;/usr/lib/python2.7/subprocess.py&quot;, line 541, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2017-03-07-12-09-51/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2017-03-07-12-09-51&#39;]&#39; returned non-zero exit status 1\n</pre></div>",
+        "id": 163784,
+        "sender_full_name": "Matthias",
+        "timestamp": 1488886175
+    },
+    {
+        "content": "<p>this was just returned</p>",
+        "id": 163785,
+        "sender_full_name": "Matthias",
+        "timestamp": 1488886188
+    },
+    {
+        "content": "<p>zulip is running again but I can't see that it's upgraded... probably not</p>",
+        "id": 163787,
+        "sender_full_name": "Matthias",
+        "timestamp": 1488886319
+    },
+    {
+        "content": "<p>ok, the new version was unpacked, the tarball was archived but it's was probably not migrated. What now?</p>",
+        "id": 163789,
+        "sender_full_name": "Matthias",
+        "timestamp": 1488886945
+    },
+    {
+        "content": "<p>deployment/current/version still points to 1.4.2</p>",
+        "id": 163816,
+        "sender_full_name": "Matthias",
+        "timestamp": 1488901110
+    },
+    {
+        "content": "<p>I'm not entirely certain if the upgrade script can be freely restarted like the install script is (although I don't see anything indicating it can't, either.) Hopefully someone will be online soon who can clarify. Was there anything useful in <code>/var/log/zulip/upgrade.log</code>?</p>",
+        "id": 163825,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488904387
+    },
+    {
+        "content": "<p>ah, I haven't checked the log. will do when back at work tomorrow.</p>",
+        "id": 163867,
+        "sender_full_name": "Matthias",
+        "timestamp": 1488908805
+    },
+    {
+        "content": "<p>The upgrade process starts with the <code>apt-get upgrade</code>, before it does anything, and like the install script is designed to be idempotent so you can run it again if it fails</p>",
+        "id": 163932,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488913221
+    },
+    {
+        "content": "<p>It starts by doing an <code>apt-get upgrade</code>, then installs the new Python virtualenv needed, and only then does it shut down the old server version and startup the new one</p>",
+        "id": 163934,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488913284
+    },
+    {
+        "content": "<p>It'd be a pretty small project to add support for an option to the upgrade script that just installs dependencies for the new version and then exits (which would make it a lot easier to know which minute the downtime is going to be in), we should probably do that</p>",
+        "id": 163936,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488913328
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"zulip@feorlen.org\" data-user-id=\"397\">@Andrea  Longo</span> most of the log is about the ubuntu upgrades. there is one line i forgot in the above quote out of the log. </p>\n<div class=\"codehilite\"><pre><span></span>E: Sub-process /usr/bin/dpkg returned an error code (1)\n</pre></div>",
+        "id": 164315,
+        "sender_full_name": "Matthias",
+        "timestamp": 1488964737
+    },
+    {
+        "content": "<p>ok, something happen. After the updates yesterday I wanted to merge the checkpoint before the upgrade and create a new one before trying another zulip upgrade. <br>\nmerging the checkpoint completely broke the VM but furtunately I had a backup. <br>\nproblem now is this</p>\n<div class=\"codehilite\"><pre><span></span>zulip@zulip:~$ sudo /home/zulip/deployments/current/scripts/upgrade-zulip zulip-server-1.5.1.tar.gz\n2017-03-08 12:51:05,047 upgrade-zulip: Archiving the tarball under /home/zulip/archives\n2017-03-08 12:51:05,945 upgrade-zulip: Unpacking the tarball\n2017-03-08 12:51:08,131 upgrade-zulip-stage-2: Upgrading system packages...\nGet:1 http://security.ubuntu.com/ubuntu xenial-security InRelease [102 kB]\nHit:2 http://ppa.launchpad.net/tabbott/zulip/ubuntu xenial InRelease\nHit:3 http://gb.archive.ubuntu.com/ubuntu xenial InRelease\nGet:4 http://gb.archive.ubuntu.com/ubuntu xenial-updates InRelease [102 kB]\nGet:5 http://gb.archive.ubuntu.com/ubuntu xenial-backports InRelease [102 kB]\nFetched 306 kB in 4s (67.5 kB/s)\nReading package lists...\nReading package lists...\nBuilding dependency tree...\nReading state information...\nYou might want to run ‘apt-get -f install’ to correct these.\nThe following packages have unmet dependencies.\n linux-image-extra-4.4.0-66-generic : Depends: linux-image-4.4.0-66-generic but it is not installed\n linux-image-generic : Depends: linux-image-4.4.0-66-generic but it is not installed\n                       Recommends: thermald but it is not installed\nE: Unmet dependencies. Try using -f.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2017-03-08-12-51-06/scripts/lib/upgrade-zulip-stage-2&quot;, line 47, in &lt;module&gt;\n    subprocess.check_call([&quot;apt-get&quot;, &quot;-y&quot;, &quot;upgrade&quot;])\n  File &quot;/usr/lib/python2.7/subprocess.py&quot;, line 541, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;apt-get&#39;, &#39;-y&#39;, &#39;upgrade&#39;]&#39; returned non-zero exit status 100\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip&quot;, line 53, in &lt;module&gt;\n    subprocess.check_call([os.path.abspath(&quot;./scripts/lib/upgrade-zulip-stage-2&quot;), deploy_path])\n  File &quot;/usr/lib/python2.7/subprocess.py&quot;, line 541, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2017-03-08-12-51-06/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2017-03-08-12-51-06&#39;]&#39; returned non-zero exit status 1\n</pre></div>",
+        "id": 164353,
+        "sender_full_name": "Matthias",
+        "timestamp": 1488974125
+    },
+    {
+        "content": "<p>I can't seem to get this dependency installed but yesterday I had no such problem</p>",
+        "id": 164356,
+        "sender_full_name": "Matthias",
+        "timestamp": 1488974212
+    },
+    {
+        "content": "<p>that's not a dependency of Zulip</p>",
+        "id": 164358,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488974316
+    },
+    {
+        "content": "<p>that's just your apt setup on the server being busted</p>",
+        "id": 164359,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488974323
+    },
+    {
+        "content": "<p>We don't depend on the Linux kernel, at least not directly</p>",
+        "id": 164360,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488974334
+    },
+    {
+        "content": "<p>all the sudden? ok. then I will have to find some help elsewhere about getting apt-get back again?</p>",
+        "id": 164361,
+        "sender_full_name": "Matthias",
+        "timestamp": 1488974360
+    },
+    {
+        "content": "<p>what is the command to shut down zulip?<br>\nin the script folder there is only restart and upgrade</p>",
+        "id": 164362,
+        "sender_full_name": "Matthias",
+        "timestamp": 1488974529
+    },
+    {
+        "content": "<p>/boot was full... but I learnt a lot in the process of cleaning this up</p>",
+        "id": 164370,
+        "sender_full_name": "Matthias",
+        "timestamp": 1488978083
+    },
+    {
+        "content": "<p>ok, managed to clean things up and installed all upgrades etc. before running the zulip upgrade<br>\nand tada: upgrade worked without a glitch<br>\nsadly the msg box of the legacy app has shrunk. Is the legacy app still being maintained? <br>\n<a href=\"/user_uploads/2/46/EMJZMK1djidWEqxNST1iIDSJ/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">shrunk message box in legacy desktop app</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/46/EMJZMK1djidWEqxNST1iIDSJ/pasted_image.png\" target=\"_blank\" title=\"shrunk message box in legacy desktop app\"><img src=\"/user_uploads/2/46/EMJZMK1djidWEqxNST1iIDSJ/pasted_image.png\"></a></div>",
+        "id": 164372,
+        "sender_full_name": "Matthias",
+        "timestamp": 1488980528
+    }
+]

@@ -1,0 +1,302 @@
+[
+    {
+        "content": "<p>I run my deployment close to main-branch, and when I sync'd recently my production deploy died. Tracking it down, the server (1) started looking for static assets in /home/zulip/prod-static and also, (2) prod-static/ now appears as static/ ?  I worked around this with a symlink... I run a substantial fork but which doesn't touch any of this stuff, i.e. no reason for upgrade to have failed.?</p>\n<p>hope this helps!</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip@zulip-prod:~$ pwd\n/home/zulip\nzulip@zulip-prod:~$ ls -l\ntotal 452\ndrwxrwxr-x   2 zulip zulip   4096 Dec 28 01:00 backups\ndrwxr-xr-x  21 zulip zulip   4096 Feb 18 22:05 deployments\n...\nlrwxrwxrwx   1 zulip zulip     38 Feb 18 20:53 prod-static -&gt; /home/zulip/deployments/current/static\n</code></pre></div>",
+        "id": 1331631,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1645223701
+    },
+    {
+        "content": "<p><code>prod-static</code> is not the same as <code>static</code> and should not be symlinked to it.</p>",
+        "id": 1331632,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645223774
+    },
+    {
+        "content": "<p><code>prod-static</code> contains the compiled assets built by Webpack that are needed by the frontend. <code>static</code> has source code that’s not directly usable directly in browsers.</p>",
+        "id": 1331633,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645223847
+    },
+    {
+        "content": "<p>The installation and upgrade scripts take care of creating and managing <code>prod-static</code>. You should never have to interact with it manually.</p>",
+        "id": 1331634,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645223896
+    },
+    {
+        "content": "<p>thx!  that's helpful.  sorry for my confusion. I re-ran update-prod-static and got an error:</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip@zulip-prod:~/deployments/current$ ./tools/update-prod-static\nUsing cached node modules from /srv/zulip-npm-cache/10018430ec99696630f7fe801e297da3568f5e5a/node_modules\n+ ./tools/setup/emoji/build_emoji\nbuild_emoji: Using cached emojis from /srv/zulip-emoji-cache/76d8e5872dd7c78dcf785dd75373945447aeb71c/emoji\n+ ./scripts/setup/inline_email_css.py\n+ ./tools/setup/generate_zulip_bots_static_files.py\n+ ./tools/setup/build_pygments_data\n+ ./tools/setup/build_timezone_values\n+ ./tools/webpack --quiet\n+ ./manage.py collectstatic --no-default-ignore -v0 --noinput --ignore=assets --ignore=emoji-styles --ignore=html --ignore=js --ignore=styles --ignore=templates\nTraceback (most recent call last):\n  File &quot;./manage.py&quot;, line 157, in &lt;module&gt;\n    execute_from_command_line(sys.argv)\n  File &quot;./manage.py&quot;, line 122, in execute_from_command_line\n    utility.execute()\n  File &quot;/home/zulip/deployments/2022-02-18-20-39-08/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/__init__.py&quot;, line 413, in execute\n    self.fetch_command(subcommand).run_from_argv(self.argv)\n  File &quot;/home/zulip/deployments/2022-02-18-20-39-08/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 354, in run_from_argv\n    self.execute(*args, **cmd_options)\n  File &quot;/home/zulip/deployments/2022-02-18-20-39-08/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 398, in execute\n    output = self.handle(*args, **options)\n  File &quot;/home/zulip/deployments/2022-02-18-20-39-08/zulip-py3-venv/lib/python3.8/site-packages/django/contrib/staticfiles/management/commands/collectstatic.py&quot;, line 187, in handle\n    collected = self.collect()\n  File &quot;/home/zulip/deployments/2022-02-18-20-39-08/zulip-py3-venv/lib/python3.8/site-packages/django/contrib/staticfiles/management/commands/collectstatic.py&quot;, line 114, in collect\n    handler(path, prefixed_path, storage)\n  File &quot;/home/zulip/deployments/2022-02-18-20-39-08/zulip-py3-venv/lib/python3.8/site-packages/django/contrib/staticfiles/management/commands/collectstatic.py&quot;, line 347, in copy_file\n    with source_storage.open(path) as source_file:\n  File &quot;/home/zulip/deployments/2022-02-18-20-39-08/zulip-py3-venv/lib/python3.8/site-packages/django/core/files/storage.py&quot;, line 38, in open\n    return self._open(name, mode)\n  File &quot;/home/zulip/deployments/2022-02-18-20-39-08/zulip-py3-venv/lib/python3.8/site-packages/django/core/files/storage.py&quot;, line 243, in _open\n    return File(open(self.path(name), mode))\nFileNotFoundError: [Errno 2] No such file or directory: &#39;/home/zulip/deployments/2022-02-18-20-39-08/static/generated/emoji/images/emoji/candle.png&#39;\n\nError running a subcommand of ./tools/update-prod-static: ./manage.py collectstatic --no-default-ignore -v0 --noinput --ignore=assets --ignore=emoji-styles --ignore=html --ignore=js --ignore=styles --ignore=templates\nActual error output for the subcommand is just above this.\n</code></pre></div>",
+        "id": 1331697,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1645225782
+    },
+    {
+        "content": "<p>each run I get a different complaint...</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip@zulip-prod:~/deployments/current$ ./manage.py collectstatic --no-default-ignore -v0 --noinput --ignore=assets --ignore=emoji-styles --ignore=html --ignore=js --ignore=styles --ignore=templates\nTraceback (most recent call last):\n...\nFileNotFoundError: [Errno 2] No such file or directory: &#39;/home/zulip/deployments/2022-02-18-20-39-08/static/generated/emoji/images/emoji/black_large_square.png&#39;\nzulip@zulip-prod:~/deployments/current$ ./manage.py collectstatic --no-default-ignore -v0 --noinput --ignore=assets --ignore=emoji-styles --ignore=html --ignore=js --ignore=styles --ignore=templates\n...\nFileNotFoundError: [Errno 2] No such file or directory: &#39;/home/zulip/deployments/2022-02-18-20-39-08/static/generated/emoji/images/emoji/heavy_check_mark.png&#39;\n</code></pre></div>",
+        "id": 1331702,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1645226255
+    },
+    {
+        "content": "<p>None of these are things you’re supposed to run yourself. The interface you’re supposed to use is <code>upgrade-zulip-from-git</code>. See our documentation on <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#making-changes\">making changes</a>.</p>",
+        "id": 1331703,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645226466
+    },
+    {
+        "content": "<p>I know!!!  but I don't know what to do - update-zulip-from-git is succeeding but leaving my system corrupted.  thx! for the help.</p>",
+        "id": 1331708,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1645227395
+    },
+    {
+        "content": "<p>(I've run <code>update-zulip-from-git </code> without incident for months)</p>",
+        "id": 1331709,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1645227450
+    },
+    {
+        "content": "<p>Based on that most recent error, maybe try deleting /srv/zulip-emoji-cache and re-running <code>upgrade-zulip-from-git</code>?</p>",
+        "id": 1331710,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645227499
+    },
+    {
+        "content": "<p>To be clear, you should also delete that <code>prod-static</code> symlink if you haven’t already.</p>",
+        "id": 1331711,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645227557
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>2022-02-18 20:39:08,688 upgrade-zulip-from-git: Fetching the latest commits\n2022-02-18 20:39:10,773 upgrade-zulip-stage-2: Upgrading system packages...\nHit:1 http://us-central1.gce.archive.ubuntu.com/ubuntu focal InRelease\nGet:2 http://us-central1.gce.archive.ubuntu.com/ubuntu focal-updates InRelease [114 kB]\nGet:3 http://us-central1.gce.archive.ubuntu.com/ubuntu focal-backports InRelease [108 kB]\nHit:4 https://packages.cloud.google.com/apt google-cloud-ops-agent-focal-all InRelease\nHit:5 http://security.ubuntu.com/ubuntu focal-security InRelease\nHit:6 http://ppa.launchpad.net/groonga/ppa/ubuntu focal InRelease\nHit:7 http://apt.postgresql.org/pub/repos/apt focal-pgdg InRelease\nHit:8 https://packages.groonga.org/ubuntu focal InRelease\nFetched 222 kB in 1s (300 kB/s)\nReading package lists...\nReading package lists...\nBuilding dependency tree...\nReading state information...\nCalculating upgrade...\nThe following package was automatically installed and is no longer required:\n  libnuma1\nUse &#39;sudo apt autoremove&#39; to remove it.\n0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.\n+ apt-get -y install build-essential libffi-dev libfreetype6-dev zlib1g-dev libjpeg-dev libldap2-dev python3-dev python3-pip virtualenv libxml2-dev libxslt1-dev libpq-dev libssl-dev libmagic1 libyaml-dev libxmlsec1-dev pkg-config jq libsasl2-dev\nReading package lists...\nBuilding dependency tree...\nReading state information...\nlibffi-dev is already the newest version (3.3-4).\nlibjpeg-dev is already the newest version (8c-2ubuntu8).\nlibmagic1 is already the newest version (1:5.38-4).\nlibsasl2-dev is already the newest version (2.1.27+dfsg-2).\nlibxmlsec1-dev is already the newest version (1.2.28-2).\nlibxslt1-dev is already the newest version (1.1.34-4).\nlibyaml-dev is already the newest version (0.2.2-1).\npkg-config is already the newest version (0.29.1-0ubuntu4).\npython3-dev is already the newest version (3.8.2-0ubuntu2).\nbuild-essential is already the newest version (12.8ubuntu1.1).\nlibfreetype6-dev is already the newest version (2.10.1-2ubuntu0.1).\nlibldap2-dev is already the newest version (2.4.49+dfsg-2ubuntu1.8).\nlibssl-dev is already the newest version (1.1.1f-1ubuntu2.10).\nlibxml2-dev is already the newest version (2.9.10+dfsg-5ubuntu0.20.04.1).\nzlib1g-dev is already the newest version (1:1.2.11.dfsg-2ubuntu1.2).\njq is already the newest version (1.6-1ubuntu0.20.04.1).\npython3-pip is already the newest version (20.0.2-5ubuntu1.6).\nvirtualenv is already the newest version (20.0.17-1ubuntu0.4).\nlibpq-dev is already the newest version (14.2-1.pgdg20.04+1).\nThe following package was automatically installed and is no longer required:\n  libnuma1\nUse &#39;sudo apt autoremove&#39; to remove it.\n0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.\nUsing cached Python venv from /srv/zulip-venv-cache/33d83727c0b2e4c40a132c9ee3d9109a5c2feab1/zulip-py3-venv\n+ ln -nsf /srv/zulip-venv-cache/33d83727c0b2e4c40a132c9ee3d9109a5c2feab1/zulip-py3-venv /home/zulip/deployments/2022-02-18-20-39-08/zulip-py3-venv\ngenerate_secrets: No new secrets to generate.\n2022-02-18 20:39:19,463 upgrade-zulip-stage-2: Building static assets...\nCached version not found! Installing node modules.\n+ /srv/zulip-yarn/bin/yarn install --non-interactive --frozen-lockfile --prod\nyarn install v1.22.17\n[1/4] Resolving packages...\n[2/4] Fetching packages...\n[3/4] Linking dependencies...\nwarning &quot;@types/webpack-dev-server &gt; webpack-dev-server &gt; http-proxy-middleware@2.0.2&quot; has unmet peer dependency &quot;@types/express@^4.17.13&quot;.\nwarning &quot;swagger-parser &gt; @apidevtools/swagger-parser@10.0.3&quot; has unmet peer dependency &quot;openapi-types@&gt;=7&quot;.\n[4/4] Building fresh packages...\nwarning Ignored scripts due to flag.\nDone in 15.77s.\nUsing cached node modules from /srv/zulip-npm-cache/10018430ec99696630f7fe801e297da3568f5e5a/node_modules\n+ ./tools/setup/emoji/build_emoji\nbuild_emoji: Using cached emojis from /srv/zulip-emoji-cache/76d8e5872dd7c78dcf785dd75373945447aeb71c/emoji\n+ ./scripts/setup/inline_email_css.py\n+ ./tools/setup/generate_zulip_bots_static_files.py\n+ ./tools/setup/build_pygments_data\n+ ./tools/setup/build_timezone_values\n+ ./tools/webpack --quiet\n+ ./manage.py collectstatic --no-default-ignore -v0 --noinput --ignore=assets --ignore=emoji-styles --ignore=html --ignore=js --ignore=styles --ignore=templates\n+ ./manage.py compilemessages -v0\n2022-02-18 20:42:12,386 upgrade-zulip-stage-2: Caching Zulip Git version...\n2022-02-18 20:42:13,421 upgrade-zulip-stage-2: Checking for needed migrations\n2022-02-18 20:42:22,204 upgrade-zulip-stage-2: Stopping Zulip...\nprocess-fts-updates: stopped\nzulip-django: stopped\nzulip-tornado: stopped\nzulip-workers:zulip_events_embed_links: stopped\nzulip-workers:zulip_events_error_reports: stopped\nzulip-workers:zulip_events_invites: stopped\nzulip-workers:zulip_events_email_senders: stopped\nzulip-workers:zulip_events_missedmessage_emails: stopped\nzulip-workers:zulip_events_user_activity: stopped\nzulip-workers:zulip_events_user_activity_interval: stopped\nzulip-workers:zulip_events_user_presence: stopped\nzulip-workers:zulip_events_deferred_work: stopped\nzulip-workers:zulip_events_digest_emails: stopped\nzulip-workers:zulip_events_email_mirror: stopped\nzulip-workers:zulip_events_embedded_bots: stopped\nzulip-workers:zulip_events_missedmessage_mobile_notifications: stopped\nzulip-workers:zulip_events_outgoing_webhooks: stopped\nzulip_deliver_scheduled_emails: stopped\nzulip_deliver_scheduled_messages: stopped\n\nESC[92mZulip stopped successfully!ESC[0m\n2022-02-18 20:42:36,162 upgrade-zulip-stage-2: Applying Puppet changes...\nESC[mNotice: Compiled catalog for zulip-prod.us-central1-a.c.zulipcraze.internal in environment production in 2.82 secondsESC[0m\nESC[mNotice: /Stage[main]/Zulip::Apt_repository/Exec[setup_apt_repo]/returns: executed successfullyESC[0m\nESC[mNotice: /Stage[main]/Zulip::App_frontend_base/File[/home/zulip/prod-static]/ensure: ensure changed &#39;link&#39; to &#39;directory&#39;ESC[0m\nESC[mNotice: Applied catalog in 6.74 secondsESC[0m\nReading package lists...\nBuilding dependency tree...\nReading state information...\nCalculating upgrade...\nThe following package was automatically installed and is no longer required:\n  libnuma1\nUse &#39;sudo apt autoremove&#39; to remove it.\nThe following packages will be DOWNGRADED:\n  postgresql-12 postgresql-13 postgresql-client-12 postgresql-client-13\n  postgresql-client-14\n0 upgraded, 0 newly installed, 5 downgraded, 0 to remove and 0 not upgraded.\nNeed to get 34.4 MB of archives.\nAfter this operation, 117 kB disk space will be freed.\nGet:1 https://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 postgresql-client-12 amd64 12.9-2.pgdg20.04+1 [1426 kB]\nGet:2 https://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 postgresql-12 amd64 12.9-2.pgdg20.04+1 [14.8 MB]\nGet:3 https://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 postgresql-client-13 amd64 13.5-2.pgdg20.04+1 [1508 kB]\nGet:4 https://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 postgresql-13 amd64 13.5-2.pgdg20.04+1 [15.0 MB]\nGet:5 https://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive/main amd64 postgresql-client-14 amd64 14.1-2.pgdg20.04+1 [1602 kB]\nPreconfiguring packages ...\nFetched 34.4 MB in 2s (15.8 MB/s)\ndpkg: warning: downgrading postgresql-client-12 from 12.10-1.pgdg20.04+1 to 12.9-2.pgdg20.04+1\n(Reading database ... ^M(Reading database ... 5%^M(Reading database ... 10%^M(Reading database ... 15%^M(Reading database ... 20%^M(Reading database ... 25%^M(Reading database ... 30%^M(Reading database ... 35%^M(Reading database ... 40%^M(Reading database ... 45%^M(Reading database ... 50%^M(Reading database ... 55%^M(Reading database ... 60%^M(Reading database ... 65%^M(Reading database ... 70%^M(Reading database ... 75%^M(Reading database ... 80%^M(Reading database ... 85%^M(Reading database ... 90%^M(Reading database ... 95%^M(Reading database ... 100%^M(Reading database ... 177996 files and directories currently installed.)\nPreparing to unpack .../postgresql-client-12_12.9-2.pgdg20.04+1_amd64.deb ...\nUnpacking postgresql-client-12 (12.9-2.pgdg20.04+1) over (12.10-1.pgdg20.04+1) ...\ndpkg: warning: downgrading postgresql-12 from 12.10-1.pgdg20.04+1 to 12.9-2.pgdg20.04+1\nPreparing to unpack .../postgresql-12_12.9-2.pgdg20.04+1_amd64.deb ...\nUnpacking postgresql-12 (12.9-2.pgdg20.04+1) over (12.10-1.pgdg20.04+1) ...\ndpkg: warning: downgrading postgresql-client-13 from 13.6-1.pgdg20.04+1 to 13.5-2.pgdg20.04+1\nPreparing to unpack .../postgresql-client-13_13.5-2.pgdg20.04+1_amd64.deb ...\nUnpacking postgresql-client-13 (13.5-2.pgdg20.04+1) over (13.6-1.pgdg20.04+1) ...\ndpkg: warning: downgrading postgresql-13 from 13.6-1.pgdg20.04+1 to 13.5-2.pgdg20.04+1\nPreparing to unpack .../postgresql-13_13.5-2.pgdg20.04+1_amd64.deb ...\nUnpacking postgresql-13 (13.5-2.pgdg20.04+1) over (13.6-1.pgdg20.04+1) ...\ndpkg: warning: downgrading postgresql-client-14 from 14.2-1.pgdg20.04+1 to 14.1-2.pgdg20.04+1\nPreparing to unpack .../postgresql-client-14_14.1-2.pgdg20.04+1_amd64.deb ...\nUnpacking postgresql-client-14 (14.1-2.pgdg20.04+1) over (14.2-1.pgdg20.04+1) ...\nSetting up postgresql-client-14 (14.1-2.pgdg20.04+1) ...\nSetting up postgresql-client-13 (13.5-2.pgdg20.04+1) ...\nSetting up postgresql-client-12 (12.9-2.pgdg20.04+1) ...\nSetting up postgresql-13 (13.5-2.pgdg20.04+1) ...\nSetting up postgresql-12 (12.9-2.pgdg20.04+1) ...\nProcessing triggers for postgresql-common (238.pgdg20.04+1) ...\nBuilding PostgreSQL dictionaries from installed myspell/hunspell packages...\n  en_us\n</code></pre></div>",
+        "id": 1331712,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1645227702
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>Removing obsolete dictionary files:\n2022-02-18 20:43:16,552 upgrade-zulip-stage-2: Restarting Zulip...\n2022-02-18 20:43:16,643 restart-server: Filling memcached caches\n2022-02-18 20:43:23.295 INFO [] Successfully populated user cache!  Consumed 1 remote cache queries (0.05 time)\n2022-02-18 20:43:23.303 INFO [] Successfully populated client cache!  Consumed 1 remote cache queries (0.0 time)\n2022-02-18 20:43:23.330 INFO [] Successfully populated stream cache!  Consumed 1 remote cache queries (0.01 time)\n2022-02-18 20:43:23.338 INFO [] Successfully populated huddle cache!  Consumed 1 remote cache queries (0.0 time)\n2022-02-18 20:43:23.365 INFO [] Successfully populated session cache!  Consumed 1 remote cache queries (0.01 time)\n2022-02-18 20:43:24,236 restart-server: Restarting zulip-workers:zulip_events_deferred_work\nzulip-workers:zulip_events_deferred_work: ERROR (not running)\nzulip-workers:zulip_events_deferred_work: started\n2022-02-18 20:43:25,514 restart-server: Restarting zulip-workers:zulip_events_digest_emails\nzulip-workers:zulip_events_digest_emails: ERROR (not running)\nzulip-workers:zulip_events_digest_emails: started\n2022-02-18 20:43:26,878 restart-server: Restarting zulip-workers:zulip_events_email_mirror\nzulip-workers:zulip_events_email_mirror: ERROR (not running)\nzulip-workers:zulip_events_email_mirror: started\n2022-02-18 20:43:28,273 restart-server: Restarting zulip-workers:zulip_events_email_senders\nzulip-workers:zulip_events_email_senders: ERROR (not running)\nzulip-workers:zulip_events_email_senders: started\n2022-02-18 20:43:29,669 restart-server: Restarting zulip-workers:zulip_events_embed_links\nzulip-workers:zulip_events_embed_links: ERROR (not running)\nzulip-workers:zulip_events_embed_links: started\n2022-02-18 20:43:31,049 restart-server: Restarting zulip-workers:zulip_events_embedded_bots\nzulip-workers:zulip_events_embedded_bots: ERROR (not running)\nzulip-workers:zulip_events_embedded_bots: started\n2022-02-18 20:43:32,486 restart-server: Restarting zulip-workers:zulip_events_error_reports\nzulip-workers:zulip_events_error_reports: ERROR (not running)\nzulip-workers:zulip_events_error_reports: started\n2022-02-18 20:43:33,886 restart-server: Restarting zulip-workers:zulip_events_invites\nzulip-workers:zulip_events_invites: ERROR (not running)\nzulip-workers:zulip_events_invites: started\n2022-02-18 20:43:35,282 restart-server: Restarting zulip-workers:zulip_events_missedmessage_emails\nzulip-workers:zulip_events_missedmessage_emails: ERROR (not running)\nzulip-workers:zulip_events_missedmessage_emails: started\n2022-02-18 20:43:36,705 restart-server: Restarting zulip-workers:zulip_events_missedmessage_mobile_notifications\n2022-02-18 20:43:36,705 restart-server: Restarting zulip-workers:zulip_events_missedmessage_mobile_notifications\nzulip-workers:zulip_events_missedmessage_mobile_notifications: ERROR (not running)\nzulip-workers:zulip_events_missedmessage_mobile_notifications: started\n2022-02-18 20:43:38,120 restart-server: Restarting zulip-workers:zulip_events_outgoing_webhooks\nzulip-workers:zulip_events_outgoing_webhooks: ERROR (not running)\nzulip-workers:zulip_events_outgoing_webhooks: started\n2022-02-18 20:43:39,541 restart-server: Restarting zulip-workers:zulip_events_user_activity\nzulip-workers:zulip_events_user_activity: ERROR (not running)\nzulip-workers:zulip_events_user_activity: started\n2022-02-18 20:43:40,937 restart-server: Restarting zulip-workers:zulip_events_user_activity_interval\nzulip-workers:zulip_events_user_activity_interval: ERROR (not running)\nzulip-workers:zulip_events_user_activity_interval: started\n2022-02-18 20:43:42,393 restart-server: Restarting zulip-workers:zulip_events_user_presence\nzulip-workers:zulip_events_user_presence: ERROR (not running)\nzulip-workers:zulip_events_user_presence: started\n2022-02-18 20:43:43,807 restart-server: Restarting zulip_deliver_scheduled_emails\nzulip_deliver_scheduled_emails: ERROR (not running)\nzulip_deliver_scheduled_emails: started\n2022-02-18 20:43:45,212 restart-server: Restarting zulip_deliver_scheduled_messages\nzulip_deliver_scheduled_messages: ERROR (not running)\nzulip_deliver_scheduled_messages: started\n2022-02-18 20:43:46,588 restart-server: Restarting process-fts-updates\nprocess-fts-updates: ERROR (not running)\nprocess-fts-updates: started\n2022-02-18 20:43:48,669 restart-server: Restarting Tornado process\nzulip-tornado: started\n2022-02-18 20:43:50,056 restart-server: Restarting django server\nzulip-django: ERROR (not running)\nzulip-django: started\n2022-02-18 20:43:52,281 restart-server: Done!\nESC[92mZulip restarted successfully!ESC[0m\n2022-02-18 20:43:52,303 upgrade-zulip-stage-2: Upgrade complete!\n2022-02-18 20:43:52,303 upgrade-zulip-stage-2: Purging old deployments...\n+ rm -rf /home/zulip/deployments/2022-02-03-18-21-16\nDeployments cleaned successfully...\nCleaning orphaned/unused caches...\nCleaning unused venv caches...\n+ rm -rf /srv/zulip-venv-cache/53df1e47e5d1cfe7e5b71ad8fb8d60d801b11198\nCleaning unused node modules caches...\n+ rm -rf /srv/zulip-npm-cache/bf7f60b504d510878a3d0eb1f2a77d3ea670bbef\nCleaning unused emoji caches...\nDone!\n</code></pre></div>",
+        "id": 1331713,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1645227725
+    },
+    {
+        "content": "<p>That all looks fine to me.</p>",
+        "id": 1331714,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645227754
+    },
+    {
+        "content": "<p>It even fixed your symlink back to a directory:</p>\n<p><code>Notice: /Stage[main]/Zulip::App_frontend_base/File[/home/zulip/prod-static]/ensure: ensure changed 'link' to 'directory'</code></p>",
+        "id": 1331715,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645227824
+    },
+    {
+        "content": "<p>haha, actually that was the tail of <code>/var/log/zulip/upgrade.log</code> but no worries, I'll rerun <code>/home/zulip/deployments/current/scripts/upgrade-zulip-from-git</code> and report what happens... I ran it many times...</p>",
+        "id": 1331736,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1645230069
+    },
+    {
+        "content": "<p>hereya go - same error:</p>\n<div class=\"codehilite\"><pre><span></span><code>+ ./manage.py collectstatic --no-default-ignore -v0 --noinput --ignore=assets --ignore=emoji-styles --ignore=html --ignore=js --ignore=styles --ignore=templates\nTraceback (most recent call last):\n  File &quot;./manage.py&quot;, line 157, in &lt;module&gt;\n    execute_from_command_line(sys.argv)\n  File &quot;./manage.py&quot;, line 122, in execute_from_command_line\n    utility.execute()\n  File &quot;/home/zulip/deployments/2022-02-19-00-20-00/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/__init__.py&quot;, line 413, in execute\n    self.fetch_command(subcommand).run_from_argv(self.argv)\n  File &quot;/home/zulip/deployments/2022-02-19-00-20-00/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 354, in run_from_argv\n    self.execute(*args, **cmd_options)\n  File &quot;/home/zulip/deployments/2022-02-19-00-20-00/zulip-py3-venv/lib/python3.8/site-packages/django/core/management/base.py&quot;, line 398, in execute\n    output = self.handle(*args, **options)\n  File &quot;/home/zulip/deployments/2022-02-19-00-20-00/zulip-py3-venv/lib/python3.8/site-packages/django/contrib/staticfiles/management/commands/collectstatic.py&quot;, line 187, in handle\n    collected = self.collect()\n  File &quot;/home/zulip/deployments/2022-02-19-00-20-00/zulip-py3-venv/lib/python3.8/site-packages/django/contrib/staticfiles/management/commands/collectstatic.py&quot;, line 114, in collect\n    handler(path, prefixed_path, storage)\n  File &quot;/home/zulip/deployments/2022-02-19-00-20-00/zulip-py3-venv/lib/python3.8/site-packages/django/contrib/staticfiles/management/commands/collectstatic.py&quot;, line 347, in copy_file\n    with source_storage.open(path) as source_file:\n  File &quot;/home/zulip/deployments/2022-02-19-00-20-00/zulip-py3-venv/lib/python3.8/site-packages/django/core/files/storage.py&quot;, line 38, in open\n    return self._open(name, mode)\n  File &quot;/home/zulip/deployments/2022-02-19-00-20-00/zulip-py3-venv/lib/python3.8/site-packages/django/core/files/storage.py&quot;, line 243, in _open\n    return File(open(self.path(name), mode))\nFileNotFoundError: [Errno 2] No such file or directory: &#39;/home/zulip/deployments/2022-02-19-00-20-00/static/generated/emoji/images/emoji/cloud_with_lightning_and_rain.png&#39;\n\nError running a subcommand of ./tools/update-prod-static: ./manage.py collectstatic --no-default-ignore -v0 --noinput --ignore=assets --ignore=emoji-styles --ignore=html --ignore=js --ignore=styles --ignore=templates\nActual error output for the subcommand is just above this.\n\n2022-02-19 00:22:54,992 upgrade-zulip-stage-2: Failed to build static assets.\n2022-02-19 00:22:54,992 upgrade-zulip-stage-2: Usually the cause is insufficient free RAM to run webpack.\n2022-02-19 00:22:54,992 upgrade-zulip-stage-2: Try stopping the Zulip server (scripts/stop-server) and trying again.\n\nZulip upgrade failed (exit code 1)!\n\nThe upgrade process is designed to be idempotent, so you can retry after resolving whatever issue caused the failure (there should be a traceback above). A log of this installation is available in /var/log/zulip/upgrade.log\n</code></pre></div>",
+        "id": 1331737,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1645230203
+    },
+    {
+        "content": "<p>Is that after deleting /srv/zulip-emoji-cache?</p>",
+        "id": 1331757,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645231153
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>zulip@zulip-prod:~/deployments/current$ sudo mv /srv/zulip-emoji-cache/  /srv/zulip-emoji-cache.bak\n\nzulip@zulip-prod:~/deployments/current$ sudo /home/zulip/deployments/current/scripts/upgrade-zulip-from-git  --remote-url https://github.com/asah/zulip.git forecast.chat\n2022-02-19 02:36:19,642 upgrade-zulip-from-git: Fetching the latest commits\n2022-02-19 02:36:20,259 upgrade-zulip-from-git: Upgrading to b4fecccbc3708b4f1c1b2858c8f346416e9ef2a9, in /home/zulip/deployments/2022-02-19-02-36-19\n2022-02-19 02:36:21,622 upgrade-zulip-stage-2: Upgrading system packages...\nHit:1 http://us-central1.gce.archive.ubuntu.com/ubuntu focal InRelease\nHit:2 http://us-central1.gce.archive.ubuntu.com/ubuntu focal-updates InRelease\nGet:3 http://us-central1.gce.archive.ubuntu.com/ubuntu focal-backports InRelease [108 kB]\nHit:5 https://packages.cloud.google.com/apt google-cloud-ops-agent-focal-all InRelease\nHit:4 https://apt-archive.postgresql.org/pub/repos/apt focal-pgdg-archive InRelease\nHit:6 http://ppa.launchpad.net/groonga/ppa/ubuntu focal InRelease\nHit:7 http://security.ubuntu.com/ubuntu focal-security InRelease\nHit:8 http://apt.postgresql.org/pub/repos/apt focal-pgdg InRelease\nHit:9 https://packages.groonga.org/ubuntu focal InRelease\nFetched 108 kB in 1s (118 kB/s)\nReading package lists...\nReading package lists...\nBuilding dependency tree...\nReading state information...\nCalculating upgrade...\nThe following package was automatically installed and is no longer required:\n  libnuma1\nUse &#39;sudo apt autoremove&#39; to remove it.\nThe following packages will be upgraded:\n  snapd\n1 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.\n1 standard security update\nNeed to get 34.3 MB of archives.\nAfter this operation, 16.4 kB of additional disk space will be used.\nGet:1 http://us-central1.gce.archive.ubuntu.com/ubuntu focal-updates/main amd64 snapd amd64 2.54.3+20.04.1ubuntu0.1 [34.3 MB]\nFetched 34.3 MB in 1s (40.2 MB/s)\n(Reading database ... 177995 files and directories currently installed.)\nPreparing to unpack .../snapd_2.54.3+20.04.1ubuntu0.1_amd64.deb ...\nUnpacking snapd (2.54.3+20.04.1ubuntu0.1) over (2.54.3+20.04.1) ...\nSetting up snapd (2.54.3+20.04.1ubuntu0.1) ...\nsnapd.failure.service is a disabled or a static unit, not starting it.\nsnapd.snap-repair.service is a disabled or a static unit, not starting it.\nProcessing triggers for man-db (2.9.1-1) ...\nProcessing triggers for dbus (1.12.16-2ubuntu2.1) ...\nProcessing triggers for mime-support (3.64ubuntu1) ...\n+ apt-get -y install build-essential libffi-dev libfreetype6-dev zlib1g-dev libjpeg-dev libldap2-dev python3-dev python3-pip virtualenv libxml2-dev libxslt1-dev libpq-dev libssl-dev libmagic1 libyaml-dev libxmlsec1-dev pkg-config jq libsasl2-dev\nReading package lists...\nBuilding dependency tree...\nReading state information...\nlibffi-dev is already the newest version (3.3-4).\nlibjpeg-dev is already the newest version (8c-2ubuntu8).\nlibmagic1 is already the newest version (1:5.38-4).\nlibsasl2-dev is already the newest version (2.1.27+dfsg-2).\nlibxmlsec1-dev is already the newest version (1.2.28-2).\nlibxslt1-dev is already the newest version (1.1.34-4).\nlibyaml-dev is already the newest version (0.2.2-1).\npkg-config is already the newest version (0.29.1-0ubuntu4).\npython3-dev is already the newest version (3.8.2-0ubuntu2).\nbuild-essential is already the newest version (12.8ubuntu1.1).\nlibfreetype6-dev is already the newest version (2.10.1-2ubuntu0.1).\nlibldap2-dev is already the newest version (2.4.49+dfsg-2ubuntu1.8).\nlibssl-dev is already the newest version (1.1.1f-1ubuntu2.10).\nlibxml2-dev is already the newest version (2.9.10+dfsg-5ubuntu0.20.04.1).\nzlib1g-dev is already the newest version (1:1.2.11.dfsg-2ubuntu1.2).\njq is already the newest version (1.6-1ubuntu0.20.04.1).\npython3-pip is already the newest version (20.0.2-5ubuntu1.6).\nvirtualenv is already the newest version (20.0.17-1ubuntu0.4).\nlibpq-dev is already the newest version (14.2-1.pgdg20.04+1).\nThe following package was automatically installed and is no longer required:\n  libnuma1\nUse &#39;sudo apt autoremove&#39; to remove it.\n0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.\nUsing cached Python venv from /srv/zulip-venv-cache/33d83727c0b2e4c40a132c9ee3d9109a5c2feab1/zulip-py3-venv\n+ ln -nsf /srv/zulip-venv-cache/33d83727c0b2e4c40a132c9ee3d9109a5c2feab1/zulip-py3-venv /home/zulip/deployments/2022-02-19-02-36-19/zulip-py3-venv\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2022-02-19-02-36-19/scripts/lib/check-database-compatibility.py&quot;, line 20, in &lt;module&gt;\n    django.setup()\n  File &quot;/srv/zulip-venv-cache/33d83727c0b2e4c40a132c9ee3d9109a5c2feab1/zulip-py3-venv/lib/python3.8/site-packages/django/__init__.py&quot;, line 24, in setup\n    apps.populate(settings.INSTALLED_APPS)\n  File &quot;/srv/zulip-venv-cache/33d83727c0b2e4c40a132c9ee3d9109a5c2feab1/zulip-py3-venv/lib/python3.8/site-packages/django/apps/registry.py&quot;, line 122, in populate\n    app_config.ready()\n  File &quot;/home/zulip/deployments/2022-02-19-02-36-19/zerver/apps.py&quot;, line 24, in ready\n    import zerver.signals\n  File &quot;/home/zulip/deployments/2022-02-19-02-36-19/zerver/signals.py&quot;, line 12, in &lt;module&gt;\n    from zerver.lib.actions import do_set_zoom_token\n  File &quot;/home/zulip/deployments/2022-02-19-02-36-19/zerver/lib/actions.py&quot;, line 63, in &lt;module&gt;\n    from zerver.lib.bulk_create import bulk_create_users\n  File &quot;/home/zulip/deployments/2022-02-19-02-36-19/zerver/lib/bulk_create.py&quot;, line 7, in &lt;module&gt;\n    from zerver.lib.streams import render_stream_description\n  File &quot;/home/zulip/deployments/2022-02-19-02-36-19/zerver/lib/streams.py&quot;, line 14, in &lt;module&gt;\n    from zerver.lib.markdown import markdown_convert\n  File &quot;/home/zulip/deployments/2022-02-19-02-36-19/zerver/lib/markdown/__init__.py&quot;, line 55, in &lt;module&gt;\n    from zerver.lib.emoji import EMOTICON_RE, codepoint_to_name, name_to_codepoint, translate_emoticons\n  File &quot;/home/zulip/deployments/2022-02-19-02-36-19/zerver/lib/emoji.py&quot;, line 22, in &lt;module&gt;\n    with open(emoji_codes_path, &quot;rb&quot;) as fp:\nFileNotFoundError: [Errno 2] No such file or directory: &#39;/home/zulip/deployments/2022-02-19-02-36-19/zerver/lib/../../static/generated/emoji/emoji_codes.json&#39;\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2022-02-19-02-36-19/scripts/lib/upgrade-zulip-stage-2&quot;, line 220, in &lt;module&gt;\n    subprocess.check_call(\n  File &quot;/usr/lib/python3.8/subprocess.py&quot;, line 364, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2022-02-19-02-36-19/scripts/lib/check-database-compatibility.py&#39;]&#39; returned non-zero exit status 1.\n\nZulip upgrade failed (exit code 1)!\n\nThe upgrade process is designed to be idempotent, so you can retry after resolving whatever issue caused the failure (there should be a traceback above). A log of this installation is available in /var/log/zulip/upgrade.log\n</code></pre></div>",
+        "id": 1331789,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1645238336
+    },
+    {
+        "content": "<p>(thx! for the help)</p>",
+        "id": 1331791,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1645238344
+    },
+    {
+        "content": "<p>Hmm. That looks like a bug in <code>check-database-compatibility.py</code>.</p>",
+        "id": 1331792,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645238493
+    },
+    {
+        "content": "<p>The bug being that it is doing an import that assumes the emoji are already in place?</p>",
+        "id": 1331797,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645238902
+    },
+    {
+        "content": "<p>Seems like a possible bug, yeah.</p>",
+        "id": 1331798,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645238908
+    },
+    {
+        "content": "<p>Likely culprit? Committed 16 days ago.</p>\n<p><a href=\"https://github.com/zulip/zulip/blame/main/scripts/lib/upgrade-zulip-stage-2#L217\">https://github.com/zulip/zulip/blame/main/scripts/lib/upgrade-zulip-stage-2#L217</a></p>\n<p><a href=\"https://github.com/zulip/zulip/commit/8da60986314996051fa6c174800b331c61bf8794\">https://github.com/zulip/zulip/commit/8da60986314996051fa6c174800b331c61bf8794</a></p>\n<p>Thx!<br>\n<span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span></p>",
+        "id": 1331864,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1645264381
+    },
+    {
+        "content": "<p>check-database-compatibility is calling <code>django.setup()</code> so it can inspect the database state, but the act of importing <code>zerver/lib/emoji.py</code> causes it to try to load <code>emoji_codes.json</code>.</p>\n<p>We can move the database check top be yet later, after building static assets, but that will necessarily mean it will be after we may have stopped the server, which feels unfortunate.</p>\n<p>Is there anything that prevents us from lazily loading the emoji data, instead of doing it at import time?</p>",
+        "id": 1332753,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1645556111
+    },
+    {
+        "content": "<p>I think nothing prevents us from lazy-loading emoji data other than the potential desire to validate that the server is going to work on first startup.</p>",
+        "id": 1332851,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645560943
+    },
+    {
+        "content": "<p>Concretely, that probably means we could lazy-load it and it make <code>zproject/wsgi.py</code> call whatever functions triggers a non-lazy load instead and have the experience be better for all scripts that don't need to access emoji?</p>",
+        "id": 1332852,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645560998
+    },
+    {
+        "content": "<p>(We might find we need to do something similar with other <code>webpack</code> outputs as well, but I think likely not since they are more likely to be only accessed when rendering webpages)</p>",
+        "id": 1332854,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645561061
+    },
+    {
+        "content": "<p>If I had to “blame” this on something, it would be that our giant monolithic <code>zerver.lib.actions</code> has to be imported in its entirety when we need a single action from it—in this case, the <code>do_set_zoom_token</code> in <code>zerver.signals</code>.</p>\n<p>If we like the separation between actions and views, we should split <code>zerver/lib/actions.py</code> into a <code>zerver/actions</code> directory.</p>",
+        "id": 1332870,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645563515
+    },
+    {
+        "content": "<p>Such a split is I think the next major backend file structure reorganization I'd like to see us do.  It'll take some care choosing how to do said split and making naming choice -- I think roughly we want to parallel the naming we use in <code>zerver/lib</code> and in <code>zerver/views</code>.</p>",
+        "id": 1332919,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645567567
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/21220\">#21220</a> severs this import chain and adds a CI check to keep it that way.</p>",
+        "id": 1333216,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645587259
+    },
+    {
+        "content": "<p>Hmm yeah that lgtm.</p>",
+        "id": 1333219,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645587400
+    },
+    {
+        "content": "<p>Evidently there’s another chain.</p>",
+        "id": 1333224,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645588086
+    },
+    {
+        "content": "<p><code>zerver/migrations/0206_stream_rendered_description.py</code> imports <code>zerver.lib.streams</code>, which migrations are not supposed to do.</p>",
+        "id": 1333225,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645588229
+    },
+    {
+        "content": "<p>We can move that to an in-function import, but I think that one has no real alternative.</p>",
+        "id": 1333228,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645589495
+    },
+    {
+        "content": "<p>How about switching it to do <code>html.escape(stream.description)</code> and scheduling a deferred job for the full Markdown rendering?</p>",
+        "id": 1333233,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645590136
+    },
+    {
+        "content": "<p>I suppose that could be OK; but is there any downside to doing the in-function import instead?</p>",
+        "id": 1333234,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645590163
+    },
+    {
+        "content": "<p>(We have a half dozen migrations that import product code for one reason or another; this won't be the only one)</p>",
+        "id": 1333235,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645590176
+    },
+    {
+        "content": "<p>The Django docs give <a href=\"https://docs.djangoproject.com/en/3.2/topics/migrations/#historical-models\">clear warnings</a> that you shouldn’t import models directly from migrations. I’m not a fan of violating expected invariants and then being given the burden of explaining exactly what will go wrong as a result of those violations.</p>",
+        "id": 1333236,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645590596
+    },
+    {
+        "content": "<p>Well, I understand what's going on here and why it won't produce invalid output.</p>\n<p>But more importantly, the migration in question was new in Zulip 2.0 and you likely can't even directly upgrade to <code>main</code> from 1.9, so it likely no longer matters what code that migration runs.</p>",
+        "id": 1333237,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645590730
+    },
+    {
+        "content": "<p>For that reason, I wouldn't want to spend time on cleaning that old migration up; better would be to just do the work to allow us to <code>squashmigrations</code> and effectively delete it.</p>",
+        "id": 1333238,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645590759
+    },
+    {
+        "content": "<p>Maybe you have an argument for why this abstraction violation doesn’t currently produce invalid output. Are you re-evaluating that argument every time you review a PR that changes apparently unrelated code that might interact with it (all code transitively imported from <code>zerver.lib.streams</code>)?</p>",
+        "id": 1333239,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645591050
+    },
+    {
+        "content": "<p>It doesn't matter what code is imported from there <code>zerver.lib.streams</code>, just what <code>render_stream_description</code> does.</p>",
+        "id": 1333240,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645591085
+    },
+    {
+        "content": "<p>That’s clearly not the case; we have top-level code that does all sorts of things, or we wouldn’t be talking about this now.</p>",
+        "id": 1333241,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645591144
+    },
+    {
+        "content": "<p>Here's the set of migrations affected by this:</p>\n<div class=\"codehilite\"><pre><span></span><code>  - id: dont-import-models-in-migrations\n    patterns:\n      - pattern-not: from zerver.lib.redis_utils import get_redis_client\n      - pattern-not: from zerver.models import filter_pattern_validator\n      - pattern-not: from zerver.models import filter_format_validator\n      - pattern-not: from zerver.models import generate_email_token_for_stream\n      - pattern-either:\n          - pattern: from zerver import $X\n          - pattern: from analytics import $X\n          - pattern: from confirmation import $X\n    message: &quot;Don&#39;t import models or other code in migrations; see https://zulip.readthedocs.io/en/latest/subsystems/schema-migrations.html&quot;\n    languages: [python]\n    severity: ERROR\n    paths:\n      include:\n        - &quot;**/migrations&quot;\n      exclude:\n        - zerver/migrations/0032_verify_all_medium_avatar_images.py\n        - zerver/migrations/0104_fix_unreads.py\n        - zerver/migrations/0206_stream_rendered_description.py\n        - zerver/migrations/0209_user_profile_no_empty_password.py\n        - zerver/migrations/0260_missed_message_addresses_from_redis_to_db.py\n        - zerver/migrations/0376_set_realmemoji_author_and_reupload_realmemoji.py\n        - pgroonga/migrations/0002_html_escape_subject.py\n</code></pre></div>",
+        "id": 1333243,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645591181
+    },
+    {
+        "content": "<p>All but the last 3 are not actually run in current <code>main</code> and can be addressed by effectively deleting the migrations (ideally using the <code>squashmigrations</code> system).</p>",
+        "id": 1333245,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645591311
+    },
+    {
+        "content": "<p>What Django is warning about is that the migrations system is designed to use the format of models from a checkpoint in the migration sequence; so code in migrations will have an incompatible idea of the database model with the normal code. Calling code that happens to import <code>models.py</code> but whose behavior does not depend on the format of models is an abstraction violation, but will run without issue.</p>\n<p>Ideally, we wouldn't have migrations like this, but sometimes it's the best way to avoid a great deal of extra work or copied code.</p>",
+        "id": 1333246,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1645591391
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21154\">@Adam S</span> The <code>check-database-compatibility.py</code> problem you ran into is now fixed (<a href=\"https://github.com/zulip/zulip/pull/21220\">#21220</a>).</p>",
+        "id": 1334579,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1645741978
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span>  confirmed - deployment worked.  <em>THANKS</em> !!!  cc <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span></p>",
+        "id": 1337743,
+        "sender_full_name": "Adam Sah",
+        "timestamp": 1646230985
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"21154\">Adam S</span> has marked this topic as resolved.</p>",
+        "id": 1337744,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1646231010
+    }
+]

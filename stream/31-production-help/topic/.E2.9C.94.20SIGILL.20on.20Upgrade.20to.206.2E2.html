@@ -1,0 +1,284 @@
+<html>
+<head><meta charset="utf-8"><title>✔ SIGILL on Upgrade to 6.2 · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html">✔ SIGILL on Upgrade to 6.2</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1574369"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1574369" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1574369">(May 22 2023 at 20:42)</a>:</h4>
+<p>I'll dig into this in a moment, but maybe somebody else has already encountered this… I get the following stack trace and error message when upgrading (from the latest 6.1 bugfix release) to 6.2:</p>
+<div class="codehilite"><pre><span></span><code>2023-05-22 20:26:58,089 upgrade-zulip-stage-2: Installing static assets...
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2023-05-22-22-24-48/scripts/lib/upgrade-zulip-stage-2&quot;, line 367, in &lt;module&gt;
+    subprocess.check_call([&quot;./manage.py&quot;, &quot;check&quot;, &quot;--database&quot;, &quot;default&quot;], preexec_fn=su_to_zulip)
+  File &quot;/usr/lib/python3.9/subprocess.py&quot;, line 373, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;./manage.py&#39;, &#39;check&#39;, &#39;--database&#39;, &#39;default&#39;]&#39; died with &lt;Signals.SIGILL: 4&gt;.
+
+Zulip upgrade failed (exit code 1)!
+
+The upgrade process is designed to be idempotent, so you can retry after resolving whatever issue caused the failure (there should be a traceback above). A log of this installation is available in /var/log/zulip/upgrade.log
+</code></pre></div>
+<p>Any help?</p>
+
+
+
+<a name="1574380"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1574380" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1574380">(May 22 2023 at 20:51)</a>:</h4>
+<p>Doesn't happen when I run <code>./manage.py check --database default</code> manually`</p>
+
+
+
+<a name="1574398"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1574398" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1574398">(May 22 2023 at 21:23)</a>:</h4>
+<p>If I run the whole <code>subprocess.check_call(["./manage.py", "check", "--database", "default"], preexec_fn=su_to_zulip)</code> call in the current environement, I don't get the error, either</p>
+
+
+
+<a name="1574467"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1574467" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1574467">(May 22 2023 at 22:27)</a>:</h4>
+<p>Is there a way to skip this step? I can' t reproduce it and I don't think it has a relevant impact</p>
+
+
+
+<a name="1574609"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1574609" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1574609">(May 23 2023 at 01:11)</a>:</h4>
+<p><span class="user-mention" data-user-id="24577">@hop</span> I would guess the actual problem is an OOM kill -- how much memory does the system have?</p>
+
+
+
+<a name="1574815"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1574815" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1574815">(May 23 2023 at 12:49)</a>:</h4>
+<p>SIGILL, not SIGKILL</p>
+<p>Here's the log line from the kernel:</p>
+<div class="codehilite"><pre><span></span><code>[754721.084618] traps: python3[732481] trap invalid opcode ip:7faaf2aab103 sp:7ffc71725770 error:0 in orjson.cpython-39-x86_64-linux-gnu.so[7faaf2a92000+2d000]
+</code></pre></div>
+
+
+
+<a name="1574857"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1574857" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1574857">(May 23 2023 at 15:08)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> it is definitely the <code>orjson</code> package. Running its test suite in the venv created by the upgrade results in a SIGILL as well.</p>
+
+
+
+<a name="1574859"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1574859" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1574859">(May 23 2023 at 15:09)</a>:</h4>
+<p>I don't think that wheel is cached somewhere, is it?</p>
+
+
+
+<a name="1574864"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1574864" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1574864">(May 23 2023 at 15:28)</a>:</h4>
+<p>The same error occurs with orjson 3.8.12 (the one used by the updater) and 3.8.11. The problem seems not to occur with 3.8.10.</p>
+
+
+
+<a name="1574867"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1574867" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1574867">(May 23 2023 at 15:30)</a>:</h4>
+<p>I can't yet recreate the problem outside of /srv/zulip-venv-cache, though</p>
+
+
+
+<a name="1574920"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1574920" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1574920">(May 23 2023 at 16:48)</a>:</h4>
+<p><span class="user-mention" data-user-id="24577">@hop</span> Is this Debian 11? Can you share the output of the <code>lscpu</code> command?</p>
+
+
+
+<a name="1575012"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1575012" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1575012">(May 23 2023 at 17:43)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> the <code>orjson</code> wheel is incompatible with my cpu</p>
+
+
+
+<a name="1575014"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1575014" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1575014">(May 23 2023 at 17:44)</a>:</h4>
+<p>There is no need to @-mention core contributors. Can you provide the data I requested, or other information that you’ve found?</p>
+
+
+
+<a name="1575023"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1575023" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1575023">(May 23 2023 at 17:46)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>Vendor ID:                       GenuineIntel
+CPU family:                      15
+Model:                           4
+Model name:                      Intel(R) Xeon(TM) CPU 3.00GHz
+Stepping:                        10
+</code></pre></div>
+
+
+
+<a name="1575036"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1575036" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1575036">(May 23 2023 at 17:54)</a>:</h4>
+<p>If you’re not willing to provide the full output, you can say so, but we’re going to have a hard time helping you if you edit things out without telling us.</p>
+
+
+
+<a name="1575039"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1575039" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1575039">(May 23 2023 at 17:54)</a>:</h4>
+<p>I don't understand</p>
+
+
+
+<a name="1575041"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1575041" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1575041">(May 23 2023 at 17:54)</a>:</h4>
+<p>What is your goal?</p>
+
+
+
+<a name="1575044"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1575044" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1575044">(May 23 2023 at 17:55)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>Architecture:                    x86_64
+CPU op-mode(s):                  32-bit, 64-bit
+Byte Order:                      Little Endian
+Address sizes:                   36 bits physical, 48 bits virtual
+CPU(s):                          3
+On-line CPU(s) list:             0-2
+Thread(s) per core:              3
+Core(s) per socket:              1
+Socket(s):                       1
+NUMA node(s):                    1
+Vendor ID:                       GenuineIntel
+CPU family:                      15
+Model:                           4
+Model name:                      Intel(R) Xeon(TM) CPU 3.00GHz
+Stepping:                        10
+CPU MHz:                         3000.152
+BogoMIPS:                        6000.30
+Hypervisor vendor:               Xen
+Virtualization type:             para
+L1d cache:                       16 KiB
+L2 cache:                        2 MiB
+NUMA node0 CPU(s):               0-2
+Vulnerability Itlb multihit:     KVM: Mitigation: VMX unsupported
+Vulnerability L1tf:              Mitigation; PTE Inversion
+Vulnerability Mds:               Vulnerable: Clear CPU buffers attempted, no microcode; SMT Host state unknown
+Vulnerability Meltdown:          Unknown (XEN PV detected, hypervisor mitigation required)
+Vulnerability Mmio stale data:   Unknown: No mitigations
+Vulnerability Retbleed:          Not affected
+Vulnerability Spec store bypass: Vulnerable
+Vulnerability Spectre v1:        Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:        Mitigation; Retpolines, STIBP disabled, RSB filling, PBRSB-eIBRS Not affected
+Vulnerability Srbds:             Not affected
+Vulnerability Tsx async abort:   Not affected
+Flags:                           fpu de tsc msr pae mce cx8 apic sep mca cmov pat clflush mmx fxsr sse sse2 ss ht syscall nx lm cons
+                                 tant_tsc nopl cpuid tsc_known_freq pni cx16 hypervisor lahf_lm
+</code></pre></div>
+
+
+
+<a name="1575070"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1575070" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1575070">(May 23 2023 at 18:16)</a>:</h4>
+<p>Hmm. Unless you’re actually running this on a CPU manufactured 18 years ago, I suspect your Xen VM has a misconfigured CPUID setting.</p>
+
+
+
+<a name="1575072"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1575072" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1575072">(May 23 2023 at 18:18)</a>:</h4>
+<p>I'm actually running this on a CPU manufactured 18 years ago.</p>
+
+
+
+<a name="1575075"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1575075" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1575075">(May 23 2023 at 18:18)</a>:</h4>
+<p>Oh. Well that’s probably not going to work: <a href="https://github.com/ijl/orjson/issues/383">https://github.com/ijl/orjson/issues/383</a></p>
+
+
+
+<a name="1575076"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1575076" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1575076">(May 23 2023 at 18:19)</a>:</h4>
+<p>Yes, I know</p>
+
+
+
+<a name="1575086"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1575086" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1575086">(May 23 2023 at 18:23)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="24577">hop</span> <a href="#narrow/stream/31-production-help/topic/SIGILL.20on.20Upgrade.20to.206.2E2/near/1575012">said</a>:</p>
+<blockquote>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> the <code>orjson</code> wheel is incompatible with my cpu</p>
+</blockquote>
+<p>Wait! Where did the link go? I thought, I had included this exact Issus in this comment?!</p>
+
+
+
+<a name="1575208"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1575208" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Notification Bot <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1575208">(May 23 2023 at 19:37)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="24577">hop</span> has marked this topic as resolved.</p>
+
+
+
+<a name="1576825"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1576825" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1576825">(May 25 2023 at 20:20)</a>:</h4>
+<p><span class="user-mention" data-user-id="24577">@hop</span> just FYI, we've worked around the <code>orjson</code> upgrade for the <code>6.x</code> branch, and you can <code>upgrade-zulip-from-git 6.x</code> to be able to upgrade to 6.2 with your existing ancient CPU.</p>
+
+
+
+<a name="1576826"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1576826" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1576826">(May 25 2023 at 20:20)</a>:</h4>
+<p>More details in <a class="stream-topic" data-stream-id="31" href="/#narrow/stream/31-production-help/topic/Upgrade.206.2E1.20to.206.2E2">#production help &gt; Upgrade 6.1 to 6.2</a>.</p>
+
+
+
+<a name="1578159"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1578159" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1578159">(May 26 2023 at 23:35)</a>:</h4>
+<p>Thank you!</p>
+
+
+
+<a name="1599883"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1599883" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1599883">(Jun 27 2023 at 22:45)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> quick update: it seems <code>orjason</code> "repented" a day later. <a href="https://github.com/ijl/orjson/issues/383">https://github.com/ijl/orjson/issues/383</a></p>
+
+
+
+<a name="1599896"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1599896" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1599896">(Jun 27 2023 at 22:56)</a>:</h4>
+<p>There’s <a href="https://zulip.com/development-community/#getting-help">no need</a> to @-mention core contributors unless you need their timely attention. This was resolved a month ago (at our own request).</p>
+
+
+
+<a name="1599916"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1599916" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1599916">(Jun 27 2023 at 23:27)</a>:</h4>
+<p><span class="user-mention" data-user-id="699">@Anders Kaseorg</span> resolved in a way that is not a long term solution.</p>
+<p>sorry for "@-mentioning" anybody, but i'm no zulip user and I chose to err on the side of being annoying over succumbing to paralysis out of fear of breaking some arbitrary social norm</p>
+
+
+
+<a name="1599917"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1599917" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1599917">(Jun 27 2023 at 23:28)</a>:</h4>
+<p>tim was so kind to fix my stupid little problem and they @-mentioned me, so I just responded in kind</p>
+
+
+
+<a name="1599920"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1599920" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1599920">(Jun 27 2023 at 23:31)</a>:</h4>
+<p>I fixed it both short-term (<a href="https://github.com/zulip/zulip/pull/25752">#25752</a>) and long-term (<a href="https://github.com/zulip/zulip/pull/25790">#25790</a>).</p>
+
+
+
+<a name="1599923"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1599923" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1599923">(Jun 27 2023 at 23:46)</a>:</h4>
+<p>Great, thank you</p>
+
+
+
+<a name="1599924"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1599924" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> hop <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1599924">(Jun 27 2023 at 23:46)</a>:</h4>
+<p>I'll make sure to not report any problems in the future</p>
+
+
+
+<a name="1600716"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20SIGILL%20on%20Upgrade%20to%206.2/near/1600716" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20SIGILL.20on.20Upgrade.20to.206.2E2.html#1600716">(Jun 29 2023 at 04:18)</a>:</h4>
+<p><span class="user-mention" data-user-id="24577">@hop</span> we do appreciate the report! Anders was just making a mild suggestion; please don't feel like anyone is upset with you or we don't appreciate bug reports.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

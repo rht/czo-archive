@@ -1,0 +1,158 @@
+[
+    {
+        "content": "<p>since my last update to master I cannot send emails from localhost/postfix through zulip<br>\neverything works finde for month. i do not change anything? any ideas? thx</p>\n<div class=\"codehilite\"><pre><span></span><code>root@zulip: ~ # su zulip -c &#39;/home/zulip/deployments/current/manage.py send_test_email fabian@tribrunner.at&#39;\nIf you run into any trouble, read:\n\n  https://zulip.readthedocs.io/en/latest/production/email.html#troubleshooting\n\nThe most common error is not setting `ADD_TOKENS_TO_NOREPLY_ADDRESS=False` when\nusing an email provider that doesn&#39;t support that feature.\n\nSending 2 test emails from:\n  * admin@chat.bc-group.at\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/manage.py&quot;, line 50, in &lt;module&gt;\n    execute_from_command_line(sys.argv)\n  File &quot;/home/zulip/deployments/2020-09-23-09-17-09/zulip-py3-venv/lib/python3.7/site-packages/django/core/management/__init__.py&quot;, line 381, in execute_from_command_line\n    utility.execute()\n  File &quot;/home/zulip/deployments/2020-09-23-09-17-09/zulip-py3-venv/lib/python3.7/site-packages/django/core/management/__init__.py&quot;, line 375, in execute\n    self.fetch_command(subcommand).run_from_argv(self.argv)\n  File &quot;/home/zulip/deployments/2020-09-23-09-17-09/zulip-py3-venv/lib/python3.7/site-packages/django/core/management/base.py&quot;, line 323, in run_from_argv\n    self.execute(*args, **cmd_options)\n  File &quot;/home/zulip/deployments/2020-09-23-09-17-09/zulip-py3-venv/lib/python3.7/site-packages/django/core/management/base.py&quot;, line 364, in execute\n    output = self.handle(*args, **options)\n  File &quot;/home/zulip/deployments/2020-09-23-09-17-09/zerver/management/commands/send_test_email.py&quot;, line 36, in handle\n    send_mail(&quot;Zulip email test&quot;, message, sender, kwargs[&#39;email&#39;])\n  File &quot;/home/zulip/deployments/2020-09-23-09-17-09/zulip-py3-venv/lib/python3.7/site-packages/django/core/mail/__init__.py&quot;, line 60, in send_mail\n    return mail.send()\n  File &quot;/home/zulip/deployments/2020-09-23-09-17-09/zulip-py3-venv/lib/python3.7/site-packages/django/core/mail/message.py&quot;, line 306, in send\n    return self.get_connection(fail_silently).send_messages([self])\n  File &quot;/home/zulip/deployments/2020-09-23-09-17-09/zulip-py3-venv/lib/python3.7/site-packages/django/core/mail/backends/smtp.py&quot;, line 110, in send_messages\n    sent = self._send(message)\n  File &quot;/home/zulip/deployments/2020-09-23-09-17-09/zulip-py3-venv/lib/python3.7/site-packages/django/core/mail/backends/smtp.py&quot;, line 126, in _send\n    self.connection.sendmail(from_email, recipients, message.as_bytes(linesep=&#39;\\r\\n&#39;))\n  File &quot;/usr/lib/python3.7/smtplib.py&quot;, line 881, in sendmail\n    raise SMTPRecipientsRefused(senderrs)\nsmtplib.SMTPRecipientsRefused: {&#39;fabian@tribrunner.at&#39;: (554, b&#39;5.7.1 &lt;fabian@tribrunner.at&gt;: Recipient address rejected: Access denied&#39;)}\nroot@zulip: ~ #\n</code></pre></div>",
+        "id": 1023226,
+        "sender_full_name": "Fabian Tribrunner",
+        "timestamp": 1600850140
+    },
+    {
+        "content": "<p>echo \"My message\" | mail -s subject <a href=\"mailto:fabian@tribrunner.at\">fabian@tribrunner.at</a> delivers fine</p>",
+        "id": 1023229,
+        "sender_full_name": "Fabian Tribrunner",
+        "timestamp": 1600850204
+    },
+    {
+        "content": "<p>receiving emails directli to streams also work fine</p>",
+        "id": 1023239,
+        "sender_full_name": "Fabian Tribrunner",
+        "timestamp": 1600850950
+    },
+    {
+        "content": "<p>Is <code>fabian@tribrunner.at</code> a kicak address to the host?  That is, postfix is configured to think that it accepts mail for <code>tribrunner.at</code> ?</p>",
+        "id": 1023403,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600879695
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/commit/1c17583ad5b2b2edae87bd93aff9e2eee866da4d\">1c17583ad5b2b2edae87bd93aff9e2eee866da4d</a> is almost certainly the cause -- we made the postfix that Zulip sets up not accept mail for anything except zulip itself.  This prevents folks outside the system from using SMTP <code>RCPT TO</code> commands to figure out what local UNIX accounts are on the system.</p>\n<p>If the Postfix mail system on the Zulip host <em>should</em> be the final destination for <code>@tribrunner.at</code> email addresses, you'll need to fork zulip to add those to <code>puppet/zulip/files/postfix/access</code>, or revert that whole commit entirely.  Be aware that this does expose more information from your server to the public internet (namely, people can look up what UNIX accounts are on the host).</p>",
+        "id": 1023405,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1600880012
+    },
+    {
+        "content": "<p>Hi <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span>  and thx for your answer. @tribrunner is not on the same host. the server runs only zulip.</p>",
+        "id": 1024355,
+        "sender_full_name": "Fabian Tribrunner",
+        "timestamp": 1600954025
+    },
+    {
+        "content": "<p>it is only used for incoming and outgoing mails relatet to zulip. it worked fine for month...i dont know what happend...maybe an postfix update...mhhh</p>",
+        "id": 1024356,
+        "sender_full_name": "Fabian Tribrunner",
+        "timestamp": 1600954260
+    },
+    {
+        "content": "<p>On the zulip server, what does <code>postconf mydestination</code> say?  What about <code>~zulip/deployments/current/scripts/get-django-setting EMAIL_HOST</code> ?</p>",
+        "id": 1024835,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1601005233
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> <br>\nroot@zulip: ~ # postconf mydestination<br>\nmydestination = localhost, <a href=\"http://localhost.zulip.bc-group.at\">localhost.zulip.bc-group.at</a>, <a href=\"http://chat.bc-group.at\">chat.bc-group.at</a>, <a href=\"http://zulip.bc-group.at\">zulip.bc-group.at</a></p>\n<p>root@zulip: ~ # su zulip -c '/home/zulip/deployments/current/scripts/get-django-setting EMAIL_HOST'<br>\nlocalhost</p>",
+        "id": 1024927,
+        "sender_full_name": "Fabian Tribrunner",
+        "timestamp": 1601015365
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> do you have any idea?</p>",
+        "id": 1025158,
+        "sender_full_name": "Fabian Tribrunner",
+        "timestamp": 1601053160
+    },
+    {
+        "content": "<p>I think the setting we added in 3.2 for increased security may interfere with using it as an outgoing relay.  You can try removing the <code>smtpd_recipient_restrictions</code> line from /etc/postfix/main.cf and restarting postfix to see if that helps.</p>",
+        "id": 1025160,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1601053455
+    },
+    {
+        "content": "<p>Yeah, that seems likely.  We can add a <code>zulip.conf</code> setting for adjusting that behavior if we confirm that's what's going on here.</p>",
+        "id": 1025182,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601056574
+    },
+    {
+        "content": "<p>Adding <code>permit_mynetworks</code> at the front of the list may suffice as well.</p>",
+        "id": 1025367,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1601069556
+    },
+    {
+        "content": "<p>Hm -- but this should be affected by <code>smtpd_relay_restrictions</code> not <code>smtpd_recipient_restrictions</code></p>",
+        "id": 1025368,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1601069612
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/16417\">https://github.com/zulip/zulip/pull/16417</a> should fix.</p>",
+        "id": 1025380,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1601070752
+    },
+    {
+        "content": "<p>We'll want to cherry-pick that to 3.x, probably?</p>",
+        "id": 1025382,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1601070761
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> merged, and yeah we should backport to 3.x (and then <span class=\"user-mention\" data-user-id=\"8768\">@Fabian Tribrunner</span> can just <code>upgrade-zulip-from-git 3.x</code> to get the fix) .</p>",
+        "id": 1025421,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601071797
+    },
+    {
+        "content": "<p>Cherry-picked and pushed.</p>",
+        "id": 1025440,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1601072482
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> works great, thanks a lot guys!</p>",
+        "id": 1025766,
+        "sender_full_name": "Fabian Tribrunner",
+        "timestamp": 1601095911
+    },
+    {
+        "content": "<p>Sorry for the trouble!</p>",
+        "id": 1025768,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1601096200
+    },
+    {
+        "content": "<p>hi again. <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> </p>\n<div class=\"codehilite\" data-code-language=\"jan\"><pre><span></span><code>Jan 19 13:51:14 chat postfix/cleanup[19169]: B5956F1FFD: message-id=&lt;20210119125114.B5956F1FFD@chat.bc-group.at&gt;\nJan 19 13:51:14 chat postfix/qmgr[19161]: B5956F1FFD: from=&lt;root@chat.bc-group.at&gt;, size=348, nrcpt=1 (queue active)\nJan 19 13:51:14 chat postfix/pipe[20185]: B5956F1FFD: to=&lt;zulip@localhost&gt;, orig_to=&lt;der.tri@gmail.com&gt;, relay=zulip, delay=0.16, delays=0.01/0.01/0/0.14, dsn=5.1.1, status=bounced (Bad destination mailbox address: Address not recognized by gateway. )\n</code></pre></div>\n<p>it looks like, that if there is a dot in the email name, delivery isnt possible</p>\n<p>would you pls help us :-) <br>\nthx in advance</p>",
+        "id": 1101863,
+        "sender_full_name": "Fabian Tribrunner",
+        "timestamp": 1611062380
+    },
+    {
+        "content": "<p>Jan 19 14:48:34 chat postfix/pipe[9869]: C5AFFF1FFA: to=&lt;zulip@localhost&gt;, orig_to=&lt;<a href=\"mailto:fabian.tribrunner@tribrunner.at\">fabian.tribrunner@tribrunner.at</a>&gt;, relay=zulip, delay=0.23, delays=0.01/0.02/0/0.21, dsn=5.1.1, status=bounced (Bad destination mailbox address: Address not recognized by gateway. )</p>",
+        "id": 1101879,
+        "sender_full_name": "Fabian Tribrunner",
+        "timestamp": 1611064183
+    },
+    {
+        "content": "<p>Jan 19 14:50:48 chat postfix/smtp[10792]: 9C8EAF1FFD: to=&lt;<a href=\"mailto:fabian@tribrunner.at\">fabian@tribrunner.at</a>&gt;, relay=mxpool.de2.hostedoffice.ag[81.20.94.242]:25, delay=1.4, delays=0/0.02/0.02/1.3, dsn=2.0.0, status=sent (250 2.0.0 OK accept as A7529789BC8:6a19a5aa3c12b3b8de230dee32c8cbfb by mx-gate01)</p>\n<p>works fine</p>",
+        "id": 1101880,
+        "sender_full_name": "Fabian Tribrunner",
+        "timestamp": 1611064291
+    },
+    {
+        "content": "<p>Gah.  Because it's not currently anchored with a hostname, everything outgoing which matches the addresses <code>virtual</code> gets eaten as a local address and sent into the mail gateway.  Which means addresses can't have a <code>+</code> or a <code>.</code>, or start with <code>mm</code>.</p>\n<p>Fixing this requires pushing down the mailname into those regexes so we only match on mail destined to us, or splitting into two different configs via another port in <code>master.cf</code></p>",
+        "id": 1104490,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1611281400
+    },
+    {
+        "content": "<p>Oh, hah.  I look to have started doing the former in November, already.</p>",
+        "id": 1104491,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1611281529
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/17105\">#17105</a>.</p>",
+        "id": 1105186,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1611350795
+    }
+]

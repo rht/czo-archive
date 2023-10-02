@@ -1,0 +1,134 @@
+[
+    {
+        "content": "<p>Hi all. I recently moved our self-hosted Zulip to a larger machine. I backed up the old instance using the <a href=\"https://zulip.readthedocs.io/en/stable/production/maintain-secure-upgrade.html#backups\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/stable/production/maintain-secure-upgrade.html#backups\">official method</a>, and then did a fresh install on the new machine and enabled <a href=\"https://zulip.readthedocs.io/en/stable/subsystems/full-text-search.html?highlight=full-text#an-optional-full-text-search-implementation\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/stable/subsystems/full-text-search.html?highlight=full-text#an-optional-full-text-search-implementation\">fulltext search with PGroonga</a>. But as soon as I finish running the restore script, the Zulip error log was filled with:</p>\n<div class=\"codehilite\"><pre><span></span>2019-04-03 13:07:45.475 ERR  [pika.connection] Connection setup failed due to Client was disconnected at a connection stage indicating a probable authentication error: (403, &#39;ACCESS_REFUSED - Login was refused using authentication mechanism PLAIN. For details see the broker logfile.&#39;)\n2019-04-03 13:07:45.476 WARN [zulip.queue] TornadoQueueClient couldn&#39;t connect to RabbitMQ, retrying in 2 secs...\n</pre></div>\n\n\n<p>I also checked the RabbitMQ log:</p>\n<div class=\"codehilite\"><pre><span></span>=ERROR REPORT==== 3-Apr-2019::09:08:29 ===\nclosing AMQP connection &lt;0.7757.0&gt; (127.0.0.1:46996 -&gt; 127.0.0.1:5672):\n{handshake_error,starting,0,\n                 {amqp_error,access_refused,\n                             &quot;PLAIN login refused: user &#39;zulip&#39; - invalid credentials&quot;,\n                             &#39;connection.start_ok&#39;}}\n</pre></div>\n\n\n<p>So it seems somehow restoring data caused RabbitMQ authentication to fail. Has anyone run into this problem before? The Zulip version is 2.0.2, OS version is 16.04. Thanks!</p>",
+        "id": 727295,
+        "sender_full_name": "Hong Jiang",
+        "timestamp": 1554297942
+    },
+    {
+        "content": "<p>I tried running <code>scripts/setup/configure-rabbitmq</code>. This seems to solve the problem.</p>",
+        "id": 727299,
+        "sender_full_name": "Hong Jiang",
+        "timestamp": 1554299408
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"9044\">@Hong Jiang</span> yes, running <code>configure-rabbitmq</code> is what to do to fix that error.</p>",
+        "id": 727775,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554338526
+    },
+    {
+        "content": "<p>I'm puzzled you ran into it; I would have expected the restoration script to run it for you.</p>",
+        "id": 727778,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554338543
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> can you look into this?  I'm a worried that possible the restoration tool is running <code>configure-rabbitmq</code> only during the installer, and that after we restore <code>/etc/zulip</code> from backups, the username/password Zulip has on file changes, and we need to run it again.</p>",
+        "id": 727781,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554338707
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> You came up with the list of commands that <code>restore-backup</code> runs, and you’d have a better idea whether <code>configure-rabbitmq</code> needs to be one of them. (Did you see <a href=\"https://github.com/zulip/zulip/pull/12029\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/12029\">#12029</a>, by the way?)</p>",
+        "id": 727784,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1554338881
+    },
+    {
+        "content": "<p>Presumably it shouldn’t be unconditional, since RabbitMQ might be running on some other machine.</p>",
+        "id": 727799,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1554339638
+    },
+    {
+        "content": "<p>Well, my read is that I was wrong before and we do need to include it if it's running on the system (or run <code>scripts/setup/install</code> as part of the backup tool after restoring settings?)</p>",
+        "id": 727800,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554339909
+    },
+    {
+        "content": "<p>Not sure what the right fix is</p>",
+        "id": 727801,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554339911
+    },
+    {
+        "content": "<p>I think it's just rabbitmq that has this issue.</p>",
+        "id": 727803,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554340727
+    },
+    {
+        "content": "<p>It's quite rare for rabbitmq to be hosted externally, but I think you can check for whether there's a <code>rabbitmq</code> block in <code>/etc/zulip/zulip.conf</code> to determine if it's hosted locally.</p>",
+        "id": 727804,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554340844
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> haven't looked at <a href=\"https://github.com/zulip/zulip/pull/12029\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/12029\">#12029</a> just because I've been sick.</p>",
+        "id": 727805,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554340861
+    },
+    {
+        "content": "<p>I know docker-zulip uses a separate rabbitmq container.</p>",
+        "id": 727807,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1554341210
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> yeah, that's the main environment that does this differently.  I believe the check I suggested should handle that case, but it's worth testing (it's possible our docker container has its zulip.conf setup oddly)</p>",
+        "id": 728129,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554400758
+    },
+    {
+        "content": "<p>Actually, what am I talking about, we should just use <code>dpkg</code> to check if <code>rabbitmq-server</code> is installer.</p>",
+        "id": 728130,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554400775
+    },
+    {
+        "content": "<p>I thought we have some level of CentOS support?</p>",
+        "id": 728142,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1554402030
+    },
+    {
+        "content": "<p>We have preliminary CentOS support only in development, but that's a good point, we'll want to add that eventually.</p>",
+        "id": 728144,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554402063
+    },
+    {
+        "content": "<p>So, the place we definitively know whether we're using rabbitmq on the system is in puppet.</p>",
+        "id": 728145,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554402085
+    },
+    {
+        "content": "<p>I don't want to run configure-rabbitmq unconditionally when we run puppet, since that will cause issues for already-running systems.</p>",
+        "id": 728146,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554402109
+    },
+    {
+        "content": "<p>But I could imagine adding an <code>Exec</code> rule in there that's conditional on a stamp file existing (and have it auto-delete that afterwards)</p>",
+        "id": 728148,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554402125
+    },
+    {
+        "content": "<p>That avoids needing to come up with weird workarounds for trying to detect whether rabbitmq is supposed to be setup and managed by Zulip on the system.</p>",
+        "id": 728149,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1554402159
+    },
+    {
+        "content": "<blockquote>\n<p>I tried running <code>scripts/setup/configure-rabbitmq</code>. This seems to solve the problem.</p>\n</blockquote>\n<p>I would like to notice that before running this script you should stop the server: <code>supervisorctl stop all</code>. RabbitMQ reconfigured successfully only after that command, in my case at least =) Then start the sever back: <code>supervisorctl start all</code></p>",
+        "id": 757012,
+        "sender_full_name": "John",
+        "timestamp": 1561022759
+    }
+]

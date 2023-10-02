@@ -1,0 +1,74 @@
+[
+    {
+        "content": "<p>Hello,<br>\nI have a general question on how to send out stream messages to stream subscribers' email addresses. <br>\nOur server has configured to run as a SMTP mail server. <br>\nI also have added SETTING_EMAIL_HOST: \"localhost\" and SETTING_EMAIL_GATEWAY_PATTERN: \"%s@abc.edu\"<br>\nHowever, I never receive any stream messages from zulip. <br>\nHave I missed any other configurations?<br>\nOr is there any log files that I can read any errors about this issue?<br>\n(there is no recorded in both email_deliverer.log and send_email.log )<br>\nPs: however zulip administrator receives stream message.<br>\nThank you so much. :)</p>",
+        "id": 1360616,
+        "sender_full_name": "jcheng",
+        "timestamp": 1649190261
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"22988\">jcheng</span> <a href=\"#narrow/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers/near/1360616\">said</a>:</p>\n<blockquote>\n<p>Hello,<br>\nI have a general question on how to send out stream messages to stream subscribers' email addresses. <br>\nOur server has configured to run as a SMTP mail server. <br>\nI also have added SETTING_EMAIL_HOST: \"localhost\" and SETTING_EMAIL_GATEWAY_PATTERN: \"%s@abc.edu\"<br>\nHowever, I never receive any stream messages from zulip. <br>\nHave I missed any other configurations?<br>\nOr is there any log files that I can read any errors about this issue?<br>\n(there is no recorded in both email_deliverer.log and send_email.log )<br>\nPs: however zulip administrator receives stream message.<br>\nThank you so much. :)</p>\n</blockquote>\n<p>When I ran send test email script, I got the following error. </p>\n<p>root@c3cf3527b976:/# su zulip -c '/home/zulip/deployments/current/manage.py send_test_email <a href=\"mailto:abc@gmail.com\">abc@gmail.com</a>'</p>\n<p>If you run into any trouble, read:</p>\n<p><a href=\"https://zulip.readthedocs.io/en/latest/production/email.html#troubleshooting\">https://zulip.readthedocs.io/en/latest/production/email.html#troubleshooting</a></p>\n<p>The most common error is not setting <code>ADD_TOKENS_TO_NOREPLY_ADDRESS=False</code> when<br>\nusing an email provider that doesn't support that feature.</p>\n<p>Sending 2 test emails from:<br>\n  *\nTraceback (most recent call last):<br>\n  File \"/home/zulip/deployments/current/manage.py\", line 52, in &lt;module&gt;<br>\n    execute_from_command_line(sys.argv)<br>\n.......<br>\n.......<br>\nnew_socket = socket.create_connection((host, port), timeout,<br>\nFile \"/usr/lib/python3.8/socket.py\", line 808, in create_connection<br>\nraise err<br>\nFile \"/usr/lib/python3.8/socket.py\", line 796, in create_connection<br>\nsock.connect(sa)<br>\nOSError: [Errno 99] Cannot assign requested address</p>\n<p>Then, I added the following line to docker-compose.yml.<br>\nSETTING_ADD_TOKENS_TO_NOREPLY_ADDRESS: \"False\"</p>\n<p>However, I still get the same error. <br>\nDoes anyone have any suggestions for this type of error?<br>\nThank you so much.</p>",
+        "id": 1361460,
+        "sender_full_name": "jcheng",
+        "timestamp": 1649281316
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"22988\">@jcheng</span>: <code>SETTING_ADD_TOKENS_TO_NOREPLY_ADDRESS</code> and <code>SETTING_EMAIL_GATEWAY_PATTERN</code> are both irrelevant here -- I don't suggest setting them right now, since your problem is a far more fundamental one:</p>\n<div class=\"codehilite\"><pre><span></span><code>OSError: [Errno 99] Cannot assign requested address\n</code></pre></div>\n<p>Your server is trying to connect to <code>localhost</code>, and failing because it either can't resolve the host, or because it can't allocate a local socket.</p>\n<p>What do you have <code>SETTING_EMAIL_PORT</code> set to?</p>\n<p>Does it fix anything to set <code>SETTING_EMAIL_HOST</code> to <code>127.0.0.1</code> instead of <code>localhost</code>?</p>",
+        "id": 1361467,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649281752
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers/near/1361467\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"22988\">jcheng</span>: <code>SETTING_ADD_TOKENS_TO_NOREPLY_ADDRESS</code> and <code>SETTING_EMAIL_GATEWAY_PATTERN</code> are both irrelevant here -- I don't suggest setting them right now, since your problem is a far more fundamental one:</p>\n<div class=\"codehilite\"><pre><span></span><code>OSError: [Errno 99] Cannot assign requested address\n</code></pre></div>\n<p>Your server is trying to connect to <code>localhost</code>, and failing because it either can't resolve the host, or because it can't allocate a local socket.</p>\n<p>What do you have <code>SETTING_EMAIL_PORT</code> set to?</p>\n<p>Does it fix anything to set <code>SETTING_EMAIL_HOST</code> to <code>127.0.0.1</code> instead of <code>localhost</code>?</p>\n</blockquote>\n<p>Hi Alex,<br>\nThank you so much for taking the time to reply to my message. <br>\nI really appreciate your help. <br>\nAfter I changed SETTING_EMAIL_HOST to 127.0.0.1, I got a different error message. <br>\nThe message is ConnectionRefusedError: [Errno 111] Connection refused<br>\nLooks like maybe I have incorrect port number for SETTING_EMAIL_PORT which I use port 25. <br>\nDo I need to use different port number since we use zulip docker container?<br>\nAlso, I have removed  SETTING_ADD_TOKENS_TO_NOREPLY_ADDRESS: \"False\".<br>\nOr do you think that SETTING_EMAIL_USE_SSL: \"True\" should be false?</p>\n<p>Thank you so much again. :)</p>",
+        "id": 1361532,
+        "sender_full_name": "jcheng",
+        "timestamp": 1649285736
+    },
+    {
+        "content": "<p>If you're using the Docker container, your mailserver is not in the container, so neither <code>127.0.0.1</code> nor <code>localhost</code> is going to work.  You'll need to put in the name of the host which is running the mailserver.</p>\n<p><code>SETTING_EMAIL_USE_SSL</code> and <code>SETTING_EMAIL_PORT </code> depend on how you've configured your email server.</p>",
+        "id": 1361533,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649286079
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers/near/1361533\">said</a>:</p>\n<blockquote>\n<p>If you're using the Docker container, your mailserver is not in the container, so neither <code>127.0.0.1</code> nor <code>localhost</code> is going to work.  You'll need to put in the name of the host which is running the mailserver.</p>\n<p><code>SETTING_EMAIL_USE_SSL</code> and <code>SETTING_EMAIL_PORT </code> depend on how you've configured your email server.</p>\n</blockquote>\n<p>Our system admin has configurated the local server as a SMTP server. It will send out message; however , it wouldn't be able to receive any email. <br>\nDoes that mean I need to use the gateway that he gave it to me to put in SETTING_EMAIL_HOST? <br>\nSuch as SETTING_EMAIL_HOST: \"<a href=\"http://gateway.abc.com\">gateway.abc.com</a>\"?<br>\nHe also mentioned to me that the port number is 25 and the local SMTP_SSL is yes.<br>\nDo I use the same parameters for the docker container or they will be different?</p>\n<p>Thank you so much for your message again. :)</p>",
+        "id": 1361556,
+        "sender_full_name": "jcheng",
+        "timestamp": 1649287003
+    },
+    {
+        "content": "<p>The answers to those questions depend on where the Docker container is running, how you've configured Docker networking, and how you've configured the local mailserver.  I don't think we can help with those details.</p>\n<p>You may find <a href=\"https://stackoverflow.com/questions/24319662/from-inside-of-a-docker-container-how-do-i-connect-to-the-localhost-of-the-mach\">https://stackoverflow.com/questions/24319662/from-inside-of-a-docker-container-how-do-i-connect-to-the-localhost-of-the-mach</a> or similar to be helpful.</p>",
+        "id": 1361560,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649287278
+    },
+    {
+        "content": "<p>You can see if <code>host.docker.internal</code> works as the hostname instead of <code>127.0.0.1</code>, as a first try.</p>",
+        "id": 1361562,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649287334
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers/near/1361560\">said</a>:</p>\n<blockquote>\n<p>The answers to those questions depend on where the Docker container is running, how you've configured Docker networking, and how you've configured the local mailserver.  I don't think we can help with those details.</p>\n<p>You may find <a href=\"https://stackoverflow.com/questions/24319662/from-inside-of-a-docker-container-how-do-i-connect-to-the-localhost-of-the-mach\">https://stackoverflow.com/questions/24319662/from-inside-of-a-docker-container-how-do-i-connect-to-the-localhost-of-the-mach</a> or similar to be helpful.</p>\n</blockquote>\n<p>Alex,<br>\nThank you so much again. <br>\nI tried to use docker0 gateway in SETTING_EMAIL_HOST: \"172.17.0.1\", but that didn't work. <br>\nHowever, I was able to make it to work by using SMTP gateway that was given to me by our system admin. <br>\nI was able to send test email by using send_test_email command. </p>\n<p>My next question is that do you know how I can let zulip streams to send posted messages to my email inbox?<br>\nI have enabled the email notification on zulip stream, but I just don't receive any message from my zulip.</p>\n<p>Do I still miss any other configurations? <br>\nThank you so much. Again I am using zulip docker container.</p>",
+        "id": 1362278,
+        "sender_full_name": "jcheng",
+        "timestamp": 1649368655
+    },
+    {
+        "content": "<p>Zulip only sends you email notifications if you're not logged in when the message was sent.</p>\n<p>Were you logged in?  Do you see anything in <code>/var/log/zulip/events.log</code> ?</p>",
+        "id": 1362283,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1649368934
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers/near/1362283\">said</a>:</p>\n<blockquote>\n<p>Zulip only sends you email notifications if you're not logged in when the message was sent.</p>\n</blockquote>\n<p>To be more precise, it will send them if you're logged in but have been idle for a while. See <a href=\"https://zulip.com/help/email-notifications#delay-before-sending-emails\">https://zulip.com/help/email-notifications#delay-before-sending-emails</a> for details on how this works.</p>",
+        "id": 1362316,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1649370367
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/How.20to.20send.20out.20stream.20message.20to.20stream.20subscribers/near/1362283\">said</a>:</p>\n<blockquote>\n<p>Zulip only sends you email notifications if you're not logged in when the message was sent.</p>\n<p>Were you logged in?  Do you see anything in <code>/var/log/zulip/events.log</code> ?</p>\n</blockquote>\n<p>Hi Alex,<br>\nI didn't know that zulip won't send out messages when users were logged in. <br>\nI will give it a try. Thank you so much for your help. :)</p>",
+        "id": 1362383,
+        "sender_full_name": "jcheng",
+        "timestamp": 1649377894
+    }
+]

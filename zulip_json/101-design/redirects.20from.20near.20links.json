@@ -1,0 +1,284 @@
+[
+    {
+        "content": "<p>Hey folks!  I'm working on trying to integrate <a href=\"https://github.com/zulip/zulip/pull/20553\">#20553</a>, which fixes one of the more important problems with Zulip's system for linking to a message, and have a few design questions that we need to settle. The problem is that it is currently not possible to generate a link to a topic that will continue to work should the topic be moved/renamed (either to a different stream or topic, or being marked as resolved).</p>\n<p>For context, in Zulip there are two types of URLs that can be generated when linking to a topic:</p>\n<ul>\n<li><code>/#narrow/stream/{stream_id}-{stream_name}/topic/{topic}</code>, which is what you get when clicking a topic in the left sidebar, or the in the URL bar when viewing a topic. These links don't specify a specific place in the conversation -- just the conversation. Clicking one of these links takes you to the first unread message in the conversation (or the bottom of it), which is convenient if your goal is to read that conversation as a whole.</li>\n<li><code>/#narrow/stream/{stream_id}-{stream_name}/topic/{topic}/near/{message_id}</code>, which is what you get when you click \"Copy link to conversation\" on an individual message, or click the timestamp on the message. These are intended to be permanent links to the target message within a conversation, and are what we recommend to users who want to post a Zulip conversation to an external issue tracker, for example. These are designed to take you to the target message within the conversation regardless of whether you've read the conversation, and as a result take you to a view where messages will not be marked as read by scrolling. (So you can later read the conversation in order after being pointed to a specific part of it by someone).</li>\n</ul>",
+        "id": 1343086,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647026600
+    },
+    {
+        "content": "<p>The change in <a href=\"https://github.com/zulip/zulip/pull/20553\">#20553</a> will make this second <code>near</code> category of link automatically redirect to the conversation containing the target message if it had been moved to a different stream or topic (assuming you have access to the message's new location).</p>",
+        "id": 1343087,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647026713
+    },
+    {
+        "content": "<p>The design question I have is what to do in the situation in situations where we determine the following:</p>\n<ul>\n<li>The requested message ID does not appear in the stream/topic pair specified in the link.</li>\n<li>The edit history for the target message shows that it was never in the topic for the narrow that was requested.</li>\n</ul>",
+        "id": 1343089,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647026804
+    },
+    {
+        "content": "<p>There are a few options:</p>\n<ul>\n<li>We can display the stream/topic pair that was requested scrolled as close as possible to the target message ID. This is the behavior we have today pre-#20553, and is useful for situations where you might replace an existing search for <code>stream: 1/topic: 1/near: 15</code> with <code>stream: 2/topic: 2/near: 15</code> in order to view what was happening in another conversation at the same time as an existing conversation. </li>\n<li>We can redirect to <code>stream: 1 topic: 1</code> because that's the location where the target message is currently. Note that we will probably need to do this option for organizations that have disabled message edit history, since in that situation there is no way for clients to know whether a message was moved. (This may argue for a modified feature for disabling edit history only for content edits, but leaving it enabled for stream/topic edits).</li>\n</ul>",
+        "id": 1343095,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647027081
+    },
+    {
+        "content": "<p>So the main question is I think whether we think it's correct to parse the edit history and check if the message was actually ever in the current stream/topic before redirecting, or only check whether the stream/topic for the message currently differs from that requested.</p>",
+        "id": 1343099,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647027136
+    },
+    {
+        "content": "<p>I think parsing edit history is the correct thing to do here since it has clear advantages for the example situation I noted above (and for others, like typing <code>stream: 1/topic: 1/near:1</code> into search to see the very oldest messages in a topic).</p>",
+        "id": 1343100,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647027201
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/redirects.20from.20near.20links/near/1343089\">said</a>:</p>\n<blockquote>\n<p>The design question I have is what to do in the situation in situations where we determine the following:</p>\n<ul>\n<li>The requested message ID does not appear in the stream/topic pair specified in the link.</li>\n<li>The edit history for the target message shows that it was never in the topic for the narrow that was requested.</li>\n</ul>\n</blockquote>\n<p>Would this ever happen via the Zulip UI? Or only because a URL was manually edited?</p>",
+        "id": 1343101,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1647027337
+    },
+    {
+        "content": "<p>I think since the feature is \"link to message\", we should send the user to wherever the <code>{message_id}</code> currently is. I didn't totally follow the relevance of the edit history.</p>",
+        "id": 1343106,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1647027447
+    },
+    {
+        "content": "<p>You can create this situation by editing search operators in the search feature, or editing the URL directly. I imagine most folks encountering this situation would be using the search UI.</p>",
+        "id": 1343131,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647029026
+    },
+    {
+        "content": "<p>Barring bugs, I think ~100% of people encountering the situation where looking at the edit history would change behavior would be folks who are doing the types of searches described above -- because the edit history will show that the message had indeed been in the topic contained in any link generated by \"Copy link to message\" (so all algorithms will produce the same outcome, and with the same latency since we need to fetch the message if not in local cache to figure out where it is anyway, and that will return both its current stream/topic and its edit history).</p>",
+        "id": 1343133,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647029130
+    },
+    {
+        "content": "<p>The main downsides, at least that I'm aware of, of parsing the edit history are (1) increased specification complexity and (2) resulting risk of bugs.</p>",
+        "id": 1343138,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647029328
+    },
+    {
+        "content": "<p>That said, I'd expect any bugs in this code path be highly reproducible and thus easy to report and then fix.</p>",
+        "id": 1343139,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647029363
+    },
+    {
+        "content": "<p>I'm deploying <a href=\"https://github.com/zulip/zulip/pull/20553\">#20553</a> here, so that we can start testing the main change, which is that <code>near</code> links should now correctly take you to the intended conversation even if the topic was moved/resolved.</p>",
+        "id": 1343157,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647030253
+    },
+    {
+        "content": "<p>After chatting with <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> to understand what the above means, I'm happy with the proposed plan.</p>",
+        "id": 1343335,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1647044030
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/redirects.20from.20near.20links/near/1343095\">said</a>:</p>\n<blockquote>\n<p>(This may argue for a modified feature for disabling edit history only for content edits, but leaving it enabled for stream/topic edits).</p>\n</blockquote>\n<p>Filed <a href=\"https://github.com/zulip/zulip/pull/21398\">#21398</a> for this.</p>",
+        "id": 1343352,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1647044507
+    },
+    {
+        "content": "<p>Great! Glad to see such excellent progress on this.</p>\n<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/redirects.20from.20near.20links/near/1343086\">said</a>:</p>\n<blockquote>\n<p>For context, in Zulip there are two types of URLs that can be generated when linking to a topic:</p>\n<ul>\n<li><code>/#narrow/stream/{stream_id}-{stream_name}/topic/{topic}</code>, which is what you get when clicking a topic in the left sidebar, or the in the URL bar when viewing a topic. These links don't specify a specific place in the conversation -- just the conversation. Clicking one of these links takes you to the first unread message in the conversation (or the bottom of it), which is convenient if your goal is to read that conversation as a whole.</li>\n</ul>\n</blockquote>\n<p>Is there a plan to handle making the links we generate in these other parts of the UI stable too?</p>\n<p>Another place we generate the same kind of link is in autocomplete like <a class=\"stream-topic\" data-stream-id=\"101\" href=\"/#narrow/stream/101-design/topic/redirects.20from.20near.20links\">#design &gt; redirects from near links</a>.</p>",
+        "id": 1349468,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1647906369
+    },
+    {
+        "content": "<p>I think the basic shape of a solution will probably be that we encode into those links a message ID too, so that we can apply the same logic of following that message around. Like this proposal in a previous thread:</p>\n<p><span class=\"user-mention silent\" data-user-id=\"17945\">Wesley Aptekar-Cassels</span> <a href=\"#narrow/stream/137-feedback/topic/links.20to.20topics/near/1214413\">said</a>:</p>\n<blockquote>\n<p>Perhaps this should be a separate thread, but have we considered making durable links to topics? (I know there's an issue sort of around this, but it doesn't cover it exactly). I imagine we could do so by having a way of encoding the ID of the first message in the thread in the URL, but without explicitly linking to the first message. That way if the entire thread was renamed, the link would still operate.</p>\n</blockquote>",
+        "id": 1349469,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1647906481
+    },
+    {
+        "content": "<p>I.e. we'd add another narrow operator that takes a message ID, and has a slightly different meaning from <code>near</code>: it'd mean to find the thread where that message now is (just like for <code>near</code>), and then go to the first unread.</p>",
+        "id": 1349470,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1647906593
+    },
+    {
+        "content": "<p>Filed <a href=\"https://github.com/zulip/zulip/pull/21505\">#21505</a> for that.</p>",
+        "id": 1349476,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1647907039
+    },
+    {
+        "content": "<p>I don't have a complete design for how to handle those additional cases, and don't intend to think about it before 5.0 is released.</p>",
+        "id": 1349483,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647907191
+    },
+    {
+        "content": "<p>Yeah, that makes sense</p>",
+        "id": 1349484,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1647907205
+    },
+    {
+        "content": "<p>One possible shape of a solution would be to have the Markdown processor, when handling our topic link syntax <a class=\"stream-topic\" data-stream-id=\"101\" href=\"/#narrow/stream/101-design/topic/redirects.20from.20near.20links\">#design &gt; redirects from near links</a>, to generate a <code>near</code> link to the end of the topic as of the time the message is rendered. The main downside with that approach is it's not stable after editing a message.</p>",
+        "id": 1349485,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647907255
+    },
+    {
+        "content": "<p>There's other approaches we might take, which is that if you land on a topic that's empty, try to figure out if it might have been resolved/unresolved ... but that feels a lot more localized to just the resolve topics (fairly common) case. </p>\n<p>But my overall perspective is that it's the kind of thing that's complicated and deserves a lot of careful consideration.</p>",
+        "id": 1349486,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647907376
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/redirects.20from.20near.20links/near/1349486\">said</a>:</p>\n<blockquote>\n<p>There's other approaches we might take, which is that if you land on a topic that's empty, try to figure out if it might have been resolved/unresolved ... but that feels a lot more localized to just the resolve topics (fairly common) case. </p>\n</blockquote>\n<p>Yeah, I'd like to have a solution that applies to topic renames/moves in general, not just resolve/unresolve. There are lots of other reasons to rename topics, even automated ones (like <a href=\"https://github.com/rust-lang/triagebot/pull/1590\">https://github.com/rust-lang/triagebot/pull/1590</a> , which I found from backlinks on <a href=\"https://github.com/zulip/zulip/pull/15290\">#15290</a>), and it's sad when that breaks links.</p>",
+        "id": 1349493,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1647907744
+    },
+    {
+        "content": "<p>Meanwhile I've filed <a href=\"https://github.com/zulip/zulip-mobile/pull/5306\">#M5306</a> for matching this feature on mobile.</p>",
+        "id": 1349494,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1647907773
+    },
+    {
+        "content": "<p>Coming back to thinking about what we want the link behavior to be for moved topics, a conservative option might be:</p>\n<ol>\n<li>If there are currently any messages in the original topic, go there.</li>\n<li>If all the messages from that topic have been moved to a single other topic, go there.</li>\n<li>If different messages from that topic have been moved to different other topics... I guess go to the original topic because the right choice isn't clear, even though there's nothing there?</li>\n</ol>\n<p>Thoughts?</p>",
+        "id": 1361553,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1649286879
+    },
+    {
+        "content": "<p>This could change with data model work, but it's not necessarily easy to know whether or not there exist messages have been moved away from a topic. The records that a message has been moved to another topic are stored on the messages themselves, and a client fetching messages currently in a topic has no way to find messages that used to be in that topic, without a specific message ID to lookup.</p>",
+        "id": 1369623,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1650327399
+    },
+    {
+        "content": "<p>The specific case of \"resolve topic\" is simpler, in that one can specifically check the resolved/unresolved version of the current topic to see if indeed messages exist there.</p>",
+        "id": 1369624,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1650327443
+    },
+    {
+        "content": "<p>I think we can have some sort of \"anchor message\" that follows the topic as the link is created. Similar to this approach <span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span>   <a href=\"#narrow/stream/101-design/topic/redirects.20from.20near.20links/near/1349485\">mentioned</a>:</p>\n<blockquote>\n<p>One possible shape of a solution would be to have the Markdown processor, when handling our topic link syntax <a class=\"stream-topic\" data-stream-id=\"101\" href=\"/#narrow/stream/101-design/topic/redirects.20from.20near.20links\">#design &gt; redirects from near links</a>, to generate a <code>near</code> link to the end of the topic as of the time the message is rendered. The main downside with that approach is it's not stable after editing a message.</p>\n</blockquote>\n<p>We ensure the invariants that:</p>\n<ul>\n<li>Each non-empty topic has one or more anchor message</li>\n<li>Each link to a topic encodes an always-valid reference to an anchor message</li>\n<li>The anchor message cannot be separately moved without renaming/moving the topic</li>\n</ul>\n<p>When the topic is renamed, that message follows. Same with resolving/unresolving. The only difference is that it is not visible to the user, nor it is editable (other than being moved along with the topic). This does not require substantial changes to our current data model.</p>",
+        "id": 1456701,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1666999282
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19400\">@Zixuan James Li</span> do you think that should be anything other than just \"the last message in the target topic\".</p>",
+        "id": 1457172,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1667235942
+    },
+    {
+        "content": "<p>I think we can insert a dummy message to separate it from a regular message, by creating a new model that subclasses <code>AbstractMessage</code>.</p>",
+        "id": 1457175,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1667236215
+    },
+    {
+        "content": "<p>Here's a scenario where I think different solutions to this problem will give different results, which might help clarify what semantics we want.</p>\n<ul>\n<li>There's a conversation on topic A. Someone makes a link to it. Call that \"link 1\".</li>\n<li>A month later, an unrelated conversation starts on the same topic A.</li>\n<li>Someone again makes a link to the topic. Call that \"link 2\".</li>\n<li>Someone cleans things up by moving the latest N messages -- the new, unrelated, conversation -- to a fresh new topic B.</li>\n</ul>\n<p>Say link 1 and link 2 both got written down in conversations elsewhere -- in a GitHub issue, say, or in messages elsewhere on Zulip.</p>\n<p>Now:</p>\n<ul>\n<li>If someone follows link 1, do they get topic A or topic B?</li>\n<li>If someone follows link 2, do they get topic A or topic B?</li>\n</ul>",
+        "id": 1460690,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1667873027
+    },
+    {
+        "content": "<p>I think it's pretty clear that the desirable behavior for link 1 is that it gives topic A.</p>\n<p>That's the conversation that the person who made link 1 was looking at -- after all, the later conversation didn't even exist at the time.</p>\n<p>If someone followed the link and got topic B, they'd find a completely unrelated conversation from the one that provides context for whatever the author of the text that used link 1 was saying. If they're lucky, there's a Notification Bot message saying things were moved from topic A, which they could use as a clue to sleuth out what happened and track down the intended conversation… and if they're less lucky, there may well not even be that.</p>",
+        "id": 1460691,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1667873295
+    },
+    {
+        "content": "<p>For link 2, I think things are a bit more ambiguous. It's possible that the author's intent was to refer to either the earlier conversation, or the newer one that had just happened.</p>\n<p>I think the more likely case is that they meant the newest conversation, though. If they really meant the older one, the most natural thing is to use \"Copy link to message\" and get a <code>/near/</code> link -- because even in the absence of anyone subsequently moving the messages, a plain link to the topic will tend to take people to what's latest, which is the newer conversation.</p>\n<p>So I think the desirable behavior is that link 2 should give topic B. But if it gave topic A, just like link 1 did, that would also be reasonable.</p>",
+        "id": 1460693,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1667873557
+    },
+    {
+        "content": "<p>With that example in mind:</p>\n<p>I like the version where each link we generate for a topic encodes an actual message in the topic, namely the current latest one.</p>\n<p>It means link 1 will go to topic A, and link 2 to topic B, just as I think we want them to do. And it also keeps things straightforward and transparent in terms of objects users already see and interact with in the app, namely messages.</p>",
+        "id": 1460694,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1667873642
+    },
+    {
+        "content": "<p>If I'm understanding the \"anchor message\" idea correctly, it would require that link 1 and link 2 go to the same place, because they'd be the very same URL. So it couldn't give us that desired behavior.</p>\n<p>I think introducing a new type of object that's sort of like a message, but invisible and intangible for the user to interact with like they can interact with messages, is also likely to lead to a long line of quirks and frustrations where things don't quite behave how the user expected -- or behave differently in situations that seem like they're the same -- and the user can't get their hands on things to make the app do what they wanted.</p>",
+        "id": 1460698,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1667873927
+    },
+    {
+        "content": "<p>Thanks <span class=\"user-mention silent\" data-user-id=\"2187\">Greg Price</span> , that's super helpful! It wasn't clear to me previously what's at stake in this discussion.</p>",
+        "id": 1460998,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1667925080
+    },
+    {
+        "content": "<p>I guess I can think of situations where you'd prefer to link to the first (or first unread) message, as we currently do. Without any topic moves involved, you might link to a topic expecting folks to read the whole thing from the top, in which case putting people at the bottom seems less useful.</p>\n<p>For links from outside the app, this would basically require a bit of retraining. Currently, when I create a GitHub issue, I sometimes just link to the Zulip topic (rather than a specific message, which would be more robust, I guess) if I want to put folks at the top. But if you're copying a link anyway, it's only a little harder to copy a link to a message; it's really the links inside Zulip where the behavior matters more.</p>",
+        "id": 1461005,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1667925537
+    },
+    {
+        "content": "<p>But it's possible that the advantages of the change (esp. with topic moves) are worth it.</p>",
+        "id": 1461035,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1667927982
+    },
+    {
+        "content": "<p>Also, making this change would put users in a situation where messages are not being marked as read more often, as we don't mark messages as read in <code>near:</code> views. So that's something to be mindful of and might require some tweaking. For example, if you follow a link to the latest message in a topic, and you have already read all the messages in that topic, you probably want new messages coming into the topic to be marked as read in the normal way.</p>",
+        "id": 1461037,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1667928120
+    },
+    {
+        "content": "<p>Ah, there's a distinction to make here:</p>\n<ul>\n<li>what message the link refers to to track moves;</li>\n<li>whether the link takes you to the top of the topic, or the bottom of it, or what.</li>\n</ul>\n<p>Currently we have basically two ways to link to a topic:</p>\n<ul>\n<li>A plain topic link takes you to your first unread in the topic -- so the start of it if you haven't read it, and the end of it if you've read the whole thing. And it doesn't follow any moves, which is basically the problem statement for the current discussion.</li>\n<li>A /near/ link encodes a particular message ID. It follows that message's moves. When opened, it takes you to that message, regardless of how much of the thread you have or haven't read.</li>\n</ul>\n<p>I think a likely outcome of this discussion is that we introduce a third type of link:</p>\n<ul>\n<li>A new-style topic link is like a /near/ link in that it encodes a particular message ID (or something) which it uses to follow moves. But it's like our current plain topic links in that it takes you to your first unread in the topic, so you can read the topic from the beginning if you haven't already.</li>\n</ul>",
+        "id": 1461038,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1667928129
+    },
+    {
+        "content": "<p>And then we'd generate that new-style link from \"Copy link to topic\" and from the <a class=\"stream-topic\" data-stream-id=\"101\" href=\"/#narrow/stream/101-design/topic/redirects.20from.20near.20links\">#design &gt; redirects from near links</a> Markdown syntax (with its handy autocomplete.)</p>",
+        "id": 1461039,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1667928221
+    },
+    {
+        "content": "<p>Mm, yeah, that sounds like a good direction!</p>",
+        "id": 1461051,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1667928948
+    },
+    {
+        "content": "<p>Yeah that seems like a sensible design! Thanks for all the work spelling out the considerations here!</p>",
+        "id": 1465117,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1668559100
+    },
+    {
+        "content": "<p>Now that we have a concrete proposal, I linked <a href=\"https://github.com/zulip/zulip/pull/21505\">#21505</a> to it, and added the \"help wanted\" and \"difficult\" tags to the issue.</p>",
+        "id": 1465587,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1668626099
+    },
+    {
+        "content": "<p>Thanks!</p>\n<p>Ha, in fact, rereading the issue description, I wrote this then:</p>\n<blockquote>\n<p>I think this will probably look something like: we encode into those links a message ID too, so that we can follow that message around using the same logic as in <code>/near/</code> links. I.e., we'd add another narrow operator that takes a message ID, and has a slightly different meaning from <code>near</code>: it'd mean to find the thread where that message now is (just like for <code>near</code>), and then go to the first unread.</p>\n</blockquote>\n<p>and that is basically the same proposal as the one I wrote <a href=\"#narrow/stream/101-design/topic/redirects.20from.20near.20links/near/1461038\">above</a>:</p>\n<blockquote>\n<ul>\n<li>A new-style topic link is like a /near/ link in that it encodes a particular message ID (or something) which it uses to follow moves. But it's like our current plain topic links in that it takes you to your first unread in the topic, so you can read the topic from the beginning if you haven't already.</li>\n</ul>\n</blockquote>",
+        "id": 1465816,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1668636592
+    },
+    {
+        "content": "<p>Heh, I guess we now have more context on this thread about why that's what we're going for. :)</p>",
+        "id": 1465867,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1668639373
+    }
+]

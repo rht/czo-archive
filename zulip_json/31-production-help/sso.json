@@ -1,0 +1,134 @@
+[
+    {
+        "content": "<p>Looking at the SSO instructions and being a noob in this area- does apache forward the SSO request to the configured server? <br>\nReading the documentation in <a href=\"https://github.com/zulip/zulip/blob/master/puppet/zulip/files/apache/sites/zulip-sso.example\" target=\"_blank\" title=\"https://github.com/zulip/zulip/blob/master/puppet/zulip/files/apache/sites/zulip-sso.example\">zulip-sso.example</a> it sounds like Zulip passes it to a local apache instance, which is expected to do the authentication</p>",
+        "id": 452596,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1516215356
+    },
+    {
+        "content": "<p>before I ask for configuration help from our actual sysop gurus I wanted to make sure  I had the basics in line</p>",
+        "id": 452597,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1516215451
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"shidarin@gmail.com\" data-user-id=\"3733\">@Sean Wallitsch</span> Yeah, that's right. There's also more details at the bottom of <a href=\"https://zulip.readthedocs.io/en/latest/production/authentication-methods.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/authentication-methods.html\">https://zulip.readthedocs.io/en/latest/production/authentication-methods.html</a> (starting at \"Here's a summary of how\").</p>",
+        "id": 452746,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1516220799
+    },
+    {
+        "content": "<p>Those docs are a bit confusingly written. I believe the point is that if you have an SSO solution you like, and it wants to<br>\n(a) set <code>REMOTE_USER</code>, and<br>\n(b) run inside Apache,<br>\nthen this gives you a more-or-less turnkey way to deploy that.</p>",
+        "id": 452754,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1516221228
+    },
+    {
+        "content": "<p>If your SSO solution wants to set <code>REMOTE_USER</code>, and will happily run inside nginx, then I believe you can just put it in the nginx configuration. But I'd have to study more to be confident of that. <span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> is the expert in this area.</p>",
+        "id": 452756,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1516221309
+    },
+    {
+        "content": "<p>The other forms of SSO you can deploy without writing any code are LDAP authentication, and OAuth with Google or GitHub.</p>",
+        "id": 452765,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1516221533
+    },
+    {
+        "content": "<p>We were the reason for that config to be developed i believe. Our auth-n method only worked with apache at the time and the new auth method does not have great support within nginx yet so we're still stuck with the apache method.</p>",
+        "id": 452767,
+        "sender_full_name": "Tim April",
+        "timestamp": 1516221621
+    },
+    {
+        "content": "<p>Makes sense. :)</p>",
+        "id": 452773,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1516221953
+    },
+    {
+        "content": "<p>Yeah I guess the confusing part for me is the documentation on the bottom sounds like it never reaches out to another server- apache instances all the way down</p>",
+        "id": 452783,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1516222589
+    },
+    {
+        "content": "<p>everything references localhost.. I've passed on the stuff to our team here, hopefully they have a better idea than I do :)</p>",
+        "id": 452784,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1516222641
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"shidarin@gmail.com\" data-user-id=\"3733\">@Sean Wallitsch</span> Sounds good. I'll take a stab at clarifying that point: the chain of requests in the actual authentication looks like<br>\n   client -&gt; nginx -&gt; Apache -&gt; (your config in <code>zulip-sso</code>)<br>\nThat config that you add (replacing the HTTP basic auth in the example config) can do whatever it needs to do, like pass things off to an external SSO server.</p>",
+        "id": 452809,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1516223651
+    },
+    {
+        "content": "<p>yeah, I haven't done much but I've still seen nginx do some crazy stuff so I figured that was possible. Thank you!</p>",
+        "id": 452810,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1516223702
+    },
+    {
+        "content": "<p>The role of the local Apache server is to set REMOTE_USER when it's satisfied the user has successfully authenticated</p>",
+        "id": 452811,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1516223723
+    },
+    {
+        "content": "<p>and with that set, pass the request to an instance of the Zulip app, which sets a session cookie for your Zulip server's domain</p>",
+        "id": 452812,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1516223782
+    },
+    {
+        "content": "<p>So that's the part that your external SSO server can't do directly.</p>",
+        "id": 452813,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1516223805
+    },
+    {
+        "content": "<p>right. is zulip setting up the local apache server which sets REMOTE_USER?</p>",
+        "id": 452815,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1516223829
+    },
+    {
+        "content": "<p>Yeah -- that's the <code>zulip::apache_sso</code> Puppet module</p>",
+        "id": 452816,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1516223881
+    },
+    {
+        "content": "<p>Which you enable by adding to <code>puppet_classes</code>, and running <code>zulip-puppet-apply</code></p>",
+        "id": 452817,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1516223895
+    },
+    {
+        "content": "<p>Not actually enabled until you enable it with <code>a2ensite</code>, because it leaves only an example file in <code>zulip-sso.example</code> which you edit as needed to make <code>zulip-sso.conf</code></p>",
+        "id": 452821,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1516223975
+    },
+    {
+        "content": "<p>Great. Thanks for taking the time for me</p>",
+        "id": 452827,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1516224167
+    },
+    {
+        "content": "<p>quite welcome!</p>",
+        "id": 452828,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1516224259
+    },
+    {
+        "content": "<p>BTW <span class=\"user-mention\" data-user-email=\"shidarin@gmail.com\" data-user-id=\"3733\">@Sean Wallitsch</span> I went through yesterday and revised that doc: <a href=\"https://zulip.readthedocs.io/en/latest/production/authentication-methods.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/authentication-methods.html\">https://zulip.readthedocs.io/en/latest/production/authentication-methods.html</a><br>\nYou might have already extracted at this point all the information you need from it; hopefully it'll be a good bit clearer now for the next person!</p>",
+        "id": 457109,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1516414452
+    }
+]

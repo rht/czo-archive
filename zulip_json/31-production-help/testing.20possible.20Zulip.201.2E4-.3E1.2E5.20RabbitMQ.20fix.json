@@ -1,0 +1,602 @@
+[
+    {
+        "content": "<p>I'm trying the steps <span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> suggested for fixing prod RabbitMQ problems when upgrating 1.4 to 1.5. (In this conversation from yesterday <a href=\"https://chat.zulip.org/#narrow/stream/production.20help/subject/gmail.20for.20register\" target=\"_blank\" title=\"https://chat.zulip.org/#narrow/stream/production.20help/subject/gmail.20for.20register\">https://chat.zulip.org/#narrow/stream/production.20help/subject/gmail.20for.20register</a>)</p>",
+        "id": 158391,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488225717
+    },
+    {
+        "content": "<p>my first try didn't solve the problem, but here's what I did:</p>",
+        "id": 158392,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488225735
+    },
+    {
+        "content": "<p>I rebooted my VM so it starts having rabbitmq trouble again.</p>",
+        "id": 158393,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488225754
+    },
+    {
+        "content": "<p>Then do the recommended steps, as root, except supervisorctl as zulip. skip the \"may not be needed\" steps. Things that worked normally aren't shown with output.</p>",
+        "id": 158394,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488225769
+    },
+    {
+        "content": "<p>Edit /etc/zulip/zulip.conf to add [rabbitmq] configuration<br>\n<code>supervisorctl stop all</code><br>\n<code>/etc/init.d/rabbitmq-server stop</code></p>",
+        "id": 158395,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488225813
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>root@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts# ./zulip-puppet-apply -f\nWarning: Could not retrieve fact fqdn\nError: Could not find class apt for minmi on node minmi\nError: Could not find class apt for minmi on node minmi\n</pre></div>",
+        "id": 158397,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488225849
+    },
+    {
+        "content": "<p><code>root@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts/setup# ./configure-rabbitmq</code></p>",
+        "id": 158399,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488225865
+    },
+    {
+        "content": "<p><code>supervisorctl start all</code></p>",
+        "id": 158400,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488225877
+    },
+    {
+        "content": "<p>Now I'm going to try it again including the \"maybe not\" steps.</p>",
+        "id": 158403,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488226118
+    },
+    {
+        "content": "<p>Here's the original note with the steps. On this try, I added the apt-get purge, which was fine. But then <code>rabbitmq-server start</code> and <code>configure-rabbitmq</code> failed.</p>\n<ul>\n<li>Edit /etc/zulip/zulip.conf and add the below block to it.</li>\n<li>supervisorctl stop all</li>\n<li>/etc/init.d/rabbitmq-server stop</li>\n<li>apt-get purge rabbitmq-server # may not be needed</li>\n<li>scripts/setup/zulip-puppet-apply -f</li>\n<li>/etc/init.d/rabbitmq-server start # may not be needed</li>\n<li>scripts/setup/configure-rabbitmq</li>\n<li>supervisorctl start all</li>\n</ul>\n<p>[rabbitmq]<br>\nnodename = zulip@localhost</p>",
+        "id": 158404,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488226628
+    },
+    {
+        "content": "<p>this is how rabbitmq-server start failed</p>\n<div class=\"codehilite\"><pre><span></span>root@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts# /etc/init.d/rabbitmq-server start\n-bash: /etc/init.d/rabbitmq-server: No such file or directory\n</pre></div>",
+        "id": 158405,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488226671
+    },
+    {
+        "content": "<p>and this is how configure-rabbitmq failed</p>\n<div class=\"codehilite\"><pre><span></span>root@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts/setup# ./configure-rabbitmq \n+++ dirname ./configure-rabbitmq\n++ ./../get-django-setting RABBITMQ_USERNAME\n+ RABBITMQ_USERNAME=zulip\n+++ dirname ./configure-rabbitmq\n++ ./../get-django-setting RABBITMQ_PASSWORD\n+ RABBITMQ_PASSWORD=[pw hash]\n+ sudo rabbitmqctl delete_user zulip\nsudo: rabbitmqctl: command not found\n+ true\n+ sudo rabbitmqctl delete_user zulip\nsudo: rabbitmqctl: command not found\n+ true\n+ sudo rabbitmqctl delete_user guest\nsudo: rabbitmqctl: command not found\n+ true\n+ sudo rabbitmqctl add_user zulip [passwd hash]\nsudo: rabbitmqctl: command not found\n</pre></div>",
+        "id": 158406,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488226752
+    },
+    {
+        "content": "<p>After that, I still see the same problem. and there is no /etc/init.d/rabbitmq-server to restart that way</p>",
+        "id": 158407,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488226929
+    },
+    {
+        "content": "<p>Oh just to be clear, puppet still failed like it did the first time</p>\n<div class=\"codehilite\"><pre><span></span>root@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts# ./zulip-puppet-apply -f\nWarning: Could not retrieve fact fqdn\nError: Could not find class apt for minmi on node minmi\nError: Could not find class apt for minmi on node minmi\n</pre></div>",
+        "id": 158408,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488227376
+    },
+    {
+        "content": "<p>Here's the entire transcript of the second attempt</p>\n<div class=\"codehilite\"><pre><span></span>root@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts/setup# su zulip\nzulip@minmi:~/deployments/2017-02-25-04-24-20/scripts/setup$ supervisorctl stop all\nprocess-fts-updates: stopped\nzulip-tornado: stopped\nzulip-workers:zulip_events_user_presence: stopped\nzulip-workers:zulip_events_invites: stopped\nzulip-workers:zulip_events_signups: stopped\nzulip-workers:zulip_events_embed_links: stopped\nzulip-workers:zulip_events_user_activity: stopped\nzulip-workers:zulip_events_error_reports: stopped\nzulip-workers:zulip_deliver_enqueued_emails: stopped\nzulip-senders:zulip_events_message_sender-0: stopped\nzulip-senders:zulip_events_message_sender-1: stopped\nzulip-senders:zulip_events_message_sender-2: stopped\nzulip-senders:zulip_events_message_sender-3: stopped\nzulip-senders:zulip_events_message_sender-4: stopped\nzulip-django: stopped\nzulip-workers:zulip_events_feedback_messages: stopped\nzulip-workers:zulip_events_email_mirror: stopped\nzulip-workers:zulip_events_user_activity_interval: stopped\nzulip-workers:zulip_events_missedmessage_emails: stopped\nzulip-workers:zulip_events_slow_queries: stopped\nzulip-workers:zulip_events_missedmessage_mobile_notifications: stopped\nzulip-workers:zulip_events_digest_emails: stopped\nzulip@minmi:~/deployments/2017-02-25-04-24-20/scripts/setup$ exit\nexit\nroot@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts/setup# /etc/init.d/rabbitmq-server stop\n * Stopping message broker rabbitmq-server\n * message broker already stopped\n   ...done.\nroot@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts/setup# apt-get purge rabbitmq-server\nReading package lists... Done\nBuilding dependency tree       \nReading state information... Done\nThe following packages were automatically installed and are no longer required:\n  apache2-data erlang-asn1 erlang-base erlang-corba erlang-crypto\n  erlang-diameter erlang-edoc erlang-eldap erlang-erl-docgen erlang-eunit\n  erlang-ic erlang-inets erlang-mnesia erlang-nox erlang-odbc erlang-os-mon\n  erlang-parsetools erlang-percept erlang-public-key erlang-runtime-tools\n  erlang-snmp erlang-ssh erlang-ssl erlang-syntax-tools erlang-tools\n  erlang-webtool erlang-xmerl libodbc1\nUse &#39;apt-get autoremove&#39; to remove them.\nThe following packages will be REMOVED:\n  rabbitmq-server*\n0 upgraded, 0 newly installed, 1 to remove and 2 not upgraded.\nAfter this operation, 4,867 kB disk space will be freed.\nDo you want to continue? [Y/n] y\n(Reading database ... 82716 files and directories currently installed.)\nRemoving rabbitmq-server (3.2.4-1) ...\n * Stopping message broker rabbitmq-server\n * message broker already stopped\n   ...done.\nPurging configuration files for rabbitmq-server (3.2.4-1) ...\nProcessing triggers for man-db (2.6.7.1-1ubuntu1) ...\nroot@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts/setup# cd ..\nroot@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts# ls\nget-django-setting  lib                    README.md       upgrade-zulip\n__init__.py         nagios                 restart-server  upgrade-zulip-from-git\n__init__.pyc        purge-old-deployments  setup           zulip-puppet-apply\nroot@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts# ./zulip-puppet-apply -f\nWarning: Could not retrieve fact fqdn\nError: Could not find class apt for minmi on node minmi\nError: Could not find class apt for minmi on node minmi\nroot@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts# /etc/init.d/rabbitmq-server start\n-bash: /etc/init.d/rabbitmq-server: No such file or directory\nroot@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts# /etc/init.d/rabbitmq-server start\n-bash: /etc/init.d/rabbitmq-server: No such file or directory\nroot@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts# ls\nget-django-setting  lib                    README.md       upgrade-zulip\n__init__.py         nagios                 restart-server  upgrade-zulip-from-git\n__init__.pyc        purge-old-deployments  setup           zulip-puppet-apply\nroot@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts# cd setup/\nroot@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts/setup# ls\nconfigure-rabbitmq   initialize-database  npm-wrapper       terminate-psql-sessions\nflush-memcached      install              pgroonga-ppa.asc  zulip-ppa.asc\ngenerate_secrets.py  node-wrapper         postgres-init-db\nroot@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts/setup# ./configure-rabbitmq \n+++ dirname ./configure-rabbitmq\n++ ./../get-django-setting RABBITMQ_USERNAME\n+ RABBITMQ_USERNAME=zulip\n+++ dirname ./configure-rabbitmq\n++ ./../get-django-setting RABBITMQ_PASSWORD\n+ RABBITMQ_PASSWORD=[pw hash]\n+ sudo rabbitmqctl delete_user zulip\nsudo: rabbitmqctl: command not found\n+ true\n+ sudo rabbitmqctl delete_user zulip\nsudo: rabbitmqctl: command not found\n+ true\n+ sudo rabbitmqctl delete_user guest\nsudo: rabbitmqctl: command not found\n+ true\n+ sudo rabbitmqctl add_user zulip [pw hash]\nsudo: rabbitmqctl: command not found\nroot@minmi:/home/zulip/deployments/2017-02-25-04-24-20/scripts/setup# su zulip\nzulip@minmi:~/deployments/2017-02-25-04-24-20/scripts/setup$ supervisorctl start all\nzulip-django: started\nzulip-tornado: started\nprocess-fts-updates: started\nzulip-workers:zulip_events_feedback_messages: started\nzulip-workers:zulip_events_user_presence: started\nzulip-workers:zulip_events_invites: started\nzulip-workers:zulip_events_signups: started\nzulip-workers:zulip_events_email_mirror: started\nzulip-workers:zulip_events_user_activity_interval: started\nzulip-workers:zulip_events_missedmessage_emails: started\nzulip-workers:zulip_events_slow_queries: started\nzulip-workers:zulip_events_embed_links: started\nzulip-workers:zulip_events_missedmessage_mobile_notifications: started\nzulip-workers:zulip_events_digest_emails: started\nzulip-workers:zulip_events_user_activity: started\nzulip-workers:zulip_events_error_reports: started\nzulip-workers:zulip_deliver_enqueued_emails: started\nzulip-senders:zulip_events_message_sender-0: started\nzulip-senders:zulip_events_message_sender-1: started\nzulip-senders:zulip_events_message_sender-2: started\nzulip-senders:zulip_events_message_sender-3: started\nzulip-senders:zulip_events_message_sender-4: started\n</pre></div>",
+        "id": 158409,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488227595
+    },
+    {
+        "content": "<p>So at the moment it's still giving me the ConnectionClosed() errors. (Fortunately this is only a test system.)</p>",
+        "id": 158411,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488227788
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"zulip@feorlen.org\" data-user-id=\"397\">@Andrea  Longo</span> just started looking at this; I have a theory that <br>\n<code>Error: Could not find class apt for minmi on node minmi</code> <br>\nmeans that <code>zulip-puppet-apply</code> isn't doing anything.</p>",
+        "id": 158438,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488237333
+    },
+    {
+        "content": "<p>What is in your <code>/etc/zulip/zulip.conf</code>?  I've never seen an error like that before, and so I suspect that you've done something unusual</p>",
+        "id": 158439,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488237371
+    },
+    {
+        "content": "<p>One possibility I suppose is that I'm not sure running e.g. <code>./zulip-puppet-apply</code> (as opposed to running <code>./scripts/zulip-puppet-apply</code> from a parent directory) will definitely work with all of our commands, so you should try seeing if that's why you're having issues.</p>",
+        "id": 158440,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488237448
+    },
+    {
+        "content": "<p>Since yesterday, I added the rabbitmq thing, but that's it</p>\n<div class=\"codehilite\"><pre><span></span>[machine]\npuppet_classes = zulip::voyager, zulip::static_asset_compiler\ndeploy_type = voyager\n\n[deployment]\ngit_repo_url = https://github.com/feorlen/zulip.git\n\n[rabbitmq]\nnodename = zulip@localhost\n</pre></div>",
+        "id": 158441,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488237454
+    },
+    {
+        "content": "<p>The other possibility is that the <code>/root/zulip</code> symlink doesn't exist</p>",
+        "id": 158442,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488237458
+    },
+    {
+        "content": "<p>OK, your <code>puppet_classes</code> looks normal</p>",
+        "id": 158443,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488237468
+    },
+    {
+        "content": "<p>What is <code>ls -ld /root/zulip</code>?</p>",
+        "id": 158444,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488237477
+    },
+    {
+        "content": "<p><code>lrwxrwxrwx 1 root root 28 Feb 14 18:41 /root/zulip -&gt; /home/zulip/deployments/next</code></p>",
+        "id": 158445,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488237511
+    },
+    {
+        "content": "<p>that looks normal as well</p>",
+        "id": 158448,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488237640
+    },
+    {
+        "content": "<p>Should those steps been done differently? As/not root or something?</p>",
+        "id": 158449,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488237648
+    },
+    {
+        "content": "<p>I stopped and started Zulip as zulip, but the other things as root</p>",
+        "id": 158450,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488237678
+    },
+    {
+        "content": "<p>OK I just did some manual testing on a prod host; the problem is <code>scripts/zulip-puppet-apply</code> needs to be run that way</p>",
+        "id": 158451,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488237683
+    },
+    {
+        "content": "<p>You can't <code>cd scripts/</code> and run things from there</p>",
+        "id": 158452,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488237697
+    },
+    {
+        "content": "<p>from that specific location</p>",
+        "id": 158453,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488237698
+    },
+    {
+        "content": "<p>You can also run <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply</code></p>",
+        "id": 158454,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488237712
+    },
+    {
+        "content": "<p>So I think it's a bug specifically with running it as <code>./zulip-puppet-apply</code></p>",
+        "id": 158455,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488237727
+    },
+    {
+        "content": "<p>I'll try it again</p>",
+        "id": 158456,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488237728
+    },
+    {
+        "content": "<p>Looks like we need to do this:</p>\n<div class=\"codehilite\"><pre><span></span>diff --git a/scripts/zulip-puppet-apply b/scripts/zulip-puppet-apply\nindex ecf0a67..75c8879 100755\n--- a/scripts/zulip-puppet-apply\n+++ b/scripts/zulip-puppet-apply\n@@ -30,7 +30,7 @@ for pclass in re.split(r&#39;\\s*,\\s*&#39;, config.get(&#39;machine&#39;, &#39;puppet_classes&#39;)):\n     puppet_config += &quot;include %s\\n&quot; % (pclass,)\n\n # We use the puppet configuration from the same Zulip checkout as this script\n-puppet_module_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), &quot;puppet&quot;)\n+puppet_module_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath((__file__)))), &quot;puppet&quot;)\n puppet_cmd = [&quot;puppet&quot;, &quot;apply&quot;, &quot;--modulepath&quot;, puppet_module_path, &quot;-e&quot;, puppet_config]\n puppet_cmd += extra_args\n</pre></div>",
+        "id": 158457,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488237828
+    },
+    {
+        "content": "<p>I'll fix that; did you not also get an exception?  When I tried running it that way, I got:</p>\n<div class=\"codehilite\"><pre><span></span># ./zulip-puppet-apply \nWarning: Could not retrieve fact fqdn\nError: Could not find class apt for zulip on node zulip\nError: Could not find class apt for zulip on node zulip\nTraceback (most recent call last):\n  File &quot;./zulip-puppet-apply&quot;, line 38, in &lt;module&gt;\n    subprocess.check_call(puppet_cmd + [&#39;--noop&#39;, &#39;--show_diff&#39;])\n  File &quot;/usr/lib/python2.7/subprocess.py&quot;, line 540, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;puppet&#39;, &#39;apply&#39;, &#39;--modulepath&#39;, &#39;puppet&#39;, &#39;-e&#39;, &#39;\\nExec { path =&gt; &quot;/usr/sbin:/usr/bin:/sbin:/bin&quot; }\\ninclude apt\\ninclude zulip::voyager\\ninclude zulip::static_asset_compiler\\n&#39;, &#39;--noop&#39;, &#39;--show_diff&#39;]&#39; returned non-zero exit status 1\n</pre></div>",
+        "id": 158458,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488237966
+    },
+    {
+        "content": "<p>Maybe it doesn't show the exception with <code>-f</code>?</p>",
+        "id": 158459,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488237995
+    },
+    {
+        "content": "<p>I didn't see an exception from that, guess not</p>",
+        "id": 158462,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488238045
+    },
+    {
+        "content": "<p>So now puppet did something</p>",
+        "id": 158463,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488238059
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>root@minmi:/# /home/zulip/deployments/current/scripts/zulip-puppet-apply -f\nWarning: Could not retrieve fact fqdn\nNotice: Compiled catalog for minmi in environment production in 1.68 seconds\nNotice: /Stage[main]/Zulip::Postgres_common/Exec[disable_logrotate]/returns: executed successfully\nNotice: /Stage[main]/Zulip::Postgres_appdb_tuned/File[/etc/sysctl.d/40-postgresql.conf]/content: content changed &#39;{md5}fd4e1c28da044ec25d858e409792298d&#39; to &#39;{md5}6f2ffcaea13b6f884e2b521a80ea9888&#39;\nNotice: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[sysctl_p]: Triggered &#39;refresh&#39; from 1 events\nNotice: /Stage[main]/Zulip::Memcached/File[/etc/memcached.conf]/content: content changed &#39;{md5}22778c0db2128b67bc42dc94b2218624&#39; to &#39;{md5}f2925a318ae365a4ee4365face52bf93&#39;\nNotice: /Stage[main]/Zulip::Memcached/Service[memcached]: Triggered &#39;refresh&#39; from 1 events\nNotice: /Stage[main]/Zulip::Rabbit/File[/etc/rabbitmq]/ensure: created\nNotice: /Stage[main]/Zulip::Rabbit/File[/etc/rabbitmq/rabbitmq-env.conf]/ensure: defined content as &#39;{md5}863d88c92c9462114602ff665f524f0e&#39;\nNotice: /Stage[main]/Zulip::Rabbit/Package[rabbitmq-server]/ensure: ensure changed &#39;purged&#39; to &#39;present&#39;\nNotice: /Stage[main]/Zulip::Rabbit/File[/etc/rabbitmq/rabbitmq.config]/ensure: defined content as &#39;{md5}2dd16948c9f36d8797732cb4c9e43bc8&#39;\nNotice: /Stage[main]/Zulip::Rabbit/File[/etc/default/rabbitmq-server]/content: content changed &#39;{md5}7cc5216f193f6be1cb32c45021197b39&#39; to &#39;{md5}d0d028b94fbee9c1f4ff98e109cce3f4&#39;\nNotice: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 9.3 main restart]: Triggered &#39;refresh&#39; from 1 events\nNotice: Finished catalog run in 11.51 seconds\n</pre></div>",
+        "id": 158465,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488238078
+    },
+    {
+        "content": "<p>That looks better.</p>",
+        "id": 158466,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488238093
+    },
+    {
+        "content": "<p>Ok that looks much better!</p>",
+        "id": 158483,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488238478
+    },
+    {
+        "content": "<p>Everything looks normal now, I'll try rebooting the host to check.</p>",
+        "id": 158485,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488238495
+    },
+    {
+        "content": "<p>yay</p>",
+        "id": 158487,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488238506
+    },
+    {
+        "content": "<p>So I wasn't in the correct directory to execute the commands (or didn't do it by full path)</p>",
+        "id": 158489,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488238559
+    },
+    {
+        "content": "<p>Whoops. It's doing it again after reboot.</p>",
+        "id": 158490,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488238626
+    },
+    {
+        "content": "<p>Ok, one more time. Here's what I did, and now to reboot and see if it sticks</p>\n<div class=\"codehilite\"><pre><span></span>root@minmi:~# \nroot@minmi:~# su zulip\nzulip@minmi:/root$ supervisorctl stop all\nzulip-workers:zulip_deliver_enqueued_emails: stopped\nprocess-fts-updates: stopped\nzulip-workers:zulip_events_user_presence: stopped\nzulip-workers:zulip_events_invites: stopped\nzulip-workers:zulip_events_embed_links: stopped\nzulip-tornado: stopped\nzulip-workers:zulip_events_signups: stopped\nzulip-workers:zulip_events_email_mirror: stopped\nzulip-workers:zulip_events_user_activity_interval: stopped\nzulip-workers:zulip_events_missedmessage_emails: stopped\nzulip-workers:zulip_events_slow_queries: stopped\nzulip-workers:zulip_events_missedmessage_mobile_notifications: stopped\nzulip-workers:zulip_events_digest_emails: stopped\nzulip-workers:zulip_events_user_activity: stopped\nzulip-workers:zulip_events_error_reports: stopped\nzulip-senders:zulip_events_message_sender-0: stopped\nzulip-senders:zulip_events_message_sender-1: stopped\nzulip-senders:zulip_events_message_sender-2: stopped\nzulip-senders:zulip_events_message_sender-3: stopped\nzulip-senders:zulip_events_message_sender-4: stopped\nzulip-django: stopped\nzulip-workers:zulip_events_feedback_messages: stopped\nzulip@minmi:/root$ exit\nexit\nroot@minmi:~# /etc/init.d/rabbitmq-server stop\n * Stopping message broker rabbitmq-server\n * message broker already stopped\n   ...done.\nroot@minmi:~# apt-get purge rabbitmq-server\nReading package lists... Done\nBuilding dependency tree       \nReading state information... Done\nThe following packages were automatically installed and are no longer required:\n  apache2-data erlang-asn1 erlang-base erlang-corba erlang-crypto\n  erlang-diameter erlang-edoc erlang-eldap erlang-erl-docgen erlang-eunit\n  erlang-ic erlang-inets erlang-mnesia erlang-nox erlang-odbc erlang-os-mon\n  erlang-parsetools erlang-percept erlang-public-key erlang-runtime-tools\n  erlang-snmp erlang-ssh erlang-ssl erlang-syntax-tools erlang-tools\n  erlang-webtool erlang-xmerl libodbc1\nUse &#39;apt-get autoremove&#39; to remove them.\nThe following packages will be REMOVED:\n  rabbitmq-server*\n0 upgraded, 0 newly installed, 1 to remove and 2 not upgraded.\nAfter this operation, 4,867 kB disk space will be freed.\nDo you want to continue? [Y/n] y\n(Reading database ... 82716 files and directories currently installed.)\nRemoving rabbitmq-server (3.2.4-1) ...\n * Stopping message broker rabbitmq-server\n * message broker already stopped\n   ...done.\nPurging configuration files for rabbitmq-server (3.2.4-1) ...\nProcessing triggers for man-db (2.6.7.1-1ubuntu1) ...\nroot@minmi:~# pwd\n/root\nroot@minmi:~# /home/zulip/deployments/current/scripts/setup/zulip-puppet-apply -f\n-bash: /home/zulip/deployments/current/scripts/setup/zulip-puppet-apply: No such file or directory\nroot@minmi:~# /home/zulip/deployments/current/scripts/zulip-puppet-apply -f\nWarning: Could not retrieve fact fqdn\nNotice: Compiled catalog for minmi in environment production in 1.52 seconds\nNotice: /Stage[main]/Zulip::Postgres_common/Exec[disable_logrotate]/returns: executed successfully\nNotice: /Stage[main]/Zulip::Rabbit/File[/etc/rabbitmq]/ensure: created\nNotice: /Stage[main]/Zulip::Rabbit/File[/etc/rabbitmq/rabbitmq-env.conf]/ensure: defined content as &#39;{md5}863d88c92c9462114602ff665f524f0e&#39;\nNotice: /Stage[main]/Zulip::Rabbit/Package[rabbitmq-server]/ensure: ensure changed &#39;purged&#39; to &#39;present&#39;\nNotice: /Stage[main]/Zulip::Rabbit/File[/etc/rabbitmq/rabbitmq.config]/ensure: defined content as &#39;{md5}2dd16948c9f36d8797732cb4c9e43bc8&#39;\nNotice: /Stage[main]/Zulip::Rabbit/File[/etc/default/rabbitmq-server]/content: content changed &#39;{md5}7cc5216f193f6be1cb32c45021197b39&#39; to &#39;{md5}d0d028b94fbee9c1f4ff98e109cce3f4&#39;\nNotice: Finished catalog run in 8.41 seconds\nroot@minmi:~# /home/zulip/deployments/current/scripts/setup/configure-rabbitmq \n+++ dirname /home/zulip/deployments/current/scripts/setup/configure-rabbitmq\n++ /home/zulip/deployments/current/scripts/setup/../get-django-setting RABBITMQ_USERNAME\n+ RABBITMQ_USERNAME=zulip\n+++ dirname /home/zulip/deployments/current/scripts/setup/configure-rabbitmq\n++ /home/zulip/deployments/current/scripts/setup/../get-django-setting RABBITMQ_PASSWORD\n+ RABBITMQ_PASSWORD=721d56ec73bf96ea1a17289753efed89dc058725d141f1578f7424131c938a7a\n+ sudo rabbitmqctl delete_user zulip\nDeleting user &quot;zulip&quot; ...\nError: no_such_user: zulip\n+ true\n+ sudo rabbitmqctl delete_user zulip\nDeleting user &quot;zulip&quot; ...\nError: no_such_user: zulip\n+ true\n+ sudo rabbitmqctl delete_user guest\nDeleting user &quot;guest&quot; ...\n...done.\n+ sudo rabbitmqctl add_user zulip 721d56ec73bf96ea1a17289753efed89dc058725d141f1578f7424131c938a7a\nCreating user &quot;zulip&quot; ...\n...done.\n+ sudo rabbitmqctl set_user_tags zulip administrator\nSetting tags for user &quot;zulip&quot; to [administrator] ...\n...done.\n+ sudo rabbitmqctl set_permissions -p / zulip &#39;.*&#39; &#39;.*&#39; &#39;.*&#39;\nSetting permissions for user &quot;zulip&quot; in vhost &quot;/&quot; ...\n...done.\nroot@minmi:~# su zulip\nzulip@minmi:/root$ supervisorctl start all\nzulip-django: started\nzulip-tornado: started\nprocess-fts-updates: started\nzulip-workers:zulip_events_feedback_messages: started\nzulip-workers:zulip_events_user_presence: started\nzulip-workers:zulip_events_invites: started\nzulip-workers:zulip_events_signups: started\nzulip-workers:zulip_events_email_mirror: started\nzulip-workers:zulip_events_user_activity_interval: started\nzulip-workers:zulip_events_missedmessage_emails: started\nzulip-workers:zulip_events_slow_queries: started\nzulip-workers:zulip_events_embed_links: started\nzulip-workers:zulip_events_missedmessage_mobile_notifications: started\nzulip-workers:zulip_events_digest_emails: started\nzulip-workers:zulip_events_user_activity: started\nzulip-workers:zulip_events_error_reports: started\nzulip-workers:zulip_deliver_enqueued_emails: started\nzulip-senders:zulip_events_message_sender-0: started\nzulip-senders:zulip_events_message_sender-1: started\nzulip-senders:zulip_events_message_sender-2: started\nzulip-senders:zulip_events_message_sender-3: started\nzulip-senders:zulip_events_message_sender-4: started\nzulip@minmi:/root$ tail -f /var/log/zulip/server.log \n2017-02-27 18:44:35,472 INFO     127.0.0.1       GET     200   9ms /api/v1/events [1488239055:0/0] (minmi-zulip@feorlen.org via internal)\n2017-02-27 18:44:35,900 INFO     64.81.53.74     GET     200  1.3s (mem: 35ms/14) (db: 86ms/27q) (+start: 6.7s) / [1488239055:0] (minmi-zulip@feorlen.org via website)\n2017-02-27 18:44:36,542 INFO     64.81.53.74     POST    200  41ms (db: 2ms/2q) (+start: 13ms) /json/users/me/presence (minmi-zulip@feorlen.org via website)\n2017-02-27 18:44:36,740 INFO     64.81.53.74     SOCKET  200   0ms /socket/open [transport=websocket] (unknown via ?)\n2017-02-27 18:44:36,772 INFO     64.81.53.74     SOCKET  200   8ms (db: 2ms/2q) /socket/auth [transport=websocket] (minmi-zulip@feorlen.org via ?)\n2017-02-27 18:44:37,568 INFO     64.81.53.74     GET     200 253ms (mem: 20ms/15) (db: 41ms/15q) (+start: 807ms) /json/messages (minmi-zulip@feorlen.org via website)\n2017-02-27 18:44:39,656 INFO     Tornado   4.4% busy over the past  5.4 seconds\n2017-02-27 18:44:44,657 INFO     Tornado   2.3% busy over the past 10.4 seconds\n2017-02-27 18:44:48,664 INFO     64.81.53.74     GET     200 119ms (db: 2ms/8q) (+start: 753ms) /json/messages (minmi-zulip@feorlen.org via website)\n2017-02-27 18:44:50,657 INFO     Tornado   1.5% busy over the past 16.4 seconds\n^C\nzulip@minmi:/root$ \n</pre></div>",
+        "id": 158493,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488239154
+    },
+    {
+        "content": "<p>Off topic but, why isn't Zulip collapsing this message?</p>",
+        "id": 158495,
+        "sender_full_name": "Sampriti Panda",
+        "timestamp": 1488239186
+    },
+    {
+        "content": "<p>Ok it did collapse it, but only after I sent ^ this message</p>",
+        "id": 158497,
+        "sender_full_name": "Sampriti Panda",
+        "timestamp": 1488239214
+    },
+    {
+        "content": "<p>hmm you got that too? I thought it was just me because I wrote it. I clicked on the topic name again and it did</p>",
+        "id": 158499,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488239235
+    },
+    {
+        "content": "<p>Yes, I guess when the latest message is sent, it doesn't collapse it.</p>",
+        "id": 158502,
+        "sender_full_name": "Sampriti Panda",
+        "timestamp": 1488239270
+    },
+    {
+        "content": "<p>Rebooted, and now it's busted again.</p>",
+        "id": 158503,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488239297
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"sampdingo@hotmail.com\" data-user-id=\"720\">@Sampriti Panda</span> I think there's basically a bug where it doesn't collapse the latest message.  Open an issue?</p>",
+        "id": 158504,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488239312
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"zulip@feorlen.org\" data-user-id=\"397\">@Andrea  Longo</span> more detail would be useful?</p>",
+        "id": 158506,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488239343
+    },
+    {
+        "content": "<p>Did rabbitmq-server not start?</p>",
+        "id": 158508,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488239349
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>root@minmi:~# /etc/init.d/rabbitmq-server status\nStatus of node zulip@localhost ...\nError: unable to connect to node zulip@localhost: nodedown\n\nDIAGNOSTICS\n===========\n\nnodes in question: [zulip@localhost]\n\nhosts, their running nodes and ports:\n- localhost: [{rabbitmqctl3764,42726}]\n\ncurrent node details:\n- node name: rabbitmqctl3764@minmi\n- home dir: /var/lib/rabbitmq\n- cookie hash: c6LbFBQK+TVuBi3YXkDCrg==\n</pre></div>",
+        "id": 158511,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488239412
+    },
+    {
+        "content": "<p>Seems not, unless I'm supposed to have something other than zulip@localhost</p>",
+        "id": 158513,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488239456
+    },
+    {
+        "content": "<p><code>ls -l /var/lib/rabbitmq/mnesia</code> ?</p>",
+        "id": 158514,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488239461
+    },
+    {
+        "content": "<p>Try starting it from <code>/etc/init.d</code>?</p>",
+        "id": 158515,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488239483
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>root@minmi:~# ls -l /var/lib/rabbitmq/mnesia\ntotal 8\ndrwxr-xr-x 5 rabbitmq rabbitmq 4096 Feb 27 23:44 zulip@localhost\ndrwxr-xr-x 2 rabbitmq rabbitmq 4096 Feb 27 23:43 zulip@localhost-plugins-expand\n</pre></div>",
+        "id": 158516,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488239489
+    },
+    {
+        "content": "<p>In theory the Debian package should do that for you</p>",
+        "id": 158517,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488239491
+    },
+    {
+        "content": "<p>May be worth checking system logs to see why it didn't start</p>",
+        "id": 158519,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488239513
+    },
+    {
+        "content": "<p>Like, did it try starting and fail, or did it not try</p>",
+        "id": 158520,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488239521
+    },
+    {
+        "content": "<p>lemme see. it's started now</p>",
+        "id": 158521,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488239533
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>-rw-r--r-- 1 root     root         0 Feb 27 23:46 shutdown_err\n-rw-r--r-- 1 rabbitmq rabbitmq   423 Feb 27 23:46 zulip@localhost-sasl.log\n-rw-r--r-- 1 root     root        55 Feb 27 23:46 shutdown_log\n-rw-r--r-- 1 rabbitmq rabbitmq     0 Feb 27 23:51 startup_err\n-rw-r--r-- 1 rabbitmq rabbitmq   341 Feb 27 23:52 startup_log\n-rw-r--r-- 1 rabbitmq rabbitmq 13050 Feb 27 23:52 zulip@localhost.log\nroot@minmi:/var/log/rabbitmq# cat startup_log\n\n              RabbitMQ 3.2.4. Copyright (C) 2007-2013 GoPivotal, Inc.\n  ##  ##      Licensed under the MPL.  See http://www.rabbitmq.com/\n  ##  ##\n  ##########  Logs: /var/log/rabbitmq/zulip@localhost.log\n  ######  ##        /var/log/rabbitmq/zulip@localhost-sasl.log\n  ##########\n              Starting broker... completed with 0 plugins.\n</pre></div>",
+        "id": 158525,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488239617
+    },
+    {
+        "content": "<blockquote>\n<p><span class=\"user-mention\" data-user-email=\"sampdingo@hotmail.com\" data-user-id=\"720\">@Sampriti Panda</span> I think there's basically a bug where it doesn't collapse the latest message.  Open an issue?</p>\n</blockquote>\n<p>Couldn't reproduce it myself for some reason.</p>",
+        "id": 158526,
+        "sender_full_name": "Sampriti Panda",
+        "timestamp": 1488239635
+    },
+    {
+        "content": "<p>recent lines from <a href=\"mailto:zulip@localhost.log\" title=\"mailto:zulip@localhost.log\">zulip@localhost.log</a> </p>\n<div class=\"codehilite\"><pre><span></span>=ERROR REPORT==== 27-Feb-2017::23:46:05 ===\nAMQP connection &lt;0.409.0&gt; (running), channel 0 - error:\n{amqp_error,connection_forced,\n            &quot;broker forced connection closure with reason &#39;shutdown&#39;&quot;,none}\n\n=ERROR REPORT==== 27-Feb-2017::23:46:05 ===\nAMQP connection &lt;0.314.0&gt; (running), channel 0 - error:\n{amqp_error,connection_forced,\n            &quot;broker forced connection closure with reason &#39;shutdown&#39;&quot;,none}\n\n=INFO REPORT==== 27-Feb-2017::23:46:05 ===\nHalting Erlang VM\n\n=INFO REPORT==== 27-Feb-2017::23:52:00 ===\nStarting RabbitMQ 3.2.4 on Erlang R16B03\nCopyright (C) 2007-2013 GoPivotal, Inc.\nLicensed under the MPL.  See http://www.rabbitmq.com/\n\n=INFO REPORT==== 27-Feb-2017::23:52:00 ===\nnode           : zulip@localhost\nhome dir       : /var/lib/rabbitmq\nconfig file(s) : /etc/rabbitmq/rabbitmq.config\ncookie hash    : c6LbFBQK+TVuBi3YXkDCrg==\nlog            : /var/log/rabbitmq/zulip@localhost.log\nsasl log       : /var/log/rabbitmq/zulip@localhost-sasl.log\ndatabase dir   : /var/lib/rabbitmq/mnesia/zulip@localhost\n\n=INFO REPORT==== 27-Feb-2017::23:52:00 ===\nLimiting to approx 924 file handles (829 sockets)\n\n=INFO REPORT==== 27-Feb-2017::23:52:01 ===\nMemory limit set to 1580MB of 3951MB total.\n\n=INFO REPORT==== 27-Feb-2017::23:52:01 ===\nDisk free limit set to 50MB\n\n=INFO REPORT==== 27-Feb-2017::23:52:01 ===\nmsg_store_transient: using rabbit_msg_store_ets_index to provide index\n\n=INFO REPORT==== 27-Feb-2017::23:52:01 ===\nmsg_store_persistent: using rabbit_msg_store_ets_index to provide index\n\n=INFO REPORT==== 27-Feb-2017::23:52:01 ===\nstarted TCP Listener on 127.0.0.1:5672\n\n=INFO REPORT==== 27-Feb-2017::23:52:01 ===\nServer startup complete; 0 plugins started.\n\n=INFO REPORT==== 27-Feb-2017::23:52:04 ===\naccepting AMQP connection &lt;0.262.0&gt; (127.0.0.1:59138 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:07 ===\naccepting AMQP connection &lt;0.272.0&gt; (127.0.0.1:59140 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:08 ===\naccepting AMQP connection &lt;0.281.0&gt; (127.0.0.1:59142 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:09 ===\naccepting AMQP connection &lt;0.290.0&gt; (127.0.0.1:59144 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:09 ===\naccepting AMQP connection &lt;0.299.0&gt; (127.0.0.1:59146 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:10 ===\naccepting AMQP connection &lt;0.308.0&gt; (127.0.0.1:59148 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:10 ===\naccepting AMQP connection &lt;0.317.0&gt; (127.0.0.1:59150 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:11 ===\naccepting AMQP connection &lt;0.326.0&gt; (127.0.0.1:59152 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:12 ===\naccepting AMQP connection &lt;0.336.0&gt; (127.0.0.1:59154 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:12 ===\naccepting AMQP connection &lt;0.345.0&gt; (127.0.0.1:59156 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:12 ===\naccepting AMQP connection &lt;0.354.0&gt; (127.0.0.1:59158 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:12 ===\naccepting AMQP connection &lt;0.363.0&gt; (127.0.0.1:59160 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:12 ===\naccepting AMQP connection &lt;0.372.0&gt; (127.0.0.1:59162 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:13 ===\naccepting AMQP connection &lt;0.381.0&gt; (127.0.0.1:59164 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:13 ===\naccepting AMQP connection &lt;0.390.0&gt; (127.0.0.1:59166 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:13 ===\naccepting AMQP connection &lt;0.399.0&gt; (127.0.0.1:59168 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:13 ===\naccepting AMQP connection &lt;0.408.0&gt; (127.0.0.1:59170 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:13 ===\naccepting AMQP connection &lt;0.417.0&gt; (127.0.0.1:59172 -&gt; 127.0.0.1:5672)\n\n=INFO REPORT==== 27-Feb-2017::23:52:13 ===\naccepting AMQP connection &lt;0.426.0&gt; (127.0.0.1:59174 -&gt; 127.0.0.1:5672)\n</pre></div>",
+        "id": 158527,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488239702
+    },
+    {
+        "content": "<p>This is only a test machine, I can make you a login</p>",
+        "id": 158528,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488239753
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"sampdingo@hotmail.com\" data-user-id=\"720\">@Sampriti Panda</span> did that message stay open for you just now? I had to reload the page before it would collapse. I wonder if it has anything to do with code formatting.</p>",
+        "id": 158529,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488239910
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"zulip@feorlen.org\" data-user-id=\"397\">@Andrea  Longo</span> can you resend that message in <a class=\"stream\" data-stream-id=\"7\" href=\"/#narrow/stream/test%20here\">#test here</a></p>",
+        "id": 158532,
+        "sender_full_name": "Sampriti Panda",
+        "timestamp": 1488240041
+    },
+    {
+        "content": "<p>I didn't have Zulip open when you sent it.</p>",
+        "id": 158533,
+        "sender_full_name": "Sampriti Panda",
+        "timestamp": 1488240049
+    },
+    {
+        "content": "<p>Yeah, let's move the collapsing testing elsewhere.  But I have noticed it not working when messages first show up sometimes, so there's definitely a bug; just may be a bit more subtle than \"always doesn't work\"</p>",
+        "id": 158559,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488240364
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"zulip@feorlen.org\" data-user-id=\"397\">@Andrea  Longo</span> the thing I want you to check (and maybe rebooting again makes this easy) is whether anything shows up in the rabbitmq logs post-reboot if your reboot</p>",
+        "id": 158560,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488240395
+    },
+    {
+        "content": "<p>I think it's possible that just the systemd/upstart settings for rabbitmq are wrong and so it's not trying to start rabbitmq on boot</p>",
+        "id": 158561,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488240415
+    },
+    {
+        "content": "<p>let me try and watch it</p>",
+        "id": 158562,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488240421
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>root@minmi:/var/log/rabbitmq# tail startup_err \n\nCrash dump was written to: erl_crash.dump\nKernel pid terminated (application_controller) ({application_start_failure,kernel,{{shutdown,{failed_to_start_child,net_sup,{shutdown,{failed_to_start_child,net_kernel,{&#39;EXIT&#39;,nodistribution}}}}},{k\n</pre></div>",
+        "id": 158563,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488240600
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>root@minmi:/var/log/rabbitmq# tail startup_log \n{error_logger,{{2017,2,28},{0,8,42}},&quot;Protocol: ~tp: register/listen error: ~tp~n&quot;,[&quot;inet_tcp&quot;,econnrefused]}\n{error_logger,{{2017,2,28},{0,8,42}},crash_report,[[{initial_call,{net_kernel,init,[&#39;Argument__1&#39;]}},{pid,&lt;0.21.0&gt;},{registered_name,[]},{error_info,{exit,{error,badarg},[{gen_server,init_it,6,[{file,&quot;gen_server.erl&quot;},{line,320}]},{proc_lib,init_p_do_apply,3,[{file,&quot;proc_lib.erl&quot;},{line,239}]}]}},{ancestors,[net_sup,kernel_sup,&lt;0.10.0&gt;]},{messages,[]},{links,[#Port&lt;0.93&gt;,&lt;0.18.0&gt;]},{dictionary,[{longnames,false}]},{trap_exit,true},{status,running},{heap_size,376},{stack_size,27},{reductions,803}],[]]}\n{error_logger,{{2017,2,28},{0,8,42}},supervisor_report,[{supervisor,{local,net_sup}},{errorContext,start_error},{reason,{&#39;EXIT&#39;,nodistribution}},{offender,[{pid,undefined},{name,net_kernel},{mfargs,{net_kernel,start_link,[[rabbitmqprelaunch1729,shortnames]]}},{restart_type,permanent},{shutdown,2000},{child_type,worker}]}]}\n{error_logger,{{2017,2,28},{0,8,42}},supervisor_report,[{supervisor,{local,kernel_sup}},{errorContext,start_error},{reason,{shutdown,{failed_to_start_child,net_kernel,{&#39;EXIT&#39;,nodistribution}}}},{offender,[{pid,undefined},{name,net_sup},{mfargs,{erl_distribution,start_link,[]}},{restart_type,permanent},{shutdown,infinity},{child_type,supervisor}]}]}\n{error_logger,{{2017,2,28},{0,8,42}},crash_report,[[{initial_call,{application_master,init,[&#39;Argument__1&#39;,&#39;Argument__2&#39;,&#39;Argument__3&#39;,&#39;Argument__4&#39;]}},{pid,&lt;0.9.0&gt;},{registered_name,[]},{error_info,{exit,{{shutdown,{failed_to_start_child,net_sup,{shutdown,{failed_to_start_child,net_kernel,{&#39;EXIT&#39;,nodistribution}}}}},{kernel,start,[normal,[]]}},[{application_master,init,4,[{file,&quot;application_master.erl&quot;},{line,133}]},{proc_lib,init_p_do_apply,3,[{file,&quot;proc_lib.erl&quot;},{line,239}]}]}},{ancestors,[&lt;0.8.0&gt;]},{messages,[{&#39;EXIT&#39;,&lt;0.10.0&gt;,normal}]},{links,[&lt;0.8.0&gt;,&lt;0.7.0&gt;]},{dictionary,[]},{trap_exit,true},{status,running},{heap_size,376},{stack_size,27},{reductions,117}],[]]}\n{error_logger,{{2017,2,28},{0,8,42}},std_info,[{application,kernel},{exited,{{shutdown,{failed_to_start_child,net_sup,{shutdown,{failed_to_start_child,net_kernel,{&#39;EXIT&#39;,nodistribution}}}}},{kernel,start,[normal,[]]}}},{type,permanent}]}\n{&quot;Kernel pid terminated&quot;,application_controller,&quot;{application_start_failure,kernel,{{shutdown,{failed_to_start_child,net_sup,{shutdown,{failed_to_start_child,net_kernel,{&#39;EXIT&#39;,nodistribution}}}}},{kernel,start,[normal,[]]}}}&quot;}\n</pre></div>",
+        "id": 158564,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488240642
+    },
+    {
+        "content": "<p>before reboot startup_err was empty</p>",
+        "id": 158565,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488240685
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> I need to go out for a bit, I'll be back online in about two hours. I wonder if there's anything meaningful in that dump file.</p>",
+        "id": 158570,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488242611
+    },
+    {
+        "content": "<p>interesting</p>",
+        "id": 158573,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488242831
+    },
+    {
+        "content": "<p>All I'm getting out of the dump is something Erlang failed to start, which we already knew. Here's the beginning of it: </p>\n<div class=\"codehilite\"><pre><span></span>=erl_crash_dump:0.3\nTue Feb 28 00:08:43 2017\nSlogan: Kernel pid terminated (application_controller) ({application_start_failure,kernel,{{shutdown\n,{failed_to_start_child,net_sup,{shutdown,{failed_to_start_child,net_kernel,{&#39;EXIT&#39;,nodistribution}}\n}}},{k\nSystem version: Erlang R16B03 (erts-5.10.4) [source] [64-bit] [smp:2:2] [async-threads:10] [kernel-p\noll:false]\nCompiled: Tue Aug 19 16:45:11 2014\nTaints: \nAtoms: 4350\n=memory\ntotal: 9008176\nprocesses: 3396304\nprocesses_used: 3385640\nsystem: 5611872\natom: 132249\natom_used: 109484\nbinary: 138552\ncode: 2625370\nets: 64264\n</pre></div>",
+        "id": 158611,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488250049
+    },
+    {
+        "content": "<p>I'm not seeing anything in the regular system logs besides something in boot.log that says rabbitmq failed</p>\n<div class=\"codehilite\"><pre><span></span> * Starting PostgreSQL 9.3 database server       ^[[128G ^M^[[122G[ OK ]\nStarting memcached: memcached.\n ^[[33m*^[[39;49m FAILED - check /var/log/rabbitmq/startup_\\{log, _err\\}\n * Starting message broker rabbitmq-server       ^[[128G ^M^[[122G[^[[31mfail^[[39;49m]\nStarting redis-server: redis-server.\n</pre></div>",
+        "id": 158612,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488250093
+    },
+    {
+        "content": "<p><a href=\"mailto:zulip@localhost-sasl.log\" title=\"mailto:zulip@localhost-sasl.log\">zulip@localhost-sasl.log</a> has \"shutdown_error\" but the timing says it's right after system boot. So it's rabbitmq shutting down? That doesn't match with other reports of it being terminated (I guess)</p>\n<div class=\"codehilite\"><pre><span></span>=SUPERVISOR REPORT==== 28-Feb-2017::00:08:18 ===\n     Supervisor: {&lt;0.530.0&gt;,rabbit_channel_sup_sup}\n     Context:    shutdown_error\n     Reason:     shutdown\n     Offender:   [{nb_children,1},\n                  {name,channel_sup},\n                  {mfargs,{rabbit_channel_sup,start_link,[]}},\n                  {restart_type,temporary},\n                  {shutdown,infinity},\n                  {child_type,supervisor}]\n\n\n=SUPERVISOR REPORT==== 28-Feb-2017::00:08:18 ===\n     Supervisor: {&lt;0.310.0&gt;,rabbit_channel_sup_sup}\n     Context:    shutdown_error\n     Reason:     shutdown\n     Offender:   [{nb_children,1},\n                  {name,channel_sup},\n                  {mfargs,{rabbit_channel_sup,start_link,[]}},\n                  {restart_type,temporary},\n                  {shutdown,infinity},\n                  {child_type,supervisor}]\n\n\n=SUPERVISOR REPORT==== 28-Feb-2017::00:08:18 ===\n     Supervisor: {&lt;0.356.0&gt;,rabbit_channel_sup_sup}\n     Context:    shutdown_error\n     Reason:     shutdown\n     Offender:   [{nb_children,1},\n                  {name,channel_sup},\n                  {mfargs,{rabbit_channel_sup,start_link,[]}},\n                  {restart_type,temporary},\n                  {shutdown,infinity},\n                  {child_type,supervisor}]\n</pre></div>",
+        "id": 158613,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488250248
+    },
+    {
+        "content": "<p>cron keeps running<code>check-rabbitmq-consumers</code> and <code>check-rabbitmq-queue</code>, I guess that's expected. syslog isn't reporting errors.</p>",
+        "id": 158614,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488250391
+    },
+    {
+        "content": "<p>I figure if I kick rabbitmq again it will resolve, but then fail on reboot once more.</p>",
+        "id": 158615,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488250455
+    },
+    {
+        "content": "<p>If it's the hostname causing the problem, is that an actual configuration error or something known to be flaky? (I'm borrowing the domain name and Digital Ocean account, so I didn't set up the DNS. But the person who did knows a lot more about it than I do.)</p>",
+        "id": 158616,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488250639
+    },
+    {
+        "content": "<p>When I try searching for that Kernel pid terminated message, I get something about an Ubuntu erlang bug from a few years ago: \"epmd does not support binding to an IPv4 address anymore\"<br>\n<a href=\"https://bugs.launchpad.net/ubuntu/+source/erlang/+bug/1374109\" target=\"_blank\" title=\"https://bugs.launchpad.net/ubuntu/+source/erlang/+bug/1374109\">https://bugs.launchpad.net/ubuntu/+source/erlang/+bug/1374109</a></p>",
+        "id": 158619,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488251489
+    },
+    {
+        "content": "<p>Same search turns up <a href=\"https://github.com/zulip/zulip/issues/76\" target=\"_blank\" title=\"https://github.com/zulip/zulip/issues/76\">zulip cannot start after restarting the server</a>, where a commenter has a workaround. But it's several years old, so I would think it would be long past</p>",
+        "id": 158620,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488251767
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"zulip@feorlen.org\" data-user-id=\"397\">@Andrea  Longo</span> what is in /etc/hosts on this system?</p>",
+        "id": 158658,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488262131
+    },
+    {
+        "content": "<p>/etc/hosts says it's managed, the contents match the template (<code>127.0.1.1 $fqdn $hostname</code>) which appears to be normal for Digital Ocean. $fqdn is only showing the hostname, although changing that to the actual fqdn doesn't help. (Editing /etc/hosts persists across reboots, so maybe not so managed?) </p>\n<div class=\"codehilite\"><pre><span></span>root@minmi:~# dnsdomainname\ngrumpyoldunixgeek.com\nroot@minmi:/var/log/rabbitmq# hostname\nminmi\nroot@minmi:/var/log/rabbitmq# cat /etc/hosts\n# Your system has configured &#39;manage_etc_hosts&#39; as True.\n[comments]\n\n127.0.1.1 minmi.grumpyoldunixgeek.com minmi\n127.0.0.1 localhost\n\n[ipv6 stuff edited]\n</pre></div>",
+        "id": 158770,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488286368
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> everything I've tried so far results in needing to restart rabbitmq after reboot. This is a standard DO Ubuntu 14.04 droplet, it seems like it shouldn't be that complicated. (Famous last words.)</p>",
+        "id": 158774,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488287283
+    },
+    {
+        "content": "<p>hmm, weird</p>",
+        "id": 158887,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488302863
+    },
+    {
+        "content": "<p>I need to re-install Zulip on this machine to work on a different issue, but presumably I can recreate this situation at any time. (I have the tarball I used originally.)</p>",
+        "id": 159074,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488325088
+    },
+    {
+        "content": "<p>OK; I think given the sequence that ended up happening here, we'll probably want to retest from scratch anyway</p>",
+        "id": 159076,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488325146
+    },
+    {
+        "content": "<p>Is there anything worth capturing now before I re-install?</p>",
+        "id": 159078,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488325222
+    },
+    {
+        "content": "<p>I think the logs you posted are pretty complete</p>",
+        "id": 159080,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1488325472
+    },
+    {
+        "content": "<p>I'll give this another try in a few days. Hopefully that will prove more enlightening.</p>",
+        "id": 159082,
+        "sender_full_name": "Andrea  Longo",
+        "timestamp": 1488325593
+    },
+    {
+        "content": "<blockquote>\n<p>I'll fix that; did you not also get an exception?  When I tried running it that way, I got:</p>\n</blockquote>\n<p># ./zulip-puppet-apply <br>\nWarning: Could not retrieve fact fqdn<br>\nError: Could not find class apt for zulip on node zulip<br>\nError: Could not find class apt for zulip on node zulip<br>\nTraceback (most recent call last):<br>\n  File \"./zulip-puppet-apply\", line 38, in &lt;module&gt;<br>\n    subprocess.check_call(puppet_cmd + ['--noop', '--show_diff'])<br>\n  File \"/usr/lib/python2.7/subprocess.py\", line 540, in check_call<br>\n    raise CalledProcessError(retcode, cmd)<br>\nsubprocess.CalledProcessError: Command '['puppet', 'apply', '--modulepath', 'puppet', '-e', '\\nExec { path =&gt; \"/usr/sbin:/usr/bin:/sbin:/bin\" }\\ninclude apt\\ninclude zulip::voyager\\ninclude zulip::static_asset_compiler\\n', '--noop', '--show_diff']' returned non-zero exit status 1</p>\n<div class=\"codehilite\"><pre><span></span>\n</pre></div>\n\n\n<p>I am facing the same error, Can somebody please show the right path to get out of it</p>",
+        "id": 164952,
+        "sender_full_name": "Antarishk Rajput",
+        "timestamp": 1489068751
+    },
+    {
+        "content": "<p><code>cd ..; ./scripts/zulip-puppet-apply</code> :)</p>",
+        "id": 165030,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1489086060
+    },
+    {
+        "content": "<p>I guess <span class=\"user-mention\" data-user-email=\"ldlenka95@gmail.com\" data-user-id=\"1918\">@Antarishk Rajput</span> since you seem to not be online right now</p>",
+        "id": 165031,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1489086079
+    },
+    {
+        "content": "<p>Thank You Tom ,  It worked , i will inform if i get further errors</p>",
+        "id": 165899,
+        "sender_full_name": "Antarishk Rajput",
+        "timestamp": 1489215764
+    }
+]

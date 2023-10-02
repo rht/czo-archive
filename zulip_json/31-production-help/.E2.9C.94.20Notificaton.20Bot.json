@@ -1,0 +1,218 @@
+[
+    {
+        "content": "<p>Whilst looking in the logs for another issue, we see various entries for the notification bot which error<br>\n<code>server.lib.exceptions.JsonableError: User not authorised for this query</code></p>",
+        "id": 1418530,
+        "sender_full_name": "Matt",
+        "timestamp": 1660260266
+    },
+    {
+        "content": "<p>We also saw <code>zerver.lib.exceptions.JsonableError: Only organisation administrators can send to this stream.</code> and this was on a private stream so it was changed to public.</p>",
+        "id": 1418532,
+        "sender_full_name": "Matt",
+        "timestamp": 1660260327
+    },
+    {
+        "content": "<p>Can the notification bot not post to private streams? and for public, what would cause the first error and how can we fix it? I assume some sort of permissions issue?</p>",
+        "id": 1418533,
+        "sender_full_name": "Matt",
+        "timestamp": 1660260351
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21057\">@Matt</span> good question.</p>",
+        "id": 1418534,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660260421
+    },
+    {
+        "content": "<p>It's very possible that the notification bot cannot send to a stream that has the \"only organization administrators can post\" restriction set. (This is an independent setting from whether it's a private stream).</p>",
+        "id": 1418535,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660260449
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10242\">@Sahil Batra</span> can you try reproducing?</p>",
+        "id": 1418536,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660260459
+    },
+    {
+        "content": "<p>I think probably it's the case that the \"only organization administrators can post\" restriction should not apply to notification bot.</p>",
+        "id": 1418537,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660260491
+    },
+    {
+        "content": "<p>It did, but I wonder if we have a bigger issue and even when the stream was open/public to all, I got the first error.</p>",
+        "id": 1418538,
+        "sender_full_name": "Matt",
+        "timestamp": 1660260504
+    },
+    {
+        "content": "<p>If you can figure out what precisely is happening when that first exception is fired, that'd be helpful.</p>",
+        "id": 1418542,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660260592
+    },
+    {
+        "content": "<p>For the first error, I am just resolving and unsolving a topic so it should fire the notice to the public channel.</p>",
+        "id": 1418547,
+        "sender_full_name": "Matt",
+        "timestamp": 1660260816
+    },
+    {
+        "content": "<p>Are you running the latest <code>5.x</code> release?</p>",
+        "id": 1418559,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660262263
+    },
+    {
+        "content": "<p>I wonder if you have something weird and <code>is_cross_realm_bot_email(settings.NOTIFICATION_BOT)</code> is False. That error message should not be possible for Notification Bot, at least in the current code:</p>\n<div class=\"codehilite\"><pre><span></span><code>    if is_cross_realm_bot_email(sender.delivery_email):\n        return\n\n    if stream.realm_id != sender.realm_id:\n        # Sending to other realm&#39;s streams is always disallowed,\n        # with the exception of cross-realm bots.\n        raise JsonableError(_(&quot;User not authorized for this query&quot;))\n</code></pre></div>",
+        "id": 1418560,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660262397
+    },
+    {
+        "content": "<p>It says: <code>Version 6.0-dev-1179-ge379d34043</code></p>",
+        "id": 1418576,
+        "sender_full_name": "Matt",
+        "timestamp": 1660263082
+    },
+    {
+        "content": "<p>Is there somewhere to check the bot and <code>is_cross_realm_bot_email</code>?</p>",
+        "id": 1418577,
+        "sender_full_name": "Matt",
+        "timestamp": 1660263108
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"21057\">Matt</span> <a href=\"#narrow/stream/31-production-help/topic/Notificaton.20Bot/near/1418576\">said</a>:</p>\n<blockquote>\n<p>It says: <code>Version 6.0-dev-1179-ge379d34043</code></p>\n</blockquote>\n<p>OK, that's a commit off <code>main</code> from a couple weeks ago; <a href=\"http://chat.zulip.org\">chat.zulip.org</a> is <code>6.0-dev-1282-ge77c2155df</code>.</p>",
+        "id": 1418583,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660263197
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"21057\">Matt</span> <a href=\"#narrow/stream/31-production-help/topic/Notificaton.20Bot/near/1418577\">said</a>:</p>\n<blockquote>\n<p>Is there somewhere to check the bot and <code>is_cross_realm_bot_email</code>?</p>\n</blockquote>\n<p>Yeah, you can run the command above in a <code>manage.py shell</code>.</p>",
+        "id": 1418586,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660263217
+    },
+    {
+        "content": "<p>Checking....</p>",
+        "id": 1418587,
+        "sender_full_name": "Matt",
+        "timestamp": 1660263239
+    },
+    {
+        "content": "<p><code>In [4]: is_cross_realm_bot_email(settings.NOTIFICATION_BOT)\nOut[4]: False</code></p>",
+        "id": 1418595,
+        "sender_full_name": "Matt",
+        "timestamp": 1660263555
+    },
+    {
+        "content": "<p>Was my output to that.</p>",
+        "id": 1418596,
+        "sender_full_name": "Matt",
+        "timestamp": 1660263560
+    },
+    {
+        "content": "<p>OK, can you print <code>settings.NOTIFICATION_BOT</code>?</p>",
+        "id": 1418600,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660263697
+    },
+    {
+        "content": "<p>It should always be this:</p>\n<div class=\"codehilite\"><pre><span></span><code>$ ./scripts/get-django-setting NOTIFICATION_BOT\nnotification-bot@zulip.com\n</code></pre></div>",
+        "id": 1418601,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660263713
+    },
+    {
+        "content": "<p>It is possible to change that via your settings.py, but doing so is a bad idea and will cause roughly this problem.</p>",
+        "id": 1418602,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660263730
+    },
+    {
+        "content": "<p>The other possibility is that <code>settings.CROSS_REALM_BOT_EMAILS</code> could not contain it:</p>\n<div class=\"codehilite\"><pre><span></span><code>$ ./scripts/get-django-setting CROSS_REALM_BOT_EMAILS\n{&#39;welcome-bot@zulip.com&#39;, &#39;emailgateway@zulip.com&#39;, &#39;notification-bot@zulip.com&#39;}\n</code></pre></div>",
+        "id": 1418603,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660263779
+    },
+    {
+        "content": "<p>OK that looks like the issue, think one of my colleagues changed that. Is there a way to update the CROSS_REALM_BOT_EMAILS setting?</p>",
+        "id": 1418607,
+        "sender_full_name": "Matt",
+        "timestamp": 1660264134
+    },
+    {
+        "content": "<p>Mystery solved, great!</p>\n<p>Does the actual bot have the <code>@zulip.com</code> email, and the setting is different?</p>",
+        "id": 1418608,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660264431
+    },
+    {
+        "content": "<p>Looks like someone changed this in settings.py and in the database. It's just CROSS_REALM_BOT_EMAILS which seems to not match.</p>",
+        "id": 1418609,
+        "sender_full_name": "Matt",
+        "timestamp": 1660264481
+    },
+    {
+        "content": "<p>I'm 95% confident that if you just make sure that the 3 things agree (the database, <code>NOTIFICATION_BOT</code> setting, <code>CROSS_REALM_BOT_EMAILS</code> setting), with any value, and then restart the server, you'll be fine; I don't think what value it is matters. You probably will want to do <code>scripts/setup/flush-memcached</code> after whatever changes to make sure that stale values aren't cached, depending how you address it.</p>",
+        "id": 1418610,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660264524
+    },
+    {
+        "content": "<p>So <code>CROSS_REALM_BOT_EMAILS</code> can be defined in settings.py it seems but I can't get the format correct. Have tried comma sep and an array like <code>REALM_HOSTS</code> but it seems they're ignored (even after a memcache clear).</p>",
+        "id": 1418611,
+        "sender_full_name": "Matt",
+        "timestamp": 1660264569
+    },
+    {
+        "content": "<p>Have tried all formats including <code>{'notification-bot@xxxx', 'emailgateway@xxxx', 'welcome-bot@xxxx'}</code> but it seems to ignore and show the defaults.</p>",
+        "id": 1418632,
+        "sender_full_name": "Matt",
+        "timestamp": 1660267300
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21057\">@Matt</span> I apologize; that setting is actually hardcoded; I'd misread my grep output. You'll just need to change the email address and <code>NOTIFICATION_BOT</code> setting back.</p>",
+        "id": 1418737,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660282267
+    },
+    {
+        "content": "<p>Thanks. Does this not then make settings like <code>NOTIFICATION_BOT</code> superfluous as even though it can be changed, you can't then change the <code>CROSS_REALM_BOT_EMAILS</code> setting?</p>",
+        "id": 1418799,
+        "sender_full_name": "Matt",
+        "timestamp": 1660297733
+    },
+    {
+        "content": "<p>Yes, that's the case at present. To be clear, it's not a documented setting; you have to spelunk the code to discover it.</p>",
+        "id": 1418922,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660333256
+    },
+    {
+        "content": "<p>It's definition has this description:</p>\n<div class=\"codehilite\"><pre><span></span><code># These settings are not documented in prod_settings_template.py.\n# They should either be documented here, or documented there.\n#\n# Settings that it makes sense to document here instead of in\n# prod_settings_template.py are those that\n#  * don&#39;t make sense to change in production, but rather are intended\n#    for dev and test environments; or\n#  * don&#39;t make sense to change on a typical production server with\n#    one or a handful of realms, though they might on an installation\n#    like Zulip Cloud or to work around a problem on another server.\n\nNOTIFICATION_BOT = &quot;notification-bot@zulip.com&quot;\n</code></pre></div>",
+        "id": 1418923,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660333275
+    },
+    {
+        "content": "<p>We have some medium-term migrations planned that would eliminate the setting altogether in favor of Notification Bot being an entity within the organization that administrators could potentially manage.</p>",
+        "id": 1418924,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1660333340
+    },
+    {
+        "content": "<p>Thanks. Not sure why it was changed but I guess whoever did, didn't understand the wider implications.</p>",
+        "id": 1419299,
+        "sender_full_name": "Matt",
+        "timestamp": 1660398504
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"21057\">Matt</span> has marked this topic as resolved.</p>",
+        "id": 1419300,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1660398506
+    }
+]

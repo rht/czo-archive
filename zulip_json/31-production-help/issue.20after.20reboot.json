@@ -1,0 +1,86 @@
+[
+    {
+        "content": "<p>Hello everyone. Recently a server running Zulip instance came into my management. Today, after rebooting the server, Zulip fails to work with following error present in django.log:</p>\n<div class=\"codehilite\"><pre><span></span><code>2021-02-23 19:53:16.514 ERR  [django.request] Internal Server Error: /json/users/me/presence\nTraceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/0a816cd0ff430872fc4978ab68de8d986b0af078/zulip-py3-venv/lib/python3.6/site-packages/django/contrib/sessions/backends/base.py&quot;, line 189, in _get_session\n    return self._session_cache\nAttributeError: &#39;SessionStore&#39; object has no attribute &#39;_session_cache&#39;\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/0a816cd0ff430872fc4978ab68de8d986b0af078/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/base/base.py&quot;, line 217, in ensure_connection\n    self.connect()\n  File &quot;/srv/zulip-venv-cache/0a816cd0ff430872fc4978ab68de8d986b0af078/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/base/base.py&quot;, line 195, in connect\n    self.connection = self.get_new_connection(conn_params)\n  File &quot;/srv/zulip-venv-cache/0a816cd0ff430872fc4978ab68de8d986b0af078/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/postgresql/base.py&quot;, line 178, in get_new_connection\n    connection = Database.connect(**conn_params)\n  File &quot;/srv/zulip-venv-cache/0a816cd0ff430872fc4978ab68de8d986b0af078/zulip-py3-venv/lib/python3.6/site-packages/psycopg2/__init__.py&quot;, line 127, in connect\n    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)\n  File &quot;./zerver/lib/db.py&quot;, line 44, in __init__\n    super().__init__(*args, **kwargs)\npsycopg2.OperationalError: FATAL:  role &quot;zulip&quot; does not exist\n</code></pre></div>",
+        "id": 1122905,
+        "sender_full_name": "ympek",
+        "timestamp": 1614111370
+    },
+    {
+        "content": "<p>The bottom part of that suggests that this is an authentication error talking to the PostgreSQL database.  Is the database running on the Zulip host? (it usually is)</p>",
+        "id": 1122910,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1614111479
+    },
+    {
+        "content": "<p>Yes, everything is inside one lxd container. I am checking it</p>",
+        "id": 1122911,
+        "sender_full_name": "ympek",
+        "timestamp": 1614111525
+    },
+    {
+        "content": "<p>That sounds like it's talking to the <em>wrong</em> pg database, or that cluster lost its storage.</p>",
+        "id": 1122912,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1614111570
+    },
+    {
+        "content": "<p>Now I feel so stupid, checked in systemd and in fact there was PG cluster down, unable to start because of occupied port</p>",
+        "id": 1122914,
+        "sender_full_name": "ympek",
+        "timestamp": 1614111747
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>root@chat:~# systemctl | grep postgres\n  postgresql.service                   loaded active     exited    PostgreSQL RDBMS\n● postgresql@10-main.service           loaded failed     failed    PostgreSQL Cluster 10-main\n  postgresql@12-main.service           loaded active     running   PostgreSQL Cluster 12-main\n  system-postgresql.slice              loaded active     active    system-postgresql.slice\n</code></pre></div>",
+        "id": 1122915,
+        "sender_full_name": "ympek",
+        "timestamp": 1614111756
+    },
+    {
+        "content": "<p>I killed all postgres and started 12-main</p>",
+        "id": 1122916,
+        "sender_full_name": "ympek",
+        "timestamp": 1614111781
+    },
+    {
+        "content": "<p>now it works... thank you so much Alex!!!</p>",
+        "id": 1122917,
+        "sender_full_name": "ympek",
+        "timestamp": 1614111796
+    },
+    {
+        "content": "<p>Happy to help with <span aria-label=\"duck\" class=\"emoji emoji-1f986\" role=\"img\" title=\"duck\">:duck:</span> debugging.</p>",
+        "id": 1122918,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1614111806
+    },
+    {
+        "content": "<p>BTW, why there are two of these? I mean this 10-main and 12-main</p>",
+        "id": 1122919,
+        "sender_full_name": "ympek",
+        "timestamp": 1614111843
+    },
+    {
+        "content": "<p>That implies that multiple versions of the postgres server are installed.  Zulip has somewhat-recent machinery to set and control which version of Pg it uses, but it's not expected that you'd end up with multiple versions that want to run at once.</p>",
+        "id": 1122920,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1614111921
+    },
+    {
+        "content": "<p>... which would be the case here, presumably?<br>\nNow I am examining logs from the container, around when reboot happened, it in fact was unable to start pg:</p>\n<div class=\"codehilite\"><pre><span></span><code>Feb 23 19:49:25 chat postgresql@12-main[189]: Error: /usr/lib/postgresql/12/bin/pg_ctl /usr/lib/postgresql/12/bin/pg_ctl start -D /var/lib/postgresql/12/main -l /var/log/postgresql/postgresql-12-main.log -s -o  -c config_file=&quot;/etc/postgresql/12/main/postgresql.conf&quot;  exited with status 1:\nFeb 23 19:49:25 chat postgresql@12-main[189]: 2021-02-23 19:49:25.052 UTC [60355c45.190]: [1-1] LOG:  starting PostgreSQL 12.5 (Ubuntu 12.5-1.pgdg18.04+1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit\nFeb 23 19:49:25 chat postgresql@12-main[189]: 2021-02-23 19:49:25.052 UTC [60355c45.190]: [2-1] LOG:  could not bind IPv4 address &quot;127.0.0.1&quot;: Address already in use\nFeb 23 19:49:25 chat postgresql@12-main[189]: 2021-02-23 19:49:25.052 UTC [60355c45.190]: [3-1] HINT:  Is another postmaster already running on port 5432? If not, wait a few seconds and retry.\nFeb 23 19:49:25 chat postgresql@12-main[189]: 2021-02-23 19:49:25.052 UTC [60355c45.190]: [4-1] WARNING:  could not create listen socket for &quot;localhost&quot;\nFeb 23 19:49:25 chat postgresql@12-main[189]: 2021-02-23 19:49:25.052 UTC [60355c45.190]: [5-1] FATAL:  could not create any TCP/IP sockets\nFeb 23 19:49:25 chat postgresql@12-main[189]: 2021-02-23 19:49:25.053 UTC [60355c45.190]: [6-1] LOG:  database system is shut down\nFeb 23 19:49:25 chat postgresql@12-main[189]: pg_ctl: could not start server\nFeb 23 19:49:25 chat postgresql@12-main[189]: Examine the log output.\nFeb 23 19:49:25 chat systemd[1]: postgresql@12-main.service: Can&#39;t open PID file /run/postgresql/12-main.pid (yet?) after start: No such file or directory\nFeb 23 19:49:25 chat systemd[1]: postgresql@12-main.service: Failed with result &#39;protocol&#39;.\nFeb 23 19:49:25 chat systemd[1]: Failed to start PostgreSQL Cluster 12-main.\n</code></pre></div>\n<p>Maybe the 10 version started itself earlier upon reboot, which lead to this race? I don't know yet.</p>",
+        "id": 1122936,
+        "sender_full_name": "ympek",
+        "timestamp": 1614112605
+    },
+    {
+        "content": "<p>Anyway, so far it was a pleasure to work with Zulip, I am newcomer at company and first time seeing it, though I am pretty impressed - really good piece of software : )</p>",
+        "id": 1122937,
+        "sender_full_name": "ympek",
+        "timestamp": 1614112697
+    },
+    {
+        "content": "<p>Thanks for the kind words!</p>",
+        "id": 1123045,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1614130700
+    }
+]

@@ -1,0 +1,50 @@
+[
+    {
+        "content": "<p>Hello,<br>\nI was wondering if anyone has successfully to save zulip container log file outside of container.<br>\nI have tried many different ways, but I was still not able to make this to work. <br>\nAny suggestions and ideas are appreciated!<br>\nThe following is par of my docker-compose.yml. </p>\n<p>Thank you so much. :)</p>\n<p>version: \"2\"<br>\nservices:<br>\n  database:<br>\n    image: \"zulip/zulip-postgresql:10\"<br>\n    environment:<br>\n      POSTGRES_DB: \"zulip\"<br>\n      POSTGRES_USER: \"zulip\"<br>\n      POSTGRES_PASSWORD: \"xxxxxxxx\"<br>\n    volumes:</p>\n<div class=\"codehilite\"><pre><span></span><code>  - &quot;/opt/docker/zulip/postgresql/data:/var/lib/postgresql/data:rw&quot;\n  - &quot;/opt/docker/zulip/zuliplogs:/var/log/nginx:rw&quot;\n</code></pre></div>",
+        "id": 1334985,
+        "sender_full_name": "jcheng",
+        "timestamp": 1645815634
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"22988\">jcheng</span> <a href=\"#narrow/stream/31-production-help/topic/save.20log.20file.20outside.20of.20zulip.20container/near/1334985\">said</a>:</p>\n<blockquote>\n<p>Hello,<br>\nI was wondering if anyone has successfully to save zulip container log file outside of container.<br>\nI have tried many different ways, but I was still not able to make this to work. <br>\nAny suggestions and ideas are appreciated!<br>\nThe following is par of my docker-compose.yml. </p>\n<p>Thank you so much. :)</p>\n<p>version: \"2\"<br>\nservices:<br>\n  database:<br>\n    image: \"zulip/zulip-postgresql:10\"<br>\n    environment:<br>\n      POSTGRES_DB: \"zulip\"<br>\n      POSTGRES_USER: \"zulip\"<br>\n      POSTGRES_PASSWORD: \"xxxxxxxx\"<br>\n    volumes:</p>\n<div class=\"codehilite\"><pre><span></span><code>  - &quot;/opt/docker/zulip/postgresql/data:/var/lib/postgresql/data:rw&quot;\n  - &quot;/whatever-path/logs:/var/log/nginx:rw&quot;\n</code></pre></div>\n\n</blockquote>\n<p>Thank you so much everyone. <br>\nI was able to make it to work. <br>\nThe reason it was not working is that I put the volumes in the wrong place. <br>\nI should put in under the following place. In case someone encounters the same issue in the future. <br>\n    volumes:</p>\n<div class=\"codehilite\"><pre><span></span><code>  - &quot;/opt/docker/zulip/zulip:/data:rw&quot;\n  - &quot;/whatever-path/logs:/var/log/nginx&quot;\n</code></pre></div>",
+        "id": 1336636,
+        "sender_full_name": "jcheng",
+        "timestamp": 1646094862
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"22988\">@jcheng</span>: For reference, that looks like it's only getting you the nginx access logs.  Zulip itself stores its logs under <code>/var/log/zulip/</code>, if you want to have access to error logs, etc.</p>",
+        "id": 1336645,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1646095093
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/save.20log.20file.20outside.20of.20zulip.20container/near/1336645\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"22988\">jcheng</span>: For reference, that looks like it's only getting you the nginx access logs.  Zulip itself stores its logs under <code>/var/log/zulip/</code>, if you want to have access to error logs, etc.</p>\n</blockquote>\n<p>Hi Alex,<br>\nThat is right. We only save nginx log file outside of the container. <br>\nAlso, it is true that all log files are under /var/log/zulip inside the container. <br>\nDo you know anyway that I can save those log files outside of container?<br>\nTherefore, we can still access those log files when container is crashed. <br>\nThank you so much. :)</p>",
+        "id": 1337124,
+        "sender_full_name": "jcheng",
+        "timestamp": 1646168339
+    },
+    {
+        "content": "<p>I'm no Docker expert, but I would imagine you can add another line to the list of volumes, like:</p>\n<div class=\"codehilite\" data-code-language=\"YAML\"><pre><span></span><code><span class=\"nt\">volumes</span><span class=\"p\">:</span><span class=\"w\"></span>\n<span class=\"w\">  </span><span class=\"p p-Indicator\">-</span><span class=\"w\"> </span><span class=\"s\">\"/opt/docker/zulip/zulip:/data:rw\"</span><span class=\"w\"></span>\n<span class=\"w\">  </span><span class=\"p p-Indicator\">-</span><span class=\"w\"> </span><span class=\"s\">\"/whatever-path/logs:/var/log/nginx\"</span><span class=\"w\"></span>\n<span class=\"w\">  </span><span class=\"p p-Indicator\">-</span><span class=\"w\"> </span><span class=\"s\">\"/whatever-path/zulip-logs:/var/log/zulip\"</span><span class=\"w\"></span>\n</code></pre></div>",
+        "id": 1337148,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1646169017
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/save.20log.20file.20outside.20of.20zulip.20container/near/1337148\">said</a>:</p>\n<blockquote>\n<p>I'm no Docker expert, but I would imagine you can add another line to the list of volumes, like:</p>\n<p><div class=\"codehilite\" data-code-language=\"YAML\"><pre><span></span><code><span class=\"nt\">volumes</span><span class=\"p\">:</span><span class=\"w\"></span>\n<span class=\"w\">  </span><span class=\"p p-Indicator\">-</span><span class=\"w\"> </span><span class=\"s\">\"/opt/docker/zulip/zulip:/data:rw\"</span><span class=\"w\"></span>\n<span class=\"w\">  </span><span class=\"p p-Indicator\">-</span><span class=\"w\"> </span><span class=\"s\">\"/whatever-path/logs:/var/log/nginx\"</span><span class=\"w\"></span>\n<span class=\"w\">  </span><span class=\"p p-Indicator\">-</span><span class=\"w\"> </span><span class=\"s\">\"/whatever-path/zulip-logs:/var/log/zulip\"</span><span class=\"w\"></span>\n</code></pre></div><br>\n</p>\n</blockquote>\n<p>Alex,<br>\nYes. You are right. I was going to repost my previous message. <br>\nNow I got all log files outside of the container. <br>\nThank you so much for your message. :)</p>",
+        "id": 1337262,
+        "sender_full_name": "jcheng",
+        "timestamp": 1646171759
+    },
+    {
+        "content": "<p>You're welcome!</p>",
+        "id": 1337273,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1646171882
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> has marked this topic as resolved.</p>",
+        "id": 1337274,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1646171885
+    }
+]

@@ -1,0 +1,212 @@
+[
+    {
+        "content": "<p>Hi!<br>\nI'm trying to setup the email gateway (via imap for now) and it works pretty well for public streams.<br>\nBut if I try to forward a message to a private stream (in this case <code>maotest</code>) I'll receive this error:</p>\n<div class=\"codehilite\"><pre><span></span>2018-04-26 12:20:36.346 ERR  [] Error queueing internal message by emailgateway@zulip.com: Not authorized to send to stream &#39;maotest&#39;\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2018-04-26-08-12-26/zerver/lib/actions.py&quot;, line 1965, in _internal_prep_message\n    content, realm=realm)\n  File &quot;/home/zulip/deployments/2018-04-26-08-12-26/zerver/lib/actions.py&quot;, line 1899, in check_message\n    raise JsonableError(_(&quot;Not authorized to send to stream &#39;%s&#39;&quot;) % (stream.name,))\nzerver.lib.exceptions.JsonableError: Not authorized to send to stream &#39;maotest&#39;\n2018-04-26 12:20:36.357 INFO [zerver.lib.email_mirror] Successfully processed email to maotest ()\n</pre></div>\n\n\n<p>I don't see any option to add <code>emailgateway@zulip.com</code> to the channel either. Do I miss something, or does the gateway not support forwarding to private streams?</p>",
+        "id": 570503,
+        "sender_full_name": "AndreM",
+        "timestamp": 1524745467
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"6056\">@AndreM</span> hmm, interesting question!  It certainly should support sending to private streams, but it's possible that we broke that by accident recently.  Let me investigate.</p>",
+        "id": 570552,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524757786
+    },
+    {
+        "content": "<p>Thank you for looking into it!<br>\nIn the meantime my DNS records were finally updated, but using the local gateway did result in the same error unsurprisingly.</p>",
+        "id": 570567,
+        "sender_full_name": "AndreM",
+        "timestamp": 1524758821
+    },
+    {
+        "content": "<p>Hey, just looking into this myself and I can confirm the same thing. I set a stream private and emails immediately started to get rejected. Glad it's not just me!</p>",
+        "id": 570862,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524784103
+    },
+    {
+        "content": "<p>Thanks for the confirmation.  I should have a fix for this today.</p>",
+        "id": 570974,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524842726
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"6056\">@AndreM</span> <span class=\"user-mention\" data-user-id=\"7571\">@Michael Potts</span> so, it turns out this issue is a little interesting.</p>",
+        "id": 571082,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524855193
+    },
+    {
+        "content": "<p>The sorta historical model for how this worked was that the email gateway bot is set as an <code>api_super_user</code> user (a permission that allows it to send to arbitrary streams)</p>",
+        "id": 571084,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524855224
+    },
+    {
+        "content": "<p>So one option is to set that manually for the email gateway bot.</p>",
+        "id": 571090,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524855394
+    },
+    {
+        "content": "<p>Hmm, something puzzling for ms is that it looks like we do that in the code for creating the database...</p>",
+        "id": 571091,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524855420
+    },
+    {
+        "content": "<p>Oh, are both of you using Slack import?</p>",
+        "id": 571092,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524855426
+    },
+    {
+        "content": "<p>It's possible that doing so could result in the email gateway bot not getting its special permissions...</p>",
+        "id": 571093,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524855443
+    },
+    {
+        "content": "<p>Nope, no import. But I set up LDAP authentication in addition to email auth. Could it have something to do with that?</p>",
+        "id": 571099,
+        "sender_full_name": "AndreM",
+        "timestamp": 1524855660
+    },
+    {
+        "content": "<p>No, that shouldn't have any effect.</p>",
+        "id": 571105,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524856311
+    },
+    {
+        "content": "<p>Let me do a bit more testing.</p>",
+        "id": 571106,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524856315
+    },
+    {
+        "content": "<p>Nope, no import as well. No special auth either.</p>",
+        "id": 571116,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524857606
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7571\">@Michael Potts</span> <span class=\"user-mention\" data-user-id=\"6056\">@AndreM</span> can you try running the following in a <code>manage.py shell</code> and let me know what it prints?</p>\n<div class=\"codehilite\"><pre><span></span>email_gateway_bot = get_system_bot(settings.EMAIL_GATEWAY_BOT)\nemail_gateway_bot.is_api_super_user\n</pre></div>",
+        "id": 571168,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524862311
+    },
+    {
+        "content": "<p>Did I do it right?<br>\n<a href=\"/user_uploads/2/60/zEvu8kWbxXsrjYMLlULLJEUI/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">pasted image</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/60/zEvu8kWbxXsrjYMLlULLJEUI/pasted_image.png\" target=\"_blank\" title=\"pasted image\"><img src=\"/user_uploads/2/60/zEvu8kWbxXsrjYMLlULLJEUI/pasted_image.png\"></a></div>",
+        "id": 571171,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524862566
+    },
+    {
+        "content": "<p>yep, you did!</p>",
+        "id": 571173,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524862634
+    },
+    {
+        "content": "<p>Interesting.</p>",
+        "id": 571174,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524862636
+    },
+    {
+        "content": "<p>So, if you set that to True and do <code>email_gateway_bot.save()</code>, you should be good.</p>",
+        "id": 571175,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524862650
+    },
+    {
+        "content": "<p>But there's still the mystery of what that wasn't set correctly when you created your server.</p>",
+        "id": 571176,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524862692
+    },
+    {
+        "content": "<p>Are you folks using the Docker image?</p>",
+        "id": 571177,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524862699
+    },
+    {
+        "content": "<p>(That's the best idea for what might result in not running the default Zulip server DB initialization code)</p>",
+        "id": 571189,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524863038
+    },
+    {
+        "content": "<p>I am not running the docker image. Debian VM for me</p>",
+        "id": 571208,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524863599
+    },
+    {
+        "content": "<p>OK.  I think my next step is to install a test server and see if I can reproduce the email gateway bot not getting that flag there.</p>",
+        "id": 571218,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524864256
+    },
+    {
+        "content": "<p>Ok. I could spin up another VM and test it, but I recorded all the changes I made and none of them would seem to have affected that.</p>",
+        "id": 571237,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524864783
+    },
+    {
+        "content": "<p>Do you want a git issue created for this?</p>",
+        "id": 571239,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1524864809
+    },
+    {
+        "content": "<p>I'll open an issue by EOD today if I don't get to the bottom of this; it's a weird enough issue that realistically I should investigate it myself regardless.</p>",
+        "id": 571245,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524865065
+    },
+    {
+        "content": "<p>Sorry for the late reply...</p>\n<div class=\"codehilite\"><pre><span></span>In [1]: email_gateway_bot = get_system_bot(settings.EMAIL_GATEWAY_BOT)\nIn [2]: email_gateway_bot.is_api_super_user\nOut[2]: False\n</pre></div>\n\n\n<p>Same for me.</p>\n<p>I tried setting</p>\n<div class=\"codehilite\"><pre><span></span>In [6]: email_gateway_bot.is_api_super_user = True\nIn [7]: email_gateway_bot.is_api_super_user\nOut[7]: True\nIn [8]: email_gateway_bot.save()\n</pre></div>\n\n\n<p>but same result...</p>\n<div class=\"codehilite\"><pre><span></span>2018-04-27 21:42:08.029 ERR  [] Error queueing internal message by emailgateway@zulip.com: Not authorized to send to stream &#39;maotest&#39;\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2018-04-26-08-12-26/zerver/lib/actions.py&quot;, line 1965, in _internal_prep_message\n    content, realm=realm)\n  File &quot;/home/zulip/deployments/2018-04-26-08-12-26/zerver/lib/actions.py&quot;, line 1899, in check_message\n    raise JsonableError(_(&quot;Not authorized to send to stream &#39;%s&#39;&quot;) % (stream.name,))\nzerver.lib.exceptions.JsonableError: Not authorized to send to stream &#39;maotest&#39;\n2018-04-27 21:42:08.034 INFO [zerver.lib.email_mirror] Successfully processed email to maotest ()\n</pre></div>\n\n\n<p>I don't know if it matters, but I installed Zulip inside an LXC container, running Ubuntu 16.04.4 LTS on a Debian 9 host.</p>",
+        "id": 571252,
+        "sender_full_name": "AndreM",
+        "timestamp": 1524865540
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"6056\">@AndreM</span> hmm, can you try doing <code>scripts/setup/flush-memcached</code>?  I think it's probably just a caching issue that your changes didn't take effect properly.</p>",
+        "id": 571286,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524874453
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> that worked!<br>\nJust tested the email gateway again and the bot was able to post the message :)<br>\nThank you very much for your efforts!</p>",
+        "id": 571311,
+        "sender_full_name": "AndreM",
+        "timestamp": 1524894134
+    },
+    {
+        "content": "<p>Cool, good to know.  So the remaining mystery is why that wasn't done automatically by the install process.</p>",
+        "id": 571366,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1524931224
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7571\">@Michael Potts</span> were you able to get this working after doing a memcached flush?</p>",
+        "id": 573184,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1525282133
+    },
+    {
+        "content": "<p>Yep, it worked perfect!</p>",
+        "id": 573284,
+        "sender_full_name": "Michael Potts",
+        "timestamp": 1525285156
+    },
+    {
+        "content": "<p>Great, thanks for testing, folks!  I still have on my TODO list tracking down why you needed to do that.</p>",
+        "id": 573308,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1525285860
+    }
+]

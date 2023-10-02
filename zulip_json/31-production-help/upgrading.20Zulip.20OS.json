@@ -1,0 +1,152 @@
+[
+    {
+        "content": "<p>Upgrading from Ubuntu14 to 16 to 18. 14-16 works like a charm.</p>\n<p>I get all the way through the <a href=\"https://zulip.readthedocs.io/en/latest/production/maintain-secure-upgrade.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/maintain-secure-upgrade.html\">listed steps</a> with only one change (using <code>/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 /home/zulip/deployments/current/ --from-git</code> instead of <code>/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 /home/zulip/deployments/current/ --ignore-static-assets</code>as that's what the line was before the <code>--ignore-static assets</code> kwarg was added)</p>\n<p>on the final step, I run <code>/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 /home/zulip/deployments/current/ --from-git</code>and it bombs out with:</p>\n<div class=\"codehilite\"><pre><span></span>Using cached node modules from /srv/zulip-npm-cache/f834f51a79a0a71e87978bb81f248c120e56f67b/node_modules\n+ rm -rf node_modules\n+ ln -nsf /srv/zulip-npm-cache/f834f51a79a0a71e87978bb81f248c120e56f67b/node_modules node_modules\n+ ./tools/setup/emoji/build_emoji\n+ ./tools/inline-email-css\n+ ./tools/setup/generate_zulip_bots_static_files.py\n+ ./tools/setup/generate-custom-icon-webfont\n+ ./tools/setup/build_pygments_data\n+ ./tools/minify-js --prev-deploy /home/zulip/deployments/current\n+ cp -R node_modules/katex/dist/fonts /home/zulip/prod-static/node_modules/katex/dist/fonts\n+ ./manage.py collectstatic --no-default-ignore --noinput -i assets -inode_modules -i styles -i templates\n+ ./manage.py compilemessages\n+ cp -aT static/locale /home/zulip/prod-static/locale\n+ ./tools/update-authors-json --not-required\n2019-04-29 05:21:20,798 upgrade-zulip-stage-2: Checking for needed migrations\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2019-03-20-20-36-08/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/base/base.py&quot;, line 213, in ensure_connection\n    self.connect()\n  File &quot;/home/zulip/deployments/2019-03-20-20-36-08/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/base/base.py&quot;, line 189, in connect\n    self.connection = self.get_new_connection(conn_params)\n  File &quot;/home/zulip/deployments/2019-03-20-20-36-08/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/postgresql/base.py&quot;, line 176, in get_new_connection\n    connection = Database.connect(**conn_params)\n  File &quot;/home/zulip/deployments/2019-03-20-20-36-08/zulip-py3-venv/lib/python3.6/site-packages/psycopg2/__init__.py&quot;, line 130, in connect\n    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)\n  File &quot;/home/zulip/deployments/2019-03-20-20-36-08/zerver/lib/db.py&quot;, line 43, in __init__\n    super().__init__(*args, **kwargs)\npsycopg2.OperationalError: could not connect to server: No such file or directory\n    Is the server running locally and accepting\n    connections on Unix domain socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot;?\n</pre></div>\n\n\n<p>To get this far, I had to make sure to run <code>/home/zulip/deployments/current/scripts/zulip-puppet-apply -f</code> first, as attempting to run the upgrade phase 2 first will cause it to bomb out with:</p>\n<div class=\"codehilite\"><pre><span></span>Error: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]: Failed to call refresh: &#39;pg_ctlcluster 10 main restart&#39; returned 1 instead of one of [0]\nError: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]: &#39;pg_ctlcluster 10 main restart&#39; returned 1 instead of one of [0]\n</pre></div>\n\n\n<p>I still get that error when run, but subsequent zulip-puppet-applies don't throw the error, so the script doesn't die... </p>\n<p>Sorry for having so many questions in this channel lately</p>",
+        "id": 737435,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1556515585
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"3733\">@Sean Wallitsch</span> just to check, were you on 2.0.2?  2.0.3 is what added <code>--ignore-static assets</code>.</p>",
+        "id": 737440,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1556517152
+    },
+    {
+        "content": "<p>No worries on posting questions, testing new documentation is very much appreciated!</p>",
+        "id": 737441,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1556517177
+    },
+    {
+        "content": "<p>So that error you got is clearly because postgres wasn't running.  In theory, the <code>service postgresql start</code> command a bit earlier was supposed to start it up.</p>",
+        "id": 737442,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1556517207
+    },
+    {
+        "content": "<p>(On 2.0.2, you had to either do <code>--from-git</code> or not depending how you'd installed the latest deployment)</p>",
+        "id": 737443,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1556517229
+    },
+    {
+        "content": "<p>yes, 2.0.2</p>",
+        "id": 737444,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1556517330
+    },
+    {
+        "content": "<p>hmm, I can try again (I have a full snapshot right before I start doing any of the migrations</p>",
+        "id": 737445,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1556517374
+    },
+    {
+        "content": "<p>should service postgressql start prevent the <code>Error: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]: Failed to call refresh: 'pg_ctlcluster 10 main restart' returned 1 instead of one of [0]</code> error?</p>",
+        "id": 737446,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1556517431
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"3733\">@Sean Wallitsch</span> yes, that's likely an error with a root cause of postgres not starting.</p>",
+        "id": 737453,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1556519402
+    },
+    {
+        "content": "<p>Now, it's possible that we have something misordered and need to tweak some code.</p>",
+        "id": 737454,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1556519431
+    },
+    {
+        "content": "<p>I'll give it a go now</p>",
+        "id": 737463,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1556519736
+    },
+    {
+        "content": "<p>thanks for your late night support</p>",
+        "id": 737464,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1556519741
+    },
+    {
+        "content": "<p>no luck. I'll reload from a snapshot and try again tomorrow.</p>",
+        "id": 737466,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1556520281
+    },
+    {
+        "content": "<blockquote>\n<p>I'll give it a go now</p>\n</blockquote>\n<p>Hello <span class=\"user-mention\" data-user-id=\"3733\">@Sean Wallitsch</span>  your upgrade was OK?</p>",
+        "id": 742060,
+        "sender_full_name": "Cesar Celis",
+        "timestamp": 1557919309
+    },
+    {
+        "content": "<p>haha, it was not. we're trying again today</p>",
+        "id": 742169,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1557935850
+    },
+    {
+        "content": "<p>We ended up bringing in our database people and doing a database migration, which was stress free</p>",
+        "id": 744948,
+        "sender_full_name": "Sean Wallitsch",
+        "timestamp": 1558573312
+    },
+    {
+        "content": "<p>Got it, my current OS is Ubuntu 14.04 and Zulip 1.9.1. I am going to upgrade to 2.0.3..</p>",
+        "id": 745187,
+        "sender_full_name": "Cesar Celis",
+        "timestamp": 1558633996
+    },
+    {
+        "content": "<p>Yeah I recommend upgrading zulip and then ubuntu following our docs</p>",
+        "id": 745290,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1558655383
+    },
+    {
+        "content": "<blockquote>\n<p>Upgrading from Ubuntu14 to 16 to 18. 14-16 works like a charm.</p>\n</blockquote>\n<p>In my case upgrade  2.0.3 from a tarball, worked OK</p>",
+        "id": 746429,
+        "sender_full_name": "Cesar Celis",
+        "timestamp": 1559048046
+    },
+    {
+        "content": "<blockquote>\n<p>should service postgressql start prevent the <code>Error: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]: Failed to call refresh: 'pg_ctlcluster 10 main restart' returned 1 instead of one of [0]</code> error?</p>\n</blockquote>\n<p>From Xenial to Bionic, the very same message.</p>",
+        "id": 746431,
+        "sender_full_name": "Cesar Celis",
+        "timestamp": 1559048123
+    },
+    {
+        "content": "<p>I'll stay en Xenial, do you need any log to troubleshoot?</p>",
+        "id": 746432,
+        "sender_full_name": "Cesar Celis",
+        "timestamp": 1559048200
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10549\">@Cesar Celis</span> can you post the output?</p>",
+        "id": 746689,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1559078875
+    },
+    {
+        "content": "<p>I'm curious what happened on the <code>service postgresql start</code> line.</p>",
+        "id": 746690,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1559078883
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>2019-05-29 15:43:48,045 upgrade-zulip-stage-2: Applying puppet changes...\nWarning: The string &#39;4033604&#39; was automatically coerced to the numerical value 4033604 (file: /home/zulip/deployments/2019-05-27-10-38-42/puppet/zulip/manifests/base.pp, line: 93, column: 19)\nNotice: Compiled catalog for zulip.megasoft.com.ve in environment production in 3.43 seconds\nNotice: /Stage[main]/Zulip::Apt_repository/Exec[setup_apt_repo]/returns: executed successfully\nNotice: /Stage[main]/Zulip::Postgres_appdb_tuned/File[/etc/postgresql/10/main/postgresql.conf]/content: content changed &#39;{md5}e18ff7c691b2dd6a0a966703adb1a45b&#39; to &#39;{md5}7d4015f37200f56bc9713a9add914230&#39;\nNotice: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]/returns: Job for postgresql@10-main.service failed because the service did not take the steps required by its unit configuration.\nNotice: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]/returns: See &quot;systemctl status postgresql@10-main.service&quot; and &quot;journalctl -xe&quot; for details.\nError: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]: Failed to call refresh: &#39;pg_ctlcluster 10 main restart&#39; returned 1 instead of one of [0]\nError: /Stage[main]/Zulip::Postgres_appdb_tuned/Exec[pg_ctlcluster 10 main restart]: &#39;pg_ctlcluster 10 main restart&#39; returned 1 instead of one of [0]\nNotice: Applied catalog in 22.86 seconds\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2&quot;, line 181, in &lt;module&gt;\n    subprocess.check_call([&quot;./scripts/zulip-puppet-apply&quot;, &quot;--force&quot;])\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 291, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./scripts/zulip-puppet-apply&#39;, &#39;--force&#39;]&#39; returned non-zero exit status 1.\nroot@zulip:~# systemctl status postgresql\nâ postgresql.service - PostgreSQL RDBMS\n   Loaded: loaded (/lib/systemd/system/postgresql.service; enabled; vendor preset: enabled)\n   Active: active (exited) since Wed 2019-05-29 11:26:51 -04; 17min ago\n Main PID: 4200 (code=exited, status=0/SUCCESS)\n    Tasks: 0 (limit: 4672)\n   CGroup: /system.slice/postgresql.service\n\nmay 29 11:26:51 zulip systemd[1]: Starting PostgreSQL RDBMS...\nmay 29 11:26:51 zulip systemd[1]: Started PostgreSQL RDBMS.\nroot@zulip:~# systemctl start postgresql\nroot@zulip:~# systemctl status postgresql\nâ postgresql.service - PostgreSQL RDBMS\n   Loaded: loaded (/lib/systemd/system/postgresql.service; enabled; vendor preset: enabled)\n   Active: active (exited) since Wed 2019-05-29 11:26:51 -04; 18min ago\n Main PID: 4200 (code=exited, status=0/SUCCESS)\n    Tasks: 0 (limit: 4672)\n   CGroup: /system.slice/postgresql.service\n\nmay 29 11:26:51 zulip systemd[1]: Starting PostgreSQL RDBMS...\nmay 29 11:26:51 zulip systemd[1]: Started PostgreSQL RDBMS.\n</pre></div>",
+        "id": 747074,
+        "sender_full_name": "Cesar Celis",
+        "timestamp": 1559144825
+    },
+    {
+        "content": "<p>PostgreSQL seems to be running ok...</p>",
+        "id": 747075,
+        "sender_full_name": "Cesar Celis",
+        "timestamp": 1559144860
+    }
+]

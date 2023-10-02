@@ -1,0 +1,314 @@
+<html>
+<head><meta charset="utf-8"><title>Upgrading to Zulip Master (a42f7a6) · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html">Upgrading to Zulip Master (a42f7a6)</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1110128"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110128" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110128">(Jan 28 2021 at 20:14)</a>:</h4>
+<p>Tried upgrading to Master this evening:<br>
+Problem was:<br>
+<code>0306_custom_profile_field_date_format.py</code><br>
+This caused <code>django.db.utils.DataError: invalid value "stri" for "YYYY"</code><br>
+I do not know about anyone having created a UserProfile Date field.  (But I am not a 100% certain)<br>
+I "fixed" this by just removing the operations from this Migration.</p>
+<p>A thing I noticed is that the version installed seems to be different to the one installed here. (Still Home Icon on "All messages", "new topics" is still modal).<br>
+My dev environment does seem to be the same. So this seems to be wanted behaviour?</p>
+<p>(Just as a notice. We run custom changes on top of master. But not anything that should change something here)</p>
+
+
+
+<a name="1110140"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110140" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110140">(Jan 28 2021 at 20:28)</a>:</h4>
+<p>So someone got a value starting with <code>stri</code> into a custom profile field of type Date? That shouldn’t have been possible.</p>
+
+
+
+<a name="1110141"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110141" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110141">(Jan 28 2021 at 20:29)</a>:</h4>
+<p>Can you check what the value is?</p>
+<div class="codehilite" data-code-language="Bash Session"><pre><span></span><code><span class="gp">$ </span>su zulip -c <span class="s1">'psql zulip'</span>
+<span class="go">zulip=&gt; SELECT * FROM zerver_customprofilefield AS f, zerver_customprofilefieldvalue WHERE f.id = field_id AND field_type = 4 AND value LIKE 'stri%';</span>
+</code></pre></div>
+
+
+
+<a name="1110142"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110142" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110142">(Jan 28 2021 at 20:32)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>zulip=&gt; SELECT * FROM zerver_customprofilefield AS f, zerver_customprofilefieldvalue WHERE f.id = field_id AND field_type = 4 AND value LIKE &#39;stri%&#39;;
+ id | name | field_type | realm_id | hint | field_data | order | id | value | field_id | user_profile_id | rendered_value
+----+------+------------+----------+------+------------+-------+----+-------+----------+-----------------+----------------
+(0 rows)
+</code></pre></div>
+
+
+
+<a name="1110143"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110143" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110143">(Jan 28 2021 at 20:33)</a>:</h4>
+<p>Here is the full Error</p>
+<div class="codehilite"><pre><span></span><code>2021-01-28 19:23:08,939 upgrade-zulip-stage-2: Applying database migrations...
+Operations to perform:
+  Apply all migrations: analytics, auth, confirmation, contenttypes, otp_static, otp_totp, sessions, social_django, two_factor, zerver
+Running migrations:
+  Applying zerver.0306_custom_profile_field_date_format...Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/utils.py&quot;, line 82, in _execute
+    return self.cursor.execute(sql)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zerver/lib/db.py&quot;, line 33, in execute
+    return wrapper_execute(self, super().execute, query, vars)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zerver/lib/db.py&quot;, line 20, in wrapper_execute
+    return action(sql, params)
+psycopg2.errors.InvalidDatetimeFormat: invalid value &quot;stri&quot; for &quot;YYYY&quot;
+DETAIL:  Value must be an integer.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File &quot;./manage.py&quot;, line 50, in &lt;module&gt;
+    execute_from_command_line(sys.argv)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/__init__.py&quot;, line 401, in execute_from_command_line
+    utility.execute()
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/__init__.py&quot;, line 395, in execute
+    self.fetch_command(subcommand).run_from_argv(self.argv)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py&quot;, line 330, in run_from_argv
+    self.execute(*args, **cmd_options)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py&quot;, line 371, in execute
+    output = self.handle(*args, **options)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py&quot;, line 85, in wrapped
+    res = handle_func(*args, **kwargs)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/commands/migrate.py&quot;, line 245, in handle
+    fake_initial=fake_initial,
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/migrations/executor.py&quot;, line 117, in migrate
+    state = self._migrate_all_forwards(state, plan, full_plan, fake=fake, fake_initial=fake_initial)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/migrations/executor.py&quot;, line 147, in _migrate_all_forwards
+    state = self.apply_migration(state, migration, fake=fake, fake_initial=fake_initial)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/migrations/executor.py&quot;, line 227, in apply_migration
+    state = migration.apply(state, schema_editor)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/migrations/migration.py&quot;, line 124, in apply
+    operation.database_forwards(self.app_label, schema_editor, old_state, project_state)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/migrations/operations/special.py&quot;, line 105, in database_forwards
+    self._run_sql(schema_editor, self.sql)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/migrations/operations/special.py&quot;, line 130, in _run_sql
+    schema_editor.execute(statement, params=None)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/base/schema.py&quot;, line 142, in execute
+    cursor.execute(sql, params)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/utils.py&quot;, line 66, in execute
+    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/utils.py&quot;, line 75, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/utils.py&quot;, line 84, in _execute
+    return self.cursor.execute(sql, params)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/utils.py&quot;, line 90, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/utils.py&quot;, line 82, in _execute
+    return self.cursor.execute(sql)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zerver/lib/db.py&quot;, line 33, in execute
+    return wrapper_execute(self, super().execute, query, vars)
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zerver/lib/db.py&quot;, line 20, in wrapper_execute
+    return action(sql, params)
+django.db.utils.DataError: invalid value &quot;stri&quot; for &quot;YYYY&quot;
+DETAIL:  Value must be an integer.
+
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/scripts/lib/upgrade-zulip-stage-2&quot;, line 285, in &lt;module&gt;
+    subprocess.check_call([&quot;./manage.py&quot;, &quot;migrate&quot;, &quot;--noinput&quot;], preexec_fn=su_to_zulip)
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 311, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;./manage.py&#39;, &#39;migrate&#39;, &#39;--noinput&#39;]&#39; returned non-zero exit status 1.
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-from-git&quot;, line 81, in &lt;module&gt;
+    deploy_path, &quot;--from-git&quot;, *deploy_options])
+  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 311, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2021-01-28-20-22-02/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2021-01-28-20-22-02&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1.
+</code></pre></div>
+
+
+
+<a name="1110147"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110147" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110147">(Jan 28 2021 at 20:42)</a>:</h4>
+<p>Maybe there are leading spaces or something? Try changing <code>LIKE 'stri%'</code> to <code>LIKE '%stri%'</code>.</p>
+
+
+
+<a name="1110148"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110148" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110148">(Jan 28 2021 at 20:45)</a>:</h4>
+<p>Still no success</p>
+
+
+
+<a name="1110149"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110149" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110149">(Jan 28 2021 at 20:45)</a>:</h4>
+<p>I tried without even checking for 'stri':</p>
+<div class="codehilite"><pre><span></span><code>zulip=&gt; SELECT * FROM zerver_customprofilefield AS f, zerver_customprofilefieldvalue WHERE f.id = field_id AND field_type = 4;
+ id | name | field_type | realm_id | hint | field_data | order | id | value | field_id | user_profile_id | rendered_value
+----+------+------------+----------+------+------------+-------+----+-------+----------+-----------------+----------------
+(0 rows)
+</code></pre></div>
+
+
+
+<a name="1110151"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110151" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110151">(Jan 28 2021 at 20:48)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>zulip=&gt; SELECT * FROM zerver_customprofilefield AS f, zerver_customprofilefieldvalue WHERE f.id = field_id;
+ id |  name  | field_type | realm_id |            hint            |      field_data      | order | id |    value    | field_id | user_profile_id | rendered_value
+----+--------+------------+----------+----------------------------+----------------------+-------+----+-------------+----------+-----------------+----------------
+  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  1 | strifel     |        1 |              11 |
+  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  2 | someGithubName |        1 |              29 |
+  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  3 | someGithubName |        1 |               9 |
+  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  4 | someGithubName  |        1 |              21 |
+  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  5 | someGithubName |        1 |              25 |
+  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  6 | someGithubName |        1 |              69 |
+  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  7 | someGithubName |        1 |              27 |
+  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  8 | someGithubName|        1 |              12 |
+  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  9 | someGithubName  |        1 |              23 |
+  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 | 10 | someGithubName |        1 |              20 |
+  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 | 11 | someGithubName |        1 |              24 |
+  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 | 12 | someGithubName  |        1 |              28 |
+</code></pre></div>
+
+
+
+<a name="1110152"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110152" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110152">(Jan 28 2021 at 20:50)</a>:</h4>
+<p>Running the SQL Query from the migration directly in the database throws the same error:</p>
+<div class="codehilite"><pre><span></span><code>zulip=&gt; UPDATE zerver_customprofilefieldvalue
+zulip-&gt;                 SET value = to_char(to_date(value, &#39;YYYY-MM-DD&#39;), &#39;YYYY-MM-DD&#39;)
+zulip-&gt;                 FROM zerver_customprofilefield AS f
+zulip-&gt;                 WHERE f.id = field_id
+zulip-&gt;                 AND f.field_type = 4
+zulip-&gt;                 AND value &lt;&gt; to_char(to_date(value, &#39;YYYY-MM-DD&#39;), &#39;YYYY-MM-DD&#39;);
+ERROR:  invalid value &quot;stri&quot; for &quot;YYYY&quot;
+DETAIL:  Value must be an integer.
+</code></pre></div>
+
+
+
+<a name="1110153"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110153" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110153">(Jan 28 2021 at 20:52)</a>:</h4>
+<p>Well that is quite a mystery…last I checked, the consensus of most mathematicians was that 7 is not equal to 4. <span aria-label="expressionless" class="emoji emoji-1f611" role="img" title="expressionless">:expressionless:</span></p>
+
+
+
+<a name="1110159"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110159" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110159">(Jan 28 2021 at 20:56)</a>:</h4>
+<p><del>I think I found a fix: ("(" in the last row) </del></p>
+<div class="codehilite"><pre><span></span><code>zulip=&gt; UPDATE zerver_customprofilefieldvalue
+                SET value = to_char(to_date(value, &#39;YYYY-MM-DD&#39;), &#39;YYYY-MM-DD&#39;)
+                FROM zerver_customprofilefield AS f
+                WHERE FALSE
+                AND field_type = 4
+                AND (value &lt;&gt; to_char(to_date(value, &#39;YYYY-MM-DD&#39;), &#39;YYYY-MM-DD&#39;));
+UPDATE 0
+</code></pre></div>
+
+
+
+<a name="1110161"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110161" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110161">(Jan 28 2021 at 20:57)</a>:</h4>
+<p>Surely you didn’t mean <code>WHERE FALSE</code>?</p>
+
+
+
+<a name="1110162"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110162" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110162">(Jan 28 2021 at 20:57)</a>:</h4>
+<p>Oh. This was a experiment I forgot to remove. Sorry</p>
+
+
+
+<a name="1110164"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110164" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110164">(Jan 28 2021 at 20:58)</a>:</h4>
+<p>So the "()" does not fix it.<br>
+But the last row is the problem: (I just used the wrong with the FALSE again):</p>
+<div class="codehilite"><pre><span></span><code>zulip=&gt; UPDATE zerver_customprofilefieldvalue
+                SET value = to_char(to_date(value, &#39;YYYY-MM-DD&#39;), &#39;YYYY-MM-DD&#39;)
+                FROM zerver_customprofilefield AS f
+                WHERE f.id = field_id
+                AND f.field_type = 4;
+UPDATE 0
+</code></pre></div>
+
+
+
+<a name="1110165"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110165" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110165">(Jan 28 2021 at 21:00)</a>:</h4>
+<p>Ohh, I see…your query plan resulted in evaluation of the <code>value</code> condition even when the <code>field_type</code> condition failed.</p>
+
+
+
+<a name="1110166"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110166" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110166">(Jan 28 2021 at 21:02)</a>:</h4>
+<p>That makes sense. (More than my FALSE :) )<br>
+But that seems like a issue not only I do should run into</p>
+
+
+
+<a name="1110168"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110168" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110168">(Jan 28 2021 at 21:04)</a>:</h4>
+<p>There’s some nondeterminism in that the query plan depends on the table statistics, but yes, I am surprised this is the first time we’ve seen this.</p>
+
+
+
+<a name="1110171"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110171" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110171">(Jan 28 2021 at 21:12)</a>:</h4>
+<p>Can you try this?</p>
+<div class="codehilite" data-code-language="PostgreSQL SQL dialect"><pre><span></span><code><span class="k">UPDATE</span> <span class="n">zerver_customprofilefieldvalue</span>
+<span class="k">SET</span> <span class="k">value</span> <span class="o">=</span> <span class="n">to_char</span><span class="p">(</span><span class="n">to_date</span><span class="p">(</span><span class="k">value</span><span class="p">,</span> <span class="s1">'YYYY-MM-DD'</span><span class="p">),</span> <span class="s1">'YYYY-MM-DD'</span><span class="p">)</span>
+<span class="k">FROM</span> <span class="n">zerver_customprofilefield</span> <span class="k">AS</span> <span class="n">f</span>
+<span class="k">WHERE</span> <span class="n">f</span><span class="mf">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">field_id</span>
+<span class="k">AND</span> <span class="n">f</span><span class="mf">.</span><span class="n">field_type</span> <span class="o">=</span> <span class="mf">4</span>
+<span class="k">AND</span> <span class="k">CASE</span>
+        <span class="k">WHEN</span> <span class="n">f</span><span class="mf">.</span><span class="n">field_type</span> <span class="o">=</span> <span class="mf">4</span>
+        <span class="k">THEN</span> <span class="k">value</span> <span class="o">&lt;&gt;</span> <span class="n">to_char</span><span class="p">(</span><span class="n">to_date</span><span class="p">(</span><span class="k">value</span><span class="p">,</span> <span class="s1">'YYYY-MM-DD'</span><span class="p">),</span> <span class="s1">'YYYY-MM-DD'</span><span class="p">)</span>
+    <span class="k">END</span><span class="p">;</span>
+</code></pre></div>
+
+
+
+<a name="1110173"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110173" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110173">(Jan 28 2021 at 21:12)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>zulip=&gt; UPDATE zerver_customprofilefieldvalue
+zulip-&gt; SET value = to_char(to_date(value, &#39;YYYY-MM-DD&#39;), &#39;YYYY-MM-DD&#39;)
+zulip-&gt; FROM zerver_customprofilefield AS f
+zulip-&gt; WHERE f.id = field_id
+zulip-&gt; AND f.field_type = 4
+zulip-&gt; AND CASE
+zulip-&gt;         WHEN f.field_type = 4
+zulip-&gt;         THEN value &lt;&gt; to_char(to_date(value, &#39;YYYY-MM-DD&#39;), &#39;YYYY-MM-DD&#39;)
+zulip-&gt;     END;
+UPDATE 0
+</code></pre></div>
+
+
+
+<a name="1110174"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110174" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110174">(Jan 28 2021 at 21:13)</a>:</h4>
+<p>Great, I’ll go with that.</p>
+
+
+
+<a name="1110175"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110175" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Felix (strifel) <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110175">(Jan 28 2021 at 21:13)</a>:</h4>
+<p>Thanks. For helping</p>
+
+
+
+<a name="1110177"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110177" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110177">(Jan 28 2021 at 21:14)</a>:</h4>
+<p>Thanks for debugging!</p>
+
+
+
+<a name="1110180"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrading%20to%20Zulip%20Master%20%28a42f7a6%29/near/1110180" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrading.20to.20Zulip.20Master.20.28a42f7a6.29.html#1110180">(Jan 28 2021 at 21:21)</a>:</h4>
+<p>Opened <a href="https://github.com/zulip/zulip/pull/17153">#17153</a>.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

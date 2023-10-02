@@ -1,0 +1,440 @@
+[
+    {
+        "content": "<p>Hi, I was trying to debug the export function and a permission error by telling it to export to the live dir, which caused it to wipe it clean.<br>\nI started a fresh install and on step 3 I moved to the restore function from my first and only backup (copying postgres first) just in case as I have chats I'd like to keep. It finds that I have 212 records and asked if I want to keep them, which I do but it stops the restore.<br>\nDo I have to rebuild the tar without postgres to get around that?</p>",
+        "id": 785692,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568074934
+    },
+    {
+        "content": "<p>Does not look like the db is part of the backup so it appears to be the restore, but I don't know enough.</p>",
+        "id": 785695,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568075921
+    },
+    {
+        "content": "<p>Am I in the wrong place here? I had the idea that I could get some help here.</p>",
+        "id": 785754,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568127411
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13379\">@Steve Szmidt</span> welcome! This is the right place, though you'll have to wait for someone familiar with that part of the code to come online</p>",
+        "id": 785755,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1568127982
+    },
+    {
+        "content": "<p>(for fast response support <a href=\"http://zulipchat.com\" target=\"_blank\" title=\"http://zulipchat.com\">zulipchat.com</a> does offer support packages with various SLAs -- ping <a href=\"mailto:support@zulipchat.com\" title=\"mailto:support@zulipchat.com\">support@zulipchat.com</a> for details)</p>",
+        "id": 785756,
+        "sender_full_name": "Rishi Gupta",
+        "timestamp": 1568128082
+    },
+    {
+        "content": "<p>Aha. Is there not a community supported forum or some such?</p>",
+        "id": 785762,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568130536
+    },
+    {
+        "content": "<p>Just realized what you said. Community here, and SLA's for those who can't wait.  Thanks!</p>",
+        "id": 785794,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568146280
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13379\">@Steve Szmidt</span> can you post precisely what you ran and what error you got?</p>",
+        "id": 785838,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568155103
+    },
+    {
+        "content": "<p>Our backup tarballs definitely include the database; so we need more detail to understand your problem.</p>",
+        "id": 785840,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568155146
+    },
+    {
+        "content": "<p>Not sure what to add beyond my initial post. Had a working install, manage.py export wiped all the files and directories, now I'm trying to reinstall without also wiping out the 212 entries. There's no error, I simply said no to <br>\n\"WARNING: This will delete your Zulip database which currently contains 212 messages.<br>\nDo you want to proceed?\"  due to not wanting to loose the 212.<br>\nNow I'm trying to figure out how to best proceed.</p>",
+        "id": 785919,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568165695
+    },
+    {
+        "content": "<p>supervisorctl stop all<br>\n./manage.py export --output /tmp -r ''<br>\nsupervisorctl start all<br>\nI specified tmp as the export file was not there after running the export.</p>\n<p>Seems I should be able to restore a backup of postgres after the install since it is a full restore not a partial which could mess up various indices and pointers.</p>",
+        "id": 785958,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568201252
+    },
+    {
+        "content": "<p><code>manage.py export</code> doesn't any data.  Do you mean <code>import</code>?  I don't think we can help you unless you can communicate what you did clearly.</p>",
+        "id": 785998,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568227507
+    },
+    {
+        "content": "<p>My guess is the you tried to import back into the same server you exported from (rather than an empty server) and got that warning.</p>",
+        "id": 785999,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568227551
+    },
+    {
+        "content": "<p>This is what I ran to find the export syntax: <br>\n./manage.py --help <br>\n(I believe was the parameter) and it gives the syntax for export. Just as it says in the online doc: <br>\n<a href=\"https://zulip.readthedocs.io/en/latest/production/export-and-import.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/latest/production/export-and-import.html\">https://zulip.readthedocs.io/en/latest/production/export-and-import.html</a></p>\n<p>There are two things going on here.<br>\n1) I exported but could not find the export file in tmp as expected and after following the--help options added the /tmp dir manually, which did not help as I still could not find the file. I did see a permission error (see below). <br>\nChecked /tmp permissions which were 777 with the sticky bit set. <br>\nThen I tried specifying the dir which still did not result in anything either. <br>\nSo I chose it's own sub dir as the manage.py file was. The result was all files and directories were removed.</p>\n<p>2) At that point I made a copy of postgres, and a few things to ensure I at least have those since program files can just be replaced but not so easily the data. Then started a new install, which worked well up to the point of it seeing the 212 comments and stopped asking me if I was OK with overwriting them, to which I said No.</p>\n<p>At that point manage.py exited back to the prompt. I was stopped with not enough familiarity nor experience with python to move fwd by myself, and found you here and made my original post. In retrospect it might have been better if I traced down what was behind the systemd error, it just seemed that I was doing something wrong rather than manage.py being wrong so I tried to figure out what is happening. I had run an export before which worked fine.</p>\n<p>OK, the traceback:</p>\n<p>Traceback (most recent call last):<br>\n  File \"./manage.py\", line 46, in &lt;module&gt;<br>\n    execute_from_command_line(sys.argv)<br>\n  File \"/home/zulip/deployments/2019-08-02-11-28-23/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/__init__.py\", line 364, in execute_from_command_line<br>\n    utility.execute()<br>\n  File \"/home/zulip/deployments/2019-08-02-11-28-23/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/__init__.py\", line 356, in execute<br>\n    self.fetch_command(subcommand).run_from_argv(self.argv)<br>\n  File \"/home/zulip/deployments/2019-08-02-11-28-23/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py\", line 283, in run_from_argv<br>\n    self.execute(*args, **cmd_options)<br>\n  File \"/home/zulip/deployments/2019-08-02-11-28-23/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py\", line 330, in execute<br>\n    output = self.handle(*args, **options)<br>\n  File \"/home/zulip/deployments/2019-08-02-11-28-23/zerver/management/commands/export.py\", line 115, in handle<br>\n    shutil.rmtree(output_dir)<br>\n  File \"/usr/lib/python3.6/shutil.py\", line 486, in rmtree<br>\n    _rmtree_safe_fd(fd, path, onerror)<br>\n  File \"/usr/lib/python3.6/shutil.py\", line 420, in _rmtree_safe_fd<br>\n    onerror(os.open, fullname, sys.exc_info())<br>\n  File \"/usr/lib/python3.6/shutil.py\", line 418, in _rmtree_safe_fd<br>\n    dirfd = os.open(name, os.O_RDONLY, dir_fd=topfd)<br>\nPermissionError: [Errno 13] Permission denied: 'systemd-private-9b365e6b782545a2a27b4f716a873f3d-systemd-timesyncd.service-YCq6GS'</p>",
+        "id": 786105,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568257798
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13379\">@Steve Szmidt</span> can you post precisely what command you ran?</p>",
+        "id": 786164,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568308205
+    },
+    {
+        "content": "<p>I'm sorry but that is what I did in the above thread. Copied and pasted.</p>",
+        "id": 786243,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568321346
+    },
+    {
+        "content": "<p>What did you pass as the output directory, specifically?</p>",
+        "id": 786244,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568321450
+    },
+    {
+        "content": "<p>It sorta looks like the cleanup code after Zulip creates the export tarball is trying to delete some systemd-related file, which I don't understand.</p>",
+        "id": 786245,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568321475
+    },
+    {
+        "content": "<p>supervisorctl stop all<br>\n./manage.py export --output /tmp -r ''<br>\nsupervisorctl start all</p>\n<p>There are two different parts to this you understand that? There's what caused the damage and me trying to restore the wiped out files.</p>",
+        "id": 786246,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568321543
+    },
+    {
+        "content": "<p>Great, <code>/tmp</code> was what I was looking for.</p>",
+        "id": 786248,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568321584
+    },
+    {
+        "content": "<p>Ugh, I see the problem.  So, the intent is that you run <code>./manage.py export /tmp/foo</code>, and we remove anything at the path <code>/tmp/foo</code> before creating an archive there.  You passed <code>/tmp</code>, so that cleanup code attempted to remove everything under <code>/tmp</code> on your system, hence the error (early in the process, so no export was attempted).</p>\n<p><span class=\"user-mention\" data-user-id=\"699\">@Anders Kaseorg</span> do you have thoughts on what the right way to prevent this error?</p>",
+        "id": 786249,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568321712
+    },
+    {
+        "content": "<p>Why wipe out at all when the name has a UUID as part of it?</p>",
+        "id": 786250,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568321756
+    },
+    {
+        "content": "<p>The current interface was designed for passing a full path to the export directory if you don't want the default behavior (of creating a new temporary directory under <code>/tmp</code>).</p>",
+        "id": 786251,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568321840
+    },
+    {
+        "content": "<p>(This can be useful if you want to control the filename the export is written to, but our implementation is definitely not as intended here)</p>",
+        "id": 786252,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568321882
+    },
+    {
+        "content": "<p>We'll fix it.  In the meantime, for what you're trying to do, just don't pass the <code>--output-dir</code> option.</p>",
+        "id": 786253,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568321898
+    },
+    {
+        "content": "<p>I did not start with --output-dir, but as I could not find it under /tmp I decided to specify it.</p>",
+        "id": 786254,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568321935
+    },
+    {
+        "content": "<p>It prints out the path at the end of its output:</p>\n<div class=\"codehilite\"><pre><span></span>...\nFinished exporting to /tmp/zulip-export-auxjzypr\nTarball written to /tmp/zulip-export-auxjzypr.tar.gz\n</pre></div>",
+        "id": 786257,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568322010
+    },
+    {
+        "content": "<p>The 2nd part here is how can I restore the file structure of the program without wiping the 212 comments? I made a backup of postgres.</p>",
+        "id": 786258,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568322017
+    },
+    {
+        "content": "<blockquote>\n<p>do you have thoughts on what the right way to prevent this error?</p>\n</blockquote>\n<p>I’m with Steve on this one—we should throw an error if there’s an existing directory in our way rather than blowing it away.</p>",
+        "id": 786259,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1568322068
+    },
+    {
+        "content": "<p>My goal is to use the export to create an automated backup routine. The file generated can then be scp'd to another machine. I'm preparing a script that finds the name. What I do is use date and time as part of my backup name. Quite handy. With date+time I can easily clean up as often as I want to using cron.</p>",
+        "id": 786261,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568322399
+    },
+    {
+        "content": "<p>The intended use of the <code>--output</code> option was that you can give it a fresh directory name, e.g. <code>./manage.py export --output=\"/var/backups/zulip/zulip-export-$(date -u +%FT%T)\"</code></p>",
+        "id": 786262,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1568322732
+    },
+    {
+        "content": "<p>Makes sense. I'm thinking that why would there be a delete involved. The reason I came up with is that someone wanted to ensure the latest export is there and having many files was not an option. I find a delete in any export to be a dangerous thing to have, and not even give a warning. This thing which is going to write a file will erase everything it can.</p>",
+        "id": 786264,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568322821
+    },
+    {
+        "content": "<p>It’s also used to compute the resulting tarball name, which in this case will be <code>/var/backups/zulip/zulip-export-2019-09-12T21:15:38.tar.gz</code>.</p>",
+        "id": 786265,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1568322952
+    },
+    {
+        "content": "<p>Sure, in short a Good Thing. :)</p>",
+        "id": 786266,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568323007
+    },
+    {
+        "content": "<p>The delete was clearly a poor decision. We’re going to get rid of it.</p>",
+        "id": 786267,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1568323017
+    },
+    {
+        "content": "<p>Cool!<br>\nNow any tips on how to get the install files back in without loosing my 212 comments?</p>",
+        "id": 786268,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568323055
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13379\">@Steve Szmidt</span> well, if your export tarball contains the message history, then that's fine -- the restore tool will delete the copy in the database and replace that with the message history in the export tarball.</p>",
+        "id": 786269,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568323462
+    },
+    {
+        "content": "<p>Which is fine, since it sounds like that's what you're trying to do; that error warning is meant to prevent folks from accidentally deleting their production by (e.g.) running the restore tool on the production system, when they meant to restore into an empty Zulip server.</p>",
+        "id": 786270,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568323522
+    },
+    {
+        "content": "<p>OK, just to be clear. I'm not trying to have an empty clean server but restored back with all 212 msgs.</p>",
+        "id": 786283,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568325361
+    },
+    {
+        "content": "<p>Yeah, as long as your messages are in the <code>messages-*.json</code> files in the exported tarball, that’s what will be restored to the server.</p>",
+        "id": 786284,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1568325565
+    },
+    {
+        "content": "<p>Any reason they would not be there? I gave no other parameters.</p>",
+        "id": 786285,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568325600
+    },
+    {
+        "content": "<p>Nope, they should be there.</p>",
+        "id": 786295,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1568325622
+    },
+    {
+        "content": "<p>OK, cool. I have a backup of postgres so I could always use that... I'm hoping. Not sure what kind of use of unique keys could be in use such as aa UUID.</p>",
+        "id": 786296,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568325661
+    },
+    {
+        "content": "<p>Thanks you guys for your help!</p>",
+        "id": 786298,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568325789
+    },
+    {
+        "content": "<p>Suggestion on the warning prompt/ Maybe make it require Enter (This will delete your Zulip database) as a single accidental y would wipe it.</p>",
+        "id": 786299,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568325955
+    },
+    {
+        "content": "<p>** Well, OK. Install finished and it is now up and running and none of the streams or anything including messages are here. How do I proceed?</p>",
+        "id": 786300,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568326154
+    },
+    {
+        "content": "<p>So after the install fiasco  I copied the old db over the new empty one and I got my messages back. But No users. <br>\nAny educated direction would be greately appreciated!</p>",
+        "id": 786302,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568328483
+    },
+    {
+        "content": "<p>Where do you keep users any way if not in the SQL db?</p>",
+        "id": 786303,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568328627
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13379\">@Steve Szmidt</span> our backups docs explain this, but data like the set of users in stored in the Zulip database.  I don't understand how it'd be possible for you to have messages but not users; Zulip can't render messages without users.</p>",
+        "id": 786305,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568329014
+    },
+    {
+        "content": "<p>Thanks again for the report about the <code>manage.py export</code> arguments; that's a land mind we'll be very glad to fix.</p>",
+        "id": 786306,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568329063
+    },
+    {
+        "content": "<p>Said fix is <a href=\"https://github.com/zulip/zulip/pull/13160\" target=\"_blank\" title=\"https://github.com/zulip/zulip/pull/13160\">#13160</a>.</p>",
+        "id": 786307,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1568329094
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Well that makes two of us.  So do you know where the user data is, for example what table?</p>",
+        "id": 786341,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568334580
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13379\">@Steve Szmidt</span> <code>zerver_userprofile</code> in postgres</p>",
+        "id": 786342,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1568336061
+    },
+    {
+        "content": "<p>Perhaps you can check if <code>zerver_message</code> has the messages, and then see the content of the userprofiles table?</p>",
+        "id": 786343,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1568336233
+    },
+    {
+        "content": "<p>I'd be more than happy to, unfortunately I'm lost in postgresql. I understand that psql is the client but I'm unable to see anything in there. <br>\nI got in as admin user postgres but when I run \\dt for tables it says \"Did not find any relations.\" I may not even have the right db. postgres appear not to have any permissions. \\ddp shows 0 rows.</p>",
+        "id": 786361,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568372337
+    },
+    {
+        "content": "<p>Alright, managed to get a select done on userprofile and it has the users listed. I got to this point by completing the install and then copied the old db over the new one. I had hesitated doing this earlier but were left with no option. My concern was that some pointers could be unlinked as I have no real idea on how Zulip is designed. <br>\nOK, so looking through the user table I see something odd. The field pointer is -1 on bots and also a number of the users have a -1 as well. Maybe they have not made a post or something and so has no pointer - I have no idea. :)</p>",
+        "id": 786371,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568378794
+    },
+    {
+        "content": "<p>In message I see also 212 rows, nothing looking like an issue, mostly empty fields. Typical notifications so and so signed up etc.</p>",
+        "id": 786387,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568391014
+    },
+    {
+        "content": "<p>Going through all user tables: <br>\nzerver_useractivity + interval,  userhotspot, usermessage, userpresence, userprofile, are populated with what looks like correct data. <br>\nzerver_usergroup, usergroupmembership,  userprofile_groups, userprofile_user_permissions, userstatus  are all empty.<br>\nThere are in all 71 tables listed. Of course this may not be of much use to you.<br>\nauth_permission has zero rows while its permission lists all possible ones.<br>\nNothing stands out to me, but again I'm a novice with Zulip.</p>",
+        "id": 786389,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568393060
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13379\">@Steve Szmidt</span>  Sounds good then I think <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span> Can you describe exactly the problem that's occuring then? You're able to log into the realm like before, but it's empty without any streams or messages or users showing up in it? Maybe a screenshot that showcases the situation could be useful?</p>",
+        "id": 786401,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1568398879
+    },
+    {
+        "content": "<p>Users are usually listed on the right side, but it's empty. I just discovered that Users show up under the Organization tab. Last active is Unknown on all but me, who's the admin and obviously there. Defaults streams are there.  Some linking appear to be broken. Many settings are not set. One user who uploaded his pic is there. Ah, it says he's been deactivated, which is not what it said under Users. But Let's see what happens. I was going to deactivate and then reactivate but they will loose their pwds. Any way of saving them?</p>",
+        "id": 786526,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568475138
+    },
+    {
+        "content": "<p>Ooh. I deactivate a test user I have and reactivated it and all the others showed up.</p>",
+        "id": 786528,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568475414
+    },
+    {
+        "content": "<p>To be clear all the users were listed and all had the red button saying deactivate. Pushing it on that one user made the button say Reactivate. Pressing that and it returned to Deactivate. Returning to main screen all the users were listed. I logged in as test user and it accepted the old password. That looks pretty good. What's important is to not mess up the users and their posts.<br>\nZulip now comes up and says it needs to send email to confirm users addresses and send notifications and wants me to configure email. If that's all I need to do now I'm quite relieved!</p>",
+        "id": 786530,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568475892
+    },
+    {
+        "content": "<p>I'm thinking that something like a reindex might work, is there an easy function to do that. Maybe delete all the index files after shutting down zulip?</p>",
+        "id": 786554,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568487258
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13379\">@Steve Szmidt</span> so are the messages showing up for you now?</p>",
+        "id": 786570,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1568499771
+    },
+    {
+        "content": "<p>Messages were showing up all along (once I copied the db over the new one), what was not showing up was the users.  There appear to be some inconsistencies with messages and what occurs. For example, it said if I disabled the users they would have to verify password all over. Which did not happen. At least not to my test account.  What appears broken is the linking between users and messages. Which is why I posted the above last question.</p>",
+        "id": 786574,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568501863
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13379\">@Steve Szmidt</span> it's possible the issue has to do with caching; can you try <code>scripts/setup/flush-memcached</code> to see if that helps?</p>",
+        "id": 786680,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568670746
+    },
+    {
+        "content": "<p>(Generally we don't expect an organization to be exported and then re-imported into the same physical server; if you wanted to do that without changes, you should use our backup tool, so it's possible we don't clear caches properly if you do that with the export/import tools)</p>",
+        "id": 786683,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568670800
+    },
+    {
+        "content": "<p>The reason I went that way was that when I searched your documentation for backup the first thing that came up was export/import. But as you say, once you read the backup notes they are clear. <br>\nI ran flush-memcached so we'll see how things are working. Thanks!</p>",
+        "id": 786753,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568716839
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"13379\">@Steve Szmidt</span> the very first section on <a href=\"https://zulip.readthedocs.io/en/stable/production/export-and-import.html\" target=\"_blank\" title=\"https://zulip.readthedocs.io/en/stable/production/export-and-import.html\">https://zulip.readthedocs.io/en/stable/production/export-and-import.html</a> recommends going to the backups documentation instead.  Is there something we could improve in the organization of that page that would have helped you get to the backups page?</p>",
+        "id": 786787,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568745111
+    },
+    {
+        "content": "<p>I suppose one option is we could move the section on backups inline into this page (rather than being in the long \"maintain, secure, and upgrade\" page)</p>",
+        "id": 786788,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568745130
+    },
+    {
+        "content": "<p>I'll review it and send you my thought. :)</p>",
+        "id": 786859,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568760886
+    },
+    {
+        "content": "<p>Yeah, I think you are right, bring them in under the same heading. I see the good logic used by the developers behind the subject headings.<br>\nMy mistake was being under the gun and not reading it all carefully. It just looked like you called it import/export when I scanned it.<br>\nIf there was a heading such as Backup/Restore &amp; Export Import. Then an introduction which explained when you would use which. <br>\nIn other words:<br>\nBackup / Restore &amp; Export / Import<br>\nThere are some options available depending on which route you choose to take. For daily backups we created .... It can also be used for ...<br>\nExport / Import is primarily intended when moving ... a.s.o.<br>\nMost of your wording is there already. The above would change have made it hard to make the wrong choice. :)</p>",
+        "id": 786927,
+        "sender_full_name": "Steve Szmidt",
+        "timestamp": 1568767403
+    },
+    {
+        "content": "<p>Yeah, I had been thinking about moving \"Backups\" to its own independent page, and based on this conversation, the right plan is to move it inot this page.  </p>\n<p><span class=\"user-mention\" data-user-id=\"3734\">@David Rosa</span> FYI, this probably belongs on your docs TODO list.</p>",
+        "id": 786934,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1568767790
+    }
+]

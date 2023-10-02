@@ -1,0 +1,88 @@
+<html>
+<head><meta charset="utf-8"><title>Postgre 14 and 15 running? · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Postgre.2014.20and.2015.20running.3F.html">Postgre 14 and 15 running?</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1466853"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Postgre%2014%20and%2015%20running%3F/near/1466853" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scotty T. <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Postgre.2014.20and.2015.20running.3F.html#1466853">(Nov 17 2022 at 20:54)</a>:</h4>
+<p>Somehow I think I have both Postgre 14 and 15 running.  I've only ever installed and updated Zulip since a long time ago, so I'm not sure how this happened.</p>
+<div class="codehilite"><pre><span></span><code>psql -V
+psql (PostgreSQL) 15.1 (Ubuntu 15.1-1.pgdg20.04+1)
+</code></pre></div>
+<p>but</p>
+<div class="codehilite"><pre><span></span><code>ls -lat
+postgres 1752027  0.0  0.5 575012 20412 ?        Ss   Nov16   0:08 postgres: 14/main: zulip zulip [local] idle in transaction
+</code></pre></div>
+<p>Any tips on how I can get down to a single version of postgre without breaking my Zulip instance would be greatly appreciated :)</p>
+<p>I'm running Z 5.7 on Ubuntu 20.04.5 LTS.</p>
+
+
+
+<a name="1466868"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Postgre%2014%20and%2015%20running%3F/near/1466868" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Postgre.2014.20and.2015.20running.3F.html#1466868">(Nov 17 2022 at 21:07)</a>:</h4>
+<p>Can you show:</p>
+<div class="codehilite"><pre><span></span><code>pg_lsclusters
+</code></pre></div>
+
+
+
+<a name="1466870"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Postgre%2014%20and%2015%20running%3F/near/1466870" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Postgre.2014.20and.2015.20running.3F.html#1466870">(Nov 17 2022 at 21:08)</a>:</h4>
+<p>My guess is that Zulip's database is in the PostgreSQL 14 cluster, and you're just happening to get the postgres 15 command-line tools.  Which is fine, since they're back-compat with previous versions of the server.</p>
+
+
+
+<a name="1466881"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Postgre%2014%20and%2015%20running%3F/near/1466881" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scotty T. <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Postgre.2014.20and.2015.20running.3F.html#1466881">(Nov 17 2022 at 21:27)</a>:</h4>
+<p>Thank you for your help.  Here's the requested output.</p>
+<div class="codehilite"><pre><span></span><code>pg_lsclusters
+Ver Cluster Port Status Owner    Data directory              Log file
+14  main    5432 online postgres /var/lib/postgresql/14/main /var/log/postgresql/postgresql-%Y-%m-%d_%H%M%S.log
+15  main    5433 online postgres /var/lib/postgresql/15/main /var/log/postgresql/postgresql-15-main.log
+</code></pre></div>
+<p>There appear to be both running something</p>
+<div class="codehilite"><pre><span></span><code>ps -aux | grep postgres
+postgres 1726629  0.0  1.7 572896 60532 ?        Ss   Nov16   0:05 /usr/lib/postgresql/14/bin/postgres -D /var/lib/postgresql/14/main -c config_file=/etc/postgresql/14/mainpostgresql.conf
+postgres 1726630  0.0  0.6 217428 23752 ?        Ss   Nov16   0:02 /usr/lib/postgresql/15/bin/postgres -D /var/lib/postgresql/15/main -c config_file=/etc/postgresql/15/mainpostgresql.conf
+postgres 1726631  0.0  0.1 217560  6716 ?        Ss   Nov16   0:00 postgres: 15/main: checkpointer
+postgres 1726632  0.0  0.1 217584  4876 ?        Ss   Nov16   0:01 postgres: 15/main: background writer
+postgres 1726634  0.0  0.2 217428  9276 ?        Ss   Nov16   0:01 postgres: 15/main: walwriter
+postgres 1726635  0.0  0.1 219032  6248 ?        Ss   Nov16   0:00 postgres: 15/main: autovacuum launcher
+postgres 1726636  0.0  0.1 219008  4632 ?        Ss   Nov16   0:00 postgres: 15/main: logical replication launcher
+postgres 1726637  0.0  0.1  69200  4344 ?        Ss   Nov16   0:00 postgres: 14/main: logger
+postgres 1726639  0.0 10.0 573260 353820 ?       Ss   Nov16   0:08 postgres: 14/main: checkpointer
+postgres 1726640  0.0  0.4 573156 16160 ?        Ss   Nov16   0:03 postgres: 14/main: background writer
+postgres 1726641  0.0  0.3 572896 10604 ?        Ss   Nov16   0:23 postgres: 14/main: walwriter
+postgres 1726642  0.0  0.2 574144  8728 ?        Ss   Nov16   0:02 postgres: 14/main: autovacuum launcher
+postgres 1726643  0.0  0.1  69556  5860 ?        Ss   Nov16   0:08 postgres: 14/main: stats collector
+postgres 1726644  0.0  0.1 573976  6920 ?        Ss   Nov16   0:00 postgres: 14/main: logical replication launcher
+postgres 1835222  0.0  0.5 574892 20272 ?        Ss   21:14   0:00 postgres: 14/main: zulip zulip [local] idle
+postgres 1835363  0.0  0.7 575668 25876 ?        Ss   21:14   0:00 postgres: 14/main: zulip zulip [local] idle
+postgres 1835364  0.0  0.5 575012 19176 ?        Ss   21:14   0:00 postgres: 14/main: zulip zulip [local] idle in transaction
+...
+postgres 1835914  0.0  0.8 575896 28180 ?        Ss   21:25   0:00 postgres: 14/main: zulip zulip [local] idle
+root     1836005  0.0  0.0   6384  2492 pts/1    R+   21:26   0:00 grep --color=auto postgres
+</code></pre></div>
+
+
+
+<a name="1467155"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Postgre%2014%20and%2015%20running%3F/near/1467155" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Postgre.2014.20and.2015.20running.3F.html#1467155">(Nov 18 2022 at 05:23)</a>:</h4>
+<p>Postgres 15 looks idle.  You can <code>pg_dropcluster 15 main</code> and <code>apt-get purge postgresql-15</code> if you want.</p>
+
+
+
+<a name="1467192"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Postgre%2014%20and%2015%20running%3F/near/1467192" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scotty T. <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Postgre.2014.20and.2015.20running.3F.html#1467192">(Nov 18 2022 at 12:40)</a>:</h4>
+<p>That took care of it .. thank you very much.  I was pretty sure I could do that but it definitely helped to have another set of eyes on it .. I didn't want to break my zulip install.  Thank you for all you do for us.  Much appreciated.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

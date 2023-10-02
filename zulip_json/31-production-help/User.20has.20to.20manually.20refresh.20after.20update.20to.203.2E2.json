@@ -1,0 +1,278 @@
+[
+    {
+        "content": "<p>We recently updated to 3.2, one user after the update has reported that in order for them to see new posts they now need to change channels or refresh the page.  We haven't seen any issues on the client-side or server-side, does anyone have any ideas about what could cause this?</p>",
+        "id": 1031507,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1601935461
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17393\">@Michael Bassler</span> hmm, it's strange that you're seeing that sort of problem with just 1 user.</p>",
+        "id": 1031547,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601939643
+    },
+    {
+        "content": "<p>The root cause of that issue is likely a problem with the server-to-client events system.</p>",
+        "id": 1031548,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601939651
+    },
+    {
+        "content": "<p>I'd start by looking at <code>/var/log/zulip/tornado.log</code> and <code>errors.log</code> looking for anything relevant.</p>",
+        "id": 1031549,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601939683
+    },
+    {
+        "content": "<p>(The user's browser console might also have relevant errors)</p>",
+        "id": 1031550,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1601939692
+    },
+    {
+        "content": "<p><code>errors.log</code> shows: </p>\n<div class=\"codehilite\"><pre><span></span><code>[zerver.lib.email_mirror] EMAIL_GATEWAY_PATTERN is an empty string, using NOREPLY_EMAIL_ADDRESS in the &#39;from&#39; field.\n</code></pre></div>\n\n\n<p>What should I be looking for in <code>tornado.log</code>? Filtering by clients IP I see a bunch of GET and DELETEs but don't see anything that stands out as an error. </p>\n<p>Browser console has periodically had: </p>\n<div class=\"codehilite\"><pre><span></span><code>reactions.js:495 Uncaught TypeError: Cannot read property &#39;emoji_url&#39; of undefined\n</code></pre></div>\n\n\n<p>But I don't have direct access to the users env to validate that.</p>",
+        "id": 1031558,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1601940357
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17393\">@Michael Bassler</span> OK, great, that exception is almost certainly the problem.</p>",
+        "id": 1031857,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602010226
+    },
+    {
+        "content": "<p>(At least, if it's happening at the \"right\" place in the codebase, it could be).</p>\n<p>Can you post the full traceback?  It might be available via <code>blueslip.get_log()</code> on a JavaScript console.</p>\n<p><span class=\"user-mention\" data-user-id=\"58\">@Steve Howell</span> FYI; can you help investigate this?</p>",
+        "id": 1031863,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602010365
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Is your theory that the one user keeps bumping up against the <code>TypeError</code> problem for reactions?  Or should I be looking at the <code>EMAIL_GATEWAY_PATTERN</code> error?  The two things seem unrelated.</p>",
+        "id": 1031945,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1602020236
+    },
+    {
+        "content": "<p><code>EMAIL_GATEWAY_PATTERN</code> is certainly unrelated here, and harmless in general</p>",
+        "id": 1031946,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1602020349
+    },
+    {
+        "content": "<p>Thanks, <span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span>.</p>",
+        "id": 1031948,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1602020563
+    },
+    {
+        "content": "<p>The reactions bug seems to be a symptom of getting an <code>emoji_code</code> that is not a realm emoji:</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"n\">r</span><span class=\"o\">.</span><span class=\"n\">url</span> <span class=\"o\">=</span> <span class=\"n\">emoji</span><span class=\"o\">.</span><span class=\"n\">all_realm_emojis</span><span class=\"o\">.</span><span class=\"n\">get</span><span class=\"p\">(</span><span class=\"n\">r</span><span class=\"o\">.</span><span class=\"n\">emoji_code</span><span class=\"p\">)</span><span class=\"o\">.</span><span class=\"n\">emoji_url</span><span class=\"p\">;</span>\n</code></pre></div>",
+        "id": 1031949,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1602020611
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/16485\">https://github.com/zulip/zulip/pull/16485</a></p>",
+        "id": 1031957,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1602021765
+    },
+    {
+        "content": "<p>Yeah, I guess this'll be easier to debug with more output.</p>",
+        "id": 1032082,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602030155
+    },
+    {
+        "content": "<p>I'm not sure whether it makes sense to backport that change (though I would backport an actual fix uncovered by it).  </p>\n<p>I don't have a good explanation for why this sort of thing might only affect one issue, but one idea might be:</p>\n<ul>\n<li>The user has in their personal history some use of a custom emoji.</li>\n<li>That custom emoji was deleted in some prior version.</li>\n</ul>\n<p><span class=\"user-mention\" data-user-id=\"17393\">@Michael Bassler</span> the best way to debug further would be if you were to use <code>upgrade-zulip-from-git</code> to install <code>3.2</code> with <a href=\"https://github.com/zulip/zulip/pull/16485\">#16485</a> added, and see what the notice reads then.</p>",
+        "id": 1032107,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602030783
+    },
+    {
+        "content": "<p>I am currently running <code>3.2</code> given that <code>upgrade-zulip-from-git</code> doesn't support upgrading to a commit, was your previous suggestion that I upgrade to <code>3.2</code> and manually apply the changes from that commit?</p>",
+        "id": 1035516,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1602527364
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17393\">@Michael Bassler</span> simplest is to just make a branch on your fork with that commit and upgrade to that branch.</p>",
+        "id": 1035611,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602530067
+    },
+    {
+        "content": "<p>I have a better idea though.</p>",
+        "id": 1035613,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602530112
+    },
+    {
+        "content": "<p>Which is that we could backport the extra logging the 3.x branch, and you can just install that.</p>",
+        "id": 1035614,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602530139
+    },
+    {
+        "content": "<p>Done.  So you can just do <code>upgrade-zulip-from-git 3.x</code>.</p>",
+        "id": 1035617,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602530215
+    },
+    {
+        "content": "<p>That worked in our dev env, but we don't have the issue there. I'm going to schedule downtime for our prod instance.</p>",
+        "id": 1035660,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1602537088
+    },
+    {
+        "content": "<p>After the patch, the user reports \"Cannot find/add realm emoji code '4'.\"</p>",
+        "id": 1036250,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1602601662
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17393\">@Michael Bassler</span> great!  Now we can investigate in a <code>manage.py shell</code></p>",
+        "id": 1036428,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602614012
+    },
+    {
+        "content": "<p><a href=\"https://zulip.readthedocs.io/en/latest/production/management-commands.html\">https://zulip.readthedocs.io/en/latest/production/management-commands.html</a></p>",
+        "id": 1036429,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602614020
+    },
+    {
+        "content": "<p>We'll want to do <code>RealmEmoji.objects.get(id=4)</code> and inspect its attributes.</p>",
+        "id": 1036430,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602614031
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>In [4]: RealmEmoji.objects.get(id=4)\n---------------------------------------------------------------------------\nDoesNotExist                              Traceback (most recent call last)\n&lt;ipython-input-4-89cff8d40539&gt; in &lt;module&gt;\n----&gt; 1 RealmEmoji.objects.get(id=4)\n\n~/deployments/2020-10-12-21-11-57/zulip-py3-venv/lib/python3.6/site-packages/django/db/models/manager.py in manager_method(self, *args, **kwargs)\n     80         def create_method(name, method):\n     81             def manager_method(self, *args, **kwargs):\n---&gt; 82                 return getattr(self.get_queryset(), name)(*args, **kwargs)\n     83             manager_method.__name__ = method.__name__\n     84             manager_method.__doc__ = method.__doc__\n\n~/deployments/2020-10-12-21-11-57/zulip-py3-venv/lib/python3.6/site-packages/django/db/models/query.py in get(self, *args, **kwargs)\n    406             raise self.model.DoesNotExist(\n    407                 &quot;%s matching query does not exist.&quot; %\n--&gt; 408                 self.model._meta.object_name\n    409             )\n    410         raise self.model.MultipleObjectsReturned(\n\nDoesNotExist: RealmEmoji matching query does not exist.\n</code></pre></div>",
+        "id": 1036716,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1602633276
+    },
+    {
+        "content": "<p>That seems somewhat expected, the id does not exist but the user had some reference to it somewhere.</p>",
+        "id": 1036720,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1602633333
+    },
+    {
+        "content": "<p>Note: The user is reporting that with this change he is getting auto refresh. The error is present but it appears to refresh for him now.</p>",
+        "id": 1036722,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1602633395
+    },
+    {
+        "content": "<p>OK -- it sounds like that custom emoji was manually deleted.</p>",
+        "id": 1036750,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602633771
+    },
+    {
+        "content": "<p>Is it something we should look to clean up or just leave?</p>",
+        "id": 1036757,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1602633845
+    },
+    {
+        "content": "<p>(Or possibly deleted like 2 years ago before we switched from deletion to deactivation).  So my guess is the root problem is the user's message history has a reaction or something referencing that deleted custom emoji.</p>\n<p>Can you try <code>Reaction.objects.filter(emoji_code=4, reaction_type=Reaction.REALM_EMOJI)</code>?</p>",
+        "id": 1036758,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602633850
+    },
+    {
+        "content": "<p>That should find all Emoji reaction objects referencing the deleted custom emoji with ID 4.</p>",
+        "id": 1036759,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602633872
+    },
+    {
+        "content": "<p>If the number of those is small, probably the simplest fix is to delete those Reaction records with:</p>\n<p><code>Reaction.objects.filter(emoji_code=4, reaction_type=Reaction.REALM_EMOJI).delete()</code></p>\n<p>After that (and clearly caches with <code>/home/zulip/deployments/current/scripts/setup/flush-memcached</code> and reloading the user's browser), you should be good.</p>",
+        "id": 1036768,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602633955
+    },
+    {
+        "content": "<p>I'm not sure how to read that output:</p>\n<div class=\"codehilite\"><pre><span></span><code>&lt;QuerySet [&lt;Reaction: redactedemail@example.com / 44381 / trollface&gt;, &#39;...(remaining elements truncated)...&#39;]&gt;\n</code></pre></div>",
+        "id": 1036775,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1602634104
+    },
+    {
+        "content": "<p>There is just one line where the number changes everytime</p>",
+        "id": 1036781,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1602634138
+    },
+    {
+        "content": "<p>also the email changes</p>",
+        "id": 1036783,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1602634147
+    },
+    {
+        "content": "<p>Yeah, maybe do <code>Reaction.objects.filter(emoji_code=4, reaction_type=Reaction.REALM_EMOJI).count()</code> to see how many there are.</p>",
+        "id": 1036786,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602634170
+    },
+    {
+        "content": "<p>If there were like 3, it wouldn't have the truncated bit and would just show them all.</p>",
+        "id": 1036787,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602634179
+    },
+    {
+        "content": "<p>145</p>",
+        "id": 1036788,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1602634193
+    },
+    {
+        "content": "<p>Anyway your options are basically (1) delete them or (2) if your team can recall what the custom emoji was meant to be, re-upload it and then renumber it to 4.</p>",
+        "id": 1036790,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602634209
+    },
+    {
+        "content": "<p>These are just peoples reaction emojis to posts right? Not messages?</p>",
+        "id": 1036791,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1602634229
+    },
+    {
+        "content": "<p>Yes, correct, just the records of which users reacted with the deleted custom emoji with ID 4 to which messages.</p>",
+        "id": 1036792,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602634261
+    },
+    {
+        "content": "<p>Done. flushed memcached and the user confirmed the error does not return after a refresh. </p>\n<p>Thank You for all your help with this!</p>",
+        "id": 1036897,
+        "sender_full_name": "Michael Bassler",
+        "timestamp": 1602635967
+    },
+    {
+        "content": "<p>Great, thanks for the confirmation of the fix!</p>",
+        "id": 1036901,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602636021
+    },
+    {
+        "content": "<p>I've confirmed that no Reaction objects exist on <a href=\"http://zulip.com\">zulip.com</a> with this problem.</p>",
+        "id": 1036912,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602636189
+    },
+    {
+        "content": "<p>So I'm guessing this isn't a normal/common Zulip bug, if it's a bug at all.</p>",
+        "id": 1036914,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602636203
+    }
+]

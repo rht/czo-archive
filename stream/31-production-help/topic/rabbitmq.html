@@ -1,0 +1,782 @@
+<html>
+<head><meta charset="utf-8"><title>rabbitmq · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html">rabbitmq</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1206449"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1206449" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Achim Maisl <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1206449">(Jun 10 2021 at 20:06)</a>:</h4>
+<p>Hallo, I use: Strato V-Server, Ubuntu 18.04 LTS 64bit, CPU vCores 10, RAM 48 GB<br>
+After a server reboot, Zulip no longer starts. Rabbitmq refuses to work.</p>
+<div class="codehilite"><pre><span></span><code>root@h2916764:/# service rabbitmq-server restart
+Job for rabbitmq-server.service failed because the control process exited with error code.
+See &quot;systemctl status rabbitmq-server.service&quot; and &quot;journalctl -xe&quot; for details.
+root@h2916764:/# supervisorctl status
+process-fts-updates                                             RUNNING   pid 8863, uptime 0:40:46
+zulip-django                                                    RUNNING   pid 8861, uptime 0:40:46
+zulip-tornado                                                   RUNNING   pid 8862, uptime 0:40:46
+zulip-workers:zulip_deliver_enqueued_emails                     RUNNING   pid 8879, uptime 0:40:46
+zulip-workers:zulip_deliver_scheduled_messages                  RUNNING   pid 8880, uptime 0:40:46
+zulip-workers:zulip_events_deferred_work                        RUNNING   pid 6768, uptime 0:00:03
+zulip-workers:zulip_events_digest_emails                        STARTING
+zulip-workers:zulip_events_email_mirror                         RUNNING   pid 6740, uptime 0:00:04
+zulip-workers:zulip_events_email_senders                        RUNNING   pid 6778, uptime 0:00:02
+zulip-workers:zulip_events_embed_links                          RUNNING   pid 6750, uptime 0:00:04
+zulip-workers:zulip_events_embedded_bots                        RUNNING   pid 6759, uptime 0:00:03
+zulip-workers:zulip_events_error_reports                        RUNNING   pid 6763, uptime 0:00:03
+zulip-workers:zulip_events_invites                              RUNNING   pid 6745, uptime 0:00:04
+zulip-workers:zulip_events_missedmessage_emails                 RUNNING   pid 6777, uptime 0:00:02
+zulip-workers:zulip_events_missedmessage_mobile_notifications   RUNNING   pid 6717, uptime 0:00:06
+zulip-workers:zulip_events_outgoing_webhooks                    STARTING
+zulip-workers:zulip_events_signups                              RUNNING   pid 6743, uptime 0:00:04
+zulip-workers:zulip_events_user_activity                        RUNNING   pid 6725, uptime 0:00:05
+zulip-workers:zulip_events_user_activity_interval               RUNNING   pid 6784, uptime 0:00:02
+zulip-workers:zulip_events_user_presence                        RUNNING   pid 6770, uptime 0:00:03
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>root@h2916764:/# systemctl status rabbitmq-server.service
+● rabbitmq-server.service - RabbitMQ Messaging Server
+   Loaded: loaded (/lib/systemd/system/rabbitmq-server.service; enabled; vendor preset: enabled)
+   Active: activating (auto-restart) (Result: exit-code) since Thu 2021-06-10 21:59:25 CEST; 2s ago
+  Process: 30355 ExecStart=/usr/sbin/rabbitmq-server (code=exited, status=134)
+ Main PID: 30355 (code=exited, status=134)
+
+Jun 10 21:59:25 h2916764.stratoserver.net systemd[1]: rabbitmq-server.service: Failed with result &#39;exit-code&#39;.
+Jun 10 21:59:25 h2916764.stratoserver.net systemd[1]: Failed to start RabbitMQ Messaging Server.
+</code></pre></div>
+<p>A restore to the last state before the backup does not make any changes.</p>
+<p>What can I do? Thank you for help!</p>
+
+
+
+<a name="1206487"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1206487" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1206487">(Jun 10 2021 at 20:45)</a>:</h4>
+<p><span class="user-mention" data-user-id="20245">@Achim Maisl</span> my guess is that something about the way you rebooted or replaced the hardware messed up your networking configuration in a way that makes <code>rabbitmq-server</code> not start.</p>
+
+
+
+<a name="1206491"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1206491" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1206491">(Jun 10 2021 at 20:46)</a>:</h4>
+<p>What is in <code>/etc/rabbitmq/rabbitmq-env.conf</code>?</p>
+
+
+
+<a name="1206960"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1206960" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Achim Maisl <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1206960">(Jun 11 2021 at 10:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> </p>
+<div class="codehilite"><pre><span></span><code># Defaults to rabbit. This can be useful if you want to run more than one node
+# per machine - RABBITMQ_NODENAME should be unique per erlang-node-and-machine
+# combination. See the clustering on a single machine guide for details:
+# http://www.rabbitmq.com/clustering.html#single-machine
+#
+# By default, we set nodename to rabbit@localhost so it will always resolve
+NODENAME=zulip@localhost
+
+# By default RabbitMQ will bind to all interfaces, on IPv4 and IPv6 if
+# available. Set this if you only want to bind to one network interface or#
+# address family.
+#NODE_IP_ADDRESS=127.0.0.1
+
+# Defaults to 5672.
+#NODE_PORT=5672
+</code></pre></div>
+
+
+
+<a name="1207102"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1207102" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1207102">(Jun 11 2021 at 15:37)</a>:</h4>
+<p><span class="user-mention" data-user-id="20245">@Achim Maisl</span> I'd check your <code>/etc/hosts</code> configuration for how <code>localhost</code> resolves.</p>
+
+
+
+<a name="1207267"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1207267" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Achim Maisl <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1207267">(Jun 11 2021 at 18:14)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> </p>
+<div class="codehilite"><pre><span></span><code>127.0.0.1   localhost
+::1     localhost ip6-localhost ip6-loopback
+ff02::1     ip6-allnodes
+ff02::2     ip6-allrouters
+
+# Auto-generated hostname. Please do not remove this comment.
+81.169.240.197 h2916764.stratoserver.net h2916764
+</code></pre></div>
+
+
+
+<a name="1207569"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1207569" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1207569">(Jun 12 2021 at 00:41)</a>:</h4>
+<p><span class="user-mention" data-user-id="20245">@Achim Maisl</span> you might want to try removing the <code>localhost</code> from the <code>::1</code> / IPv6 line of your configuration; I've seen that cause issues with RabbitMQ in the past.</p>
+
+
+
+<a name="1207626"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1207626" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Achim Maisl <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1207626">(Jun 12 2021 at 05:18)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span>  Unfortunately it doesn't work either. I tried:</p>
+<div class="codehilite"><pre><span></span><code>root@h2916764:~# apt-get install rabbitmq-server
+Paketlisten werden gelesen... Fertig
+Abhängigkeitsbaum wird aufgebaut.
+Statusinformationen werden eingelesen.... Fertig
+Die folgenden zusätzlichen Pakete werden installiert:
+  erlang-asn1 erlang-corba erlang-diameter erlang-edoc erlang-eldap erlang-erl-docgen erlang-eunit erlang-ic erlang-inets erlang-nox erlang-odbc erlang-os-mon
+  erlang-parsetools erlang-public-key erlang-snmp erlang-ssh erlang-ssl erlang-xmerl socat
+Vorgeschlagene Pakete:
+  erlang erlang-manpages erlang-doc xsltproc fop erlang-ic-java
+Die folgenden NEUEN Pakete werden installiert:
+  erlang-asn1 erlang-corba erlang-diameter erlang-edoc erlang-eldap erlang-erl-docgen erlang-eunit erlang-ic erlang-inets erlang-nox erlang-odbc erlang-os-mon
+  erlang-parsetools erlang-public-key erlang-snmp erlang-ssh erlang-ssl erlang-xmerl rabbitmq-server socat
+0 aktualisiert, 20 neu installiert, 0 zu entfernen und 0 nicht aktualisiert.
+Es müssen noch 0 B von 15,5 MB an Archiven heruntergeladen werden.
+Nach dieser Operation werden 24,3 MB Plattenplatz zusätzlich benutzt.
+Möchten Sie fortfahren? [J/n] J
+Vormals nicht ausgewähltes Paket erlang-asn1 wird gewählt.
+(Lese Datenbank ... 44067 Dateien und Verzeichnisse sind derzeit installiert.)
+Vorbereitung zum Entpacken von .../00-erlang-asn1_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-asn1 (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-public-key wird gewählt.
+Vorbereitung zum Entpacken von .../01-erlang-public-key_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-public-key (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-ssl wird gewählt.
+Vorbereitung zum Entpacken von .../02-erlang-ssl_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-ssl (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-inets wird gewählt.
+Vorbereitung zum Entpacken von .../03-erlang-inets_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-inets (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-corba wird gewählt.
+Vorbereitung zum Entpacken von .../04-erlang-corba_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-corba (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-diameter wird gewählt.
+Vorbereitung zum Entpacken von .../05-erlang-diameter_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-diameter (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-xmerl wird gewählt.
+Vorbereitung zum Entpacken von .../06-erlang-xmerl_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-xmerl (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-edoc wird gewählt.
+Vorbereitung zum Entpacken von .../07-erlang-edoc_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-edoc (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-eldap wird gewählt.
+Vorbereitung zum Entpacken von .../08-erlang-eldap_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-eldap (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-erl-docgen wird gewählt.
+Vorbereitung zum Entpacken von .../09-erlang-erl-docgen_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-erl-docgen (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-eunit wird gewählt.
+Vorbereitung zum Entpacken von .../10-erlang-eunit_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-eunit (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-ic wird gewählt.
+Vorbereitung zum Entpacken von .../11-erlang-ic_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-ic (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-odbc wird gewählt.
+Vorbereitung zum Entpacken von .../12-erlang-odbc_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-odbc (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-snmp wird gewählt.
+Vorbereitung zum Entpacken von .../13-erlang-snmp_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-snmp (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-os-mon wird gewählt.
+Vorbereitung zum Entpacken von .../14-erlang-os-mon_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-os-mon (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-parsetools wird gewählt.
+Vorbereitung zum Entpacken von .../15-erlang-parsetools_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-parsetools (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-ssh wird gewählt.
+Vorbereitung zum Entpacken von .../16-erlang-ssh_1%3a20.2.2+dfsg-1ubuntu2_amd64.deb ...
+Entpacken von erlang-ssh (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket erlang-nox wird gewählt.
+Vorbereitung zum Entpacken von .../17-erlang-nox_1%3a20.2.2+dfsg-1ubuntu2_all.deb ...
+Entpacken von erlang-nox (1:20.2.2+dfsg-1ubuntu2) ...
+Vormals nicht ausgewähltes Paket socat wird gewählt.
+Vorbereitung zum Entpacken von .../18-socat_1.7.3.2-2ubuntu2_amd64.deb ...
+Entpacken von socat (1.7.3.2-2ubuntu2) ...
+Vormals nicht ausgewähltes Paket rabbitmq-server wird gewählt.
+Vorbereitung zum Entpacken von .../19-rabbitmq-server_3.6.10-1ubuntu0.4_all.deb ...
+Entpacken von rabbitmq-server (3.6.10-1ubuntu0.4) ...
+erlang-parsetools (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-ic (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+socat (1.7.3.2-2ubuntu2) wird eingerichtet ...
+erlang-xmerl (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-snmp (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-asn1 (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-eunit (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-odbc (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-os-mon (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-public-key (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-ssl (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-inets (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-diameter (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-ssh (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-eldap (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-edoc (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-corba (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-erl-docgen (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+erlang-nox (1:20.2.2+dfsg-1ubuntu2) wird eingerichtet ...
+rabbitmq-server (3.6.10-1ubuntu0.4) wird eingerichtet ...
+Created symlink /etc/systemd/system/multi-user.target.wants/rabbitmq-server.service → /lib/systemd/system/rabbitmq-server.service.
+Job for rabbitmq-server.service failed because the control process exited with error code.
+See &quot;systemctl status rabbitmq-server.service&quot; and &quot;journalctl -xe&quot; for details.
+invoke-rc.d: initscript rabbitmq-server, action &quot;start&quot; failed.
+● rabbitmq-server.service - RabbitMQ Messaging Server
+   Loaded: loaded (/lib/systemd/system/rabbitmq-server.service; enabled; vendor preset: enabled)
+   Active: activating (auto-restart) (Result: exit-code) since Sat 2021-06-12 07:13:45 CEST; 10ms ago
+  Process: 2373 ExecStart=/usr/sbin/rabbitmq-server (code=exited, status=134)
+ Main PID: 2373 (code=exited, status=134)
+
+Jun 12 07:09:29 h2916764.stratoserver.net systemd[1]: Failed to start RabbitMQ Messaging Server.
+Jun 12 07:09:39 h2916764.stratoserver.net systemd[1]: rabbitmq-server.service: Service hold-off time over, scheduling restart.
+Jun 12 07:09:39 h2916764.stratoserver.net systemd[1]: rabbitmq-server.service: Scheduled restart job, restart counter is at 3.
+Jun 12 07:09:39 h2916764.stratoserver.net systemd[1]: Stopped RabbitMQ Messaging Server.
+Jun 12 07:09:39 h2916764.stratoserver.net systemd[1]: Starting RabbitMQ Messaging Server...
+Jun 12 07:10:39 h2916764.stratoserver.net systemd[1]: Stopped RabbitMQ Messaging Server.
+dpkg: Fehler beim Bearbeiten des Paketes rabbitmq-server (--configure):
+ »installiertes rabbitmq-server-Skript des Paketes post-installation«-Unterprozess gab den Fehlerwert 1 zurück
+Trigger für man-db (2.8.3-2ubuntu0.1) werden verarbeitet ...
+Trigger für systemd (237-3ubuntu10.47) werden verarbeitet ...
+Fehler traten auf beim Bearbeiten von:
+ rabbitmq-server
+E: Sub-process /usr/bin/dpkg returned an error code (1)
+</code></pre></div>
+
+
+
+<a name="1207687"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1207687" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Achim Maisl <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1207687">(Jun 12 2021 at 09:43)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> Hello Tim, I solved the problem. </p>
+<div class="codehilite"><pre><span></span><code>sudo apt-get install curl gnupg debian-keyring debian-archive-keyring apt-transport-https -y
+
+## Team RabbitMQ&#39;s main signing key
+sudo apt-key adv --keyserver &quot;hkps://keys.openpgp.org&quot; --recv-keys &quot;0x0A9AF2115F4687BD29803A206B73A36E6026DFCA&quot;
+## Launchpad PPA that provides modern Erlang releases
+sudo apt-key adv --keyserver &quot;keyserver.ubuntu.com&quot; --recv-keys &quot;F77F1EDA57EBB1CC&quot;
+## PackageCloud RabbitMQ repository
+curl -1sLf &#39;https://packagecloud.io/rabbitmq/rabbitmq-server/gpgkey&#39; | sudo apt-key add -
+
+## Add apt repositories maintained by Team RabbitMQ
+sudo tee /etc/apt/sources.list.d/rabbitmq.list &lt;&lt;EOF
+## Provides modern Erlang/OTP releases
+##
+## &quot;bionic&quot; as distribution name should work for any reasonably recent Ubuntu or Debian release.
+## See the release to distribution mapping table in RabbitMQ doc guides to learn more.
+deb http://ppa.launchpad.net/rabbitmq/rabbitmq-erlang/ubuntu bionic main
+deb-src http://ppa.launchpad.net/rabbitmq/rabbitmq-erlang/ubuntu bionic main
+
+## Provides RabbitMQ
+##
+## &quot;bionic&quot; as distribution name should work for any reasonably recent Ubuntu or Debian release.
+## See the release to distribution mapping table in RabbitMQ doc guides to learn more.
+deb https://packagecloud.io/rabbitmq/rabbitmq-server/ubuntu/ bionic main
+deb-src https://packagecloud.io/rabbitmq/rabbitmq-server/ubuntu/ bionic main
+EOF
+
+## Update package indices
+sudo apt-get update -y
+
+## Install Erlang packages
+sudo apt-get install -y erlang-base \
+                        erlang-asn1 erlang-crypto erlang-eldap erlang-ftp erlang-inets \
+                        erlang-mnesia erlang-os-mon erlang-parsetools erlang-public-key \
+                        erlang-runtime-tools erlang-snmp erlang-ssl \
+                        erlang-syntax-tools erlang-tftp erlang-tools erlang-xmerl
+
+## Install rabbitmq-server and its dependencies
+sudo apt-get install rabbitmq-server -y --fix-missing
+</code></pre></div>
+<p>Thank you for your help!</p>
+
+
+
+<a name="1417291"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1417291" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vojtech Brothanek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1417291">(Aug 09 2022 at 05:42)</a>:</h4>
+<p>Hello guys,<br>
+I would like to ask for help. I installed new zulip (5.5) on Debian 11 and did backup on the same version of zulip but on Debian 10. <br>
+When I want to restore backup of "old zulip" from server where is Debain 10 to Debian 11 i get this message:</p>
+<div class="codehilite"><pre><span></span><code>Waiting for RabbitMQ to start up...
+/home/zulip/deployments/2022-08-08-17-10-11/scripts/setup/configure-rabbitmq: line 29: rabbitmqctl: command not found
+
+Error running a subcommand of /home/zulip/deployments/current/scripts/setup/restore-backup: /home/zulip/deployments/2022-08-08-17-10-11/scripts/setup/configure-rabbitmq
+Actual error output for the subcommand is just above this.
+</code></pre></div>
+<p>Can you help me? Do I have to just install rabbitmq or I must do some configuration of rabbitmq?</p>
+<p>Thank a lot!<br>
+Vojtech Brothanek</p>
+
+
+
+<a name="1417293"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1417293" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vojtech Brothanek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1417293">(Aug 09 2022 at 06:01)</a>:</h4>
+<p>And as I just discovered also zulip on Debian 11 just stop working. (internal server error) I dont know if its by failed restore of backup or otherwise..</p>
+
+
+
+<a name="1417476"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1417476" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1417476">(Aug 09 2022 at 17:34)</a>:</h4>
+<p><span class="user-mention" data-user-id="21379">@Vojtech Brothanek</span> thanks for the report. A Zulip server will definitely throw 500s without RabbitMQ installed, so I think the question is why that's the case.</p>
+
+
+
+<a name="1417478"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1417478" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1417478">(Aug 09 2022 at 17:35)</a>:</h4>
+<p>Can you share the <code>/etc/zulip/zulip.conf</code> on your Debian 10 server?</p>
+
+
+
+<a name="1417490"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1417490" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vojtech Brothanek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1417490">(Aug 09 2022 at 17:46)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> <br>
+Hi Tim, thanks for response.<br>
+Here is zulip.conf</p>
+<div class="codehilite"><pre><span></span><code>root@chat:~# cd /etc/zulip/
+root@chat:/etc/zulip# cat zulip.conf
+[machine]
+puppet_classes = zulip::profile::standalone
+deploy_type = production
+
+[postgresql]
+version = 12
+
+
+[certbot]
+auto_renew = yes
+
+[rabbitmq]
+nodename = zulip@localhost
+</code></pre></div>
+
+
+
+<a name="1417531"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1417531" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1417531">(Aug 09 2022 at 18:23)</a>:</h4>
+<p>I think it's likely that you had some other error earlier in installing your server -- there should be an <code>apt install rabbitmq-server</code> that failed well before <code>rabbitmqctl</code> fails to appear.</p>
+
+
+
+<a name="1417532"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1417532" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1417532">(Aug 09 2022 at 18:24)</a>:</h4>
+<p>Can you upload the full output from <code>/var/log/zulip/install.log</code> and from <code>restore-backup</code> on the new server?</p>
+
+
+
+<a name="1417877"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1417877" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vojtech Brothanek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1417877">(Aug 10 2022 at 06:36)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> <br>
+Unfortunately not, because I started a complete new installation including a new installation of Deabian 11.<br>
+I will give you feedback about result of another installation and restoring backup.. Thanks Tim</p>
+
+
+
+<a name="1469143"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469143" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vojtech Brothanek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469143">(Nov 23 2022 at 15:46)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> <br>
+Hello Tim!<br>
+So today I finally get to install new Debian 11 (I was forced to do so by you with new Zulip version 6.0 <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span>)<br>
+But after restoring backup from Zulip 5.7 to new server Zulip 6.0 I get the same error.</p>
+<p><strong>Here is install.log</strong><br>
+<a href="/user_uploads/2/b3/sCGfzDgBuHuGw_pTe1dkRYCZ/install.log">install.log</a></p>
+<p><strong>Here is restore backup log</strong></p>
+<div class="codehilite"><pre><span></span><code>root@zulip:/var/log/zulip# /home/zulip/deployments/current/scripts/setup/restore-backup /home/Install/zulip-backup-2022-11-23-14-26-56-4hncrvqn.tar.gz
++ tar --directory=/etc/zulip --strip-components=2 -xz zulip-backup/settings
++ tar -C /tmp/zulip-restore-backup-hpqvix_q &#39;--transform=s|^zulip-backup/zproject(/.*)?$|/home/zulip/deployments/2022-11-23-16-08-46/zproject\1|x&#39; &#39;--transform=s|^zulip-backup/uploads(/.*)?$|/home/zulip/uploads\1|x&#39; -xPz
++ chown -R postgres -- /tmp/zulip-restore-backup-hpqvix_q
++ /home/zulip/deployments/2022-11-23-16-08-46/scripts/setup/terminate-psql-sessions zulip
+ pg_terminate_backend
+----------------------
+ t
+ t
+ t
+ t
+ t
+(5 rows)
+
++ dropdb --if-exists -- zulip
++ createdb --owner=zulip --template=template0 -- zulip
++ /home/zulip/deployments/2022-11-23-16-08-46/scripts/setup/generate_secrets.py --production
+generate_secrets: No new secrets to generate.
++ /home/zulip/deployments/2022-11-23-16-08-46/scripts/setup/configure-rabbitmq
+Waiting for RabbitMQ to start up...
+/home/zulip/deployments/2022-11-23-16-08-46/scripts/setup/configure-rabbitmq: line 23: rabbitmqctl: command not found
+
+Error running a subcommand of /home/zulip/deployments/current/scripts/setup/restore-backup: /home/zulip/deployments/2022-11-23-16-08-46/scripts/setup/configure-rabbitmq
+Actual error output for the subcommand is just above this.
+</code></pre></div>
+
+
+
+<a name="1469145"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469145" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vojtech Brothanek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469145">(Nov 23 2022 at 16:09)</a>:</h4>
+<p>root@zulip:/home/Install# systemctl status rabbitmq-server<br>
+● rabbitmq-server.service - RabbitMQ Messaging Server<br>
+     Loaded: loaded (/lib/systemd/system/rabbitmq-server.service; enabled; vendor preset: enabled)<br>
+     Active: active (running) since Wed 2022-11-23 16:18:23 CET; 50min ago<br>
+   Main PID: 462 (beam.smp)<br>
+     Status: "Initialized"<br>
+      Tasks: 86 (limit: 4678)<br>
+     Memory: 83.9M<br>
+        CPU: 30.940s<br>
+     CGroup: /system.slice/rabbitmq-server.service<br>
+             ├─462 /usr/lib/erlang/erts-11.1.8/bin/beam.smp -W w -K true -A 64 -MBas ageffcbf -MHas ageffcbf -MBlmbcs 512 -MHlmbcs 512 -MMmcs 30 -P 104857&gt;<br>
+             ├─594 erl_child_setup 65536<br>
+             ├─671 inet_gethost 4<br>
+             └─672 inet_gethost 4</p>
+<p>Nov 23 16:18:12 zulip systemd[1]: Starting RabbitMQ Messaging Server...<br>
+Nov 23 16:18:23 zulip systemd[1]: Started RabbitMQ Messaging Server.</p>
+
+
+
+<a name="1469150"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469150" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469150">(Nov 23 2022 at 16:11)</a>:</h4>
+<p>Can you show:</p>
+<div class="codehilite"><pre><span></span><code>apt-cache policy rabbitmq-server
+dpkg -L rabbitmq-server
+</code></pre></div>
+
+
+
+<a name="1469153"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469153" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vojtech Brothanek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469153">(Nov 23 2022 at 16:12)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>root@zulip:/home/Install# apt-cache policy rabbitmq-server
+rabbitmq-server:
+  Installed: 3.8.9-3
+  Candidate: 3.8.9-3
+  Version table:
+ *** 3.8.9-3 500
+        500 http://deb.debian.org/debian bullseye/main amd64 Packages
+        100 /var/lib/dpkg/status
+</code></pre></div>
+
+
+
+<a name="1469154"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469154" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vojtech Brothanek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469154">(Nov 23 2022 at 16:12)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>root@zulip:/home/Install# dpkg -L rabbitmq-server
+/.
+/etc
+/etc/default
+/etc/default/rabbitmq-server
+/etc/init.d
+/etc/init.d/rabbitmq-server
+/etc/logrotate.d
+/etc/logrotate.d/rabbitmq-server
+/lib
+/lib/systemd
+/lib/systemd/system
+/lib/systemd/system/rabbitmq-server.service
+/usr
+/usr/bin
+/usr/bin/rabbitmqadmin
+/usr/lib
+/usr/lib/erlang
+/usr/lib/erlang/lib
+/usr/lib/ocf
+/usr/lib/ocf/resource.d
+/usr/lib/ocf/resource.d/rabbitmq
+/usr/lib/ocf/resource.d/rabbitmq/rabbitmq-server
+/usr/lib/ocf/resource.d/rabbitmq/rabbitmq-server-ha
+/usr/lib/rabbitmq
+/usr/lib/rabbitmq/autocomplete
+/usr/lib/rabbitmq/autocomplete/bash_autocomplete.sh
+/usr/lib/rabbitmq/autocomplete/zsh_autocomplete.sh
+/usr/lib/rabbitmq/bin
+/usr/lib/rabbitmq/bin/rabbitmq-script-wrapper
+/usr/lib/rabbitmq/bin/rabbitmq-server-wait
+/usr/lib/rabbitmq/lib
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/INSTALL
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-APACHE2
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-APACHE2-ExplorerCanvas
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-APACHE2-excanvas
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-APL2-Stomp-Websocket
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-BSD-base64js
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-BSD-recon
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-ISC-cowboy
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-MIT-EJS
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-MIT-EJS10
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-MIT-Erlware-Commons
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-MIT-Flot
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-MIT-Mochi
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-MIT-Sammy
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-MIT-Sammy060
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-MIT-jQuery
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-MIT-jQuery164
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-MPL
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-MPL-RabbitMQ
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-erlcloud
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-httpc_aws
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/LICENSE-rabbitmq_aws
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/escript
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/escript/rabbitmq-diagnostics
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/escript/rabbitmq-plugins
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/escript/rabbitmq-queues
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/escript/rabbitmq-upgrade
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/escript/rabbitmqctl
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/README
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/accept-0.3.5.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/amqp10_client-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/amqp10_common-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/amqp_client-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/aten-0.5.5.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/base64url-0.0.1.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/cowboy-2.6.1.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/cowlib-2.7.0.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/credentials_obfuscation-2.2.0.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/cuttlefish-2.4.1.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/eetcd-0.3.3.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/gen_batch_server-0.8.4.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/getopt-1.0.1.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/goldrush-0.1.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/gun-1.3.3.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/jose-1.10.1.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/jsx-2.11.0.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/lager-3.8.0.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/observer_cli-1.5.4.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/prometheus-4.6.0.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/ra-1.1.6.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbit-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbit_common-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_amqp1_0-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_auth_backend_cache-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_auth_backend_http-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_auth_backend_ldap-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_auth_backend_oauth2-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_auth_mechanism_ssl-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_aws-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_consistent_hash_exchange-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_event_exchange-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_federation-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_federation_management-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_jms_topic_exchange-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_management-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_management_agent-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_mqtt-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_peer_discovery_aws-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_peer_discovery_common-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_peer_discovery_consul-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_peer_discovery_etcd-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_peer_discovery_k8s-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_prelaunch-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_prometheus-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_random_exchange-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_recent_history_exchange-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_sharding-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_shovel-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_shovel_management-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_stomp-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_top-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_tracing-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_trust_store-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_web_dispatch-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_web_mqtt-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_web_mqtt_examples-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_web_stomp-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/rabbitmq_web_stomp_examples-3.8.9.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/ranch-1.7.1.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/recon-2.5.1.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/stdout_formatter-0.2.4.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/syslog-3.4.5.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/plugins/sysmon_handler-1.3.0.ez
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/sbin
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/sbin/rabbitmq-defaults
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/sbin/rabbitmq-diagnostics
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/sbin/rabbitmq-env
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/sbin/rabbitmq-plugins
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/sbin/rabbitmq-queues
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/sbin/rabbitmq-server
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/sbin/rabbitmq-upgrade
+/usr/lib/rabbitmq/lib/rabbitmq_server-3.8.9/sbin/rabbitmqctl
+/usr/sbin
+/usr/sbin/rabbitmq-diagnostics
+/usr/sbin/rabbitmq-queues
+/usr/sbin/rabbitmq-upgrade
+/usr/share
+/usr/share/doc
+/usr/share/doc/rabbitmq-server
+/usr/share/doc/rabbitmq-server/changelog.Debian.gz
+/usr/share/doc/rabbitmq-server/copyright
+/usr/share/man
+/usr/share/man/man5
+/usr/share/man/man5/rabbitmq-env.conf.5.gz
+/usr/share/man/man8
+/usr/share/man/man8/rabbitmq-plugins.8.gz
+/usr/share/man/man8/rabbitmq-server.8.gz
+/usr/share/man/man8/rabbitmqctl.8.gz
+/usr/share/rabbitmq
+/usr/share/rabbitmq/rabbitmq-env.conf
+/var
+/var/lib
+/var/lib/rabbitmq
+/var/lib/rabbitmq/mnesia
+/var/log
+/var/log/rabbitmq
+/usr/lib/rabbitmq/bin/rabbitmq-defaults
+/usr/lib/rabbitmq/bin/rabbitmq-diagnostics
+/usr/lib/rabbitmq/bin/rabbitmq-env
+/usr/lib/rabbitmq/bin/rabbitmq-plugins
+/usr/lib/rabbitmq/bin/rabbitmq-queues
+/usr/lib/rabbitmq/bin/rabbitmq-server
+/usr/lib/rabbitmq/bin/rabbitmq-upgrade
+/usr/lib/rabbitmq/bin/rabbitmqctl
+/usr/sbin/rabbitmq-plugins
+/usr/sbin/rabbitmq-server
+/usr/sbin/rabbitmqctl
+</code></pre></div>
+
+
+
+<a name="1469155"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469155" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469155">(Nov 23 2022 at 16:14)</a>:</h4>
+<p>What's your $PATH?</p>
+
+
+
+<a name="1469156"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469156" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vojtech Brothanek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469156">(Nov 23 2022 at 16:16)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="12178">Alex Vandiver</span> <a href="#narrow/stream/31-production-help/topic/rabbitmq/near/1469155">said</a>:</p>
+<blockquote>
+<p>What's your $PATH?</p>
+</blockquote>
+<p>You mean where is zulip installed?</p>
+
+
+
+<a name="1469157"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469157" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469157">(Nov 23 2022 at 16:17)</a>:</h4>
+<p>No, sorry:</p>
+<div class="codehilite"><pre><span></span><code>echo $PATH
+</code></pre></div>
+
+
+
+<a name="1469158"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469158" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vojtech Brothanek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469158">(Nov 23 2022 at 16:19)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>root@zulip:/etc/zulip# echo $PATH
+/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games
+</code></pre></div>
+
+
+
+<a name="1469161"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469161" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469161">(Nov 23 2022 at 16:20)</a>:</h4>
+<p>Ok, the <code>root</code> user is supposed to have <code>/usr/sbin</code> in there.</p>
+<p>How did you become root?  Did you ssh in directly as root, or connect as some  other user and run a command?  If the latter, what command?</p>
+
+
+
+<a name="1469162"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469162" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469162">(Nov 23 2022 at 16:21)</a>:</h4>
+<p>We can make the installer more durable to this, I just want to understand the contributing factors</p>
+
+
+
+<a name="1469163"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469163" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vojtech Brothanek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469163">(Nov 23 2022 at 16:22)</a>:</h4>
+<p>Right now I did connect to the server via other user (in my case user <em>brotel</em>)and then with commad su I become root</p>
+
+
+
+<a name="1469169"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469169" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vojtech Brothanek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469169">(Nov 23 2022 at 16:32)</a>:</h4>
+<p>So if I get it right the restore backup had to be run as root but directly as root (at the moment) I did that but unfortunately get another error :D </p>
+<div class="codehilite"><pre><span></span><code>root@zulip:~# /home/zulip/deployments/current/scripts/setup/restore-backup /home/Install/zulip-backup-2022-11-23-14-26-56-4hncrvqn.tar.gz
++ tar --directory=/etc/zulip --strip-components=2 -xz zulip-backup/settings
++ tar -C /tmp/zulip-restore-backup-y2xwowzi &#39;--transform=s|^zulip-backup/zproject(/.*)?$|/home/zulip/deployments/2022-11-23-16-08-46/zproject\1|x&#39; &#39;--transform=s|^zulip-backup/uploads(/.*)?$|/home/zulip/uploads\1|x&#39; -xPz
++ chown -R postgres -- /tmp/zulip-restore-backup-y2xwowzi
++ /home/zulip/deployments/2022-11-23-16-08-46/scripts/setup/terminate-psql-sessions zulip
+ pg_terminate_backend
+----------------------
+ t
+ t
+ t
+ t
+(4 rows)
+
++ dropdb --if-exists -- zulip
++ createdb --owner=zulip --template=template0 -- zulip
++ /home/zulip/deployments/2022-11-23-16-08-46/scripts/setup/generate_secrets.py --production
+generate_secrets: No new secrets to generate.
++ /home/zulip/deployments/2022-11-23-16-08-46/scripts/setup/configure-rabbitmq
+Deleting user &quot;zulip&quot; ...
+Deleting user &quot;zulip&quot; ...
+Error:
+User &quot;zulip&quot; does not exist
+Deleting user &quot;guest&quot; ...
+Error:
+User &quot;guest&quot; does not exist
+Adding user &quot;zulip&quot; ...
+Setting tags for user &quot;zulip&quot; to [administrator] ...
+Setting permissions for user &quot;zulip&quot; in vhost &quot;/&quot; ...
++ /home/zulip/deployments/2022-11-23-16-08-46/scripts/zulip-puppet-apply -f
+Notice: Compiled catalog for zulip.brotel.cz in environment production in 7.02 seconds
+Notice: /Stage[main]/Zulip::Tornado_sharding/File[/etc/zulip/nginx_sharding.conf]/ensure: removed
+Notice: /Stage[main]/Zulip::App_frontend_base/File[/etc/zulip/uwsgi.ini]/content: content changed &#39;{md5}4116f822da35d615d77ed7aef0a31acc&#39; to &#39;{md5}8cea0450e03460b9ad6c2f88adf30c80&#39;
+Notice: /Stage[main]/Zulip::App_frontend_base/File[/etc/zulip/uwsgi.ini]/owner: owner changed &#39;zulip&#39; to &#39;root&#39;
+Notice: /Stage[main]/Zulip::App_frontend_base/File[/etc/zulip/uwsgi.ini]/group: group changed &#39;zulip&#39; to &#39;root&#39;
+Notice: /Stage[main]/Zulip::Profile::Redis/File[/etc/redis/zulip-redis.conf]/content: content changed &#39;{md5}8fc4defed914d8995b6d5dd1d6bfb451&#39; to &#39;{md5}ac8ba117d2d7b9da83bc64cde4154099&#39;
+Notice: /Stage[main]/Zulip::Profile::Redis/File[/run/redis]/mode: mode changed &#39;2755&#39; to &#39;0755&#39;
+Notice: /Stage[main]/Zulip::Profile::Redis/Service[redis-server]: Triggered &#39;refresh&#39; from 1 event
+Notice: /Stage[main]/Zulip::Profile::Memcached/File[/etc/sasl2/memcached-zulip-password]/content: content changed &#39;{md5}25530810a3116f9d547e9d3cd4935ae6&#39; to &#39;{md5}8b348ecc319e505176f4efc98cacb267&#39;
+Notice: /Stage[main]/Zulip::Profile::Memcached/Exec[generate_memcached_sasldb2]: Triggered &#39;refresh&#39; from 1 event
+Notice: /Stage[main]/Zulip::Profile::Memcached/File[/etc/sasl2/memcached-sasldb2]/owner: owner changed &#39;root&#39; to &#39;memcache&#39;
+Notice: /Stage[main]/Zulip::Profile::Memcached/File[/etc/sasl2/memcached-sasldb2]/group: group changed &#39;zulip&#39; to &#39;memcache&#39;
+Notice: /Stage[main]/Zulip::Profile::Memcached/File[/etc/sasl2/memcached-sasldb2]/mode: mode changed &#39;0640&#39; to &#39;0600&#39;
+Notice: /Stage[main]/Zulip::Postgresql_common/Zulip::Safepackage[postgresql-12]/Package[postgresql-12]/ensure: created
+Notice: /Stage[main]/Zulip::Postgresql_base/File[/usr/share/postgresql/12/tsearch_data/zulip_english.stop]/ensure: defined content as &#39;{md5}34e771a8f53b4ae2e8b43affd3f820b2&#39;
+Notice: /Stage[main]/Zulip::Profile::Postgresql/File[/etc/postgresql/12/main/postgresql.conf]/content: content changed &#39;{md5}c8e8ded79c681780e287487831bf6632&#39; to &#39;{md5}3ffb451e9bae981759e6f1acea5b20ca&#39;
+Notice: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 12 main restart]/returns: Job for postgresql@12-main.service failed because the service did not take the steps required by its unit configuration.
+Notice: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 12 main restart]/returns: See &quot;systemctl status postgresql@12-main.service&quot; and &quot;journalctl -xe&quot; for details.
+Error: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 12 main restart]: Failed to call refresh: &#39;pg_ctlcluster 12 main restart&#39; returned 1 instead of one of [0]
+Error: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 12 main restart]: &#39;pg_ctlcluster 12 main restart&#39; returned 1 instead of one of [0]
+Notice: /Stage[main]/Zulip::Supervisor/Service[supervisor]: Triggered &#39;refresh&#39; from 3 events
+Notice: Applied catalog in 77.37 seconds
+
+Error running a subcommand of /home/zulip/deployments/current/scripts/setup/restore-backup: /home/zulip/deployments/2022-11-23-16-08-46/scripts/zulip-puppet-apply -f
+Actual error output for the subcommand is just above this.
+</code></pre></div>
+<p>The thing right now is, that my original zulip is on domain <strong>chat.brotel.cz</strong> but my test zluip server where I want to restore backup is <strong>zulip-db.brotel.cz</strong> that might be a problem..</p>
+
+
+
+<a name="1469173"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469173" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469173">(Nov 23 2022 at 16:47)</a>:</h4>
+<p>Reading the first post, are you trying to restore the backup on a different version? That is not supported.</p>
+
+
+
+<a name="1469174"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469174" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vojtech Brothanek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469174">(Nov 23 2022 at 16:53)</a>:</h4>
+<p>Ahhh, yes I do. That will be a problem.. Okay my bad! <br>
+Thanks for help guys, very appreciated.</p>
+<p>Btw. is there a way to do downgrade or complete uninstall zulip from server with all dependecies? I dont want to install my VMs from stone <span aria-label="joy" class="emoji emoji-1f602" role="img" title="joy">:joy:</span></p>
+
+
+
+<a name="1469175"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469175" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469175">(Nov 23 2022 at 16:56)</a>:</h4>
+<p>We don't have a downgrade or uninstallation script, no.  For cleanliness, I suggest starting with a clean VM.</p>
+
+
+
+<a name="1469176"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469176" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469176">(Nov 23 2022 at 16:58)</a>:</h4>
+<p>And the <code>$PATH</code> issue looks to be <a href="https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=918754">https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=918754</a></p>
+<p>Specifically, running <code>su</code> (with no arguments) is insecure since it is supposed to (and since Debian 10, now does) inherit all of the environment from the running user.  That means it doesn't adjust <code>$HOME</code>, <code>$PATH</code>, etc.</p>
+<p>To become root, the safe way (not just for zulip, but in general) is either <code>su -</code> or <code>sudo -i</code></p>
+
+
+
+<a name="1469177"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469177" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469177">(Nov 23 2022 at 16:59)</a>:</h4>
+<p>We patched over this in <a href="https://github.com/zulip/zulip/commit/49144247ddd1889c3a45338345c87f7e63ae2963">49144247ddd1889c3a45338345c87f7e63ae2963</a>.  But <code>restore-backup</code> may need something similar.</p>
+
+
+
+<a name="1469182"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/rabbitmq/near/1469182" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Vojtech Brothanek <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/rabbitmq.html#1469182">(Nov 23 2022 at 17:29)</a>:</h4>
+<p>Okay, thanks for advices. I'll do clean installaation of OS and Zulip one more time and if I get any problem I'll let you know. <br>
+Thanks for now :)</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

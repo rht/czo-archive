@@ -1,0 +1,166 @@
+<html>
+<head><meta charset="utf-8"><title>error 3 from memcached_get · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html">error 3 from memcached_get</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="545276"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545276" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonathan Holt <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545276">(Mar 20 2018 at 19:20)</a>:</h4>
+<p>Hi folks, new user here.<br>
+I've successfully rolled out a zulip server on an Amazon EC2 instance running Ubuntu. All is well, the server is running nicely, I've added my first non-me user and we're going places.<br>
+The problem is, I'm getting errors sent to me by email as follows:</p>
+<p>'Traceback (most recent call last):  <br>
+  File "/home/zulip/deployments/2018-03-18-12-53-51/zerver/worker/queue_processors.py", line 141, in consume_wrapper  <br>
+    self.consume(data)  <br>
+  File "/home/zulip/deployments/2018-03-18-12-53-51/zerver/worker/queue_processors.py", line 377, in consume  <br>
+    user_profile = get_user_profile_by_id(server_meta['user_id'])  <br>
+  File "/home/zulip/deployments/2018-03-18-12-53-51/zerver/lib/cache.py", line 156, in func_with_caching  <br>
+    val = cache_get(key, cache_name=cache_name)  <br>
+  File "/home/zulip/deployments/2018-03-18-12-53-51/zerver/lib/cache.py", line 196, in cache_get  <br>
+    ret = cache_backend.get(KEY_PREFIX + key)  <br>
+  File "/home/zulip/deployments/2018-03-18-12-53-51/zulip-py3-venv/lib/python3.5/site-packages/django/core/cache/backends/memcached.py", line 79, in get  <br>
+    val = self._cache.get(key)  <br>
+pylibmc.ConnectionError: error 3 from memcached_get(:1:f88e97e6eed5345ecbb10583e2faa): (0x32d6a30) CONNECTION FAILURE, ::rec() returned zero, server has disconnected,  host: <a href="http://127.0.0.1:11211/" target="_blank" title="http://127.0.0.1:11211/">127.0.0.1:11211</a> -&gt; libmemcached/io.cc:484  </p>
+<p>Request info:  <br>
+- path: None  <br>
+- None: None  <br>
+- REMOTE_ADDR: "None"  <br>
+- QUERY_STRING: "None"  <br>
+- SERVER_NAME: "None" '</p>
+<p>I don't know what these errors mean, can anyone help?</p>
+
+
+
+<a name="545362"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545362" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545362">(Mar 20 2018 at 22:07)</a>:</h4>
+<p>Hi <span class="user-mention" data-user-id="5937">@Jonathan Holt</span> -- thanks for coming by!</p>
+<p>We occasionally get a burst of these same errors on <a href="http://zulipchat.com" target="_blank" title="http://zulipchat.com">zulipchat.com</a> -- like 5-20 or so of them all in the span of a minute, and then we might not see them again for weeks. Is that similar to your experience?</p>
+
+
+
+<a name="545365"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545365" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545365">(Mar 20 2018 at 22:08)</a>:</h4>
+<p>Based on the message, I think they happen when we restart memcached, though I haven't noted for sure if that's the case.</p>
+<p>Note that if you have unattended-upgrades enabled on your system, an upgrade to memcached may cause it to restart without you taking any action or specifically noticing.</p>
+
+
+
+<a name="545367"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545367" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545367">(Mar 20 2018 at 22:11)</a>:</h4>
+<p>I've had a low-priority todo item for a while to go and add a retry or something so that when the memcached server disappears and comes back, we don't raise an error like this.</p>
+
+
+
+<a name="545369"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545369" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545369">(Mar 20 2018 at 22:15)</a>:</h4>
+<p>Also, we have a mechanism for rate-limiting error emails; we won't send more than one per 10min for a single issue. But we group the errors by a hash of the stack plus the message -- so this particular error evades that by including <br>
+in the exception message a bunch of detail that changes every time, making it a lot noisier.</p>
+
+
+
+<a name="545382"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545382" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545382">(Mar 20 2018 at 22:37)</a>:</h4>
+<p><span class="user-mention" data-user-id="2187">@Greg Price</span> just to add a bit of detail: This is definitely caused by a memcached restart.  There was an Ubuntu security release memcached package put out today, and I bet <span class="user-mention" data-user-id="5937">@Jonathan Holt</span> has Ubuntu's (default-on) "unattended upgrades" feature enabled.</p>
+
+
+
+<a name="545399"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545399" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Greg Price <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545399">(Mar 20 2018 at 22:45)</a>:</h4>
+<p>Great -- that all fits together, then :)</p>
+
+
+
+<a name="545401"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545401" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545401">(Mar 20 2018 at 22:49)</a>:</h4>
+<p>I still haven't turned it off, but I've verified that the unattended upgrades is the cause of the massive stream of error emails I get every now and then</p>
+
+
+
+<a name="545417"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545417" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545417">(Mar 20 2018 at 23:05)</a>:</h4>
+<p><span class="user-mention" data-user-id="2187">@Greg Price</span> I wonder if we should add a notice in the install script or a more prominent one in the docs about unattended-upgrades, since that does seem to be a source of confusion about the reliability of Zulip.  Not sure if there's a good place for this.</p>
+
+
+
+<a name="545430"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545430" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545430">(Mar 20 2018 at 23:13)</a>:</h4>
+<p>Maybe a system configuration section under <a href="http://zulip.readthedocs.io/en/latest/production/install.html#step-4-configure-and-use" target="_blank" title="http://zulip.readthedocs.io/en/latest/production/install.html#step-4-configure-and-use">Configure and Use</a></p>
+
+
+
+<a name="545444"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545444" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545444">(Mar 20 2018 at 23:21)</a>:</h4>
+<p>Yeah, that's probably a reasonable place for this.</p>
+
+
+
+<a name="545492"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545492" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545492">(Mar 20 2018 at 23:58)</a>:</h4>
+<p><a href="https://github.com/zulip/zulip/pull/8769" target="_blank" title="https://github.com/zulip/zulip/pull/8769">#8769</a></p>
+
+
+
+<a name="545678"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545678" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonathan Holt <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545678">(Mar 21 2018 at 13:04)</a>:</h4>
+<p>Guys, thanks so much for your help. Glad to hear that these errors are basically nothing to worry about. If I've got unattended upgrades running as suspected, does that mean I don't need to worry about keeping my packages up to date too?</p>
+
+
+
+<a name="545682"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545682" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonathan Holt <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545682">(Mar 21 2018 at 13:39)</a>:</h4>
+<p>Can I also just check the following:<br>
+1) I'm running on Xenial. According to the zulip docs, this means that the LOCAL_UPLOADS_DIR backend is such that user uploaded content isn't visible to anyone who isn't on a logged in browser session. The thing is, I've tried logging out and accessing user uploaded data, and it still works (check out <a href="https://zulip.marshallcarterdark.co.uk/user_uploads/2/d8/pSbw1GFbrRvUMHnvVsz4PxrZ/IMG_20180317_120741.jpg" target="_blank" title="IMG_20180317_120741.jpg">https://zulip.marshallcarterdark.co.uk/user_uploads/2/d8/pSbw1GFbrRvUMHnvVsz4PxrZ/IMG_20180317_120741.jpg</a> for yourself). Any ideas?</p>
+<div class="message_inline_image"><a href="https://zulip.marshallcarterdark.co.uk/user_uploads/2/d8/pSbw1GFbrRvUMHnvVsz4PxrZ/IMG_20180317_120741.jpg" target="_blank" title="https://zulip.marshallcarterdark.co.uk/user_uploads/2/d8/pSbw1GFbrRvUMHnvVsz4PxrZ/IMG_20180317_120741.jpg"><img src="https://zulip.marshallcarterdark.co.uk/user_uploads/2/d8/pSbw1GFbrRvUMHnvVsz4PxrZ/IMG_20180317_120741.jpg"></a></div><p>2) I'm running on an EC2 instance with only incoming ports 22, 80 and 443 open.  Should I additionally be running a firewall? (ufw, for instance?)</p>
+<p>3) Are there any other security issues I should be considering before I go live with this setup?</p>
+
+
+
+<a name="545722"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545722" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545722">(Mar 21 2018 at 15:58)</a>:</h4>
+<p><span class="user-mention" data-user-id="5937">@Jonathan Holt</span> securing LOCAL_UPLOADS_DIR was something that was added fairly recently- it wasn't in the 1.7.1 release, but will be in the upcoming 1.8 release (I believe)</p>
+
+
+
+<a name="545723"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545723" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545723">(Mar 21 2018 at 15:59)</a>:</h4>
+<p>You're probably looking at docs built off of the <code>master</code> branch, instead of a tagged release.</p>
+
+
+
+<a name="545724"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545724" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jonathan Holt <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545724">(Mar 21 2018 at 15:59)</a>:</h4>
+<p>Gotcha. I'll await release. (Upgrading should be fun!)</p>
+
+
+
+<a name="545725"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545725" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545725">(Mar 21 2018 at 15:59)</a>:</h4>
+<p>Upgrading is actually pretty painless, I was surprised.</p>
+
+
+
+<a name="545726"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545726" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545726">(Mar 21 2018 at 16:00)</a>:</h4>
+<p>It's so painless that for a while, we pulled in commits off of master after the 1.7.1 release.</p>
+
+
+
+<a name="545727"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545727" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Sean Wallitsch <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545727">(Mar 21 2018 at 16:00)</a>:</h4>
+<p>(We wanted the dark theme)</p>
+
+
+
+<a name="545804"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/error%203%20from%20memcached_get/near/545804" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/error.203.20from.20memcached_get.html#545804">(Mar 21 2018 at 17:16)</a>:</h4>
+<p>On the firewall front, limiting to just those 3 forks should be all you need.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

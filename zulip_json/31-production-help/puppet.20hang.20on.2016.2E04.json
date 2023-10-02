@@ -1,0 +1,446 @@
+[
+    {
+        "content": "<p>May first install of 1.7.1 was to follow the production directions on a 16.04 system. I had update the system with all the latest packages before attempting the Zulip install. During the install process it seemed to go well until it got to puppet. Then it hung. Here is the portion of the install.log with the problem. Do we know the cause of this? I was unable to find it in the Issue tracker.</p>\n<p>Attaching log because too big to post in comment.</p>\n<p><a href=\"/user_uploads/2/8b/EnszXVXy2-bCwFghSMlUSzGG/zulip_171_install_hang.txt\" target=\"_blank\" title=\"zulip_171_install_hang.txt\">zulip_171_install_hang.txt</a></p>",
+        "id": 489134,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518123684
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"scott@frak.ms\" data-user-id=\"5233\">@Scott Russell</span> Huh -- it hung at that point?</p>\n<p>That's new to me. Is it still running? What does <code>ps faux</code> or <code>pstree</code> say underneath the puppet process?</p>",
+        "id": 489140,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518123808
+    },
+    {
+        "content": "<p>I killed the install process and setup our test Zulip with the docker-compose GitHub instead. However for prod I would prefer the direct install. <span class=\"emoji emoji-1f60a\" title=\"blush\">:blush:</span></p>\n<p>Let me restart the installer and check. But while I've never used puppet I think the big clue is the apt-get messages \"Provider apt does not support features virtual_packages\"</p>",
+        "id": 489149,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518123935
+    },
+    {
+        "content": "<p>(Greg: I've never seen a similar hang before either)</p>",
+        "id": 489151,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518123965
+    },
+    {
+        "content": "<p>Yeah, I'm definitely curious about that \"does not support features\" message.</p>",
+        "id": 489192,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518124296
+    },
+    {
+        "content": "<p>Not sure it means anything -- in my experience Puppet and Puppet modules have a habit of spewing a lot of logs even when things are perfectly normal. But I'll go run a test install and see how the log compares.</p>",
+        "id": 489202,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518124368
+    },
+    {
+        "content": "<p>Let's see if this formats right.. ps faux for the puppet process...</p>\n<div class=\"codehilite\"><pre><span></span>USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND\nroot      1167  0.0  0.0  61328  6064 ?        Ss   Feb06   0:00 /usr/sbin/sshd -D\nroot      7508  0.0  0.1  96320  8944 ?        Ss   13:07   0:00  \\_ sshd: root@pts/0\nroot      7538  0.0  0.1  19416  8472 pts/0    Ss   13:08   0:00  |   \\_ -bash\nroot      8022  0.0  0.0  12528  3028 pts/0    S+   13:10   0:00  |       \\_ /bin/bash ./scripts/setup/install\nroot      8024  0.0  0.0  12548  3052 pts/0    S+   13:10   0:00  |           \\_ bash ./scripts/lib/install\nroot     16463  0.0  0.1  30296 10548 pts/0    S+   13:10   0:00  |           |   \\_ python3 /root/zulip-server-1.7.1/scripts/zulip-puppet-apply -f\nroot     16464  1.6  0.6 210484 52316 pts/0    Sl+  13:10   0:02  |           |       \\_ /usr/bin/ruby /usr/bin/puppet apply --modulepath /root/zulip-server-1.7.1/puppet -e  Exec {\nroot      8025  0.0  0.0   7296   668 pts/0    S+   13:10   0:00  |           \\_ tee -a /var/log/zulip/install.log\nroot     16621  0.0  0.1  96320  8896 ?        Ss   13:10   0:00  \\_ sshd: root@pts/1\nroot     16650  0.0  0.0  19416  8132 pts/1    Ss   13:10   0:00      \\_ -bash\nroot     16822  0.0  0.0  31176  3144 pts/1    R+   13:12   0:00          \\_ ps faux 16464\n</pre></div>",
+        "id": 489205,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518124443
+    },
+    {
+        "content": "<p>I had modified the zulip-puppet-apply script to add the -d option to the CLI so I could see that debug output. Without that debug output  the last line I see is \"Notice: Compiled catalog for <a href=\"http://zulip.eng.nimblestorage.com\" target=\"_blank\" title=\"http://zulip.eng.nimblestorage.com\">zulip.eng.nimblestorage.com</a> in environment production in 1.43 seconds\"</p>",
+        "id": 489216,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518124545
+    },
+    {
+        "content": "<p>Huh, so no subprocesses for puppet.</p>",
+        "id": 489222,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518124608
+    },
+    {
+        "content": "<p>Maybe some service not running on my system that should be?</p>",
+        "id": 489224,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518124649
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>root@zulip:~# ps aux | grep puppet | grep -v grep\nroot     16463  0.0  0.1  30296 10548 pts/0    S+   13:10   0:00 python3 /root/zulip-server-1.7.1/scripts/zulip-puppet-apply -f\nroot     16464  0.6  0.6 213460 55428 pts/0    Sl+  13:10   0:02 /usr/bin/ruby /usr/bin/puppet apply --modulepath /root/zulip-server-1.7.1/puppet -e  Exec { path =&gt; &quot;/usr/sbin:/usr/bin:/sbin:/bin&quot; } include apt include zulip::voyager  --detailed-exitcodes -d\n</pre></div>",
+        "id": 489231,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518124730
+    },
+    {
+        "content": "<p>I'm running a test install now, with <code>-d</code> added to the puppet command line like you did</p>",
+        "id": 489264,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518125252
+    },
+    {
+        "content": "<p>(It's on trusty because that's what I have handy, but hopefully that will be informative enough)</p>",
+        "id": 489266,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518125267
+    },
+    {
+        "content": "<p>Here's the puppet section of the log on my test install:<br>\n<a href=\"/user_uploads/2/80/V-1kNqsyCxqh6plpbNT78XL3/log\" target=\"_blank\" title=\"log\">trusty log</a></p>",
+        "id": 489295,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518125829
+    },
+    {
+        "content": "<p>It has some similar messages in flavor, like</p>\n<blockquote>\n<p>Debug: /User[zulip]: Provider useradd does not support features libuser; not managing attribute forcelocal</p>\n</blockquote>\n<p>but not the one about apt and <code>virtual_packages</code></p>",
+        "id": 489297,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518125886
+    },
+    {
+        "content": "<p>That is on trusty, so it could just be an OS version difference</p>",
+        "id": 489298,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518125897
+    },
+    {
+        "content": "<p>Hmm.. is there some other puppet process that should be running? Do you know of basic env setting I need to check? hostname, dns, network?</p>",
+        "id": 489316,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518126481
+    },
+    {
+        "content": "<p>Hmm. One way to get more information: run <code>strace</code> on the puppet process. Like<br>\n<code>sudo strace -p $(pgrep -f 'ruby.*puppet-apply')</code></p>",
+        "id": 489317,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518126490
+    },
+    {
+        "content": "<p>(Meanwhile I'm setting up a Xenial test-install environment; should have one of those anyway)</p>",
+        "id": 489324,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518126593
+    },
+    {
+        "content": "<p>At a quick check of a couple of running prod servers, we do have a <code>puppet agent</code> daemon running. Not sure if that's expected/required in the install process. But try <code>service puppet status</code>?</p>",
+        "id": 489338,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518126768
+    },
+    {
+        "content": "<p>And if it's not running, <code>service puppet start</code>.</p>",
+        "id": 489340,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518126777
+    },
+    {
+        "content": "<p>If that fixes it, then you have a workaround and we've reduced the mystery to why that wasn't running for you <span class=\"emoji emoji-1f604\" title=\"smile\">:smile:</span> -- we do install Puppet with <code>apt</code> earlier in the install script, which should start it</p>",
+        "id": 489344,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518126840
+    },
+    {
+        "content": "<p>Let me get this running and restart the install. I wonder why it didn't autostart?</p>\n<div class=\"codehilite\"><pre><span></span>root@zulip:~# systemctl status puppet\n● puppet.service - Puppet agent\n   Loaded: loaded (/lib/systemd/system/puppet.service; disabled; vendor preset: enabled)\n   Active: inactive (dead)\n\nFeb 06 20:42:42 zulip systemd[1]: Starting Puppet agent...\nFeb 06 20:42:43 zulip puppet-agent[12622]: Reopening log files\nFeb 06 20:42:43 zulip systemd[1]: Started Puppet agent.\nFeb 06 20:42:43 zulip puppet-agent[12622]: Starting Puppet client version 3.8.5\nFeb 06 20:42:43 zulip puppet-agent[12622]: Skipping run of Puppet configuration client; administratively disabled (Reason: &#39;Disabled by default on new or unconfigured old installati\nFeb 06 20:42:43 zulip puppet-agent[12622]: Use &#39;puppet agent --enable&#39; to re-enable.\nFeb 06 20:45:44 zulip systemd[1]: Stopping Puppet agent...\nFeb 06 20:45:44 zulip puppet-agent[12622]: Caught TERM; exiting\nFeb 06 20:45:44 zulip systemd[1]: Stopped Puppet agent.\nFeb 06 20:57:54 zulip systemd[1]: Stopped Puppet agent.\n</pre></div>",
+        "id": 489349,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518126902
+    },
+    {
+        "content": "<p>Started puppet and enabled it. Confirmed it was running and kicked off the installer again. I still see the same types of messages about apt does not support features virtual_packages. The install doesn't progress any further after 60 seconds of sitting there. Confirmed that puppet agent is running during the install now.</p>\n<div class=\"codehilite\"><pre><span></span>root@zulip:~# ps aux | grep puppet | grep -v grep\nroot     16962  0.0  0.4 144864 39092 ?        Ssl  13:55   0:00 /usr/bin/ruby /usr/bin/puppet agent\nroot     17341  0.0  0.1  30292 10616 pts/0    S+   13:55   0:00 python3 /root/zulip-server-1.7.1/scripts/zulip-puppet-apply -f\nroot     17342  6.4  0.6 207532 49288 pts/0    Sl+  13:55   0:02 /usr/bin/ruby /usr/bin/puppet apply --modulepath /root/zulip-server-1.7.1/puppet -e  Exec { path =&gt; &quot;/usr/sbin:/usr/bin:/sbin:/bin&quot; } include apt include zulip::voyager  --detailed-exitcodes -d\n</pre></div>\n\n\n<p>That didn't change the output of ps faux except to add a puppet agent process that is not running under the installer.</p>",
+        "id": 489365,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518127203
+    },
+    {
+        "content": "<p><code>pgrep -f 'ruby.*puppet-apply'</code> doesn't return anything... only the zulip-puppet-apply python script seems to be running.</p>",
+        "id": 489375,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518127340
+    },
+    {
+        "content": "<p>Hmm, dang, red herring then.</p>",
+        "id": 489383,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518127565
+    },
+    {
+        "content": "<p>Oh! I misread your <code>pstree</code> output above -- you had <code>/usr/bin/ruby /usr/bin/puppet apply</code>, with a space.</p>",
+        "id": 489385,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518127615
+    },
+    {
+        "content": "<p>That <code>pgrep</code> was meant to match that command -- so try <code>pgrep -f 'ruby.*puppet apply'</code>. Or just type the PID of that process. :-)</p>\n<p><span class=\"user-mention\" data-user-email=\"scott@frak.ms\" data-user-id=\"5233\">@Scott Russell</span> ^</p>",
+        "id": 489389,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518127674
+    },
+    {
+        "content": "<p>(BTW thanks for the report and this detailed debugging!)</p>",
+        "id": 489390,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518127681
+    },
+    {
+        "content": "<p>No thank you! This is bugging the crap out of me. I'm very happy to have assistance looking at this as I've been poking at it for a day or two now. Let me get a good strace. Maybe try lsof and fuser to see what that process has open</p>",
+        "id": 489404,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518127813
+    },
+    {
+        "content": "<p>Now we are getting somewhere! strace gave me back bunch of NIS stuff. We do have a NIS env for hosts, mounts, and users. However it should be disabled on this box. Let me look at it.</p>\n<div class=\"codehilite\"><pre><span></span>open(&quot;/var/yp/binding/nimblestorage.2&quot;, O_RDONLY) = 8\npread64(8, &quot;\\1\\0\\0\\0\\n\\24\\0000\\3\\303\\0\\0&quot;, 12, 2) = 12\nsocket(PF_INET, SOCK_DGRAM|SOCK_CLOEXEC|SOCK_NONBLOCK, IPPROTO_UDP) = 9\nbind(9, {sa_family=AF_INET, sin_port=htons(657), sin_addr=inet_addr(&quot;0.0.0.0&quot;)}, 16) = 0\nsetsockopt(9, SOL_IP, IP_RECVERR, [1], 4) = 0\nclose(8)                                = 0\n</pre></div>",
+        "id": 489419,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518127913
+    },
+    {
+        "content": "<p>The second I disabled NIS the install process kicked into gear!</p>",
+        "id": 489422,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518127998
+    },
+    {
+        "content": "<p>Excellent!</p>",
+        "id": 489433,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518128218
+    },
+    {
+        "content": "<p>When you have a chance, I'd be interested in your thoughts on what the installer could do to better detect or help debug this case.</p>",
+        "id": 489436,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518128330
+    },
+    {
+        "content": "<p>So, with a NIS environment, I'm wondering if there is a way to force local user creation. My experience with CentOS is that adduser gets a little odd with NIS in place. I've not run Ubuntu in NIS environments before unsure of the impact there.</p>",
+        "id": 489439,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518128399
+    },
+    {
+        "content": "<p>I caught the installer with the strace trying to do some group work. (maybe add a new group?) In a NIS environment that could fail if the OS is trying to update the NIS server.</p>\n<div class=\"codehilite\"><pre><span></span>stat(&quot;/usr/lib/ruby/vendor_ruby/puppet/vendor/pathspec/lib/puppet/type/class.rb&quot;, 0x7ffd6e549c80) = -1 ENOENT (No such file or directory)\nstat(&quot;/usr/lib/ruby/vendor_ruby/puppet/vendor/safe_yaml/lib/puppet/type/class.rb&quot;, 0x7ffd6e549c80) = -1 ENOENT (No such file or directory)\nstat(&quot;/root/zulip-server-1.7.1/puppet/zulip/lib/puppet/type/class.rb&quot;, 0x7ffd6e549c80) = -1 ENOENT (No such file or directory)\nstat(&quot;/root/zulip-server-1.7.1/puppet/stdlib/lib/puppet/type/class.rb&quot;, 0x7ffd6e549c80) = -1 ENOENT (No such file or directory)\nstat(&quot;/var/lib/puppet/lib/puppet/type/class.rb&quot;, 0x7ffd6e549c80) = -1 ENOENT (No such file or directory)\nopen(&quot;/etc/group&quot;, O_RDONLY|O_CLOEXEC)  = 7\nfstat(7, {st_mode=S_IFREG|0644, st_size=967, ...}) = 0\nread(7, &quot;root:x:0:\\ndaemon:x:1:\\nbin:x:2:\\ns&quot;..., 4096) = 967\nread(7, &quot;&quot;, 4096)                       = 0\nopen(&quot;/etc/ld.so.cache&quot;, O_RDONLY|O_CLOEXEC) = 8\nfstat(8, {st_mode=S_IFREG|0644, st_size=34373, ...}) = 0\nmmap(NULL, 34373, PROT_READ, MAP_PRIVATE, 8, 0) = 0x7f2a80063000\nclose(8)                                = 0\naccess(&quot;/etc/ld.so.nohwcap&quot;, F_OK)      = -1 ENOENT (No such file or directory)\nopen(&quot;/lib/x86_64-linux-gnu/libnss_nis.so.2&quot;, O_RDONLY|O_CLOEXEC) = 8\nread(8, &quot;\\177ELF\\2\\1\\1\\0\\0\\0\\0\\0\\0\\0\\0\\0\\3\\0&gt;\\0\\1\\0\\0\\0\\260 \\0\\0\\0\\0\\0\\0&quot;..., 832) = 832\nfstat(8, {st_mode=S_IFREG|0644, st_size=47648, ...}) = 0\nmmap(NULL, 2143624, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 8, 0) = 0x7f2a7653a000\nmprotect(0x7f2a76545000, 2093056, PROT_NONE) = 0\nmmap(0x7f2a76744000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 8, 0xa000) = 0x7f2a76744000\nclose(8)                                = 0\naccess(&quot;/etc/ld.so.nohwcap&quot;, F_OK)      = -1 ENOENT (No such file or directory)\nopen(&quot;/lib/x86_64-linux-gnu/libnsl.so.1&quot;, O_RDONLY|O_CLOEXEC) = 8\nread(8, &quot;\\177ELF\\2\\1\\1\\0\\0\\0\\0\\0\\0\\0\\0\\0\\3\\0&gt;\\0\\1\\0\\0\\0\\360?\\0\\0\\0\\0\\0\\0&quot;..., 832) = 832\nfstat(8, {st_mode=S_IFREG|0644, st_size=93128, ...}) = 0\nmmap(NULL, 2198104, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 8, 0) = 0x7f2a76321000\nmprotect(0x7f2a76337000, 2093056, PROT_NONE) = 0\nmmap(0x7f2a76536000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 8, 0x15000) = 0x7f2a76536000\nmmap(0x7f2a76538000, 6744, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f2a76538000\nclose(8)                                = 0\n</pre></div>",
+        "id": 489441,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518128518
+    },
+    {
+        "content": "<p>Interesting.</p>",
+        "id": 489455,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518128800
+    },
+    {
+        "content": "<p>So, around that spot in the logs, the next things in my log from trusty are</p>\n<div class=\"codehilite\"><pre><span></span>Debug: /User[postgres]: Provider useradd does not support features libuser; not managing attribute forcelocal\nDebug: Creating default schedules\nDebug: Using settings: adding file resource &#39;confdir&#39;: &#39;File[/etc/puppet]{:path=&gt;&quot;/etc/puppet&quot;, :ensure=&gt;:directory, :loglevel=&gt;:debug, :links=&gt;:follow, :backup=&gt;false}&#39;\nDebug: /User[puppet]: Provider useradd does not support features libuser; not managing attribute forcelocal\nDebug: /Group[puppet]: Provider groupadd does not support features libuser; not managing attribute forcelocal\n</pre></div>",
+        "id": 489457,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518128895
+    },
+    {
+        "content": "<p>In your log, it's already successfully added both a user and group named <code>zulip</code>, it looks like</p>",
+        "id": 489458,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518128925
+    },
+    {
+        "content": "<p>But maybe on creating the postgres user, there's something different that makes it fail trying to use NIS?</p>",
+        "id": 489461,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518129079
+    },
+    {
+        "content": "<p>Ah, here's what looks like the relevant bit of our puppet code:</p>\n<div class=\"codehilite\"><pre><span></span>puppet/zulip/manifests/postgres_common.pp:\n\n  # Use arcane puppet virtual resources to add postgres user to zulip group\n  @user { &#39;postgres&#39;:\n    groups     =&gt; [&#39;ssl-cert&#39;],\n    membership =&gt; minimum,\n    require    =&gt; [Package[&quot;postgresql-${zulip::base::postgres_version}&quot;],\n                   Package[&quot;ssl-cert&quot;]],\n  }\n  User &lt;| title == postgres |&gt; { groups +&gt; &quot;zulip&quot; }\n}\n</pre></div>",
+        "id": 489462,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518129134
+    },
+    {
+        "content": "<p>So, adding a user to a group.</p>",
+        "id": 489464,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518129160
+    },
+    {
+        "content": "<p>I could try that at the CLI as root with NIS enabled and disabled to see if there is a difference.</p>",
+        "id": 489474,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518129513
+    },
+    {
+        "content": "<p>I'm not sure exactly how puppet is going about adding the user to the group given that syntax... just appending it to the /etc/groups files?</p>",
+        "id": 489475,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518129556
+    },
+    {
+        "content": "<p>Me neither. I imagine it's calling system commands like <code>adduser</code>.</p>",
+        "id": 489482,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518130709
+    },
+    {
+        "content": "<p>Looks like <span class=\"user-mention\" data-user-email=\"tabbott@zulipchat.com\" data-user-id=\"7\">@Tim Abbott</span> added that line, including the comment remarking on the arcane bit of Puppet syntax -- Tim, do you recall any further details?</p>",
+        "id": 489484,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518130833
+    },
+    {
+        "content": "<p>Just following up that I was able to complete the rest of the install and have the instance running outside of docker now. Thank you again for the awesome help!</p>",
+        "id": 489512,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518132903
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"greg@zulipchat.com\" data-user-id=\"2187\">@Greg Price</span> I imagine <code>puppet</code> calls <code>adduser</code> internally.  I believe the reason we need to do that is so that postgres SSL authentication works.</p>",
+        "id": 489687,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518143659
+    },
+    {
+        "content": "<p>Oh -- <code>ssl-cert</code> is the group that can read <code>/etc/ssl/private</code>, as I happened to notice yesterday for unrelated reasons.</p>",
+        "id": 490871,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518206546
+    },
+    {
+        "content": "<p>Why do we add it to the <code>zulip</code> group with the funny syntax at the end, instead of with the <code>groups</code> field where we give it the <code>ssl-cert</code> group?</p>",
+        "id": 490874,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518206605
+    },
+    {
+        "content": "<p>Basically because <code>puppet</code> sucks.  I believe because we don't create the <code>postgres</code> user -- the <code>postgres</code> package does.  And the <code>ssl-cert</code> and <code>zulip</code> groups may not exist when the packages are installed.</p>",
+        "id": 490884,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518206876
+    },
+    {
+        "content": "<p>In other words, if you try doing the other thing, you'll get an error.</p>",
+        "id": 490886,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518206887
+    },
+    {
+        "content": "<p>Root user typically is a local account not in NIS. I believe that’s also the required user for install. Since this is an install issue only, just check for NIS in the install setup and about the install with a message to disable NIS for the install process. NIS can be enabled again after install. </p>\n<p>Clumsy I know but I don’t think NIS environments are common enough in the user base or we would have seen this before?</p>",
+        "id": 490936,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518207970
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"scott@frak.ms\" data-user-id=\"5233\">@Scott Russell</span> do you have a recommended command we should use for checking if it's an NIS environment?  Also, we should create an issue to track this at this point; I'll work on that.</p>",
+        "id": 490969,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518208634
+    },
+    {
+        "content": "<p>Created <a href=\"https://github.com/zulip/zulip/issues/8330\" target=\"_blank\" title=\"https://github.com/zulip/zulip/issues/8330\">https://github.com/zulip/zulip/issues/8330</a> to track this.</p>",
+        "id": 490973,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518208758
+    },
+    {
+        "content": "<p>Tag me in the issue and I’ll find a suggestion. My initial thought will be using service to see if NIS is installed and running. I’ll try out some commands</p>\n<p>My github email is the same.</p>",
+        "id": 490974,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518208765
+    },
+    {
+        "content": "<p><a href=\"/user_uploads/2/12/2Ojk12f3ki8bLiJSmml3Obx5/pasted_image.png\" target=\"_blank\" title=\"pasted_image.png\">pasted image</a> <br>\nThe above problems when installing zulip . How do I deal with it?  Ubuntu 16.04 xenial (ARM64)</p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/12/2Ojk12f3ki8bLiJSmml3Obx5/pasted_image.png\" target=\"_blank\" title=\"pasted image\"><img src=\"/user_uploads/2/12/2Ojk12f3ki8bLiJSmml3Obx5/pasted_image.png\"></a></div>",
+        "id": 528593,
+        "sender_full_name": "maziBIE",
+        "timestamp": 1520418403
+    },
+    {
+        "content": "<p>Hey <span class=\"user-mention\" data-user-id=\"4850\">@maziBIE</span> this is the first time i've seen tsearch missing on Xenial, I suppose. We've earlier encountered similar issues on Debian Stretch and Ubuntu Artful, as seen in a quick search here: <a href=\"#narrow/search/tsearch\" title=\"#narrow/search/tsearch\">https://chat.zulip.org/#narrow/search/tsearch</a></p>",
+        "id": 528665,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1520423977
+    },
+    {
+        "content": "<p>Try this person's solution, replacing artful with xenial in the repository listing: <a href=\"#narrow/stream/95-new-members/subject/Help.20needed.20for.20Ubuntu17.2E10.20zulip.20setup/near/501657\" title=\"#narrow/stream/95-new-members/subject/Help.20needed.20for.20Ubuntu17.2E10.20zulip.20setup/near/501657\">https://chat.zulip.org/#narrow/stream/95-new-members/subject/Help.20needed.20for.20Ubuntu17.2E10.20zulip.20setup/near/501657</a></p>",
+        "id": 528667,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1520424061
+    },
+    {
+        "content": "<p>Just adding that PPA and running <code>sudo apt upgrade</code> should ideally be enough, as after that, the install script can take care of the package installation. Pinging <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> in case I'm reading the situation incorrectly.</p>",
+        "id": 528670,
+        "sender_full_name": "Rohitt Vashishtha",
+        "timestamp": 1520424218
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"4850\">@maziBIE</span> I think the arm64 architecture is a key part of the issue -- thanks for mentioning that detail!</p>\n<p>Looking at <a href=\"https://launchpad.net/~tabbott/+archive/ubuntu/zulip/+packages\" target=\"_blank\" title=\"https://launchpad.net/~tabbott/+archive/ubuntu/zulip/+packages\">https://launchpad.net/~tabbott/+archive/ubuntu/zulip/+packages</a> and expanding the line \"tsearch-extras - 0.3\", we've only uploaded versions of that for amd64, i386, and armhf.</p>",
+        "id": 529319,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1520456462
+    },
+    {
+        "content": "<p>I'm curious -- what kind of machine are you trying to install Zulip on?</p>",
+        "id": 529321,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1520456489
+    },
+    {
+        "content": "<p>It might or might not be easy for us to add an arm64 build to the PPA -- <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> would know more.</p>",
+        "id": 529323,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1520456526
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span> I think it's not hard, but requires asking Canonical to upgrade our PPA to support that architecture, and then a few clicks.</p>",
+        "id": 529327,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1520456574
+    },
+    {
+        "content": "<p>If we do, though, you will be in uncharted territory -- nobody else has ever installed Zulip on an arm64 machine <span class=\"emoji emoji-1f603\" title=\"smiley\">:smiley:</span> -- so there may be other things you run into further on.</p>",
+        "id": 529329,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1520456592
+    },
+    {
+        "content": "<p>I think posting something like this: <a href=\"https://answers.launchpad.net/launchpad/+question/271836\" target=\"_blank\" title=\"https://answers.launchpad.net/launchpad/+question/271836\">https://answers.launchpad.net/launchpad/+question/271836</a></p>",
+        "id": 529330,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1520456594
+    },
+    {
+        "content": "<p>Ha, I see.</p>",
+        "id": 529332,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1520456614
+    },
+    {
+        "content": "<p>So that's how we got armhf, by asking for \"ARM builds\" -- and it turns out armhf isn't the only ARM architecture people might want. (Maybe it was in 2015, I don't know.)</p>",
+        "id": 529334,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1520456663
+    },
+    {
+        "content": "<p>Tim, want to make another request like that?</p>",
+        "id": 529335,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1520456682
+    },
+    {
+        "content": "<p>(OK, and some quick web research says arm64 was new in Debian jessie, released 2015; so probably new in xenial, and didn't exist in Ubuntu at the time of that previous request of ours.)</p>",
+        "id": 529347,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1520456888
+    },
+    {
+        "content": "<p>Done, see <a href=\"https://answers.launchpad.net/launchpad/+question/665356\" target=\"_blank\" title=\"https://answers.launchpad.net/launchpad/+question/665356\">https://answers.launchpad.net/launchpad/+question/665356</a></p>",
+        "id": 529365,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1520457042
+    },
+    {
+        "content": "<p>Great -- thanks!</p>\n<p><span class=\"user-mention\" data-user-id=\"4850\">@maziBIE</span> based on experience last time, I expect we'll probably have support for arm64 within a few days. Thanks again for the report!</p>",
+        "id": 529388,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1520457371
+    },
+    {
+        "content": "<p>OK, we've been approved; I'll try to take care of the series of clicking things spaced by 30 minutes required to have the package posted soon.</p>",
+        "id": 529555,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1520463799
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2187\">@Greg Price</span> <span class=\"user-mention\" data-user-id=\"1406\">@Rohitt Vashishtha</span> <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  Thanks a lot!</p>",
+        "id": 529761,
+        "sender_full_name": "maziBIE",
+        "timestamp": 1520472430
+    }
+]

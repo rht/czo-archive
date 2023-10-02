@@ -1,0 +1,320 @@
+<html>
+<head><meta charset="utf-8"><title>✔ Puppet error on backup restoration · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html">✔ Puppet error on backup restoration</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1289151"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289151" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ncc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289151">(Dec 01 2021 at 14:31)</a>:</h4>
+<p>Hello all,</p>
+<p>I'm trying to restore a 4.7 backup taken from an Ubuntu 18.04 server onto a 20.04 server running the same Zulip version. When running <code>/home/zulip/deployments/current/scripts/setup/restore-backup</code>, I encounter the following error:</p>
+<div class="codehilite"><pre><span></span><code>Error: Evaluation Error: Error while evaluating a Function Call, Could not find class ::zulip::voyager for zulip.domain.com (line: 3, column: 1) on node zulip.domain.com
+</code></pre></div>
+<p>the restore script is attempting to run this command:</p>
+<div class="codehilite"><pre><span></span><code>puppet apply --modulepath=/home/zulip/deployments/2021-11-30-14-56-13/puppet -e &#39;Exec { path =&gt; &quot;/usr/sbin:/usr/bin:/sbin:/bin&quot; } include zulip::voyager&#39;
+</code></pre></div>
+<p>but the <code>zulip::voyager</code> class does not exist:</p>
+<div class="codehilite"><pre><span></span><code># cat /var/lib/puppet/classes.txt | grep voyager
+#
+</code></pre></div>
+<p>if it's relevant, <code>/etc/zulip/zulip.conf</code> specifies the voyager class:</p>
+<div class="codehilite"><pre><span></span><code> # cat /etc/zulip/zulip.conf
+[machine]
+puppet_classes = zulip::voyager
+deploy_type = voyager
+
+[rabbitmq]
+nodename = zulip@localhost
+</code></pre></div>
+
+
+
+<a name="1289168"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289168" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289168">(Dec 01 2021 at 16:46)</a>:</h4>
+<p><span class="user-mention" data-user-id="13263">@ncc</span> are you sure the two systems are running the same version?</p>
+
+
+
+<a name="1289169"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289169" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289169">(Dec 01 2021 at 16:46)</a>:</h4>
+<p>I'm pretty sure we removed the voyager class name in 4.0.</p>
+
+
+
+<a name="1289175"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289175" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ncc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289175">(Dec 01 2021 at 17:03)</a>:</h4>
+<p>is referring to <code>/home/zulip/deployments/current/version</code> a good way to determine the version of a server? if so, they're both 4.7</p>
+
+
+
+<a name="1289177"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289177" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ncc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289177">(Dec 01 2021 at 17:05)</a>:</h4>
+<p>if it matters, the 18.04 server that the backup was generated from was previously a 16.04 server running a 2.X version. I performed a do-release-upgrade per the zulip documentation, then performed an upgrade to zulip 4.7.</p>
+
+
+
+<a name="1289206"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289206" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289206">(Dec 01 2021 at 18:39)</a>:</h4>
+<p>The upgrade process to Zulip 4.0 and above is supposed to rename those (<a href="https://github.com/zulip/zulip/blob/a3095331eb77410ab62ee3913aeb12b7f9b8c154/scripts/lib/upgrade-zulip-stage-2#L265-L288">https://github.com/zulip/zulip/blob/a3095331eb77410ab62ee3913aeb12b7f9b8c154/scripts/lib/upgrade-zulip-stage-2#L265-L288</a>):</p>
+<div class="codehilite" data-code-language="Python"><pre><span></span><code><span class="c1"># Adjust Puppet class names for the manifest renames in the 4.0 release</span>
+<span class="n">class_renames</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"zulip::app_frontend"</span><span class="p">:</span> <span class="s2">"zulip::profile::app_frontend"</span><span class="p">,</span>
+    <span class="s2">"zulip::dockervoyager"</span><span class="p">:</span> <span class="s2">"zulip::profile::docker"</span><span class="p">,</span>
+    <span class="s2">"zulip::memcached"</span><span class="p">:</span> <span class="s2">"zulip::profile::memcached"</span><span class="p">,</span>
+    <span class="s2">"zulip::postgres_appdb_tuned"</span><span class="p">:</span> <span class="s2">"zulip::profile::postgresql"</span><span class="p">,</span>
+    <span class="s2">"zulip::postgres_backups"</span><span class="p">:</span> <span class="s2">"zulip::postgresql_backups"</span><span class="p">,</span>
+    <span class="s2">"zulip::rabbit"</span><span class="p">:</span> <span class="s2">"zulip::profile::rabbitmq"</span><span class="p">,</span>
+    <span class="s2">"zulip::voyager"</span><span class="p">:</span> <span class="s2">"zulip::profile::standalone"</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="n">classes</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\s*,\s*"</span><span class="p">,</span> <span class="n">get_config</span><span class="p">(</span><span class="n">config_file</span><span class="p">,</span> <span class="s2">"machine"</span><span class="p">,</span> <span class="s2">"puppet_classes"</span><span class="p">))</span>
+<span class="n">new_classes</span> <span class="o">=</span> <span class="p">[</span><span class="n">class_renames</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">classes</span> <span class="k">if</span> <span class="n">c</span> <span class="o">!=</span> <span class="s2">"zulip::base"</span><span class="p">]</span>
+<span class="k">if</span> <span class="n">classes</span> <span class="o">!=</span> <span class="n">new_classes</span><span class="p">:</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Adjusting Puppet classes for renames..."</span><span class="p">)</span>
+    <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="s2">"crudini"</span><span class="p">,</span>
+            <span class="s2">"--set"</span><span class="p">,</span>
+            <span class="s2">"/etc/zulip/zulip.conf"</span><span class="p">,</span>
+            <span class="s2">"machine"</span><span class="p">,</span>
+            <span class="s2">"puppet_classes"</span><span class="p">,</span>
+            <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">new_classes</span><span class="p">),</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+</code></pre></div>
+
+
+
+<a name="1289211"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289211" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289211">(Dec 01 2021 at 18:42)</a>:</h4>
+<p>I don't think we encode in the backup tarball the version that it was backed up from (we should I think).  But if you still have the machine the backup was taken on, you can look at the upgrade logs and see if you see the "Adjusting Puppet classes" log line in <code>/var/log/zulip/upgrade.log</code></p>
+
+
+
+<a name="1289234"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289234" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ncc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289234">(Dec 01 2021 at 19:00)</a>:</h4>
+<p>I do see that logged:</p>
+<div class="codehilite"><pre><span></span><code>^[[92mZulip stopped successfully!^[[0m
+2021-11-29 20:08:14,073 upgrade-zulip-stage-2: Adjusting Puppet classes for renames...
+2021-11-29 20:08:14,110 upgrade-zulip-stage-2: Applying Puppet changes...
+</code></pre></div>
+
+
+
+<a name="1289237"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289237" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ncc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289237">(Dec 01 2021 at 19:01)</a>:</h4>
+<p>could I just manually apply those renames to <code>/etc/zulip/zulip.conf</code>? is there anywhere else they'd need to be applied?</p>
+
+
+
+<a name="1289238"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289238" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289238">(Dec 01 2021 at 19:01)</a>:</h4>
+<p>And what're the contents of <code>/etc/zulip/zulip.conf</code> on that host?</p>
+
+
+
+<a name="1289239"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289239" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ncc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289239">(Dec 01 2021 at 19:02)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>[machine]
+puppet_classes = zulip::profile::standalone
+deploy_type = voyager
+
+[rabbitmq]
+nodename = zulip@localhost
+
+
+[postgresql]
+version = 10
+</code></pre></div>
+
+
+
+<a name="1289240"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289240" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289240">(Dec 01 2021 at 19:02)</a>:</h4>
+<p>That is <em>probably</em> a reasonable solution -- I';m just wary of suggesting it since it points ot maybe the upgrade not completing, or the backup not being what you think.</p>
+
+
+
+<a name="1289241"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289241" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289241">(Dec 01 2021 at 19:02)</a>:</h4>
+<p>OK, that looks right.  I think your backup predates the upgrade.</p>
+
+
+
+<a name="1289242"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289242" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289242">(Dec 01 2021 at 19:03)</a>:</h4>
+<p>Check the timestamp on the backup file, compared to the upgrade log?</p>
+
+
+
+<a name="1289247"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289247" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ncc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289247">(Dec 01 2021 at 19:11)</a>:</h4>
+<p>the original backup with the correct timestamp wasn't preserved, but I'm generating a new backup and decompressing the old one in the meantime.</p>
+
+
+
+<a name="1289248"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289248" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ncc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289248">(Dec 01 2021 at 19:11)</a>:</h4>
+<p>so zulip.conf is copied from the backup as part of the restore process?</p>
+
+
+
+<a name="1289258"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289258" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289258">(Dec 01 2021 at 19:15)</a>:</h4>
+<p>Yeah, the backup includes the zulip.conf, and restoring it puts it back into place.</p>
+
+
+
+<a name="1289425"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289425" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ncc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289425">(Dec 01 2021 at 21:02)</a>:</h4>
+<p>yep, that was the issue, I was attempting to restore an older backup; thanks.</p>
+
+
+
+<a name="1289426"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289426" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289426">(Dec 01 2021 at 21:03)</a>:</h4>
+<p>Glad that solved it!</p>
+
+
+
+<a name="1289947"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1289947" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ncc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1289947">(Dec 02 2021 at 16:07)</a>:</h4>
+<p>I'm seeing a different issue now... before the restore, zulip is running with postgres 13:</p>
+<div class="codehilite"><pre><span></span><code> # dpkg --list | grep postgresql
+ii  pgdg-keyring                         2018.2                                all          keyring for apt.postgresql.org
+ii  postgresql-13                        13.5-2.pgdg20.04+1                    amd64        The World&#39;s Most Advanced Open Source Relational Database
+ii  postgresql-client                    14+232.pgdg20.04+1                    all          front-end programs for PostgreSQL (supported version)
+ii  postgresql-client-13                 13.5-2.pgdg20.04+1                    amd64        front-end programs for PostgreSQL 13
+ii  postgresql-client-14                 14.1-2.pgdg20.04+1                    amd64        front-end programs for PostgreSQL 14
+ii  postgresql-client-common             232.pgdg20.04+1                       all          manager for multiple PostgreSQL client versions
+ii  postgresql-common                    232.pgdg20.04+1                       all          PostgreSQL database-cluster manager
+ # systemctl status postgresql@13-main.service
+● postgresql@13-main.service - PostgreSQL Cluster 13-main
+     Loaded: loaded (/lib/systemd/system/postgresql@.service; enabled-runtime; vendor preset: enabled)
+     Active: active (running) since Wed 2021-12-01 15:55:55 CST; 17h ago
+   Main PID: 422 (postgres)
+      Tasks: 13 (limit: 309304)
+     Memory: 110.9M
+     CGroup: /system.slice/system-postgresql.slice/postgresql@13-main.service
+             ├─  422 /usr/lib/postgresql/13/bin/postgres -D /var/lib/postgresql/13/main -c config_file=/etc/postgresql/13/main/postgresql.conf
+             ├─  500 postgres: 13/main: logger
+             ├─  504 postgres: 13/main: checkpointer
+             ├─  505 postgres: 13/main: background writer
+             ├─  506 postgres: 13/main: walwriter                                                                                                                                             ├─  507 postgres: 13/main: autovacuum launcher
+             ├─  508 postgres: 13/main: stats collector
+             ├─  509 postgres: 13/main: logical replication launcher                                                                                                                          ├─ 1194 postgres: 13/main: zulip zulip [local] idle
+             ├─ 1776 postgres: 13/main: zulip zulip [local] idle
+             ├─ 1777 postgres: 13/main: zulip zulip [local] idle
+             ├─73897 postgres: 13/main: zulip zulip [local] idle
+             └─73899 postgres: 13/main: zulip zulip [local] idle
+
+Dec 01 15:55:52 zulip systemd[1]: Starting PostgreSQL Cluster 13-main...
+Dec 01 15:55:55 zulip systemd[1]: Started PostgreSQL Cluster 13-main.
+</code></pre></div>
+<p>but the restore is installing postgres 10, and the restore fails when it tries to start postgres 10 (because there's already an active postgres daemon):</p>
+<div class="codehilite"><pre><span></span><code>Notice: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 10 main restart]/returns: Job for postgresql@10-main.service failed because the service did not take the steps required by its unit configuration.
+Notice: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 10 main restart]/returns: See &quot;systemctl status postgresql@10-main.service&quot; and &quot;journalctl -xe&quot; for details.
+Error: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 10 main restart]: Failed to call refresh: &#39;pg_ctlcluster 10 main restart&#39; returned 1 instead of one of [0]
+Error: /Stage[main]/Zulip::Profile::Postgresql/Exec[pg_ctlcluster 10 main restart]: &#39;pg_ctlcluster 10 main restart&#39; returned 1 instead of one of [0]
+Notice: /Stage[main]/Zulip::Supervisor/Service[supervisor]/ensure: ensure changed &#39;stopped&#39; to &#39;running&#39;
+Notice: Applied catalog in 31.85 seconds
+
+Error running a subcommand of /home/zulip/deployments/current/scripts/setup/restore-backup: /home/zulip/deployments/2021-12-01-15-41-59/scripts/zulip-puppet-apply -f
+Actual error output for the subcommand is just above this.
+
+ # dpkg --list | grep postgresql
+ii  pgdg-keyring                         2018.2                                all          keyring for apt.postgresql.org
+ii  postgresql-10                        10.19-2.pgdg20.04+1                   amd64        The World&#39;s Most Advanced Open Source Relational Database
+ii  postgresql-13                        13.5-2.pgdg20.04+1                    amd64        The World&#39;s Most Advanced Open Source Relational Database
+ii  postgresql-client                    14+232.pgdg20.04+1                    all          front-end programs for PostgreSQL (supported version)
+ii  postgresql-client-10                 10.19-2.pgdg20.04+1                   amd64        front-end programs for PostgreSQL 10
+ii  postgresql-client-13                 13.5-2.pgdg20.04+1                    amd64        front-end programs for PostgreSQL 13
+ii  postgresql-client-14                 14.1-2.pgdg20.04+1                    amd64        front-end programs for PostgreSQL 14
+ii  postgresql-client-common             232.pgdg20.04+1                       all          manager for multiple PostgreSQL client versions
+ii  postgresql-common                    232.pgdg20.04+1                       all          PostgreSQL database-cluster manager
+ #
+</code></pre></div>
+
+
+
+<a name="1290048"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1290048" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1290048">(Dec 02 2021 at 17:53)</a>:</h4>
+<p><span class="user-mention" data-user-id="13263">@ncc</span> this configuration in <code>zulip.conf</code> is what determines what postgres version is supposed to be running:</p>
+<div class="codehilite"><pre><span></span><code>[postgresql]
+version = 10
+</code></pre></div>
+
+
+
+<a name="1290050"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1290050" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1290050">(Dec 02 2021 at 17:54)</a>:</h4>
+<p>I'd check your original host that generated the backup; the most likely story is you're importing a backup generated on a postgres 10 host.</p>
+
+
+
+<a name="1290051"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1290051" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1290051">(Dec 02 2021 at 17:54)</a>:</h4>
+<p>(i.e. before you upgraded)</p>
+
+
+
+<a name="1290054"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1290054" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1290054">(Dec 02 2021 at 17:54)</a>:</h4>
+<p>Since I don't think it's very likely you'd have a Zulip instance running postgres 13 with <code>/etc/zulip/zulip.conf</code> having postgres 10 listed, but I suppose it's possible with enough manual intervention (i.e. not using our postgres upgrade tool).</p>
+
+
+
+<a name="1290070"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1290070" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ncc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1290070">(Dec 02 2021 at 18:09)</a>:</h4>
+<p>that does indeed seem to be the case</p>
+
+
+
+<a name="1290071"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1290071" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ncc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1290071">(Dec 02 2021 at 18:10)</a>:</h4>
+<p>what's the preferred way to resolve that? modify one of the zulip.conf's before taking  or restoring the backup?</p>
+
+
+
+<a name="1290082"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1290082" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1290082">(Dec 02 2021 at 18:32)</a>:</h4>
+<p><a href="https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-postgresql">https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-postgresql</a> is the recommended way to upgrade postgres.</p>
+
+
+
+<a name="1290083"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1290083" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1290083">(Dec 02 2021 at 18:33)</a>:</h4>
+<p>If you had already upgraded it some other way ... probably just changing that configuration line and then doing a <code>zulip-puppet-apply</code> will leave you in the same state as if you'd used our tool.</p>
+
+
+
+<a name="1290085"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1290085" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1290085">(Dec 02 2021 at 18:34)</a>:</h4>
+<p>(And the <code>zulip-puppet-apply</code> isn't really necessary -- it just updates the postgres configuration to be tuned for use with Zulip, which won't matter if you're about to backup the system anyway)</p>
+
+
+
+<a name="1290087"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1290087" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1290087">(Dec 02 2021 at 18:34)</a>:</h4>
+<p>And thus you could probably equivalently just change the value in your backup tarball and then run the backup restore command.</p>
+
+
+
+<a name="1291019"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1291019" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> ncc <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1291019">(Dec 03 2021 at 21:32)</a>:</h4>
+<p>forgot to post an update here, but things are looking good after the postgres upgrade, thanks for the help!</p>
+
+
+
+<a name="1291020"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/%E2%9C%94%20Puppet%20error%20on%20backup%20restoration/near/1291020" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Notification Bot <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/.E2.9C.94.20Puppet.20error.20on.20backup.20restoration.html#1291020">(Dec 03 2021 at 21:32)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="13263">ncc</span> has marked this topic as resolved.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,158 @@
+[
+    {
+        "content": "<p>Hi :) I think I got another hairy problem <span aria-label=\"see no evil\" class=\"emoji emoji-1f648\" role=\"img\" title=\"see no evil\">:see_no_evil:</span> </p>\n<p>The situation:<br>\nA message with a lot of reactions (different emojis). But not all reactions load. There is no pattern detectable. The developer's console shows the following error:</p>\n<div class=\"spoiler-block\"><div class=\"spoiler-header\">\n</div><div class=\"spoiler-content\" aria-hidden=\"true\">\n<div class=\"codehilite\"><pre><span></span><code>Uncaught Error: Cannot find realm emoji for code &#39;149&#39;.\n    b emoji.js:253\n    q reactions.js:499\n    S reactions.js:475\n    M reactions.js:405\n    build_message_groups message_list_view.js:457\n    render message_list_view.js:789\n    append message_list_view.js:1305\n    append_to_view message_list.js:329\n    add_messages message_list.js:112\n    u message_util.js:26\n    d message_util.js:32\n    v message_fetch.js:54\n    success message_fetch.js:127\n    success message_fetch.js:259\n    success channel.js:109\n    jQuery 6\n    f channel.js:112\n    C channel.js:117\n    j message_fetch.js:255\n    I message_fetch.js:295\n    dn narrow.js:534\n    hn narrow.js:910\n    fn stream_list.js:598\n    jQuery 8\n    fn stream_list.js:591\n    fn stream_list.js:680\n    Eo ui_init.js:639\n    21064 ui_init.js:721\n    I blueslip.ts:239\n    21064 ui_init.js:720\n    jQuery 12\n    Webpack 15\nemoji.js:253:18\n</code></pre></div>\n</div></div>\n<p>I did some research and found that there is an emoji missing from the custom emojis that is present in the reactions of the message. Thus, it cannot be loaded properly. I wondered how this can happen and found this (old and solved) issue: <a href=\"https://github.com/zulip/zulip/issues/4750\">https://github.com/zulip/zulip/issues/4750</a></p>\n<p>However, I recently deleted a user who has most probably uploaded that emoji. Is it possible that the user deletion does not \"deactivate\" the  custom emojis uploaded by that user but removing them and thus leading to errors?</p>",
+        "id": 1551918,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681992009
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert (ro-i)</span> what mechanism did you use to delete the user? Was it the management command?</p>",
+        "id": 1552116,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682013665
+    },
+    {
+        "content": "<p>I think your best bet is to re-upload the emoji (or at least some emoji) yourself and then adjust the database to set the ID of the re-uploaded emoji to 149; that will result in the database being in a consistent state again.</p>",
+        "id": 1552119,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682013711
+    },
+    {
+        "content": "<p>(And then you can deactivate it if you like)</p>",
+        "id": 1552120,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682013717
+    },
+    {
+        "content": "<p>On our end, we probably need to remove <code>on_delete=CASCADE</code> and change <code>do_delete_user</code> to work around this issue.</p>\n<div class=\"codehilite\"><pre><span></span><code>class RealmEmoji(models.Model):\n    author = models.ForeignKey(\n        &quot;UserProfile&quot;,\n        blank=True,\n        null=True,\n        on_delete=CASCADE,\n    )\n</code></pre></div>",
+        "id": 1552122,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682013802
+    },
+    {
+        "content": "<p>(I'm still not convinced that the high-level mechanism used for deleting users is correct; it might be simpler to explicitly clear the data that we want to clear than the thing we're doing presently, precisely because it can result in bugs like this)</p>",
+        "id": 1552123,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682013835
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/Realm.20Emoji.20of.20Deleted.20User/near/1552116\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"17322\">Robert (ro-i)</span> what mechanism did you use to delete the user? Was it the management command?</p>\n</blockquote>\n<p>Yes, <code>manage.py delete_user -f</code></p>\n<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/Realm.20Emoji.20of.20Deleted.20User/near/1552119\">said</a>:</p>\n<blockquote>\n<p>[...] and then adjust the database to set the ID of the re-uploaded emoji to 149 [...]</p>\n</blockquote>\n<p>How can I do that?</p>",
+        "id": 1552194,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1682019691
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert (ro-i)</span> in a management shell, <code>RealmEmoji.objects.filter(name=\"deleted_emoji_name\").update(id=149)</code></p>",
+        "id": 1552344,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682030227
+    },
+    {
+        "content": "<p>(After having created it via the web UI)</p>",
+        "id": 1552345,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682030257
+    },
+    {
+        "content": "<p>Actually hmm, that might not work -- what file upload backend are you using?</p>",
+        "id": 1552346,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682030274
+    },
+    {
+        "content": "<p>the default one</p>",
+        "id": 1552347,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1682030290
+    },
+    {
+        "content": "<p>OK. You'll probably need to do some additional surgery in <code>/home/zulip/uploads/avatars/2/emoji/images/</code> to move the files associated with whatever ID your emoji had when you re-uploaded it to its new ID.</p>",
+        "id": 1552349,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682030384
+    },
+    {
+        "content": "<p>That's the output from the shell:</p>\n<div class=\"codehilite\" data-code-language=\"IPython\"><pre><span></span><code><span class=\"n\">In</span> <span class=\"p\">[</span><span class=\"mi\">1</span><span class=\"p\">]:</span> <span class=\"n\">RealmEmoji</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">filter</span><span class=\"p\">(</span><span class=\"n\">name</span><span class=\"o\">=</span><span class=\"s2\">\"eist\"</span><span class=\"p\">)</span><span class=\"o\">.</span><span class=\"n\">update</span><span class=\"p\">(</span><span class=\"nb\">id</span><span class=\"o\">=</span><span class=\"mi\">149</span><span class=\"p\">)</span>\n<span class=\"n\">Out</span><span class=\"p\">[</span><span class=\"mi\">1</span><span class=\"p\">]:</span> <span class=\"mi\">1</span>\n\n<span class=\"n\">In</span> <span class=\"p\">[</span><span class=\"mi\">2</span><span class=\"p\">]:</span> <span class=\"n\">RealmEmoji</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">filter</span><span class=\"p\">(</span><span class=\"n\">name</span><span class=\"o\">=</span><span class=\"s2\">\"eist\"</span><span class=\"p\">)</span>\n<span class=\"n\">Out</span><span class=\"p\">[</span><span class=\"mi\">2</span><span class=\"p\">]:</span> <span class=\"o\">&lt;</span><span class=\"n\">QuerySet</span> <span class=\"p\">[</span><span class=\"o\">&lt;</span><span class=\"n\">RealmEmoji</span><span class=\"p\">:</span> <span class=\"o\">&lt;</span><span class=\"n\">RealmEmoji</span><span class=\"p\">():</span> <span class=\"mi\">149</span> <span class=\"n\">eist</span> <span class=\"kc\">False</span> <span class=\"mf\">197.</span><span class=\"n\">png</span><span class=\"o\">&gt;&gt;</span><span class=\"p\">]</span><span class=\"o\">&gt;</span>\n</code></pre></div>\n<p>Interestingly, the 149.png and 149.png.original files still exist... But it seems to be fine to have an ID different from the file name?</p>\n<p>And then I need to restart the server, ig?</p>",
+        "id": 1552364,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1682030825
+    },
+    {
+        "content": "<p>Of yeah, 149.png probably does still exist, since this was deleted through an unintended mechanism that definitely wouldn't delete the files on disk.</p>",
+        "id": 1552372,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682031058
+    },
+    {
+        "content": "<p>I think you probably just need to do <code>scripts/setup/flush-memcached</code>, not a full server restart.</p>",
+        "id": 1552373,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682031082
+    },
+    {
+        "content": "<p>(And you can now likely delete the <code>197.png</code> files if you like, but it doesn't really matter -- the database will issue ID 198 to the next custom emoji)</p>",
+        "id": 1552374,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682031113
+    },
+    {
+        "content": "<p>Hm, so with the current state after a server-restart, it doesn't seem to work yet. I can use the emoji, but it doesn't get displayed on the existing message...</p>",
+        "id": 1552377,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1682031168
+    },
+    {
+        "content": "<p>I think the new emoji is still registered as 197. That's what <code>get_realm_emoji</code> from the python-api says...</p>",
+        "id": 1552418,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1682032461
+    },
+    {
+        "content": "<p>although the id in the shell says it is 149</p>",
+        "id": 1552419,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1682032505
+    },
+    {
+        "content": "<p>It feels like I forgot to save something <span aria-label=\"sweat smile\" class=\"emoji emoji-1f605\" role=\"img\" title=\"sweat smile\">:sweat_smile:</span></p>",
+        "id": 1552420,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1682032563
+    },
+    {
+        "content": "<p>Sounds like you didn't flush the cache successfully.</p>",
+        "id": 1552430,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682032933
+    },
+    {
+        "content": "<p>Ah, <code>scripts/setup/flush-memcached</code> alone worked, thanks! Now the message is displayed correctly.<br>\nHowever, the developer console shows that now the emoji 197 is missing... Although that doesn't exist and I removed the files and also updated the <code>file_name</code>attribute of the new emoji to point to the old 149 file.</p>",
+        "id": 1552443,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1682033424
+    },
+    {
+        "content": "<p>Is there anything else I should consider?</p>",
+        "id": 1552445,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1682033449
+    },
+    {
+        "content": "<p>The traceback might be relevant. If someone used that emoji in a message while you were doing this surgery, that could explain the console error even if you did everything correctly -- I wasn't thinking about human races.</p>",
+        "id": 1552448,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682033638
+    },
+    {
+        "content": "<p>Uhm that would be me during testing <span aria-label=\"face palm\" class=\"emoji emoji-1f926\" role=\"img\" title=\"face palm\">:face_palm:</span> I deleted my test message and the error is gone. <span aria-label=\"see no evil\" class=\"emoji emoji-1f648\" role=\"img\" title=\"see no evil\">:see_no_evil:</span> <br>\nThank you very much for the help! <span aria-label=\"octopus\" class=\"emoji emoji-1f419\" role=\"img\" title=\"octopus\">:octopus:</span></p>",
+        "id": 1552450,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1682033825
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/Realm.20Emoji.20of.20Deleted.20User/near/1552122\">said</a>:</p>\n<blockquote>\n<p>On our end, we probably need to remove <code>on_delete=CASCADE</code> and change <code>do_delete_user</code> to work around this issue.</p>\n<p><div class=\"codehilite\"><pre><span></span><code>class RealmEmoji(models.Model):\n    author = models.ForeignKey(\n        &quot;UserProfile&quot;,\n        blank=True,\n        null=True,\n        on_delete=CASCADE,\n    )\n</code></pre></div><br>\n</p>\n</blockquote>\n<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> can you file this issue for the tracker?</p>",
+        "id": 1552869,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1682100435
+    }
+]

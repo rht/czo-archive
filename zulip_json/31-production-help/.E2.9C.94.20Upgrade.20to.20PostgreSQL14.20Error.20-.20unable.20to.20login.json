@@ -1,0 +1,158 @@
+[
+    {
+        "content": "<p>I upgraded line by line manually following the steps in the wiki, but face an issue as outlined here: <a href=\"https://github.com/zulip/docker-zulip/pull/368#issuecomment-1326215249\">https://github.com/zulip/docker-zulip/pull/368#issuecomment-1326215249</a></p>",
+        "id": 1470435,
+        "sender_full_name": "Mal Page",
+        "timestamp": 1669634631
+    },
+    {
+        "content": "<p>Tried again from scratch, but get the same result in log</p>",
+        "id": 1470436,
+        "sender_full_name": "Mal Page",
+        "timestamp": 1669634651
+    },
+    {
+        "content": "<p>and no users can login after that.  So had to revert to backup</p>",
+        "id": 1470437,
+        "sender_full_name": "Mal Page",
+        "timestamp": 1669634664
+    },
+    {
+        "content": "<p>(back to PG10)</p>",
+        "id": 1470438,
+        "sender_full_name": "Mal Page",
+        "timestamp": 1669634675
+    },
+    {
+        "content": "<p>any suggestions welcome</p>",
+        "id": 1470439,
+        "sender_full_name": "Mal Page",
+        "timestamp": 1669634679
+    },
+    {
+        "content": "<p>I stood up a PG10-based realm (Zulip 5.7) and created a couple users, then ran through the <a href=\"https://github.com/zulip/docker-zulip#upgrading-zulipzulip-postgresql-to-14\">PG14 upgrade process</a> again, and didn't encounter any errors after the fact, logging in and out a couple times. If you're having problems logging in, it's probably with Step 4 part 2:</p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code><span class=\"nb\">echo</span> <span class=\"s2\">\"ALTER USER zulip WITH PASSWORD 'REPLACE_WITH_SECURE_POSTGRES_PASSWORD';\"</span> <span class=\"p\">|</span>\n    docker <span class=\"nb\">exec</span> -i postgresnew psql -U zulip\n</code></pre></div>\n<p>Make sure to replace <code>REPLACE_WITH_SECURE_POSTGRES_PASSWORD</code> with the actual <code>zulip</code> database-user password. </p>\n<p>Thanks for the report <span class=\"user-mention\" data-user-id=\"14099\">@Mal Page</span>: Please let us know if that resolves the problem or not.</p>",
+        "id": 1470469,
+        "sender_full_name": "Matt",
+        "timestamp": 1669647335
+    },
+    {
+        "content": "<p>Thank you, I still get the same issue</p>",
+        "id": 1470494,
+        "sender_full_name": "Mal Page",
+        "timestamp": 1669652371
+    },
+    {
+        "content": "<p>perhaps it is some corruption in my current DB, is there some way I can check and repair that?</p>",
+        "id": 1470495,
+        "sender_full_name": "Mal Page",
+        "timestamp": 1669652393
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24078\">@Matt Keller</span></p>",
+        "id": 1470496,
+        "sender_full_name": "Mal Page",
+        "timestamp": 1669652399
+    },
+    {
+        "content": "<p>Are you running Zulip 5.7 (latest Docker-Zulip version available) or did you go through the manual upgrade to Zulip 6? or a git upgrade? <span class=\"user-mention\" data-user-id=\"14099\">@Mal Page</span></p>",
+        "id": 1470497,
+        "sender_full_name": "Matt",
+        "timestamp": 1669652764
+    },
+    {
+        "content": "<p>Hi <span class=\"user-mention\" data-user-id=\"24078\">@Matt Keller</span>  I wanted to upgrade the DB BEFORE the 6.0 upgrade, so was doing all this on 5.7.  Perhaps that is the issue, is 5.7 only compatible with PG10 and the 6.0/PG14 upgrade all needs to happen at the same time?</p>",
+        "id": 1470501,
+        "sender_full_name": "Mal Page",
+        "timestamp": 1669652920
+    },
+    {
+        "content": "<p>Nope, I've only tested this on Zulip 5.7, so that's good.</p>",
+        "id": 1470502,
+        "sender_full_name": "Matt",
+        "timestamp": 1669652999
+    },
+    {
+        "content": "<p>It does seem like a migration went awry- unrelated to the PG14 upgrade- and something didn't get applied properly. I'm reviewing migrations to see if I can find which one.</p>",
+        "id": 1470506,
+        "sender_full_name": "Matt",
+        "timestamp": 1669653495
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"14099\">@Mal Page</span>: Seeing <code>zulip       |   Applying zerver.0001_initial... OK</code> implies that the database Zulip is seeing is pretty much empty.  It's applying ~all of the schema changes, when it shouldn't need to apply any.</p>",
+        "id": 1470508,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1669653735
+    },
+    {
+        "content": "<p>So that implies to me that something with the Pg 10 -&gt; 14 upgrade is finding the wrong container, or the wrong container's data.</p>",
+        "id": 1470509,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1669653830
+    },
+    {
+        "content": "<p>Can you show any and all logs from the 10 -&gt; 14 database upgrade?</p>",
+        "id": 1470510,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1669653849
+    },
+    {
+        "content": "<ul>\n<li>If I have a working docker-zulip 5.7, and follow the <a href=\"https://github.com/zulip/docker-zulip#upgrading-zulipzulip-postgresql-to-14\">PG14 upgrade process</a>, everything works great. </li>\n<li>If I have nothing, and specify pg14 in the <code>docker-compose.yml</code> before running the initial <code>docker-compose up</code> then all of the migrations are run as-expected and that works too.</li>\n</ul>\n<p>It does seem there is an odd state, as <span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> mentioned, that is occurring.</p>",
+        "id": 1470531,
+        "sender_full_name": "Matt",
+        "timestamp": 1669656817
+    },
+    {
+        "content": "<p>Interesting, so I dont even need to do a manual upgrade?  Should I just try 1. shutdown everything 2. update compose file to 14 then 3. Restart, are you saying that the migration will be handled anyway like this?  Then why the need for the manual steps if so.  Thank you for the help <span class=\"user-mention\" data-user-id=\"24078\">@Matt Keller</span> <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span></p>",
+        "id": 1470535,
+        "sender_full_name": "Mal Page",
+        "timestamp": 1669657406
+    },
+    {
+        "content": "<p>If you already have a running Docker-Zulip instance, on PG10, then you must follow the upgrade instructions to get to PG14.</p>",
+        "id": 1470537,
+        "sender_full_name": "Matt",
+        "timestamp": 1669657508
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"14099\">@Mal Page</span>: Please show us the logs from running the documented 10 -&gt; 14 upgrade, which you do need to do.</p>",
+        "id": 1470539,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1669658062
+    },
+    {
+        "content": "<p>OK, I will do one more time from start to end, and post all here.  Will come back when I do that.  Thank you</p>",
+        "id": 1470543,
+        "sender_full_name": "Mal Page",
+        "timestamp": 1669658415
+    },
+    {
+        "content": "<p>Just one question <span class=\"user-mention\" data-user-id=\"24078\">@Matt Keller</span>  , for this line:</p>\n<div class=\"codehilite\"><pre><span></span><code>echo &quot;ALTER USER zulip WITH PASSWORD &#39;mysecretcodes&#39;;&quot; |\n    docker exec -i postgresnew psql -U zulip\n</code></pre></div>\n<p>Do I leave the '' around the secret code, or remove these?</p>",
+        "id": 1470544,
+        "sender_full_name": "Mal Page",
+        "timestamp": 1669658585
+    },
+    {
+        "content": "<p>Keep them for safety. If you have spaces or certain \"special\" characters in your password, it will create an error without them.</p>",
+        "id": 1470545,
+        "sender_full_name": "Matt",
+        "timestamp": 1669658660
+    },
+    {
+        "content": "<p>I boy, I am stupid, I am sorry for wasting your time.  In this line, instead of this:</p>\n<div class=\"codehilite\"><pre><span></span><code>      -v /var/lib/docker/volumes/docker-zulip_postgresqldir/_new:/var/lib/postgresql/data:rw \\\n</code></pre></div>\n<p>I had this:</p>\n<div class=\"codehilite\"><pre><span></span><code>      -v /var/lib/docker/volumes/docker-zulip_postgresqldir/_new:/var/lib/docker/volumes/docker-zulip_postgresqldir/_new:rw \\\n</code></pre></div>\n<p>Totally dumb copy paste error.  All worked well now when I realized/fixed this.  Sorry again <span class=\"user-mention\" data-user-id=\"24078\">@Matt Keller</span> <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> !!!</p>",
+        "id": 1470634,
+        "sender_full_name": "Mal Page",
+        "timestamp": 1669667267
+    },
+    {
+        "content": "<p><span aria-label=\"thumbs up\" class=\"emoji emoji-1f44d\" role=\"img\" title=\"thumbs up\">:thumbs_up:</span> Glad it all worked out</p>",
+        "id": 1470637,
+        "sender_full_name": "Matt",
+        "timestamp": 1669667374
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"14099\">Mal Page</span> has marked this topic as resolved.</p>",
+        "id": 1470825,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1669675912
+    }
+]

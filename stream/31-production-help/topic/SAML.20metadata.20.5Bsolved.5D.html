@@ -1,0 +1,417 @@
+<html>
+<head><meta charset="utf-8"><title>SAML metadata [solved] · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html">SAML metadata [solved]</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1190984"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1190984" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1190984">(May 29 2021 at 02:26)</a>:</h4>
+<p>I'm getting sp_cert_not_found_and_required<br>
+when configuring Zulip with the X509Certificate from my IDP and setting<br>
+authnRequestsSigned": True</p>
+<div class="codehilite"><pre><span></span><code>SOCIAL_AUTH_SAML_SECURITY_CONFIG: Dict[str, Any] = {
+    &quot;authnRequestsSigned&quot;: True,
+}
+</code></pre></div>
+<p>Here's the full traceback</p>
+<div class="codehilite"><pre><span></span><code>   auth = self._create_saml_auth(idp=self.get_idp(idp_name))
+  File &quot;/srv/zulip-venv-cache/3738dadf748d3baa2eb0371a83c912149a50d964/zulip-py3-venv/lib/python3.6/site-packages/social_core/backends/saml.py&quot;, line 276, in _create_saml_auth
+    return OneLogin_Saml2_Auth(request_info, config)
+  File &quot;/srv/zulip-venv-cache/3738dadf748d3baa2eb0371a83c912149a50d964/zulip-py3-venv/lib/python3.6/site-packages/onelogin/saml2/auth.py&quot;, line 59, in __init__
+    self.__settings = OneLogin_Saml2_Settings(old_settings, custom_base_path)
+  File &quot;/srv/zulip-venv-cache/3738dadf748d3baa2eb0371a83c912149a50d964/zulip-py3-venv/lib/python3.6/site-packages/onelogin/saml2/settings.py&quot;, line 131, in __init__
+    &#39;,&#39;.join(self.__errors)
+onelogin.saml2.errors.OneLogin_Saml2_Error: Invalid dict settings: sp_cert_not_found_and_required
+2021-05-29 02:19:23.485 WARN [zerver.lib.push_notifications] Mobile push notifications are not configured.
+</code></pre></div>
+
+
+
+<a name="1191111"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1191111" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1191111">(May 29 2021 at 15:31)</a>:</h4>
+<p><span class="user-mention" data-user-id="20384">@David Bain</span> Did you set up the cert files as mentioned in point 4 of <a href="https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#saml">https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#saml</a> ? <code>/etc/zulip/saml/zulip-cert.crt</code> and <code>/etc/zulip/saml/zulip-private-key.key</code></p>
+
+
+
+<a name="1191135"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1191135" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1191135">(May 29 2021 at 16:06)</a>:</h4>
+<p>I've probably done that incorrectly.<br>
+I only have the private key and it's symlinked to the key I use with nginx<br>
+<code>/etc/zulip/saml/zulip-private-key.key -&gt; /etc/ssl/private/zulip.key</code><br>
+rereading the docs now :(</p>
+
+
+
+<a name="1191140"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1191140" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1191140">(May 29 2021 at 16:13)</a>:</h4>
+<p>I do have a full chain of trust cert<br>
+<code>/etc/ssl/certs/zulip.combined-chain.crt</code><br>
+But the instructions say</p>
+<div class="codehilite"><pre><span></span><code>    the certificate should be the single X.509 certificate for the server, not a full chain of trust, which consists of multiple certificates.
+</code></pre></div>
+<p>So I'm currently trying to figure out which cert  I should extract from the chain.</p>
+
+
+
+<a name="1191143"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1191143" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1191143">(May 29 2021 at 16:15)</a>:</h4>
+<p><span class="user-mention" data-user-id="20384">@David Bain</span>  You don't need to extract, you can grab any X.509 certificate and private key, or just generate a new pair</p>
+
+
+
+<a name="1191146"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1191146" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1191146">(May 29 2021 at 16:18)</a>:</h4>
+<p>Sorry for being so clueless... what about expiration issues?<br>
+I was trying to piggyback on the LetsEncrypt stuff for <br>
+which I would have an auto-updater in place.</p>
+
+
+
+<a name="1191154"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1191154" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1191154">(May 29 2021 at 16:34)</a>:</h4>
+<p>So I went ahead and created the certificate and key in the /etc/zulip folder and moved them over to the saml/ folder</p>
+<div class="codehilite"><pre><span></span><code>openssl genrsa -des3 -out zulip-private-key.key 2048
+openssl req -new -key zulip-private-key.key -out saml.csr
+openssl x509 -req -days 365 -in saml.csr -signkey zulip-private-key.key -out zulip-cert.crt
+
+mv zulip-private-key.key saml/
+mv zulip-cert.crt saml/
+</code></pre></div>
+<p>testing to see if this resolves everything.</p>
+
+
+
+<a name="1191156"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1191156" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1191156">(May 29 2021 at 16:38)</a>:</h4>
+<p>Now I have a new error:</p>
+<div class="codehilite"><pre><span></span><code> return auth.login(return_to=relay_state)
+  File &quot;/srv/zulip-venv-cache/3738dadf748d3baa2eb0371a83c912149a50d964/zulip-py3-venv/lib/python3.6/site-packages/onelogin/saml2/auth.py&quot;, line 417, in login
+    self.add_request_signature(parameters, security[&#39;signatureAlgorithm&#39;])
+  File &quot;/srv/zulip-venv-cache/3738dadf748d3baa2eb0371a83c912149a50d964/zulip-py3-venv/lib/python3.6/site-packages/onelogin/saml2/auth.py&quot;, line 516, in add_request_signature
+    return self.__build_signature(request_data, &#39;SAMLRequest&#39;, sign_algorithm)
+  File &quot;/srv/zulip-venv-cache/3738dadf748d3baa2eb0371a83c912149a50d964/zulip-py3-venv/lib/python3.6/site-packages/onelogin/saml2/auth.py&quot;, line 590, in __build_signature
+    signature = OneLogin_Saml2_Utils.sign_binary(msg, key, sign_algorithm_transform, self.__settings.is_debug_active())
+  File &quot;/srv/zulip-venv-cache/3738dadf748d3baa2eb0371a83c912149a50d964/zulip-py3-venv/lib/python3.6/site-packages/onelogin/saml2/utils.py&quot;, line 1019, in sign_binary
+    dsig_ctx.key = xmlsec.Key.from_memory(key, xmlsec.KeyFormat.PEM, None)
+xmlsec.InternalError: (-1, &#39;cannot load key&#39;)
+</code></pre></div>
+
+
+
+<a name="1191207"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1191207" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1191207">(May 29 2021 at 18:40)</a>:</h4>
+<p><span class="user-mention" data-user-id="20384">@David Bain</span> Hmm yeah I'm getting this error for certificates generated in this way as well. Can you try <a href="https://www.samltool.com/self_signed_certs.php">https://www.samltool.com/self_signed_certs.php</a>?  What this tool generates works for me now</p>
+
+
+
+<a name="1191213"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1191213" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1191213">(May 29 2021 at 18:53)</a>:</h4>
+<p>Ohh, right... The private key we were generating was encrypted with a password, so that wasn't going to be possible to load.<br>
+E.g. this works</p>
+<div class="codehilite"><pre><span></span><code>openssl req -x509 -newkey rsa:1024 -keyout zulip-private-key.key -out zulip-cert.crt -days 365 -nodes
+</code></pre></div>
+<p>Need <code>-nodes</code> so that the password isn't needed.</p>
+
+
+
+<a name="1191217"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1191217" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1191217">(May 29 2021 at 19:08)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="20384">David Bain</span> <a href="#narrow/stream/31-production-help/topic/SAML.20metadata/near/1191146">said</a>:</p>
+<blockquote>
+<p>Sorry for being so clueless... what about expiration issues?<br>
+I was trying to piggyback on the LetsEncrypt stuff for <br>
+which I would have an auto-updater in place.</p>
+</blockquote>
+<p>And yeah, regarding that, expiry has to be handled manually for now <span aria-label="sad" class="emoji emoji-2639" role="img" title="sad">:sad:</span></p>
+
+
+
+<a name="1191219"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1191219" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1191219">(May 29 2021 at 19:12)</a>:</h4>
+<p><a href="https://github.com/zulip/zulip/pull/18648">https://github.com/zulip/zulip/pull/18648</a> to improve the doc a bit based on this thread</p>
+
+
+
+<a name="1191230"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1191230" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1191230">(May 29 2021 at 19:44)</a>:</h4>
+<p>I guess I can create a script for that. Will I need to restart zulip after regenerating the certs etc..?</p>
+
+
+
+<a name="1191241"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1191241" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1191241">(May 29 2021 at 19:56)</a>:</h4>
+<p>Yes, the server has to be restarted to load the new certs</p>
+
+
+
+<a name="1197894"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1197894" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1197894">(May 30 2021 at 14:47)</a>:</h4>
+<p>How do I go about getting more verbose debugging messages?</p>
+
+
+
+<a name="1197895"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1197895" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1197895">(May 30 2021 at 15:01)</a>:</h4>
+<p>Some additional auth-specific things get logged to /var/log/auth.log but e.g. this situation that we encountered wasn't gonna have better logging. Ultimately this was the <code>xmlsec</code> library giving a very vague error, I don't think there was a good way of getting more verbose information about what was going on since that's a limitation of upstream.</p>
+
+
+
+<a name="1198003"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1198003" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1198003">(May 30 2021 at 20:34)</a>:</h4>
+<p>seeing this stuff in my auth.log</p>
+<div class="codehilite"><pre><span></span><code>INFO [zulip.auth.saml] /login/saml/ : Bad idp param: KeyError: &#39;IDP must contain x509cert or x509certMulti&#39;.
+INFO [zulip.auth.saml] /complete/saml/: No valid IdP as issuer of the SAMLResponse.
+</code></pre></div>
+
+
+
+<a name="1198143"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1198143" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1198143">(May 31 2021 at 08:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="20384">@David Bain</span>  Sounds like the IdP cert is missing. From the instructions: <code>Put the IDP public certificate in /etc/zulip/saml/idps/{idp_name}.crt</code></p>
+
+
+
+<a name="1198193"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1198193" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1198193">(May 31 2021 at 11:07)</a>:</h4>
+<p>This is what I have in my settings.py</p>
+<div class="codehilite"><pre><span></span><code>SOCIAL_AUTH_SAML_ENABLED_IDPS = {
+    &quot;theidp&quot;: {
+        ## Configure entity_id and url according to information provided to you by your IdP:
+        &quot;entity_id&quot;: &quot;https://samldemo.myidp.com/saml2idp&quot;,
+        &quot;url&quot;: &quot;https://samldemo.myidp.com/saml2idp/redirect&quot;,
+       &quot;attr_user_permanent_id&quot;: &quot;user_id&quot;,
+        &quot;attr_first_name&quot;: &quot;user_id&quot;,
+ #       &quot;attr_last_name&quot;: &quot;last_name&quot;,
+        &quot;attr_username&quot;: &quot;email&quot;,
+        &quot;attr_email&quot;: &quot;email&quot;,
+
+    },
+}
+</code></pre></div>
+<p>The cert is located at <code>/etc/zulip/saml/idps/theidp.crt</code><br>
+My understanding is that the crt name should match the key used in <code>SOCIAL_AUTH_SAML_ENABLED_IDPS</code></p>
+
+
+
+<a name="1198227"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1198227" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1198227">(May 31 2021 at 12:08)</a>:</h4>
+<p>It seems my <code>entity_id</code> was wrong. It wasn't even a URL, my idp returned a simple string. Once I updated the <code>entity_id</code>  I started seeing this error in the auth.log.</p>
+<div class="codehilite"><pre><span></span><code>INFO [zulip.auth.saml] AuthFailed: Authentication failed: SAML login failed: [&#39;invalid_response&#39;] (There is no AttributeStatement on the Response)
+</code></pre></div>
+
+
+
+<a name="1198277"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1198277" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1198277">(May 31 2021 at 14:33)</a>:</h4>
+<p>It seems that the IdP isn't sending any attribute statements, when it should, as configured in the</p>
+<div class="codehilite"><pre><span></span><code>       &quot;attr_user_permanent_id&quot;: &quot;user_id&quot;,
+        &quot;attr_first_name&quot;: &quot;user_id&quot;,
+ #       &quot;attr_last_name&quot;: &quot;last_name&quot;,
+        &quot;attr_username&quot;: &quot;email&quot;,
+        &quot;attr_email&quot;: &quot;email&quot;,
+</code></pre></div>
+<p>part</p>
+
+
+
+<a name="1198279"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1198279" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1198279">(May 31 2021 at 14:36)</a>:</h4>
+<p>Did you see this doc <a href="https://zulip.com/help/saml-authentication">https://zulip.com/help/saml-authentication</a> ? This is for configuring Okta and onelogin IdPs for Zulip  Cloud specifically but it may be useful as examples of what the process usually involves even if this doesn't exactly apply to your situation</p>
+
+
+
+<a name="1198280"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1198280" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1198280">(May 31 2021 at 14:41)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> I'll look at it. I'm actually using Plone with collective.saml2 as my Idp.</p>
+
+
+
+<a name="1198285"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1198285" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1198285">(May 31 2021 at 15:02)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> for clarification<br>
+When we put  "attr_user_permanent_id": "user_id"<br>
+does it means that Zulip has an internal value of "attr_user_permanent_id" and it expects the IdP to return a response containing "user_id" as an attribute to map to that internal value?</p>
+
+
+
+<a name="1198286"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1198286" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1198286">(May 31 2021 at 15:04)</a>:</h4>
+<p>Yes, exactly</p>
+
+
+
+<a name="1198287"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1198287" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1198287">(May 31 2021 at 15:05)</a>:</h4>
+<p>I think that usually should be set to the same thing as attr_email because zulip uses the email address as user identifier</p>
+
+
+
+<a name="1200101"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1200101" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1200101">(Jun 03 2021 at 03:53)</a>:</h4>
+<p>I'm testing my Zulip SP with a test IdP service<br>
+<a href="https://samltest.id">https://samltest.id</a></p>
+<p>Am I missing something?<br>
+This is the AuthnRequest generated by my Zulip SP<br>
+I expected to see at least the 'email' attribute as part of the request.</p>
+<div class="codehilite"><pre><span></span><code>&lt;samlp:AuthnRequest
+    AssertionConsumerServiceURL=&quot;https://zulipsp.mysite.com/complete/saml/&quot;
+    Destination=&quot;https://samltest.id/idp/profile/SAML2/Redirect/SSO&quot;
+    ID=&quot;ONELOGIN_b3169c2849ebdccfbb0b7df82694fc34a44dad01&quot;
+    IssueInstant=&quot;2021-06-03T02:48:34Z&quot;
+    ProtocolBinding=&quot;urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST&quot;
+    ProviderName=&quot;Incrementic Zulip&quot; Version=&quot;2.0&quot;
+    xmlns:saml=&quot;urn:oasis:names:tc:SAML:2.0:assertion&quot;
+        xmlns:samlp=&quot;urn:oasis:names:tc:SAML:2.0:protocol&quot;&gt;
+    &lt;saml:Issuer&gt;https://zulipsp.mysite.com&lt;/saml:Issuer&gt;
+    &lt;samlp:NameIDPolicy
+        AllowCreate=&quot;true&quot;
+        Format=&quot;urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified&quot;/&gt;
+    &lt;samlp:RequestedAuthnContext Comparison=&quot;exact&quot;&gt;
+        &lt;saml:AuthnContextClassRef&gt;urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport&lt;/saml:AuthnContextClassRef&gt;
+    &lt;/samlp:RequestedAuthnContext&gt;
+&lt;/samlp:AuthnRequest&gt;
+</code></pre></div>
+<p>This is despite having attributes in my /etc/zulip/settings.py<br>
+Here's the entry:</p>
+<div class="codehilite"><pre><span></span><code>SOCIAL_AUTH_SAML_ENABLED_IDPS = {
+&quot;test&quot;:{
+        &quot;entity_id&quot;: &quot;https://samltest.id/saml/idp&quot;, #https://samldemo.alteroo.com/saml2idp&quot;,
+        &quot;url&quot;: &quot;https://samltest.id/idp/profile/SAML2/Redirect/SSO&quot;,
+       &quot;attr_user_permanent_id&quot;: &quot;email&quot;,
+        &quot;attr_email&quot;: &quot;email&quot;,
+        &quot;display_name&quot;: &quot;Test&quot;,
+
+        }
+}
+</code></pre></div>
+
+
+
+<a name="1200226"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1200226" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1200226">(Jun 03 2021 at 13:10)</a>:</h4>
+<p>I now understand that attributes are declared through the SP's metadata.<br>
+My expectation was that Zulip would provide an <code>AttributeConsumingService</code> entry containing the <code>RequestedAttribute</code> entries inline.<br>
+similar to the example here: </p>
+<div class="codehilite"><pre><span></span><code>&lt;md:EntityDescriptor entityID=&quot;https://sso.example.com/portal&quot; validUntil=&quot;2017-08-30T19:10:29Z&quot;
+…”&gt;
+    &lt;!-- insert ds:Signature element (omitted) --&gt;
+…
+    &lt;md:SPSSODescriptor WantAssertionsSigned=&quot;true&quot; protocolSupportEnumeration=&quot;urn:oasis:names:tc:SAML:2.0:protocol&quot;&gt;
+…
+      &lt;md:NameIDFormat&gt;urn:oasis:names:tc:SAML:2.0:nameid-format:transient&lt;/md:NameIDFormat&gt;
+      &lt;md:AssertionConsumerService index=&quot;0&quot; Binding=&quot;urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST&quot;  Location=&quot;https://service.example.com/SAML2/SSO/POST&quot;/&gt;
+      &lt;md:AttributeConsumingService index=&quot;0&quot;&gt;
+        &lt;md:ServiceName xml:lang=&quot;en&quot;&gt;Example.com Employee Portal&lt;/md:ServiceName&gt;
+        &lt;md:RequestedAttribute isRequired=&quot;true&quot;
+          NameFormat=&quot;urn:oasis:names:tc:SAML:2.0:attrname-format:uri&quot;
+          Name=&quot;urn:oid:1.3.6.1.4.1.5923.1.1.1.13&quot; FriendlyName=&quot;eduPersonUniqueId&quot;/&gt;
+        &lt;md:RequestedAttribute
+          NameFormat=&quot;urn:oasis:names:tc:SAML:2.0:attrname-format:uri&quot;
+          Name=&quot;urn:oid:0.9.2342.19200300.100.1.3&quot; FriendlyName=&quot;mail&quot;/&gt;
+      &lt;/md:AttributeConsumingService&gt;
+    &lt;/md:SPSSODescriptor&gt;
+…
+  &lt;/md:EntityDescriptor&gt;
+</code></pre></div>
+<p>I don't see an <code>AttributeConsumingService</code> in my metadata.</p>
+<p>Once I know how to "switch" on the <code>AttributeConsumingService</code>, I think I'll be good.</p>
+<p>All roads lead to this code <a href="https://github.com/onelogin/python-saml/blob/master/src/onelogin/saml2/metadata.py#L79-L95">https://github.com/onelogin/python-saml/blob/master/src/onelogin/saml2/metadata.py#L79-L95</a></p>
+
+
+
+<a name="1200231"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1200231" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1200231">(Jun 03 2021 at 13:21)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> <span aria-label="point up" class="emoji emoji-1f446" role="img" title="point up">:point_up:</span>  my last post is a good summary of the issue.</p>
+
+
+
+<a name="1200266"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1200266" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1200266">(Jun 03 2021 at 14:00)</a>:</h4>
+<p>Hmm, Zulip doesn't use requestedAttributes. The IdP has to be configured to send the attribute statements by default- like in the Okta and Onelogin configuration examples.</p>
+
+
+
+<a name="1200272"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1200272" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1200272">(Jun 03 2021 at 14:42)</a>:</h4>
+<p>That explains a lot. So I MUST get my IdP to send the attributes.</p>
+
+
+
+<a name="1200273"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1200273" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1200273">(Jun 03 2021 at 14:43)</a>:</h4>
+<p>The python saml code (onelogin) that I linked to seems capable of generated attributes. I wonder why Zulip doesn't use that.</p>
+
+
+
+<a name="1200275"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1200275" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1200275">(Jun 03 2021 at 14:45)</a>:</h4>
+<p>or... I could force my IdP to send the attributes.</p>
+
+
+
+<a name="1200338"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1200338" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1200338">(Jun 03 2021 at 15:43)</a>:</h4>
+<p>Okay... now I've forced my IdP to send the attributes.<br>
+New error:</p>
+<div class="codehilite"><pre><span></span><code>No valid IdP as issuer of the SAMLResponse.PD94bWwgdmVy...
+</code></pre></div>
+
+
+
+<a name="1200372"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1200372" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1200372">(Jun 03 2021 at 16:00)</a>:</h4>
+<p>I fixed the <code>No Valid IdP</code> issue by updating the <code>entity_id</code> to match what I have on my IdP.<br>
+Now log in takes me to a screen saying:</p>
+<div class="codehilite"><pre><span></span><code>You need an invitation to join this organization.
+</code></pre></div>
+
+
+
+<a name="1200385"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1200385" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1200385">(Jun 03 2021 at 16:05)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="20384">David Bain</span> <a href="#narrow/stream/31-production-help/topic/SAML.20metadata/near/1200372">said</a>:</p>
+<blockquote>
+<p>I fixed the <code>No Valid IdP</code> issue by updating the <code>entity_id</code> to match what I have on my IdP.<br>
+Now log in takes me to a screen saying:</p>
+<p><div class="codehilite"><pre><span></span><code>You need an invitation to join this organization.
+</code></pre></div><br>
+</p>
+</blockquote>
+<p>Small things :)<br>
+I needed to allow joining without an invitation<br>
+<a href="https://zulip.com/help/allow-anyone-to-join-without-an-invitation">https://zulip.com/help/allow-anyone-to-join-without-an-invitation</a></p>
+
+
+
+<a name="1200572"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1200572" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1200572">(Jun 03 2021 at 19:36)</a>:</h4>
+<p><span class="user-mention" data-user-id="20384">@David Bain</span> so is it now working for you?</p>
+
+
+
+<a name="1200573"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1200573" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1200573">(Jun 03 2021 at 19:37)</a>:</h4>
+<p>Would it be useful to make our SAML integration attempt to send <code>requestedAttributes</code> using the fields that are declared as keys in <code>settings.py</code> for the SAML backend?</p>
+
+
+
+<a name="1202561"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1202561" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> David Bain <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1202561">(Jun 07 2021 at 12:47)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span>  MOST definitely! Especially since the underlying code <a href="https://github.com/onelogin/python-saml/blob/master/src/onelogin/saml2/metadata.py#L79-L95">https://github.com/onelogin/python-saml/blob/master/src/onelogin/saml2/metadata.py#L79-L95</a> seems to support the capability.</p>
+
+
+
+<a name="1203028"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/SAML%20metadata%20%5Bsolved%5D/near/1203028" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/SAML.20metadata.20.5Bsolved.5D.html#1203028">(Jun 07 2021 at 19:43)</a>:</h4>
+<p><span class="user-mention" data-user-id="20384">@David Bain</span> would you be up for opening an issue for that in <a href="https://github.com/zulip/zulip/issues/new">https://github.com/zulip/zulip/issues/new</a> so that we can track that request?</p>
+<p>If you can provide background on how <code>requestedAttributes</code> works and any risks you're aware of around it, that'd be great; I'm not personally an expert on this sort of SAML specification detail.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

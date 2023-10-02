@@ -1,0 +1,50 @@
+[
+    {
+        "content": "<p>Posting <a href=\"https://github.com/zulip/zulip/pull/24242\">#24242</a> here for visibility:</p>\n<blockquote>\n<p>We created an invite link and shared it to a few people over a public group call. </p>\n<p>One of the recipients has been spamming and this has resulted in no newly generated links working either - Rate Limit Exceeded.</p>\n<p>Logs:</p>\n<p><code>email_deliverer.log</code></p>\n<div class=\"codehilite\"><pre><span></span><code>2023-01-31 18:45:54,565 WARNING  &lt;ScheduledEmail: &lt;ScheduledEmail: 1 [&lt;UserProfile: &lt;UserProfile: user17@zulip.bitshala.org &lt;Realm:  2&gt;&gt;&gt;] 2023-01-29 18:30:13.454766+00:00&gt;&gt; not delivered\n2023-01-31 18:45:54,806 WARNING  &lt;ScheduledEmail: &lt;ScheduledEmail: 1 [&lt;UserProfile: &lt;UserProfile: user17@zulip.bitshala.org &lt;Realm:  2&gt;&gt;&gt;] 2023-01-29 18:30:13.454766+00:00&gt;&gt; not delivered\n2023-01-31 18:45:55,060 WARNING  &lt;ScheduledEmail: &lt;ScheduledEmail: 1 [&lt;UserProfile: &lt;UserProfile: user17@zulip.bitshala.org &lt;Realm:  2&gt;&gt;&gt;] 2023-01-29 18:30:13.454766+00:00&gt;&gt; not delivered\n2023-01-31 18:45:55,309 WARNING  &lt;ScheduledEmail: &lt;ScheduledEmail: 1 [&lt;UserProfile: &lt;UserProfile: user17@zulip.bitshala.org &lt;Realm:  2&gt;&gt;&gt;] 2023-01-29 18:30:13.454766+00:00&gt;&gt; not delivered\n2023-01-31 18:45:55,555 WARNING  &lt;ScheduledEmail: &lt;ScheduledEmail: 1 [&lt;UserProfile: &lt;UserProfile: user17@zulip.bitshala.org &lt;Realm:  2&gt;&gt;&gt;] 2023-01-29 18:30:13.454766+00:00&gt;&gt; not delivered\n2023-01-31 18:45:55,811 WARNING  &lt;ScheduledEmail: &lt;ScheduledEmail: 1 [&lt;UserProfile: &lt;UserProfile: user17@zulip.bitshala.org &lt;Realm:  2&gt;&gt;&gt;] 2023-01-29 18:30:13.454766+00:00&gt;&gt; not delivered\n2023-01-31 18:45:56,065 WARNING  &lt;ScheduledEmail: &lt;ScheduledEmail: 1 [&lt;UserProfile: &lt;UserProfile: user17@zulip.bitshala.org &lt;Realm:  2&gt;&gt;&gt;] 2023-01-29 18:30:13.454766+00:00&gt;&gt; not delivered\n2023-01-31 18:45:56,312 WARNING  &lt;ScheduledEmail: &lt;ScheduledEmail: 1 [&lt;UserProfile: &lt;UserProfile: user17@zulip.bitshala.org &lt;Realm:  2&gt;&gt;&gt;] 2023-01-29 18:30:13.454766+00:00&gt;&gt; not delivered\n2023-01-31 18:45:56,559 WARNING  &lt;ScheduledEmail: &lt;ScheduledEmail: 1 [&lt;UserProfile: &lt;UserProfile: user17@zulip.bitshala.org &lt;Realm:  2&gt;&gt;&gt;] 2023-01-29 18:30:13.454766+00:00&gt;&gt; not delivered\n2023-01-31 18:45:56,810 WARNING  &lt;ScheduledEmail: &lt;ScheduledEmail: 1 [&lt;UserProfile: &lt;UserProfile: user17@zulip.bitshala.org &lt;Realm:  2&gt;&gt;&gt;] 2023-01-29 18:30:13.454766+00:00&gt;&gt; not delivered\n2023-01-31 18:45:57,062 WARNING  &lt;ScheduledEmail: &lt;ScheduledEmail: 1 [&lt;UserProfile: &lt;UserProfile: user17@zulip.bitshala.org &lt;Realm:  2&gt;&gt;&gt;] 2023-01-29 18:30:13.454766+00:00&gt;&gt; not delivered\n2023-01-31 18:45:57,313 WARNING  &lt;ScheduledEmail: &lt;ScheduledEmail: 1 [&lt;UserProfile: &lt;UserProfile: user17@zulip.bitshala.org &lt;Realm:  2&gt;&gt;&gt;] 2023-01-29 18:30:13.454766+00:00&gt;&gt; not delivered\n\n1000s MORE OF THESE for over 12 hours on the 31st of Jan\n</code></pre></div>\n<p>Is it expected behaviour that the entire auth service halts due to a single user spamming?</p>\n<p>Update: Our gmail smtp server eventually rate limited us too, so even other routes that use send_email like forgot password was temporarily down. The invite link route however was still returning a Rate Limited Error.</p>\n<p>We have for now changed our smtp server to one of our self hosted mail servers and temporarily turned RateLimit within zullip to False, just to allow new users to join for the time being.</p>\n</blockquote>",
+        "id": 1500208,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1675207864
+    },
+    {
+        "content": "<p>Replied. The crux of the issue here looks to be that the attacker attempted to create thousands of accounts, and overwhelmed the server's ability to send outgoing email via the \"Your new account is created!\" emails.</p>\n<p><span class=\"user-mention\" data-user-id=\"10349\">@Mateusz Mandera</span> do you have ideas for how we might add a limit to cover this? It's tricky, because at the start of a conference, say, you want to be able to have 1000 users sign up for accounts all at once, and they might come from similar IP addresses (the wiki from the conference).</p>",
+        "id": 1500270,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1675211933
+    },
+    {
+        "content": "<p>I note that the error they're showing from <code>email_deliverer.log</code> is the same as discussed in <a class=\"stream-topic\" data-stream-id=\"3\" href=\"/#narrow/stream/3-backend/topic/scheduled.20email.20worker\">#backend &gt; scheduled email worker</a> -- it's one email for the same users and the same scheduled time which is getting repeatedly rejected from the mailserver.</p>\n<p>Though that one doesn't show the 10-second retry that I think we'd expect from that?</p>",
+        "id": 1500621,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1675266217
+    },
+    {
+        "content": "<p>Yeah, that's a good point, this is actually likely that same error-handling issue.</p>",
+        "id": 1500864,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1675285638
+    },
+    {
+        "content": "<p>because of this even newly generated invite links do not work and return Rate Limit Exceeded error. </p>\n<p>Is it possible to only limit the IP rather than the entire auth service when a Rate Limit rule is triggered?</p>",
+        "id": 1501160,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1675314671
+    },
+    {
+        "content": "<p>let me know if any other logs would be useful.</p>",
+        "id": 1501161,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1675314899
+    },
+    {
+        "content": "<p>Hmm yeah I'm not sure how something like that would be best dealt with - restricting by IP doesn't seem great since it will block cases like Tim described above where a lot of users might be coming from the same IPs, and also wouldn't be effective anyway I imagine since a dedicated spammer can obtain more IP addresses to get around the limit relatively easily.</p>\n<p>Wouldn't  the answer just be that a service facing a signup spam like that should just restrict open signups and only allow signup via invitation links? (And if an attacker has a multiuse invitation link allowing them to spam, you can just revoke it)? And if the attacker has been shut off through  that, the <code>sends_email_by_ip</code> limit could even be temporarily disabled so that regular users can sign up through their invitation links.</p>",
+        "id": 1503358,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1675689548
+    },
+    {
+        "content": "<p>(deleted)</p>",
+        "id": 1504243,
+        "sender_full_name": "longgong",
+        "timestamp": 1675773071
+    }
+]

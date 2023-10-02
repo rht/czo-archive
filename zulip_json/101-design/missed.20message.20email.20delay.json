@@ -1,0 +1,128 @@
+[
+    {
+        "content": "<p>I'm really excited about <a href=\"https://github.com/zulip/zulip/pull/19119\">#19119</a> by <span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span>, which rewrites our missed-message email queue worker to use a better data structure, which will allow us to make \"How long to wait before sending email notifications for a mention\" configurable.  (Currently it is hardcoded to 2 minutes).  </p>\n<p>There's a design/semantics question that I'd like to ask that affects exactly how we do this: What should happen with mentions sent during the last few minutes if you change this parameter?</p>",
+        "id": 1226912,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625680979
+    },
+    {
+        "content": "<p>The first option is that any messages you had already received at the moment you make that change have the old setting applied, and any new messages you receive after the change have the new setting applied.</p>",
+        "id": 1226913,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625681007
+    },
+    {
+        "content": "<p>The second option is that we apply the new setting to any potential missed-message emails that have not yet been sent (I.e. if you had previously configured 30 minutes and change it to 10, a mention that had been been tracked since 20 minutes ago would immediately email you).</p>",
+        "id": 1226915,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625681073
+    },
+    {
+        "content": "<p>(I guess I'm assuming here that you've configured email notifications for messages you haven't read yet regardless of whether you're offline, for simplicity of not having to think about that configuration detail).</p>",
+        "id": 1226916,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625681134
+    },
+    {
+        "content": "<p>Basically, which option we pick determines how we store the data.  I think I prefer the second option, since structurally it is applying your settings change more immediately.</p>",
+        "id": 1226918,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625681273
+    },
+    {
+        "content": "<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code>    <span class=\"c1\"># List of event dictionaries</span>\n    <span class=\"n\">events</span><span class=\"p\">:</span> <span class=\"nb\">object</span> <span class=\"o\">=</span> <span class=\"n\">models</span><span class=\"o\">.</span><span class=\"n\">JSONField</span><span class=\"p\">(</span><span class=\"n\">default</span><span class=\"o\">=</span><span class=\"nb\">list</span><span class=\"p\">)</span>\n</code></pre></div>\n<p>That is an…let’s go with “unusual”…database schema, especially in the light of the way it gets updated, which uses quadratic time and database garbage. Is there a reason for this choice?</p>",
+        "id": 1226919,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1625681308
+    },
+    {
+        "content": "<p>I think how to story the list of events is a good (separate) question; maybe we should take that to <a class=\"stream\" data-stream-id=\"3\" href=\"/#narrow/stream/3-backend\">#backend</a>?  I think for this audience I mostly want to answer the above UX question.</p>",
+        "id": 1226922,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625681501
+    },
+    {
+        "content": "<p>(The above UX question determines what the right interface is for the <code>next_process_time</code> field, whereas how we store the events has purely technical implications)</p>",
+        "id": 1226923,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625681519
+    },
+    {
+        "content": "<p>Started that technical thread <a href=\"#narrow/stream/3-backend/topic/MissedMessageWorker/near/1226924\">here</a>.</p>",
+        "id": 1226925,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625681599
+    },
+    {
+        "content": "<p>I agree with the preference for the second option.</p>",
+        "id": 1226961,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1625683796
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/missed.20message.20email.20delay/near/1226912\">said</a>:</p>\n<blockquote>\n<p>allow us to make \"How long to wait before sending email notifications for a mention\" configurable.  (Currently it is hardcoded to 2 minutes).  </p>\n</blockquote>\n<p><span aria-label=\"tada\" class=\"emoji emoji-1f389\" role=\"img\" title=\"tada\">:tada:</span> That sounds great!</p>",
+        "id": 1227320,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1625715298
+    },
+    {
+        "content": "<p>Yeah, I'm excited about that one; I imagine <span class=\"user-mention\" data-user-id=\"16839\">@Abhijeet Bodas</span> might work on it immediately after the technical migration completes, while we have momentum.</p>",
+        "id": 1227932,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1625770263
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/3-backend/topic/MissedMessageWorker/near/1231146\">said</a>:</p>\n<blockquote>\n<p>I'm actually not entirely sure what the product experience we want is on that front.  Certainly the current algorithm with just making the 2 minutes a variable is a plausible user experience, but I at least haven't grappled with whether that's what users want/expect.</p>\n</blockquote>\n<p>Continuing this here. Do I understand the question correctly as the following...?</p>\n<ul>\n<li>If Alice sends Bob a PM at 10:30 AM</li>\n<li>and mentions Bob <strong>twice</strong> in a stream #Denmark at 11 AM and 11:05 AM</li>\n<li>and if Bob has set his email notifications timer to be 1 hour,</li>\n</ul>\n<p>how do we want Bob to receive emails?</p>\n<ol>\n<li>A single email at 11 AM for \"Alice mentioned you in #Denmark and PMed you\"</li>\n<li>\n<p>Two emails-</p>\n<ul>\n<li>One email at 11:30 AM (10:30 AM + 1 hour) for the PM (\"Alice PMed you\")</li>\n<li>and another at 12 noon (11 AM + 1 hour) for both the mentions (\"Alice mentioned you twice in #Denmark\").</li>\n</ul>\n</li>\n</ol>",
+        "id": 1231658,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1626339668
+    },
+    {
+        "content": "<ol>\n<li>seems more like digest emails but for active users, so I would lean towards 2.</li>\n</ol>\n<p>But 2. might feel spammy, and give rise to frustrations like \"I have my settings to send me at most one email every ___ minutes/hours/days, but even then I get so many emails\" if we don't word it correctly in the settings page/user docs.</p>",
+        "id": 1231660,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1626339863
+    },
+    {
+        "content": "<p>I think we're going to send 2 emails in any case -- our email designs rightly don't try to mix content from unrelated threads (We let you reply from your email client, and that means your email client has to know what thread it is).</p>\n<p>So the design question here is whether Bob gets both emails at 11:30AM or one at 11:30AM (for the PM) and one at noon (for the stream notice).</p>",
+        "id": 1231993,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626377396
+    },
+    {
+        "content": "<p>Oh! I didn't know that, thanks. I think then the later makes more sense to me, since the intent behind batching is preventing multiple messages sent consecutively <strong>in a thread</strong> not generate a bunch of emails? Sending all emails together (for cross-thread messages) seems unnecessary in that case.</p>",
+        "id": 1232464,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1626426538
+    },
+    {
+        "content": "<p>/poll Should notification emails for messages from different threads be necessarily sent at the same time?<br>\nYes<br>\nNo</p>",
+        "id": 1232465,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1626426599
+    },
+    {
+        "content": "<p>I guess a downside of trying to batch by thread is that we have to think about topic/stream editing changing the situation for which messages are in the same thread.</p>",
+        "id": 1233230,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626465196
+    },
+    {
+        "content": "<p>Hmm, yeah. Does it then make sense to implement \"all emails at the same time\" first (since that seems easier) and then iterate from there towards the other model if we end up not liking what we have?</p>",
+        "id": 1233481,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1626491988
+    },
+    {
+        "content": "<p>That's what we have implemented right now, right?  I think it's OK to preserve that model and add the setting and then we can think about whether it's worth changing the model; I'm pretty sure those two changes should mostly commute.</p>",
+        "id": 1233776,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1626634325
+    },
+    {
+        "content": "<p>Yeah, I meant adding the setting for the current model <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1234034,
+        "sender_full_name": "Abhijeet Bodas",
+        "timestamp": 1626679881
+    }
+]

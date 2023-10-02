@@ -1,0 +1,196 @@
+<html>
+<head><meta charset="utf-8"><title>2.1.2 performance · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html">2.1.2 performance</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="832724"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832724" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832724">(Mar 17 2020 at 17:46)</a>:</h4>
+<p>Since upgrading to 2.1.2, my end users are essentially unanimous in the feeling that Zulip isn't as responsive as it use to be<br>
+Particularly, users have noted an uptick in the frequency of:</p>
+<ul>
+<li>messages waiting to send (with the "Sending...." note)</li>
+<li>waiting for messages to be edit-able </li>
+<li>having messages re-order (e.g. A, B, C, D on client turns into D, A, B, C after a time)</li>
+</ul>
+<p>I believe all of these have a root in server performance (i.e. the server is slower to respond to clients)</p>
+<p>I do not have any error messages in the error log and the host itself seems to be OK with CPU/RAM (though if there are concrete measurements to perform, I would appreciate that)</p>
+<p>Any idea on how to identify the bottleneck?</p>
+
+
+
+<a name="832765"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832765" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832765">(Mar 17 2020 at 18:59)</a>:</h4>
+<p><span class="user-mention" data-user-id="9893">@Mike Ray</span> strange.  Just to be clear, what was the previous version?</p>
+
+
+
+<a name="832766"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832766" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832766">(Mar 17 2020 at 19:00)</a>:</h4>
+<p>Those are all symptoms of the Tornado server being overloaded; the first thing I'd look at is <code>grep Tornado /var/log/zulip/server.log</code> and look at what sort of percentages you're seeing there.</p>
+
+
+
+<a name="832767"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832767" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832767">(Mar 17 2020 at 19:01)</a>:</h4>
+<p>We have significant work in progress to improve the scalability of that in master since 2.1.2 (and more coming soon into master), so it's possible the near-term solution would be to upgrade that.  There's a few other ideas we can discuss as well.</p>
+
+
+
+<a name="832775"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832775" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832775">(Mar 17 2020 at 19:05)</a>:</h4>
+<p>2.0.8 was the previous version</p>
+
+
+
+<a name="832776"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832776" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832776">(Mar 17 2020 at 19:06)</a>:</h4>
+<p>And to be clear -- it's not that we didn't have those symptoms before, but user feedback is suggesting it just happens more on this version</p>
+
+
+
+<a name="832779"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832779" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832779">(Mar 17 2020 at 19:10)</a>:</h4>
+<p>Here are the last 5 minutes or so of tornado entries in the log:</p>
+<div class="codehilite"><pre><span></span>2020-03-17 19:05:37.677 INFO [] Tornado 9993  73.5% busy over the past 41.5 seconds
+2020-03-17 19:05:58.491 INFO [] Tornado 9993  82.5% busy over the past 59.8 seconds
+2020-03-17 19:06:11.566 INFO [] Tornado 9993  91.0% busy over the past 59.8 seconds
+2020-03-17 19:06:18.013 INFO [] Tornado 9993 removed 0 expired event queues owned by 0 users in 0.001s.  Now 454 active queues, 384 handlers, latest ID 5772933
+2020-03-17 19:06:18.740 INFO [] Tornado 9993  88.6% busy over the past 41.1 seconds
+2020-03-17 19:06:23.946 INFO [] Tornado 9993  81.1% busy over the past 46.3 seconds
+2020-03-17 19:06:37.963 INFO [] Tornado 9993  78.2% busy over the past 60.0 seconds
+2020-03-17 19:06:48.464 INFO [] Tornado 9993  74.1% busy over the past 50.0 seconds
+2020-03-17 19:06:53.716 INFO [] Tornado 9993  69.0% busy over the past 55.2 seconds
+2020-03-17 19:06:58.717 INFO [] Tornado 9993  64.1% busy over the past 60.0 seconds
+2020-03-17 19:07:13.983 INFO [] Tornado 9993  66.6% busy over the past 55.3 seconds
+2020-03-17 19:07:15.933 INFO [] Tornado 9993 removed 0 expired event queues owned by 0 users in 0.002s.  Now 454 active queues, 453 handlers, latest ID 5776714
+2020-03-17 19:07:19.136 INFO [] Tornado 9993  61.5% busy over the past 59.8 seconds
+2020-03-17 19:07:43.557 INFO [] Tornado 9993  71.6% busy over the past 55.1 seconds
+2020-03-17 19:08:04.665 INFO [] Tornado 9993  82.3% busy over the past 50.7 seconds
+2020-03-17 19:08:17.443 INFO [] Tornado 9993 removed 1 expired event queues owned by 1 users in 0.002s.  Now 453 active queues, 1 handlers, latest ID 5782072
+2020-03-17 19:08:39.374 INFO [] Tornado 9993  91.5% busy over the past 55.8 seconds
+2020-03-17 19:08:44.383 INFO [] Tornado 9993  85.7% busy over the past 60.0 seconds
+2020-03-17 19:09:04.511 INFO [] Tornado 9993  86.1% busy over the past 59.8 seconds
+2020-03-17 19:09:16.077 INFO [] Tornado 9993 removed 0 expired event queues owned by 0 users in 0.001s.  Now 453 active queues, 446 handlers, latest ID 5787477
+2020-03-17 19:09:16.108 INFO [] Tornado 9993  80.2% busy over the past 36.7 seconds
+2020-03-17 19:09:21.328 INFO [] Tornado 9993  71.4% busy over the past 42.0 seconds
+2020-03-17 19:09:27.652 INFO [] Tornado 9993  71.8% busy over the past 48.3 seconds
+</pre></div>
+
+
+
+<a name="832780"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832780" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832780">(Mar 17 2020 at 19:11)</a>:</h4>
+<p>The percents are certainly higher than other times, e.g. around 6 AM it was only hitting 10 to 20 %</p>
+
+
+
+<a name="832782"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832782" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832782">(Mar 17 2020 at 19:13)</a>:</h4>
+<p>But is 60%-90% problematic? It seems to me like it shouldn't be</p>
+
+
+
+<a name="832791"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832791" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832791">(Mar 17 2020 at 19:19)</a>:</h4>
+<p><span class="user-mention" data-user-id="9893">@Mike Ray</span> yes, hitting 90% is problematic in that it never logs 100% (it just stop logging when overloaded, due to a design bug in the logging).</p>
+
+
+
+<a name="832793"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832793" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832793">(Mar 17 2020 at 19:22)</a>:</h4>
+<p>So great, we understand the cause.  My guess is you could fix it by upgrading to master, where we've done some performance work impacting Tornado.</p>
+
+
+
+<a name="832795"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832795" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832795">(Mar 17 2020 at 19:23)</a>:</h4>
+<p>And simpler workaround would be to modify <code>send_presence_changed</code> to immediately return; we have a few folks doing that to lower Tornado load.  The user-facing impact is that when a user comes online, they won't appear green in the right sidebar for an extra minute.</p>
+
+
+
+<a name="832797"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832797" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832797">(Mar 17 2020 at 19:23)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/2.2E1.2E2.20performance/near/832795" title="#narrow/stream/31-production-help/topic/2.2E1.2E2.20performance/near/832795">said</a>:</p>
+<blockquote>
+<p>And simpler workaround would be to modify <code>send_presence_changed</code> to immediately return; we have a few folks doing that to lower Tornado load.  The user-facing impact is that when a user comes online, they won't appear green in the right sidebar for an extra minute.</p>
+</blockquote>
+<p>Is that the only known side-effect?</p>
+
+
+
+<a name="832800"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832800" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832800">(Mar 17 2020 at 19:25)</a>:</h4>
+<p>That's the only effect of <code>send_presence_changed</code>; it makes the presence UI update immediately for just-logged-in users; they'll get the update in any case in the every-minute poll of new presence data (presence has its own independent sync system, and we use Tornado for presence just for these instant updates).</p>
+
+
+
+<a name="832807"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832807" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832807">(Mar 17 2020 at 19:27)</a>:</h4>
+<p>Gotcha, so that may keep tornado less busy.<br>
+I'll go over the options with my colleagues<br>
+As a note (because I am sure they will ask) -- is there any hint of a 2.2 release or is 2.1.2 likely to be the latest tagged release for some time?</p>
+<p>Also -- thank you very much for your assistance!</p>
+
+
+
+<a name="832813"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832813" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832813">(Mar 17 2020 at 19:31)</a>:</h4>
+<p>Yeah, I'd guess it'll reduce Tornado load like 2x given the details you've shared.</p>
+
+
+
+<a name="832815"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832815" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832815">(Mar 17 2020 at 19:32)</a>:</h4>
+<p>Well there will likely be a 2.1.3 release soon, though with coronavirus affecting things like my childcare I'm not going to make timing promises, and it'll be just bugfixes.</p>
+<p>And of course a 2.2 is coming; we were aiming for about a month from now but again with the coronavirus situation who knows.  We run off master on <a href="http://zulipchat.com" target="_blank" title="http://zulipchat.com">zulipchat.com</a> FWIW, so it's a viable option in production.</p>
+
+
+
+<a name="832827"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832827" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832827">(Mar 17 2020 at 19:36)</a>:</h4>
+<p>Fantastic information as always -- thank you</p>
+
+
+
+<a name="832829"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832829" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832829">(Mar 17 2020 at 19:37)</a>:</h4>
+<p>Also, I completely understand the pandemic throwing things into disarray -- stay safe and take care of yourself and your family first!</p>
+
+
+
+<a name="832888"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/832888" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#832888">(Mar 17 2020 at 20:07)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="9893">Mike Ray</span> <a href="#narrow/stream/31-production-help/topic/2.2E1.2E2.20performance/near/832829" title="#narrow/stream/31-production-help/topic/2.2E1.2E2.20performance/near/832829">said</a>:</p>
+<blockquote>
+<p>Also, I completely understand the pandemic throwing things into disarray -- stay safe and take care of yourself and your family first!</p>
+</blockquote>
+<p>Yeah, it's also resulting in a ton of support tickets, as a lot of organizations are becoming distributed teams.</p>
+
+
+
+<a name="833075"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/833075" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#833075">(Mar 17 2020 at 22:53)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span>  - after discussion, we are electing to first try modifying <code>send_presence_changed</code> . Do I just add a <code>return None</code> as the first line of that function or are the changes more involved?</p>
+
+
+
+<a name="833119"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/833119" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#833119">(Mar 17 2020 at 23:32)</a>:</h4>
+<p><span class="user-mention" data-user-id="9893">@Mike Ray</span> yep, and then restart the server.</p>
+
+
+
+<a name="833627"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/2.1.2%20performance/near/833627" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mike Ray <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/2.2E1.2E2.20performance.html#833627">(Mar 18 2020 at 17:46)</a>:</h4>
+<p>Initial results show positive results. Thanks again!</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

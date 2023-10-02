@@ -1,0 +1,56 @@
+[
+    {
+        "content": "<p>This is a follow-up question of <a class=\"stream-topic\" data-stream-id=\"31\" href=\"/#narrow/stream/31-production-help/topic/hardware.20requirements\">#production help &gt; hardware requirements</a>.<br>\nI have now used my own installation process (keeping the contents of the old database, i.e. use my backup) to install the db. As it seemed to be difficult to pick out the needed stuff from the normal zulip installation routine, I simply did it the other way round and executed the usual zulip installation and then removed the stuff that is not needed for a standalone postgres server:</p>\n<blockquote>\n<p>- <strong>on new postgres server</strong><br>\n  - install full zulip: <code>sudo ./scripts/setup/install --email=my_email --hostname=my_host --self-signed-cert</code><br>\n    (we do not need the zulip certificates, so just create self-signed ones)</p>\n<p>- stop running zulip services: <code>sudo -u zulip supervisorctl stop all</code><br>\n  - restore backup: <code>sudo /home/zulip/deployments/current/scripts/setup/restore-backup /path/to/backup.tar.gz</code><br>\n  - stop again all zulip services<br>\n  - remove all cron jobs in /etc/cron.d whose file stamps are now:<br>\n<code>sudo rm archive-messages certbot-renew check-analytics-state clearsessions rabbitmq-* restart-zulip send-digest-emails soft-deactivate-users update-analytics-counts</code><br>\n    (there are no such jobs in the other /etc/cron.* directories)</p>\n<p>- stop and disable unnecessary systemd units:<br>\n    - <code>sudo systemctl disable redis*</code><br>\n    - <code>sudo systemctl disable memcached.service</code><br>\n    - <code>sudo systemctl disable rabbitmq-server.service</code><br>\n    - <code>sudo systemctl disable camo.service</code><br>\n  - disable unnecessary supervisorctl jobs:<br>\n    - <code>sudo rm /etc/supervisor/conf.d/zulip.conf</code> <br>\n  - restart supervisor:<br>\n    -  <code>sudo systemctl restart supervisor.service</code><br>\n  - /etc/postgresql-common:<br>\n    - https-cert of server &gt; server.crt<br>\n    - https-cert-key of server &gt; server.key<br>\n  - /etc/postgresql/12/main/postgresql.conf:<br>\n    - listen_addresses = '*'<br>\n    - password_encryption = scram-sha-256<br>\n    - ssl_cert_file = '/etc/postgresql-common/server.crt'<br>\n    - ssl_key_file = '/etc/postgresql-common/server.key'<br>\n  - add the following line to pg_hba.conf:<br>\n<code>hostssl zulip           zulip           [application server hostname]     scram-sha-256</code></p>\n<p>- restart database:<br>\n<code>sudo systemctl restart postgresql</code></p>\n<p>- set password for zulip in postgres:<br>\n    - run <code>sudo -u postgres psql</code> and use <code>\\password zulip</code><br>\n  - <strong>go to application server</strong><br>\n  - stop zulip:<br>\n<code>sudo -u zulip supervisorctl stop all</code></p>\n<p>- settings.py: configure the REMOTE_POSTGRES variables according to your need (hostname, port, verify-full)<br>\n  - /etc/zulip/zulip.conf:<br>\n    - puppet_classes = zulip::app_frontend, zulip::memcached, zulip::rabbit, zulip::redis<br>\n  - /etc/zulip/zulip-secrets.conf:<br>\n    - set <code>postgres_password</code> to the password you just assigned to the zulip user in your remote postgres<br>\n  - stop and disable old database<br>\n    - <code>sudo systemctl disable postgresql</code><br>\n  - initialize db:<br>\n<code>sudo -u zulip /home/zulip/deployments/current/scripts/setup/initialize-database</code></p>\n</blockquote>\n<p>Now, I can successfully login and read messages. However, I get the pop-up warning:<br>\n<code>Unable to connect to Zulip. Updates may be delayed. Retrying soon... Try now.</code><br>\nand one mail with <code>Internal Server Error: /json/messages</code> containing:</p>\n<div class=\"codehilite\"><pre><span></span><code>Request info:\n- path: /json/messages\n- GET: {&#39;anchor&#39;: [&#39;1531&#39;], &#39;num_before&#39;: [&#39;1000&#39;], &#39;num_after&#39;: [&#39;0&#39;], &#39;client_gravatar&#39;: [&#39;true&#39;]}\n- REMOTE_ADDR: &quot;ip.ip.ip.ip&quot;\n- QUERY_STRING: &quot;anchor=******&amp;num_before=******&amp;num_after=******&amp;client_gravatar=******&quot;\n- SERVER_NAME: &quot;&quot;\n</code></pre></div>\n\n\n<p>and one with the traceback:</p>\n<div class=\"codehilite\"><pre><span></span><code>Traceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/base.py&quot;, line 113, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File &quot;./zerver/lib/rest.py&quot;, line 30, in _wrapped_view_func\n    response = view_func(request, *args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/django/views/decorators/csrf.py&quot;, line 54, in wrapped_view\n    return view_func(*args, **kwargs)\n  File &quot;./zerver/lib/rest.py&quot;, line 168, in rest_dispatch\n    return target_function(request, **kwargs)\n  File &quot;/srv/zulip-venv-cache/6f29ad6387ac30ebe6770916be3d39a90e77fc7b/zulip-py3-venv/lib/python3.8/site-packages/django/utils/decorators.py&quot;, line 142, in _wrapped_view\n    response = view_func(request, *args, **kwargs)\n  File &quot;./zerver/decorator.py&quot;, line 684, in _wrapped_view_func\n    return authenticate_log_and_execute_json(\n  File &quot;./zerver/decorator.py&quot;, line 671, in authenticate_log_and_execute_json\n    return limited_view_func(request, user_profile, *args, **kwargs)\n  File &quot;./zerver/decorator.py&quot;, line 801, in wrapped_func\n    return func(request, *args, **kwargs)\n  File &quot;./zerver/lib/request.py&quot;, line 366, in _wrapped_view_func\n    return view_func(request, *args, **kwargs)\n  File &quot;./zerver/views/message_fetch.py&quot;, line 948, in get_messages_backend\n    message_list = messages_for_ids(\n  File &quot;./zerver/lib/message.py&quot;, line 119, in messages_for_ids\n    MessageDict.post_process_dicts(message_list, apply_markdown, client_gravatar)\n  File &quot;./zerver/lib/message.py&quot;, line 206, in post_process_dicts\n    MessageDict.bulk_hydrate_recipient_info(objs)\n  File &quot;./zerver/lib/message.py&quot;, line 525, in bulk_hydrate_recipient_info\n    display_recipients = bulk_fetch_display_recipients(recipient_tuples)\n  File &quot;./zerver/lib/display_recipient.py&quot;, line 170, in bulk_fetch_display_recipients\n    personal_and_huddle_display_recipients: Dict[int, List[UserDisplayRecipient]] = transformed_bulk_cached_fetch(\n  File &quot;./zerver/lib/cache.py&quot;, line 417, in transformed_bulk_cached_fetch\n    return generic_bulk_cached_fetch(\n  File &quot;./zerver/lib/cache.py&quot;, line 394, in generic_bulk_cached_fetch\n    db_objects = query_function(needed_ids)\n  File &quot;./zerver/lib/display_recipient.py&quot;, line 145, in personal_and_huddle_query_function\n    result.append((recipient.id, [user_profiles[recipient.type_id]]))\nKeyError: 13\n</code></pre></div>\n\n\n<p>Maybe, this is related to a deleted user or something like that? How could I debug this?<br>\nHelp is greatly appreciated! :-)</p>\n<p>It would also be great if you could point out a bug in my installation routine! :-) (Maybe I forgot something to disable?)</p>",
+        "id": 1040605,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603048193
+    },
+    {
+        "content": "<p>I already tried to mark all messages in \"All messages\" as read but this only caused the error message to come later. (If that helps, maybe it's unrelated...)</p>",
+        "id": 1040607,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603048969
+    },
+    {
+        "content": "<p>Because of this (maybe irrelevant phenomenon), I also tried <code>/home/zulip/deployments/current/manage.py fix_unreads</code>, which did not help either.</p>",
+        "id": 1040608,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603049042
+    },
+    {
+        "content": "<p><code>/home/zulip/deployments/current/manage.py audit_fts_indexes</code> says <code>Fixed 0 messages.</code><br>\n(BTW: There was no such problem when the db was local...)</p>",
+        "id": 1040609,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603049857
+    },
+    {
+        "content": "<p>I think I fixed the problem by deleting the old messages (nothing important yet) using the message retention policy and <code>manage.py archive_messages</code>. Do you think that this has been the correct solution?</p>\n<p>(And what do you think about my way to install the database?)</p>",
+        "id": 1040616,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603053026
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert</span> if I had to guess, you at some point wiped the database without clearing the cache, resulting in phantom objects.</p>",
+        "id": 1040741,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1603058092
+    },
+    {
+        "content": "<p>Hm, but whatever the reason is, it should be properly fixed now (i.e. the db is in a consistent, healthy state)? Or what do you think?</p>",
+        "id": 1040750,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603058448
+    },
+    {
+        "content": "<p>Likely; <code>scripts/setup/flush-memcached</code> will flush the cache and isn't a bad idea just to be sure.</p>",
+        "id": 1040805,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1603065367
+    },
+    {
+        "content": "<p>Ok, thank you. I executed this command successfully on the application machine and then restarted zulip. :-)</p>",
+        "id": 1040899,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603090714
+    }
+]

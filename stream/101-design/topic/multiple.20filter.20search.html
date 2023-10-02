@@ -1,0 +1,176 @@
+<html>
+<head><meta charset="utf-8"><title>multiple filter search · design · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/101-design/index.html">design</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html">multiple filter search</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="705670"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/705670" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Yash RE <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#705670">(Feb 22 2019 at 09:42)</a>:</h4>
+<p>I hope these are constructive observations and not an unwanted ones <span aria-label="sweat smile" class="emoji emoji-1f605" role="img" title="sweat smile">:sweat_smile:</span>.</p>
+
+
+
+<a name="705676"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/705676" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Yash RE <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#705676">(Feb 22 2019 at 10:18)</a>:</h4>
+<p>I've been working on issue <a href="https://github.com/zulip/zulip/issues/10592" target="_blank" title="https://github.com/zulip/zulip/issues/10592">#10592</a> which currently is about having no results in a multi-filter search. Playing around with the search bar has brought up a few things that I'd like to ask about, and while I can understand why most of this happening from a code perspective, I don't understand it from a design perspective:</p>
+<ul>
+<li>
+<p>We allow the user to write out searches of the type: <code>steam:a stream:b</code> <br>
+What this returns is a search for messages that belong to both streams which will always be empty. I think allowing the user to create a query that would always return an empty narrow is not productive. Also, we're at a weird in-between where we don't promote this kind of behavior (because we don't autocomplete for the the second <code>stream:</code>), but we acknowledge what the user is trying to do by recognizing the <code>stream: b</code> in the typeahead (which would suggest to the user that this would be a useful thing to do, which currently it isn't and so is a bit misleading.)<br>
+Further more, we actually show suggestions for topics from the second stream! <br>
+I think this is useless because the results will always be empty and we're suggesting to the user that their actions make sense .  Also, why the last stream only? (as compared to topics from both)<br>
+<a href="/user_uploads/2/1a/9GgGFSyDr6l4gegfmM7p-560/pasted_image.png" target="_blank" title="pasted_image.png">pasted image</a>:</p>
+<div class="message_inline_image"><a href="/user_uploads/2/1a/9GgGFSyDr6l4gegfmM7p-560/pasted_image.png" target="_blank" title="pasted image"><img src="/user_uploads/2/1a/9GgGFSyDr6l4gegfmM7p-560/pasted_image.png"></a></div></li>
+<li>
+<p>Similarly, we allow the user to write out searches of the type: <code>topic:a topic:b</code> </p>
+</li>
+<li>
+<p>We (unintentionally, I believe) handle <code>sender:a sender:b</code> differently since we offer the suggestion <code>sent by a, pm-with:b</code> (I think this also doesn't make much sense since <code>pm-with:</code> should be 1 on 1?)  if we have users with "b" in their name or email, but we still recognize <code>sender:a sender:b</code> and if I choose to do so I can still make a query for that.</p>
+</li>
+</ul>
+<p>The possible solutions that I could think of (from worst to best) are:</p>
+<ul>
+<li>Add checks to prevent suggestions that acknowledge this behavior.</li>
+<li>Add checks that prevent the user from making queries like this.</li>
+<li>Flip this bug into a feature by checking to see if this is happening and, in that case, making the searches additive ie showing all the messages from <code>stream:a</code> <em>and</em> <code>stream:b</code> which would make this a sensible query and could also sort of work as an interleaved view of only the streams we've selected! Further more, we could papply any other filters to the messages of these two streams, ie <code>stream:a stream:b topic:cats</code> could show the topic cat from either and both streams, if it exists. (this might be a bit useful to trace "moved" topics). If we choose to use this approach, one thing that would need to be handled here is that we shouldn't change the search bar to the color of a single stream, either both or none.</li>
+</ul>
+<p>A similar solution for multiple <code>topic:</code> filters could be possible, however, the solution for multiple <code>sender:</code> filters would be different.<br>
+Also, all this does translate to more than two uses of the filter ie I could have <code>topic:a topic:b topic:c</code></p>
+
+
+
+<a name="705695"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/705695" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#705695">(Feb 22 2019 at 14:09)</a>:</h4>
+<p><span class="user-mention" data-user-id="9808">@Yash RE</span> This is good feedback on the "stream/stream" problem.  Right now the behavior is essentially undefined for these searches.  The easiest fix here is probably to make them illegal, or at least communicate better to users that their searches aren't supported in the way they may think.</p>
+<p>I also agree that there's some logic in saying "stream:a stream:b" means you want both streams.  I think that would be the user's intuition, and then the challenge is implementing it on the backend.</p>
+
+
+
+<a name="705800"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/705800" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#705800">(Feb 22 2019 at 18:28)</a>:</h4>
+<p>Thanks for the careful analysis! Agreed that our search currently has lots of funny bugs like this, and would be great to iron them out. I'm not sure exactly what the right solution here is; I agree with Steve that probably the easiest will be to make them illegal (and having the UI, typeahead, etc reflect that).</p>
+
+
+
+<a name="705802"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/705802" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#705802">(Feb 22 2019 at 18:29)</a>:</h4>
+<p>And I think just removing them from the typeahead, etc (your first suggestion) will be 95% of the benefit</p>
+
+
+
+<a name="705805"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/705805" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#705805">(Feb 22 2019 at 18:31)</a>:</h4>
+<p>One minor clarification: I don't think typeahead encourages you to do <code>stream:a stream:b</code> in any way.  I think you have to explicitly type that out.  Maybe I'm wrong, not sure.</p>
+
+
+
+<a name="706064"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/706064" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#706064">(Feb 22 2019 at 21:55)</a>:</h4>
+<blockquote>
+<p>One minor clarification: I don't think typeahead encourages you to do <code>stream:a stream:b</code> in any way.  I think you have to explicitly type that out.  Maybe I'm wrong, not sure.</p>
+</blockquote>
+<p>I believe that's correct.</p>
+
+
+
+<a name="706065"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/706065" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#706065">(Feb 22 2019 at 21:55)</a>:</h4>
+<p>I don't think we should block users from typing whatever, because that's not really a thing we can do; instead, we should focus on ensuring the typeahead doesn't suggest things that don't make sense.</p>
+
+
+
+<a name="706066"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/706066" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#706066">(Feb 22 2019 at 21:57)</a>:</h4>
+<blockquote>
+<p>we offer the suggestion sent by a, pm-with:b (I think this also doesn't make much sense since pm-with: should be 1 on 1?) </p>
+</blockquote>
+<p>No, this is a valid suggestion -- I might want every PM that Rishi sent me, without my replies.  Also note <code>pm-with</code> can query a group PM.</p>
+
+
+
+<a name="706360"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/706360" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Yash RE <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#706360">(Feb 23 2019 at 06:31)</a>:</h4>
+<blockquote>
+<blockquote>
+<p>One minor clarification: I don't think typeahead encourages you to do <code>stream:a stream:b</code> in any way.  I think you have to explicitly type that out.  Maybe I'm wrong, not sure.</p>
+</blockquote>
+<p>I believe that's correct.</p>
+</blockquote>
+<p>It is correct that one would have to type out "stream:" entirely on their own and that this is not something we can prevent, and also, any less-frequent-user/new user is unlikely to do that because they wouldn't know the search operators that well. However, if a user does do this, they get suggestions like: <a href="user_uploads/2/18/L8MjlLcMom2X96ZMI2viPE9Y/addkrdiya.png" target="_blank" title="user_uploads/2/18/L8MjlLcMom2X96ZMI2viPE9Y/addkrdiya.png">suggestions</a> which indicate recognition of what the user is trying to do and imply that this might be a useful thing to do, which it is not.</p>
+<div class="message_inline_image"><a href="user_uploads/2/18/L8MjlLcMom2X96ZMI2viPE9Y/addkrdiya.png" target="_blank" title="suggestions"><img src="user_uploads/2/18/L8MjlLcMom2X96ZMI2viPE9Y/addkrdiya.png"></a></div>
+
+
+
+<a name="706368"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/706368" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Yash RE <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#706368">(Feb 23 2019 at 07:27)</a>:</h4>
+<blockquote>
+<p>instead, we should focus on ensuring the typeahead doesn't suggest things that don't make sense.</p>
+</blockquote>
+<p>Steve and Rishi also agree with this and it was my first suggestion, I think that means we have consensus that step 1 would definitely be: </p>
+<ul>
+<li>remove suggestions/recognition for queries that don't make sense.</li>
+</ul>
+<p>then, if everyone agrees, part 2 could be:</p>
+<ul>
+<li>prevent the user from sending queries that don't make sense, and show them an error message. [part 2 option 1]</li>
+</ul>
+<p>OR</p>
+<ul>
+<li>Allow the query to go through but then when directing them to an empty narrow, tell them that their combination of search operators does not make sense. [part 2 option 2]</li>
+</ul>
+<blockquote>
+<p>I also agree that there's some logic in saying "stream:a stream:b" means you want both streams.  I think that would be the user's intuition, and then the challenge is implementing it on the backend.</p>
+</blockquote>
+<p>then, further, if we decide that this (the behavior in quote) is something we want to have, that could be a step 3 and it would mean slightly going back on step 1 to re-enable the suggestions and also going back on part 2 option 1 to allow the query through (if we go with that option), but I believe that's worth the structure this problem is getting from this approach.</p>
+
+
+
+<a name="706378"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/706378" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Yash RE <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#706378">(Feb 23 2019 at 07:59)</a>:</h4>
+<p>But one thing that I wanted to ask about is, how important it is to actually fix this? <br>
+Because I could do [part 2 option 2] along with what I'm already working on, <a href="https://github.com/zulip/zulip/issues/10592" target="_blank" title="https://github.com/zulip/zulip/issues/10592">#10592</a> (tell the user about stop words in an empty search query, when there are multiple filters) but that would be before [step 1] and as such, would be in the wrong order... so, I'm not sure if that would okay...</p>
+
+
+
+<a name="706399"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/706399" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Yash RE <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#706399">(Feb 23 2019 at 09:01)</a>:</h4>
+<blockquote>
+<blockquote>
+<p>we offer the suggestion sent by a, pm-with:b (I think this also doesn't make much sense since pm-with: should be 1 on 1?) </p>
+</blockquote>
+<p>No, this is a valid suggestion -- I might want every PM that Rishi sent me, without my replies.</p>
+</blockquote>
+<p>I might be misunderstanding, but wouldn't that be a query of type <code>sender:rishig@.. pm-with:rishig@..</code> i e <code>sender:A pm-with:A</code><br>
+while, what I'm saying doesn't make sense is a query of type <code>sender:cordelia@zulip.com pm-with:iago@zulip.com</code> i e <code>sender:A pm-with:B</code> because we're looking for messages sent by "A" in 1 to 1 PMs between the user and "B"</p>
+<blockquote>
+<p>Also note <code>pm-with</code> can query a group PM.</p>
+</blockquote>
+<p>Again, I might not be understanding this correctly, isn't that if we have <code>pm-with:cordelia@zulip.com,iago@zulip.com,zoe@zulip.com</code> <br>
+i e <code>pm-with:A,B,C</code> and not when we have <code>sender:A pm-with:B</code> which will always be blank. Although I agree that, when one writes this, one might actually be looking for all the messages from "A" in any and all group PMs that also involve "B" i e <code>sender:A group-pm-with:B</code> and I think we should just make it behave like that rather than returning blank.</p>
+<p>examples: The window on the right is just to show that there exists a group pm between cordelia, iago, Aaron (current user) and Zoe<br>
+<a href="/user_uploads/2/e2/e9aKxL-BHwW0WMI3eDGrZ3Qa/sender-pm-combo.png" target="_blank" title="sender-pm-combo.png">sent-by-me-pm-with-I</a> = No results<br>
+<a href="/user_uploads/2/3f/z8EDztMZFOizMmp2zb-ojiem/sent-by-other-pmwith.png" target="_blank" title="sent-by-other-pmwith.png">sent-by-C-pm-with-I</a>  = No results<br>
+<a href="/user_uploads/2/e5/KC3M273adm4g4nm3towVR1Xh/grouppmexample.png" target="_blank" title="grouppmexample.png">sent-by-C group-pm-with:I</a> = what we may actually be looking for</p>
+<div class="message_inline_image"><a href="/user_uploads/2/e2/e9aKxL-BHwW0WMI3eDGrZ3Qa/sender-pm-combo.png" target="_blank" title="sent-by-me-pm-with-I"><img src="/user_uploads/2/e2/e9aKxL-BHwW0WMI3eDGrZ3Qa/sender-pm-combo.png"></a></div><div class="message_inline_image"><a href="/user_uploads/2/3f/z8EDztMZFOizMmp2zb-ojiem/sent-by-other-pmwith.png" target="_blank" title="sent-by-C-pm-with-I"><img src="/user_uploads/2/3f/z8EDztMZFOizMmp2zb-ojiem/sent-by-other-pmwith.png"></a></div><div class="message_inline_image"><a href="/user_uploads/2/e5/KC3M273adm4g4nm3towVR1Xh/grouppmexample.png" target="_blank" title="sent-by-C group-pm-with:I"><img src="/user_uploads/2/e5/KC3M273adm4g4nm3towVR1Xh/grouppmexample.png"></a></div>
+
+
+
+<a name="706400"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/706400" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Yash RE <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#706400">(Feb 23 2019 at 09:06)</a>:</h4>
+<p>Apologies for the massive wall of text, maybe I should have been more concise, but I wanted to be clear... <span aria-label="sweat" class="emoji emoji-1f613" role="img" title="sweat">:sweat:</span> <span aria-label="sweat smile" class="emoji emoji-1f605" role="img" title="sweat smile">:sweat_smile:</span></p>
+
+
+
+<a name="706471"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/101-design/topic/multiple%20filter%20search/near/706471" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/101-design/topic/multiple.20filter.20search.html#706471">(Feb 23 2019 at 12:53)</a>:</h4>
+<p>I'm not sure how important it is to fix the stream/stream problem right away.  It's a strange quirk, but it seems that most folks stay clear of it.  But if there are easy things we can fix, I'm certainly up for improving it.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

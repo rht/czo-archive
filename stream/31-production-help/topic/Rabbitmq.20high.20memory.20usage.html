@@ -1,0 +1,89 @@
+<html>
+<head><meta charset="utf-8"><title>Rabbitmq high memory usage · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Rabbitmq.20high.20memory.20usage.html">Rabbitmq high memory usage</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1376805"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Rabbitmq%20high%20memory%20usage/near/1376805" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Unam <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Rabbitmq.20high.20memory.20usage.html#1376805">(May 02 2022 at 08:41)</a>:</h4>
+<p>Hi, since upgrade from 4.9 to 5.1 on Debian 11, I have a high memory alert in my monitoring tool.<br>
+The ram seems to be full and I suspect rabbitmq to consume all the ram (many rabbitmq process spawned).</p>
+<p>Is there any tweak to reduce this ?</p>
+<p>Thx</p>
+
+
+
+<a name="1376993"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Rabbitmq%20high%20memory%20usage/near/1376993" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Rabbitmq.20high.20memory.20usage.html#1376993">(May 02 2022 at 18:53)</a>:</h4>
+<p><span class="user-mention" data-user-id="12755">@Unam</span>: We're not aware of any specific changes to RabbitMQ in 5.1 that would cause this.</p>
+<p>Are you running all of the server on one host?  In most such configs, PostgreSQL and memcached are the high memory processes.</p>
+<p>Be aware that RabbitMQ is highly multi-threaded, and depending on how you're looking, those may show up as processes -- and they share memory, so if you're parsing that as each line being independent memory usage, that's not the case.  What in particular makes you point at RabbitMQ?</p>
+<p>Can you show <code>rabbitmqctl list-queues</code>?</p>
+
+
+
+<a name="1377199"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Rabbitmq%20high%20memory%20usage/near/1377199" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Unam <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Rabbitmq.20high.20memory.20usage.html#1377199">(May 03 2022 at 12:12)</a>:</h4>
+<p>Hi <span class="user-mention" data-user-id="12178">@Alex Vandiver</span> , thx for your reply.<br>
+You are probably right, rabbitmq is not the reason.</p>
+<div class="codehilite"><pre><span></span><code>root@zulip  ~  rabbitmqctl list_queues
+Timeout: 60.0 seconds ...
+Listing queues for vhost / ...
+name    messages
+digest_emails   0
+embed_links 0
+outgoing_webhooks   0
+email_senders   0
+invites 0
+user_activity   2
+signups 0
+embedded_bots   0
+user_activity_interval  0
+error_reports   0
+user_presence   0
+missedmessage_mobile_notifications  0
+missedmessage_emails    0
+notify_tornado  0
+email_mirror    0
+deferred_work   0
+</code></pre></div>
+
+
+
+<a name="1377200"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Rabbitmq%20high%20memory%20usage/near/1377200" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Unam <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Rabbitmq.20high.20memory.20usage.html#1377200">(May 03 2022 at 12:13)</a>:</h4>
+<p>When I sort by percent_mem in htop, I have many manage.py process (attachement)</p>
+
+
+
+<a name="1377201"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Rabbitmq%20high%20memory%20usage/near/1377201" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Unam <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Rabbitmq.20high.20memory.20usage.html#1377201">(May 03 2022 at 12:14)</a>:</h4>
+<p><a href="/user_uploads/2/46/x-Mv9QMHeXYSL77-Npq-iSP7/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/46/x-Mv9QMHeXYSL77-Npq-iSP7/image.png" title="image.png"><img src="/user_uploads/2/46/x-Mv9QMHeXYSL77-Npq-iSP7/image.png"></a></div>
+
+
+
+<a name="1378001"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Rabbitmq%20high%20memory%20usage/near/1378001" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Rabbitmq.20high.20memory.20usage.html#1378001">(May 04 2022 at 19:22)</a>:</h4>
+<p><span class="user-mention" data-user-id="12755">@Unam</span>: It looks like your server is using 3GB out of the 3.84GB it has -- which in general <em>is a good thing</em>.  Memory which isn't in use is going to waste.</p>
+<p>None of the memory sizes there jump out to me as being egregiously wrong.</p>
+
+
+
+<a name="1378301"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Rabbitmq%20high%20memory%20usage/near/1378301" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Unam <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Rabbitmq.20high.20memory.20usage.html#1378301">(May 05 2022 at 07:31)</a>:</h4>
+<p>Hi <span class="user-mention" data-user-id="12178">@Alex Vandiver</span> , I made the upgrade on April 28th.<br>
+As you can see below, memory usage was lowest before.</p>
+<p><a href="/user_uploads/2/fa/lxvSWD8ow7Qi1yOuAROibj3t/image.png">image.png</a> </p>
+<div class="message_inline_image"><a href="/user_uploads/2/fa/lxvSWD8ow7Qi1yOuAROibj3t/image.png" title="image.png"><img src="/user_uploads/2/fa/lxvSWD8ow7Qi1yOuAROibj3t/image.png"></a></div><p>Anyway, it's not a big problem from my point of view, my monitoring system just popped up an alert and I was wondering why.<br>
+Also, the server is swapping more than before, don't know why yet.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

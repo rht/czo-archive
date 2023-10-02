@@ -1,0 +1,92 @@
+[
+    {
+        "content": "<p>Hello, I upgraded to latest version (7.1). The upgrade went well, but when I try to log in I get the following message:<br>\n<a href=\"/user_uploads/2/21/C-EWgAXJmI7kR17EJHFEL5CV/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/21/C-EWgAXJmI7kR17EJHFEL5CV/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/21/C-EWgAXJmI7kR17EJHFEL5CV/image.png\"></a></div><p>I don't seem to be able to find what is happening.<br>\nIn the <code>/var/log/zulip/errors.log</code> I get many of the following messages:</p>\n<div class=\"codehilite\"><pre><span></span><code>2023-06-16 12:45:37.270 WARN [django.security.csrf] Forbidden (Origin checking failed - https://***REDACTED*** does not match any trusted origins.): /accounts/login/\n</code></pre></div>\n<p>Has this happened to anyone else? Any workarounds?</p>\n<p>I am using regular zulip installation (not docker, patched or modified)</p>",
+        "id": 1594349,
+        "sender_full_name": "Panagiotis Famelis",
+        "timestamp": 1686919745
+    },
+    {
+        "content": "<p>Solved it following the instructions here:<br>\n<a href=\"https://github.com/zulip/zulip/issues/24599\">https://github.com/zulip/zulip/issues/24599</a></p>\n<p>Basically you need to enter the following in you <code>/etc/zulip/settings.py</code>:</p>\n<div class=\"codehilite\"><pre><span></span><code>CSRF_TRUSTED_ORIGINS = [&quot;https://***REDACTED***&quot;, &quot;http://127.0.0.1&quot;, &quot;http://localhost&quot;]\n</code></pre></div>",
+        "id": 1594354,
+        "sender_full_name": "Panagiotis Famelis",
+        "timestamp": 1686920789
+    },
+    {
+        "content": "<p>and run:</p>\n<div class=\"codehilite\"><pre><span></span><code>su zulip -c &#39;/home/zulip/deployments/current/scripts/restart-server&#39;\n</code></pre></div>",
+        "id": 1594355,
+        "sender_full_name": "Panagiotis Famelis",
+        "timestamp": 1686920816
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"24875\">Panagiotis Famelis</span> has marked this topic as resolved.</p>",
+        "id": 1594356,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1686921042
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"24875\">@Panagiotis Famelis</span>: No, that is not the right fix.  As I explain in <a href=\"https://github.com/zulip/docker-zulip/pull/403\">#DZ403</a>, this is because you have a <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy\">reverse proxy in front of Zulip</a>, you have <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#configuring-zulip-to-allow-http\">configured Zulip itself to serve over HTTP</a>, but you have not <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#configuring-zulip-to-trust-proxies\">told Zulip the IP address of your proxy to trust it</a> or your <a href=\"https://zulip.readthedocs.io/en/latest/production/deployment.html#nginx-configuration\">proxy is misconfigured and does not send the necessary headers</a>.</p>\n<p>Adding <code>http://127.0.0.1</code> and <code>http://localhost</code> to <code>CSRF_ALLOWED_ORIGINS</code> is a security vulnerability; please don't do that.</p>\n<p>We're happy to help you if you have questions about your proxy configuration.</p>",
+        "id": 1594410,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686929927
+    },
+    {
+        "content": "<p>I suspect we need to catch this error and provide a custom warning message in the logs.</p>",
+        "id": 1594412,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686929945
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/26046\">#26046</a>.</p>",
+        "id": 1594540,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686944018
+    },
+    {
+        "content": "<p>Hello <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> , thank you very much.<br>\nI changed the configuration according to the links and it works (also removed the CSRF_TRUSTED_ORIGINS):</p>\n<div class=\"codehilite\"><pre><span></span><code>Add the following block to /etc/zulip/zulip.conf.\n\n[loadbalancer]\n# Use the IP addresses (of the proxy) you determined above, separated by commas. example:\nips = 192.168.0.100\n</code></pre></div>",
+        "id": 1595172,
+        "sender_full_name": "Panagiotis Famelis",
+        "timestamp": 1687158808
+    },
+    {
+        "content": "<p>Glad to hear that worked!</p>",
+        "id": 1595258,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1687179842
+    },
+    {
+        "content": "<p>I'm also having the CSRF verification failed message, but in a Cloud Hosted organization, so I don't think any of the previous fixes apply to me [really bad timing, since I'm giving a demo of Zulip at our organization in three hours... <span aria-label=\"grimacing\" class=\"emoji emoji-1f62c\" role=\"img\" title=\"grimacing\">:grimacing:</span> ]</p>",
+        "id": 1595554,
+        "sender_full_name": "Angel de Vicente",
+        "timestamp": 1687245450
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26261\">@Angel de Vicente</span> Can you provide more information on this? When exactly do you encounter this and browser are you using? (Trying to log in? Or just opening the organization's page etc.?)</p>",
+        "id": 1595607,
+        "sender_full_name": "Mateusz Mandera",
+        "timestamp": 1687257618
+    },
+    {
+        "content": "<p>I <em>think</em> it was just opening the organization's page, but I figured out that it was due to the browser I'm trying. It is Sidekick browser, and I open Zulip as a web app, which I understand that it is somehow like a containerized tab in Firefox, so the issue was probably coming from that. Opening it in a new tab (not a containerized one gave me no trouble, and I was able to deliver the Zulip demo withous issues <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1595625,
+        "sender_full_name": "Angel de Vicente",
+        "timestamp": 1687264448
+    },
+    {
+        "content": "<p>Hello all, and very happy to be here in this nice chat !</p>\n<p>FYI, the same for me : after upgrading from 6.4 to 7.1, CSRF error.</p>\n<p>The solution (found here <span aria-label=\"grinning face with smiling eyes\" class=\"emoji emoji-1f601\" role=\"img\" title=\"grinning face with smiling eyes\">:grinning_face_with_smiling_eyes:</span> ) is to add the line on /etc/zulip/settings.py:<br>\nCSRF_TRUSTED_ORIGINS = [\"https://<strong><em>REDACTED</em></strong>\", \"<a href=\"http://127.0.0.1\">http://127.0.0.1</a>\", \"http://localhost\"]</p>\n<p>Hope this can help/confirm.</p>",
+        "id": 1596274,
+        "sender_full_name": "SimonD",
+        "timestamp": 1687349969
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"27256\">@SimonD</span>: No, that is not the right fix.  Please see <a href=\"#narrow/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed/near/1594410\">https://chat.zulip.org/#narrow/stream/31-production-help/topic/.E2.9C.94.20CSRF.20verification.20failed/near/1594410</a> above which points to the right fix.</p>",
+        "id": 1596353,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1687356755
+    },
+    {
+        "content": "<p>Yeah the issue here is that some privacy browsers disable the HTTP headers used by Django CSRF's protection system.</p>",
+        "id": 1599552,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1687888041
+    }
+]

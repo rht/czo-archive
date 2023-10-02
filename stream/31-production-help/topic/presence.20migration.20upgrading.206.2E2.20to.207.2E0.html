@@ -1,0 +1,273 @@
+<html>
+<head><meta charset="utf-8"><title>presence migration upgrading 6.2 to 7.0 · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html">presence migration upgrading 6.2 to 7.0</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1582735"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582735" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Serg  Grishchenko <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582735">(Jun 01 2023 at 09:43)</a>:</h4>
+<p>hi! <br>
+When upgrading to version 7, I get the error "psycopg2.errors.DuplicateObject: constraint "zerver_userpresenceo_user_profile_id_d75366d6_fk_zerver_us" for relation "zerver_userpresence" already exists" </p>
+<p>How to solve the problem?</p>
+
+
+
+<a name="1582736"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582736" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Serg  Grishchenko <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582736">(Jun 01 2023 at 09:43)</a>:</h4>
+<p><a href="/user_uploads/2/99/98xrTo8xG1nv8nOa3B0DOvca/upgrade.log">upgrade.log</a></p>
+
+
+
+<a name="1582760"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582760" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Antti Kanes <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582760">(Jun 01 2023 at 11:56)</a>:</h4>
+<p>I also got this today and that was just the beginning of things going seriously wrong</p>
+
+
+
+<a name="1582761"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582761" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Antti Kanes <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582761">(Jun 01 2023 at 11:56)</a>:</h4>
+<p>I thought the issue might've been in us running postgresql-14 instead of 15 which was by now installed by ubuntu so I looked into the upgrade instructions which prompted me to do a database upgrade</p>
+
+
+
+<a name="1582762"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582762" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Antti Kanes <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582762">(Jun 01 2023 at 11:59)</a>:</h4>
+<p>something in the lines of /home/zulip/deployments/current/scripts/setup/upgrade-postgresql  (now do <em>not</em> run this!)</p>
+<p>The thing is there was no warning that this was indeed a trick someone had done as we now had our Zulip instance on postgresql-14 and running the script figured out our target was 14 but failed to deduct we were already there (not sure what happened, there were remnants of Postresql-12, maybe that was the issue?) </p>
+<div class="codehilite"><pre><span></span><code>if [ &quot;$UPGRADE_TO&quot; = &quot;$UPGRADE_FROM&quot; ]; then                                                                                                                                                                                                      echo &quot;Already running PostgreSQL $UPGRADE_TO!&quot;
+    exit 1
+fi
+set -x
+
+&quot;$ZULIP_PATH&quot;/scripts/lib/setup-apt-repo
+apt-get install -y &quot;postgresql-$UPGRADE_TO&quot;
+if pg_lsclusters -h | grep -qE &quot;^$UPGRADE_TO\s+main\b&quot;; then
+    pg_dropcluster &quot;$UPGRADE_TO&quot; main --stop
+fi
+</code></pre></div>
+
+
+
+<a name="1582763"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582763" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Antti Kanes <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582763">(Jun 01 2023 at 11:59)</a>:</h4>
+<p>So what it ended up doing was the latter part of dropping the entire 14-main cluster without ever asking a question</p>
+
+
+
+<a name="1582764"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582764" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Antti Kanes <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582764">(Jun 01 2023 at 11:59)</a>:</h4>
+<p>Also the upgrade only takes backups of the zulip folder, not the data</p>
+
+
+
+<a name="1582765"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582765" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Antti Kanes <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582765">(Jun 01 2023 at 12:01)</a>:</h4>
+<p>yeah seems a previous upgrade had not updated the postgres version value in the ini file which it trusted and wiped out our data</p>
+
+
+
+<a name="1582766"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582766" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Antti Kanes <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582766">(Jun 01 2023 at 12:04)</a>:</h4>
+<p>(I initially started doing the upgrade because the search had been broken for us since a previous upgrade )</p>
+
+
+
+<a name="1582777"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582777" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Antti Kanes <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582777">(Jun 01 2023 at 12:55)</a>:</h4>
+<p>ok now with very old backup upgrading from 6.1 after restoring the database I'm back at <br>
+<code>django.db.utils.ProgrammingError: constraint "zerver_userpresenceo_user_profile_id_d75366d6_fk_zerver_us" for relation "zerver_userpresence" already exists  </code></p>
+
+
+
+<a name="1582778"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582778" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Serg  Grishchenko <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582778">(Jun 01 2023 at 12:58)</a>:</h4>
+<p><span aria-label="sweat smile" class="emoji emoji-1f605" role="img" title="sweat smile">:sweat_smile:</span></p>
+
+
+
+<a name="1582779"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582779" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Serg  Grishchenko <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582779">(Jun 01 2023 at 12:59)</a>:</h4>
+<p>waiting for a solution to the problem ...</p>
+
+
+
+<a name="1582807"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582807" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Antti Kanes <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582807">(Jun 01 2023 at 13:42)</a>:</h4>
+<p>Oh no, the database upgrade script sure is badass as it assumes version 14 as target (on zulip 6.x anyway as the upgrade to 7 fails) - I tried upgrading 14=&gt;15 to see if that's the issue but it failed</p>
+
+
+
+<a name="1582808"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582808" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Antti Kanes <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582808">(Jun 01 2023 at 13:42)</a>:</h4>
+<p>did some problem solving and tried again, this time forgetting to pass the target version 15 as parameter</p>
+
+
+
+<a name="1582809"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582809" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Antti Kanes <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582809">(Jun 01 2023 at 13:43)</a>:</h4>
+<p>well the script had already updated our "current" version information to 15 even though it failed (!) and now the script started doing an "upgrade" 15 =&gt; 14</p>
+
+
+
+<a name="1582810"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582810" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Antti Kanes <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582810">(Jun 01 2023 at 13:43)</a>:</h4>
+<p>and again there goes my version 14 cluster</p>
+
+
+
+<a name="1582811"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1582811" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Antti Kanes <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1582811">(Jun 01 2023 at 13:43)</a>:</h4>
+<p>Kudos to whoever coded that abomination.</p>
+
+
+
+<a name="1583174"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1583174" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Antti Kanes <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1583174">(Jun 01 2023 at 17:29)</a>:</h4>
+<p>Ok now I'm back to 6.1 and will wait for the solution also. Had to revert back to a snapshot from a year ago due to 7.0 upgrade path being as broken as it is.</p>
+
+
+
+<a name="1583260"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1583260" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1583260">(Jun 01 2023 at 19:25)</a>:</h4>
+<p><span class="user-mention" data-user-id="9287">@Antti Kanes</span> sorry to hear about your trouble. I'm confused, you're talking about upgrading postgres, which is an independent operation from upgrading the Zulip server -- did you see the original <code>psycopg2.errors.DuplicateObject: constraint "zerver_userpresenceo_user_profile_id_d75366d6_fk_zerver_us" for relation "zerver_userpresence" already exists"</code> error in this thread?</p>
+
+
+
+<a name="1583262"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1583262" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1583262">(Jun 01 2023 at 19:25)</a>:</h4>
+<p>If not, we should definitely split the topic so we can discuss the different issues correctly.</p>
+
+
+
+<a name="1583266"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1583266" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1583266">(Jun 01 2023 at 19:27)</a>:</h4>
+<p>Oh, I see, you indeed report seeing that error. I guess I'm very confused as to how you ended up trying to upgrade <code>postgres</code> in response to an error about a migration not applying.</p>
+
+
+
+<a name="1583270"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1583270" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1583270">(Jun 01 2023 at 19:28)</a>:</h4>
+<p><span class="user-mention" data-user-id="23869">@Serg  Grishchenko</span> <span class="user-mention" data-user-id="9287">@Antti Kanes</span> can you talk about the past upgrade history of your server -- what version it was originally installed with? I think it's quite likely that the exception the database migration has to do with that history.</p>
+
+
+
+<a name="1583271"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1583271" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1583271">(Jun 01 2023 at 19:29)</a>:</h4>
+<p>Like, it might be something that only fails for users who originally installed 4.0 and continuously upgraded that, and it'd be very helpful to know what your situation is so we can try to debug.</p>
+
+
+
+<a name="1583290"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1583290" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1583290">(Jun 01 2023 at 19:37)</a>:</h4>
+<p>Maybe I'm too late to catch you folks today; <span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> It's probably worth you looking at whether you have any theories for the migration issue.</p>
+
+
+
+<a name="1583292"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1583292" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1583292">(Jun 01 2023 at 19:38)</a>:</h4>
+<p>We've also seen other reports of folks thinking they need to change the postgres version; see <a class="stream-topic" data-stream-id="31" href="/#narrow/stream/31-production-help/topic/postgres.20version.20issue.20upgrading.206.2E1.20to.206.2E2">#production help &gt; postgres version issue upgrading 6.1 to 6.2</a>, for example. I don't understand that, but it seems like a separate problem that we can debug there.</p>
+
+
+
+<a name="1583317"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1583317" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1583317">(Jun 01 2023 at 19:52)</a>:</h4>
+<p>Some debugging in <a class="stream-topic" data-stream-id="31" href="/#narrow/stream/31-production-help/topic/postgres.20version.20issue.20upgrading.206.2E1.20to.206.2E2">#production help &gt; postgres version issue upgrading 6.1 to 6.2</a> suggests a theory for the issue <span class="user-mention silent" data-user-id="9287">Antti Kanes</span> had of ending up with multiple postgres versions may be the result of having <code>/etc/zulip/zulip.conf</code> recording a different <code>postgresql</code> version than the one the system was actually using.</p>
+<p>I don't think it's related to the migration failure.</p>
+
+
+
+<a name="1583324"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1583324" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1583324">(Jun 01 2023 at 19:56)</a>:</h4>
+<p>OK so we can see clearly from upgrade the logs for <span class="user-mention silent" data-user-id="23869">Serg  Grishchenko</span> that this failed the first time migrations were applied, so it's not something weird with incomplete migrations:</p>
+<div class="codehilite"><pre><span></span><code>Running migrations:
+  Applying zerver.0423_fix_email_gateway_attachment_owner... OK
+  Applying zerver.0424_realm_move_messages_within_stream_limit_seconds... OK
+  Applying zerver.0425_realm_move_messages_between_streams_limit_seconds... OK
+  Applying zerver.0426_add_email_address_visibility_setting... OK
+  Applying zerver.0427_migrate_to_user_level_email_address_visibility_setting... OK
+  Applying zerver.0428_remove_realm_email_address_visibility... OK
+  Applying zerver.0429_user_topic_case_insensitive_unique_toghether... OK
+  Applying zerver.0430_fix_audit_log_objects_for_group_based_stream_settings... OK
+  Applying zerver.0431_alter_archivedreaction_unique_together_and_more... OK
+  Applying zerver.0432_alter_and_migrate_realm_name_in_notifications... OK
+  Applying zerver.0433_preregistrationrealm... OK
+  Applying zerver.0434_create_nobody_system_group... OK
+  Applying zerver.0435_scheduledmessage_rendered_content... OK
+  Applying zerver.0436_realmauthenticationmethods... OK
+  Applying zerver.0437_remove_realm_authentication_methods... OK
+  Applying zerver.0438_add_web_mark_read_on_scroll_policy_setting... OK
+  Applying zerver.0439_fix_deleteduser_email... OK
+  Applying zerver.0440_realmfilter_url_template... OK
+  Applying zerver.0441_backfill_realmfilter_url_template... OK
+  Applying zerver.0442_remove_realmfilter_url_format_string... OK
+  Applying zerver.0443_userpresence_new_table_schema...Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/80adc5a65d3947b00c17d97d243aa9d941435ad3/zulip-py3-venv/lib/python3.8/site-packages/django/db/backends/utils.py&quot;, line 87, in _execute
+    return self.cursor.execute(sql)
+  File &quot;/home/zulip/deployments/2023-06-01-08-51-18/zerver/lib/db.py&quot;, line 35, in execute
+    wrapper_execute(self, super().execute, query, vars)
+  File &quot;/home/zulip/deployments/2023-06-01-08-51-18/zerver/lib/db.py&quot;, line 20, in wrapper_execute
+    action(sql, params)
+psycopg2.errors.DuplicateObject: constraint &quot;zerver_userpresenceo_user_profile_id_d75366d6_fk_zerver_us&quot; for relation &quot;zerver_userpresence&quot; already exists
+</code></pre></div>
+
+
+
+<a name="1583325"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1583325" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1583325">(Jun 01 2023 at 19:57)</a>:</h4>
+<p>OK I have a theory that the issue is that this block in <code>0443_userpresence_new_table_schema.py</code> just needs to be skipped if the migration already has that name:</p>
+<div class="codehilite"><pre><span></span><code>                    raw_query = SQL(
+                        &quot;ALTER TABLE {old_table} RENAME CONSTRAINT {old_name} TO {new_name}&quot;
+                    ).format(
+                        old_table=Identifier(old_table),
+                        old_name=Identifier(old_name),
+                        new_name=Identifier(new_name),
+                    )
+</code></pre></div>
+
+
+
+<a name="1583326"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1583326" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1583326">(Jun 01 2023 at 19:59)</a>:</h4>
+<p>That would at least generate this exact exception:</p>
+<div class="codehilite"><pre><span></span><code>zulip=&gt; ALTER TABLE zerver_userpresence RENAME CONSTRAINT zerver_userpresence_user_profile_id_b67b4092_fk_zerver_us to zerver_userpresence_user_profile_id_b67b4092_fk_zerver_us;
+ERROR:  constraint &quot;zerver_userpresence_user_profile_id_b67b4092_fk_zerver_us&quot; for relation &quot;zerver_userpresence&quot; already exists
+</code></pre></div>
+
+
+
+<a name="1583327"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1583327" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1583327">(Jun 01 2023 at 20:00)</a>:</h4>
+<p>I don't understand this migration well enough to say why it might be possible for that to happen, but I'm guessing this is the fix for the issue:</p>
+<div class="codehilite"><pre><span></span><code>diff --git a/zerver/migrations/0443_userpresence_new_table_schema.py b/zerver/migrations/0443_userpresence_new_table_schema.py
+index e4a7d3ca10..d1e5f3bdfe 100644
+--- a/zerver/migrations/0443_userpresence_new_table_schema.py
++++ b/zerver/migrations/0443_userpresence_new_table_schema.py
+@@ -33,6 +33,11 @@ def rename_indexes_constraints(
+                     suffix = &quot;_idx&quot; if len(infodict[&quot;columns&quot;]) &gt; 1 else &quot;&quot;
+                     is_index = True
+                 new_name = schema_editor._create_index_name(new_table, infodict[&quot;columns&quot;], suffix)
++
++                if old_name == new_name:
++                    # Don&#39;t crash if these already have the right names.
++                    continue
++
+                 if is_index:
+                     raw_query = SQL(&quot;ALTER INDEX {old_name} RENAME TO {new_name}&quot;).format(
+                         old_name=Identifier(old_name), new_name=Identifier(new_name)
+</code></pre></div>
+
+
+
+<a name="1583453"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/presence%20migration%20upgrading%206.2%20to%207.0/near/1583453" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/presence.20migration.20upgrading.206.2E2.20to.207.2E0.html#1583453">(Jun 01 2023 at 21:23)</a>:</h4>
+<p>Opened <a href="https://github.com/zulip/zulip/pull/25869">https://github.com/zulip/zulip/pull/25869</a>; review appreciated. I would feel most comfortable with this if we had a theory for how this failure mode might be possible.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

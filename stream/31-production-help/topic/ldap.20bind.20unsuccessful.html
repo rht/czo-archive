@@ -1,0 +1,98 @@
+<html>
+<head><meta charset="utf-8"><title>ldap bind unsuccessful · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.20unsuccessful.html">ldap bind unsuccessful</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="516699"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind%20unsuccessful/near/516699" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ryan Braganza <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.20unsuccessful.html#516699">(Feb 26 2018 at 05:59)</a>:</h4>
+<p>Hello, I have installed a Zulip server on Ubuntu 16.04.3, I want to authenticate users via an ADS server, but the bind does is not successful .Below is the error i get when i do a ldap test query</p>
+<p>/home/zulip/deployments/current/manage.py query_ldap <a href="mailto:ryan.braganza@xxxxxx.com" title="mailto:ryan.braganza@xxxxxx.com">ryan.braganza@xxxxxx.com</a><br>
+2018-02-26 05:47:45.177 ERR  [django_auth_ldap] search_s('dc=xxxxxx,dc=com', 2, '(uid=ryan.braganza)') raised OPERATIONS_ERROR({'info': '000004DC: LdapErr: DSID-0C0906DD, comment: In order to perform this operation a successful bind must be completed on the connection., data 0, v1772', 'desc': 'Operations error'},)<br>
+No such user found</p>
+<p>=============================================================================<br>
+The setting.py ldap sections is as below</p>
+<p>AUTH_LDAP_SERVER_URI = "ldap://mumdc01.xxxxxx.com"</p>
+<p>AUTH_LDAP_BIND_DN = "CN=xyzuser,CN=Users,DC=xxxxxx,DC=com"<br>
+AUTH_LDAP_BIND_PASSWORD = "password"</p>
+<p>AUTH_LDAP_USER_SEARCH = LDAPSearch("dc=xxxxxx,dc=com",<br>
+                                  ldap.SCOPE_SUBTREE, "(uid=%(user)s)")</p>
+<p>LDAP_APPEND_DOMAIN = '<a href="http://xxxxxx.com" target="_blank" title="http://xxxxxx.com">xxxxxx.com</a>'<br>
+=============================================================================</p>
+<p>Can anyone please help me out what i could be possibly missing ?? I am able to a successful ldap query using the ldapsearch command.</p>
+<p>Thank you</p>
+
+
+
+<a name="516994"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind%20unsuccessful/near/516994" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ryan Braganza <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.20unsuccessful.html#516994">(Feb 26 2018 at 12:34)</a>:</h4>
+<p>After  putting the password in quotes in the secrets file, the bind unsuccessful error has gone, but now its throws up a new error ----&gt; </p>
+<p>"ldap.INVALID_CREDENTIALS: {'desc': 'Invalid credentials', 'info': '80090308: LdapErr: DSID-0C0903AA, comment: AcceptSecurityContext error, data 52e, v1772'}"</p>
+
+
+
+<a name="517267"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind%20unsuccessful/near/517267" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.20unsuccessful.html#517267">(Feb 26 2018 at 15:14)</a>:</h4>
+<p><span class="user-mention" data-user-email="ryann.braganza@gmail.com" data-user-id="5510">@Ryan Braganza</span> I'm not sure and don't have time to investigate this moment, but I think it's possible that you should be using <code>ldaps://</code> protocol (which is more secure) for connecting to your server, i.e. you should use that in the <code>AUTH_LDAP_SERVER_URI</code> field.</p>
+
+
+
+<a name="518015"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind%20unsuccessful/near/518015" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scott Russell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.20unsuccessful.html#518015">(Feb 27 2018 at 05:17)</a>:</h4>
+<p>Here are the settings that work for my AD instance. Users will login with <a href="mailto:first.last@domain.com" title="mailto:first.last@domain.com">first.last@domain.com</a> and their LDAP password. The <code>auth_ldap_bind_password</code> value in zulip-secrets.conf should <em>not</em> be quoted because the file is in INI format, not a python file.</p>
+<p>Take careful note of the <code>AUTH_LDAP_CONNECTION_OPTIONS</code> options for AD servers. Without these options your AD connection will fail.</p>
+<div class="codehilite"><pre><span></span>AUTH_LDAP_SERVER_URI = &quot;ldap://ldap.example.com&quot;
+
+AUTH_LDAP_BIND_DN = &quot;cn=ldapbind,cn=Users,dc=example,dc=com&quot;
+
+AUTH_LDAP_USER_SEARCH = LDAPSearch(&quot;dc=example,dc=com&quot;, ldap.SCOPE_SUBTREE, &quot;(mail=%(user)s)&quot;)
+
+LDAP_APPEND_DOMAIN = None
+
+LDAP_EMAIL_ATTR = None
+
+AUTH_LDAP_USER_ATTR_MAP = {
+    &quot;full_name&quot;: &quot;cn&quot;,
+}
+
+AUTH_LDAP_CONNECTION_OPTIONS = {
+        ldap.OPT_REFERRALS: 0,
+        ldap.OPT_X_TLS_REQUIRE_CERT: 0,
+}
+</pre></div>
+
+
+<p>My guess as to how to get you going would be:</p>
+<p>1) Unquote your ldap password in zulip-settings.conf<br>
+2) Add the <code>AUTH_LDAP_CONNECTION_OPTIONS</code> as I have it.<br>
+3) Use supervisiorctl restart all<br>
+4) As the zulip account, run ./manage.py query_ldap &lt;uid&gt;</p>
+<p>If that still fails then post whatever traceback get and I'll try and take a second look for you.</p>
+
+
+
+<a name="518016"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind%20unsuccessful/near/518016" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Scott Russell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.20unsuccessful.html#518016">(Feb 27 2018 at 05:19)</a>:</h4>
+<p>Just to be clear, the reason why you now get INVALID_CREDENTIALS is because the password is being sent as <code>"password"</code>with the quotes as you put in the INI file zulip-secrets.conf</p>
+
+
+
+<a name="518027"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind%20unsuccessful/near/518027" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Ryan Braganza <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.20unsuccessful.html#518027">(Feb 27 2018 at 05:55)</a>:</h4>
+<p>Wow :) thanks <span class="user-mention" data-user-email="scott@frak.ms" data-user-id="5233">@Scott Russell</span> adding AUTH_LDAP_CONNECTION_OPTIONS and removing he quotes has got it working :) ...</p>
+
+
+
+<a name="527752"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/ldap%20bind%20unsuccessful/near/527752" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Voy Test <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/ldap.20bind.20unsuccessful.html#527752">(Mar 06 2018 at 17:02)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> test</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

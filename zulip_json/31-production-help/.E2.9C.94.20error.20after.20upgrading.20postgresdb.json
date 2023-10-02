@@ -1,0 +1,338 @@
+[
+    {
+        "content": "<p>Hey team, I am upgrading our AWS-hosted zulip server (18.04 to 20.04) and I was following the instructions on <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade.html#upgrading-from-ubuntu-18-04-bionic-to-20-04-focal\">https://zulip.readthedocs.io/en/latest/production/upgrade.html#upgrading-from-ubuntu-18-04-bionic-to-20-04-focal</a></p>\n<p>Everything went well, until step 5, in particular when running this command:</p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code>/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2<span class=\"w\"> </span><span class=\"se\">\\</span>\n<span class=\"w\">    </span>/home/zulip/deployments/current/<span class=\"w\"> </span>--ignore-static-assets<span class=\"w\"> </span>--audit-fts-indexes\n</code></pre></div>\n<p>I got the following error:</p>\n<div class=\"codehilite\"><pre><span></span><code>django.db.utils.OperationalError: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2&quot;, line 249, in &lt;module&gt;\n    migrations_output = subprocess.check_output(\n  File &quot;/usr/lib/python3.8/subprocess.py&quot;, line 415, in check_output\n    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,\n  File &quot;/usr/lib/python3.8/subprocess.py&quot;, line 516, in run\n    raise CalledProcessError(retcode, process.args,\nsubprocess.CalledProcessError: Command &#39;[&#39;./manage.py&#39;, &#39;showmigrations&#39;]&#39; returned non-zero exit status 1.\n</code></pre></div>",
+        "id": 1523260,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678687623
+    },
+    {
+        "content": "<p>I'm a bit stuck and don't know how to best proceed from here. Would appreciate any help, thank you!</p>",
+        "id": 1523261,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678687658
+    },
+    {
+        "content": "<p>When I tried using the dbshell from manage.py I get the same error:</p>\n<div class=\"codehilite\"><pre><span></span><code>$ deployments/current/manage.py dbshell\npsql: error: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n&quot;psql -U zulip zulip&quot; returned non-zero exit status 2.\n</code></pre></div>\n<p>So it seems like my postgresdb is not running, <img alt=\":shrug:\" class=\"emoji\" src=\"/user_avatars/2/emoji/images/31.png\" title=\"shrug\"></p>",
+        "id": 1523263,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678687920
+    },
+    {
+        "content": "<p>hmm, I'm going to restart the server to see if it's just an issue with restarting PG, because the step 4 (<code>/home/zulip/deployments/current/scripts/setup/upgrade-postgresql</code>) ran with no problems...</p>",
+        "id": 1523264,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678688255
+    },
+    {
+        "content": "<p>... nope, that didn't help. Same error as above</p>",
+        "id": 1523268,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678688493
+    },
+    {
+        "content": "<p>so it seems postgres is running, but it's \"empty\". </p>\n<p>I am able to access psql only if I run <code>sudo -U postgres psql</code>, but all other users don't have access</p>",
+        "id": 1523273,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678689345
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>~$ sudo -u zulip psql\npsql: error: connection to server on socket &quot;/var/run/postgresql/.s.PGSQL.5432&quot; failed: FATAL:  role &quot;zulip&quot; does not exist\n</code></pre></div>",
+        "id": 1523274,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678689360
+    },
+    {
+        "content": "<p>and when I look inside it looks pretty empty (no zulip db):</p>\n<div class=\"codehilite\"><pre><span></span><code>~$ sudo -u postgres psql\npsql (15.2 (Ubuntu 15.2-1.pgdg20.04+1), server 13.10 (Ubuntu 13.10-1.pgdg20.04+1))\nType &quot;help&quot; for help.\n\npostgres=# \\l\n                                             List of databases\n   Name    |  Owner   | Encoding | Collate |  Ctype  | ICU Locale | Locale Provider |   Access privileges\n-----------+----------+----------+---------+---------+------------+-----------------+-----------------------\n postgres  | postgres | UTF8     | C.UTF-8 | C.UTF-8 |            | libc            |\n template0 | postgres | UTF8     | C.UTF-8 | C.UTF-8 |            | libc            | =c/postgres          +\n           |          |          |         |         |            |                 | postgres=CTc/postgres\n template1 | postgres | UTF8     | C.UTF-8 | C.UTF-8 |            | libc            | postgres=CTc/postgres+\n           |          |          |         |         |            |                 | =c/postgres\n(3 rows)\n</code></pre></div>",
+        "id": 1523275,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678689428
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"8187\">@Will Monge</span>: I assume that <code>REMOTE_POSTGRES_HOST</code> isn't set -- i.e. you're not using Amazon RDS, and your PostgreSQL database is on the same server?</p>\n<p>It's likely that it looks empty because there are multiple versions of PostgreSQL installed, and <code>psql</code> is getting the wrong one.</p>\n<p>Can you show <code>pg_lsclusters</code> ?</p>",
+        "id": 1523373,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678715219
+    },
+    {
+        "content": "<p>thanks <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> <br>\nYes, <code>REMOTE_POSTGRES_HOST</code> is not set, using the postgresdb that comes default with zulip on the same server.</p>\n<p>I was looking through that, and yes, there were multiple versions, some of them broken. It's weird because this was a brand new server that I started earlier in the day with Ubuntu 18.04, installed zulip 4.6, loaded my backup, then upgraded to ubuntu 20.04 successfully, and then got stuck on that step. I'll try to run again today and inspect more closely the output of the <code>upgrade-postgres</code> command.</p>",
+        "id": 1523397,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678718088
+    },
+    {
+        "content": "<p>When you do a new install, it defaults to PostgreSQL 14.  If you're using our <a href=\"https://zulip.readthedocs.io/en/latest/production/export-and-import.html#backups\">backups</a>, restoring that will have reconfigured it to whatever the old server used, which probably left the PostgreSQL 14 around.</p>",
+        "id": 1523398,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678718322
+    },
+    {
+        "content": "<p>I suspect that we need to improve the backup restoration code to clean up any other postgres installs before installing the one it wants.</p>",
+        "id": 1523400,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678718374
+    },
+    {
+        "content": "<p>thank you for that. Would you recommend then, after restoring the backup, removing postgres 14? if so what is the best way to do so? thank you!</p>",
+        "id": 1523401,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678718525
+    },
+    {
+        "content": "<p>If you're trying this again, check the value of <code>postgresql.version</code> in <code>/etc/zulip/zulip.conf</code> on the old server.  When you do the install on the new host, pass <code>--postgresql-version=13</code> or whatever the version is.</p>",
+        "id": 1523402,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678718555
+    },
+    {
+        "content": "<p>I see the version on the old server is set to 10</p>",
+        "id": 1523407,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678718735
+    },
+    {
+        "content": "<p><a href=\"https://zulip.readthedocs.io/en/latest/production/export-and-import.html#backups-export-and-import\">https://zulip.readthedocs.io/en/latest/production/export-and-import.html#backups-export-and-import</a> notes this but I guess <a href=\"https://zulip.readthedocs.io/en/latest/production/export-and-import.html#restoring-backups\">https://zulip.readthedocs.io/en/latest/production/export-and-import.html#restoring-backups</a> doesn't.</p>",
+        "id": 1523408,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678718741
+    },
+    {
+        "content": "<p>Good time to upgrade, since PostgreSQL 10 is out of support, and Zulip 6.0 won't support it.</p>",
+        "id": 1523409,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678718819
+    },
+    {
+        "content": "<p>Oh, wait.  Wrong tense -- you're presumably trying to upgrade to 6.1, so you can't install <code>--postgresql-version=10</code></p>",
+        "id": 1523410,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678718865
+    },
+    {
+        "content": "<p>Presumably you're trying the postgresql upgrade step on a new server because you're trying to minimize downtime.</p>\n<p>But it may be easiest to upgrade postgres on the old server, do an export, and then import that on the new server.  Because I don't think you can do this with out an intermediate step otherwise.</p>",
+        "id": 1523411,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678718967
+    },
+    {
+        "content": "<p>right, I have ubuntu 18.04, postgres 10, and zulip 4.6. What is the proper order of upgrade here?</p>\n<ol>\n<li>upgrade to ubuntu 20.04</li>\n<li>upgrade postgres to 13(?) using <code>/home/zulip/deployments/current/scripts/setup/upgrade-postgresql</code></li>\n<li>then upgrade zulip to 6.1?</li>\n</ol>",
+        "id": 1523412,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678719004
+    },
+    {
+        "content": "<p>I'd swap steps 2 and 3.</p>",
+        "id": 1523413,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678719063
+    },
+    {
+        "content": "<p>Hm, though I don't know if the upgrade will stop you if you're on PostgreSQL 10.</p>",
+        "id": 1523414,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678719098
+    },
+    {
+        "content": "<p>oh, but doesn't zulip 5.x and above not support postgres10?</p>",
+        "id": 1523415,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678719116
+    },
+    {
+        "content": "<p>6.x doesn't support PostgreSQL 10.</p>",
+        "id": 1523416,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678719131
+    },
+    {
+        "content": "<p>So yeah, I think you're right on the ordering.  You can repeat the PostgreSQL upgrade after you're on 6.1 to take you up to PG 14.</p>",
+        "id": 1523417,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678719177
+    },
+    {
+        "content": "<p>I am trying to run all this on a backup server (to then just swap folks from one to the other with minimal interruption, but some loss of recent messages)</p>",
+        "id": 1523418,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678719234
+    },
+    {
+        "content": "<p>I believe that's the order I tried. But I'll try again and I'll be mindful of what versions of postgres I have at all times</p>",
+        "id": 1523420,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678719292
+    },
+    {
+        "content": "<p>thank you! I'll try to post updates during today</p>",
+        "id": 1523425,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678719316
+    },
+    {
+        "content": "<p>Starting with installing 4.6 with <code>--postgresql-version=10</code> is probably the trick.</p>",
+        "id": 1523426,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678719325
+    },
+    {
+        "content": "<p>So to be explicit:</p>\n<ul>\n<li>install ubuntu 20.04</li>\n<li>install zulip 4.6 <code>--postgresql-version=10</code></li>\n<li><code>upgrade-postgresql</code> to pg13</li>\n<li><code>upgrade-zulip</code> to 6.1</li>\n<li>optionally go up to <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade.html#upgrading-from-ubuntu-20-04-focal-to-22-04-jammy\">Ubuntu 22.04</a> and/or repeat <code>upgrade-postgresql</code> to give you pg14.</li>\n</ul>",
+        "id": 1523428,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678719489
+    },
+    {
+        "content": "<p>do you think I'd be able to restore the backup directly on a new server running 20.04 on which I've run an install zulip 4.6 with the <code>--postgresql-version=10</code> ?</p>",
+        "id": 1523429,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678719503
+    },
+    {
+        "content": "<p>Yes.</p>",
+        "id": 1523430,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678719519
+    },
+    {
+        "content": "<p>(nevermind, you just answered the question with your last message, thanks!)</p>",
+        "id": 1523431,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678719523
+    },
+    {
+        "content": "<p>okay, I think we are progressing, but I ran into a new error.</p>\n<p>I was following these steps:</p>\n<ol>\n<li>install ubuntu 20.04</li>\n<li>install zulip 4.6 --postgresql-version=10</li>\n<li>restore-backup</li>\n<li>upgrade-postgresql to pg13</li>\n<li>upgrade-zulip to 6.1</li>\n</ol>\n<p>I got the following error on step 3 (restoring the backup):</p>",
+        "id": 1523468,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678723899
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>Notice: /Stage[main]/Zulip::Supervisor/Service[supervisor]: Triggered &#39;refresh&#39; from 2 events\nNotice: Applied catalog in 8.65 seconds\n+ pg_restore --dbname=zulip -- /tmp/zulip-restore-backup-o75w4j8z/zulip-backup/database\npg_restore: [archiver] unsupported version (1.14) in file header\n\nError running a subcommand of /home/zulip/deployments/current/scripts/setup/restore-backup: pg_restore --dbname=zulip -- /tmp/zulip-restore-backup-o75w4j8z/zulip-backup/database\nActual error output for the subcommand is just above this.\n</code></pre></div>",
+        "id": 1523469,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678723915
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> , not sure if you are available/able to give me some advice on how to proceed. Thanks and sorry to keep pinging you!</p>",
+        "id": 1523470,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678723948
+    },
+    {
+        "content": "<p>I'm not familiar with that error -- my only guess is that <code>/tmp/zulip-restore-backup-o75w4j8z/zulip-backup/database</code> isn't the format that postgres is expecting for some reason.  Double-check the versions of postgres on the export side and the import side match?</p>",
+        "id": 1523475,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678724034
+    },
+    {
+        "content": "<p>so here is what I'm seeing on the old server (that generated the backup) and continues to run our zulip:</p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code>$<span class=\"w\"> </span>cat<span class=\"w\"> </span>/etc/zulip/zulip.conf\n<span class=\"o\">[</span>machine<span class=\"o\">]</span>\n<span class=\"nv\">puppet_classes</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span>zulip::profile::standalone\n<span class=\"nv\">deploy_type</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span>voyager\n\n<span class=\"o\">[</span>rabbitmq<span class=\"o\">]</span>\n<span class=\"nv\">nodename</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span>zulip@localhost\n\n<span class=\"o\">[</span>certbot<span class=\"o\">]</span>\n<span class=\"nv\">auto_renew</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span>yes\n\n<span class=\"o\">[</span>postgresql<span class=\"o\">]</span>\n<span class=\"nv\">version</span><span class=\"w\"> </span><span class=\"o\">=</span><span class=\"w\"> </span><span class=\"m\">10</span>\n\n\n$<span class=\"w\"> </span>pg_lsclusters\nVer<span class=\"w\"> </span>Cluster<span class=\"w\"> </span>Port<span class=\"w\"> </span>Status<span class=\"w\"> </span>Owner<span class=\"w\">    </span>Data<span class=\"w\"> </span>directory<span class=\"w\">              </span>Log<span class=\"w\"> </span>file\n<span class=\"m\">10</span><span class=\"w\">  </span>main<span class=\"w\">    </span><span class=\"m\">5432</span><span class=\"w\"> </span>down<span class=\"w\">   </span>postgres<span class=\"w\"> </span>/var/lib/postgresql/10/main<span class=\"w\"> </span>/var/log/postgresql/postgresql-%Y-%m-%d_%H%M%S.log\n<span class=\"m\">13</span><span class=\"w\">  </span>main<span class=\"w\">    </span><span class=\"m\">5432</span><span class=\"w\"> </span>online<span class=\"w\"> </span>postgres<span class=\"w\"> </span>/var/lib/postgresql/13/main<span class=\"w\"> </span>/var/log/postgresql/postgresql-%Y-%m-%d_%H%M%S.log\n</code></pre></div>",
+        "id": 1523478,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678724182
+    },
+    {
+        "content": "<p>this seems weird, pg version 10 is down, and pg 13 is online... but the zulip.conf points to pg 10</p>",
+        "id": 1523479,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678724214
+    },
+    {
+        "content": "<p>could this be because at some point we restored a zulip+pg10 backup on a new zulip+pg13 instance?</p>",
+        "id": 1523481,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678724308
+    },
+    {
+        "content": "<p>do you have any advice on how to un-mess this?</p>",
+        "id": 1523482,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678724331
+    },
+    {
+        "content": "<p>Looks like a happy postgres 13 situation.  I'd <code>s/10/13/</code> in the config file and <code>apt-get purge</code> any <code>dpkg --get-selections | grep postgresql | grep 10</code></p>",
+        "id": 1523485,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678724445
+    },
+    {
+        "content": "<p>That's just cleanup on the old host.  You can skip it.</p>",
+        "id": 1523486,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678724466
+    },
+    {
+        "content": "<p>The main thing is to <code>s/10/13/</code> in the new install instructions above.  And since it's already PG 13, I think you can simplify some steps.</p>",
+        "id": 1523488,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678724493
+    },
+    {
+        "content": "<ol>\n<li>install 20.04</li>\n<li>Install zulip 4.6 <code>--postgresql-version=13</code></li>\n<li>restore the backup</li>\n<li>upgrade to 6.1</li>\n<li>upgrade-postgresql and/or the OS to 22.04</li>\n</ol>",
+        "id": 1523489,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678724547
+    },
+    {
+        "content": "<p>thanks! will try that now!</p>",
+        "id": 1523491,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678724573
+    },
+    {
+        "content": "<p>Actually, you will need to <code>s/10/13/</code> on the old host since we use the config file when installing on the new host</p>",
+        "id": 1523493,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678724655
+    },
+    {
+        "content": "<p>actually, do I have to change the config file on the old server, then re-export a backup, and then use that clean pg13 backup on the new ubuntu20.04 instance running the new zulip+pg13 ?</p>",
+        "id": 1523494,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678724690
+    },
+    {
+        "content": "<p>Yes.</p>",
+        "id": 1523496,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678724706
+    },
+    {
+        "content": "<p>awesome, that worked!!</p>",
+        "id": 1523644,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678733433
+    },
+    {
+        "content": "<p>last step is switching the DNS for those servers. Is there a way to re-trigger certbot through zulip's scripts/manage.py ?</p>",
+        "id": 1523646,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678733466
+    },
+    {
+        "content": "<p>thank you SO much!! finally got a full upgrade! <span aria-label=\"praise\" class=\"emoji emoji-1f64c\" role=\"img\" title=\"praise\">:praise:</span> <span aria-label=\"praise\" class=\"emoji emoji-1f64c\" role=\"img\" title=\"praise\">:praise:</span> <span aria-label=\"praise\" class=\"emoji emoji-1f64c\" role=\"img\" title=\"praise\">:praise:</span></p>",
+        "id": 1523649,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678733487
+    },
+    {
+        "content": "<p>I think you need to call <code>certbot</code>directly.</p>",
+        "id": 1523654,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1678733671
+    },
+    {
+        "content": "<p>gotcha</p>",
+        "id": 1523657,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678733901
+    },
+    {
+        "content": "<p>thanks again, Alex!</p>\n<p>In case somebody in the future needs it, I was able to rerun certbot with :</p>\n<div class=\"codehilite\" data-code-language=\"Bash\"><pre><span></span><code>sudo<span class=\"w\"> </span>-s<span class=\"w\">  </span><span class=\"c1\"># If not already root</span>\n/home/zulip/deployments/current/scripts/setup/setup-certbot<span class=\"w\"> </span>--email<span class=\"o\">=</span>EMAIL<span class=\"w\"> </span>HOSTNAME<span class=\"w\"> </span><span class=\"o\">[</span>HOSTNAME2...<span class=\"o\">]</span>\n</code></pre></div>\n<p>docs: <a href=\"https://zulip.readthedocs.io/en/stable/production/ssl-certificates.html#after-zulip-is-already-installed\">https://zulip.readthedocs.io/en/stable/production/ssl-certificates.html#after-zulip-is-already-installed</a></p>",
+        "id": 1523763,
+        "sender_full_name": "Will Monge",
+        "timestamp": 1678738453
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"8187\">Will Monge</span> has marked this topic as resolved.</p>",
+        "id": 1523764,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1678738470
+    }
+]

@@ -1,0 +1,86 @@
+[
+    {
+        "content": "<p>So, this PR (WIP) adds a stream filter and upon activation of the stream filter, shows all the topics in the stream by fetching a message (max_msg_id) for every topic in the stream. The idea is to support full history of a stream. I can complete this PR if the idea is worth investing in.</p>\n<p><a href=\"/user_uploads/2/29/Fe9daIeH-Ega_Ac1Wm7OFSG2/RT-stream_filter.gif\">RT-stream_filter.gif</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/29/Fe9daIeH-Ega_Ac1Wm7OFSG2/RT-stream_filter.gif\" title=\"RT-stream_filter.gif\"><img src=\"/user_uploads/2/29/Fe9daIeH-Ega_Ac1Wm7OFSG2/RT-stream_filter.gif\"></a></div>",
+        "id": 1281787,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1636996719
+    },
+    {
+        "content": "<p>Since the fetching happens in background, and user gets rendered an immediate version of the filter which shows the topics already fetched, the time taken to process the query is not a factor.</p>",
+        "id": 1281811,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1636997750
+    },
+    {
+        "content": "<p>So, we can possibly do something for the <code>Participated</code> filter here too.</p>",
+        "id": 1281812,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1636997794
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"5140\">Aman Agrawal (amanagr)</span> <a href=\"#narrow/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256/near/1281812\">said</a>:</p>\n<blockquote>\n<p>So, we can possibly do something for the <code>Participated</code> filter here too.</p>\n</blockquote>\n<p>I don't think we have the data to do that easily, but we could likely extend the \"fetch topics for a stream\" endpoint to offer a way to get that.</p>",
+        "id": 1282004,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1637010019
+    },
+    {
+        "content": "<p>I assume this is using the same topic-fetching endpoint that we use for populating the left sidebar?</p>",
+        "id": 1282006,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1637010082
+    },
+    {
+        "content": "<p>I guess here's the query that endpoint does:</p>\n<div class=\"codehilite\"><pre><span></span><code>    SELECT\n        &quot;zerver_message&quot;.&quot;subject&quot; as topic,\n        max(&quot;zerver_message&quot;.id) as max_message_id\n    FROM &quot;zerver_message&quot;\n    INNER JOIN &quot;zerver_usermessage&quot; ON (\n        &quot;zerver_usermessage&quot;.&quot;message_id&quot; = &quot;zerver_message&quot;.&quot;id&quot;\n    )\n    WHERE (\n        &quot;zerver_usermessage&quot;.&quot;user_profile_id&quot; = %s AND\n        &quot;zerver_message&quot;.&quot;recipient_id&quot; = %s\n    )\n    GROUP BY (\n        &quot;zerver_message&quot;.&quot;subject&quot;\n    )\n    ORDER BY max(&quot;zerver_message&quot;.id) DESC\n</code></pre></div>\n<p>I think it'd be possible to extend that to return the set of <code>sender_id</code> values for each, but I'm not sure I know how to do that without it being much more expensive.</p>",
+        "id": 1282008,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1637010181
+    },
+    {
+        "content": "<p>The other option is to just have the stream-filtered view not support the \"Participated\" column and filter in its initial version.  I wouldn't want to do that if it was a ton of work to make happen, but Recent Topics would still certainly be useful without it.</p>",
+        "id": 1282009,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1637010232
+    },
+    {
+        "content": "<p>The other approach we can take is using the data from just fetching all recent message history on the stream, which would be more in the direction of having working \"Load more\" logic for the main \"Recent topics\" view, which I think was just blocked on scrolling UI issues.</p>",
+        "id": 1282012,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1637010296
+    },
+    {
+        "content": "<p>If we complete this PR, would there be any blockers for adding an option to display this type of view instead of an interleaved stream view?</p>",
+        "id": 1282153,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1637021291
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256/near/1282012\">said</a>:</p>\n<blockquote>\n<p>The other approach we can take is using the data from just fetching all recent message history on the stream, which would be more in the direction of having working \"Load more\" logic for the main \"Recent topics\" view, which I think was just blocked on scrolling UI issues.</p>\n</blockquote>\n<p>Okay.</p>",
+        "id": 1282225,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1637030585
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256/near/1282153\">said</a>:</p>\n<blockquote>\n<p>If we complete this PR, would there be any blockers for adding an option to display this type of view instead of an interleaved stream view?</p>\n</blockquote>\n<p>I think the prep work for both will be same.</p>",
+        "id": 1282226,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1637030625
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/Recent.20topics.20stream.20filter.20.2320256/near/1282153\">said</a>:</p>\n<blockquote>\n<p>If we complete this PR, would there be any blockers for adding an option to display this type of view instead of an interleaved stream view?</p>\n</blockquote>\n<p>It might require more work on performance and completeness considerations, but yeah, we'd want to start from this for that work.</p>",
+        "id": 1282714,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1637110175
+    },
+    {
+        "content": "<p>Cool, that would be great. I'm not sure if there are any UX decisions we need to make at this point?</p>",
+        "id": 1283340,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1637176194
+    },
+    {
+        "content": "<p>I will let you know when the PR is ready to play with. I am not making any massive UI changes, so we can tweak the things later too.</p>",
+        "id": 1283654,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1637227351
+    }
+]

@@ -1,0 +1,152 @@
+[
+    {
+        "content": "<p>I just started looking into <a href=\"https://github.com/zulip/zulip/pull/21285\">#21285</a>, which is splitting the right buddy list into users relevant to a conversation and everyone else.</p>\n<p>Our current faded-user system focuses on the <strong>compose box recipient</strong>, but I want to make a case that we should do it for the <strong>current narrow</strong>. We now have the handy button to let users move to the narrow they're composing to, which would let them see the relevant users for their recipient if they want.</p>\n<p>Many users have asked for this feature and they mostly talk about stream view and not composebox view:</p>\n<ul>\n<li>\"please highlight users when stream is selected and not only when compose box is entered\" <a href=\"https://github.com/zulip/zulip/issues/10208#issuecomment-461079759\">https://github.com/zulip/zulip/issues/10208#issuecomment-461079759</a></li>\n<li>\"It seems that a good enhancement would be to only show the users subscribed to the current stream?\" <a href=\"https://github.com/zulip/zulip/issues/236\">https://github.com/zulip/zulip/issues/236</a> </li>\n<li>\"When in a narrow other than all-messages, we should limit the display of users to show those in the narrow, much like the webapp makes the display of out-of-narrow users.\" <a href=\"https://github.com/zulip/zulip-terminal/issues/575\">https://github.com/zulip/zulip-terminal/issues/575</a></li>\n<li><a href=\"https://github.com/zulip/zulip/issues/16835\">https://github.com/zulip/zulip/issues/16835</a></li>\n</ul>\n<p>Can I get confirmation that we're specifically doing this for the current narrow and not the compose box recipient?</p>",
+        "id": 1629582,
+        "sender_full_name": "Evy",
+        "timestamp": 1692731885
+    },
+    {
+        "content": "<p>I think you right. Compose box is derived from that. You want to see compose box autosuggest people first from the list of the current narrow</p>",
+        "id": 1629609,
+        "sender_full_name": "Vlad Korobov",
+        "timestamp": 1692740246
+    },
+    {
+        "content": "<p>The compose box can be for a different narrow than the visible one. Autosuggesting people from the list is different than the thing I'm suggesting, which is to always keep it matching the narrow.</p>",
+        "id": 1629610,
+        "sender_full_name": "Evy",
+        "timestamp": 1692740439
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"21453\">@Evy</span> it was definitely intentional that the existing fading logic is for the current narrow.</p>\n<p>I don't think we need to stick with that with a design change to no longer be doing fading as how we're doing things in the sidebar -- but the fading is meant to reinforce/match the fading that we do of visible messages that are not in the conversation you're composing to -- as part of helping folks avoid accidentally sending messages to a different place/audience than they intended.</p>\n<p>So I think we should feel fine changing the logic, but we should try to avoid an intermediate state where we're still doing fading with a different rule, if that makes sense.</p>",
+        "id": 1629701,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692747287
+    },
+    {
+        "content": "<p>I suppose one could imagine continuing to do fading under the current rule based on the compose box, either by default or as an option -- the proposed design change is mostly a change in organization/sectioning for the sidebar.</p>",
+        "id": 1629702,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692747375
+    },
+    {
+        "content": "<p>But I think the main goal here is to, when you're in a narrow/view that is limited to a single stream, change the main sidebar display around that.</p>",
+        "id": 1629704,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692747402
+    },
+    {
+        "content": "<p>Okay great -- yeah my plan was to remove the fading as a commit immediately following the split buddy list, so that they wouldn't both exist at the same time.</p>",
+        "id": 1629705,
+        "sender_full_name": "Evy",
+        "timestamp": 1692747434
+    },
+    {
+        "content": "<p>Does that sound reasonable?</p>",
+        "id": 1629709,
+        "sender_full_name": "Evy",
+        "timestamp": 1692747478
+    },
+    {
+        "content": "<p>Yeah that seems fine, and would make it easy to restore the fading in some form via reverting that commit (possibly hidden behind an option) if we find folks complain about it being removed.</p>",
+        "id": 1629748,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692750421
+    },
+    {
+        "content": "<p>(Which I'm not particularly expecting, but it can be very handy to have the option in case users surprise us.)</p>",
+        "id": 1629750,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692750466
+    },
+    {
+        "content": "<p>Okay! I worked a while on the buddy list today and got something working which feels exciting! I tried it on a dev environment with 1k users (I attempted 10k but the setup script crashed) and it seems to work fine in that it still paginates loading users -- though it might actually do that more than we want, so I'm going to play around with that a bit more. It's a bit hard to test because all the users have the same \"last active\" time which is very unrealistic and results in us sorting/filtering in ways that appear wrong but maybe are actually fine. This is notable on user search as well.</p>\n<p>Put up the code I have so far as a PR on my own fork if folks want to see: <a href=\"https://github.com/evykassirer/zulip/pull/4\">https://github.com/evykassirer/zulip/pull/4</a></p>",
+        "id": 1629854,
+        "sender_full_name": "Evy",
+        "timestamp": 1692774273
+    },
+    {
+        "content": "<p>note: I haven't added user counts to the sections, and am considering not having this as part of the first version we merge, especially because of the pagination situation.</p>",
+        "id": 1629855,
+        "sender_full_name": "Evy",
+        "timestamp": 1692774278
+    },
+    {
+        "content": "<p>I also haven't made any custom heading text other than \"In selected conversation\" and am not sure if that's something we specifically want or not.</p>",
+        "id": 1629856,
+        "sender_full_name": "Evy",
+        "timestamp": 1692774282
+    },
+    {
+        "content": "<p>I'm surprised the setup script cracked -- let's debug that in <a class=\"stream\" data-stream-id=\"3\" href=\"/#narrow/stream/3-backend\">#backend</a>. We definitely want to be able to do performance testing with 10K users.</p>",
+        "id": 1630249,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692820831
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"21453\">Evy</span> <a href=\"#narrow/stream/101-design/topic/buddy.20list.20split.20users/near/1629855\">said</a>:</p>\n<blockquote>\n<p>note: I haven't added user counts to the sections, and am considering not having this as part of the first version we merge, especially because of the pagination situation.</p>\n</blockquote>\n<p>That's totally fine, it's a very naturally cut enhancement.</p>",
+        "id": 1630251,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692820865
+    },
+    {
+        "content": "<p>I've put up a draft PR! <a href=\"https://github.com/zulip/zulip/pull/26717\">#26717</a></p>\n<p><a href=\"/user_uploads/2/a2/ndqpGdN4s4GewfKZwbTdF4ta/image.png\">image.png</a></p>\n<div class=\"message_inline_image\"><a href=\"/user_uploads/2/a2/ndqpGdN4s4GewfKZwbTdF4ta/image.png\" title=\"image.png\"><img src=\"/user_uploads/2/a2/ndqpGdN4s4GewfKZwbTdF4ta/image.png\"></a></div>",
+        "id": 1639227,
+        "sender_full_name": "Evy",
+        "timestamp": 1694567835
+    },
+    {
+        "content": "<p>Should I play with it, or is it better for someone to review the code first?</p>",
+        "id": 1639649,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694628037
+    },
+    {
+        "content": "<p>If you're feeling tight for time and want to reduce the number of passes you do, then waiting might be a good idea. But I've played around with a decent amount and don't know of any current UX issues, so I would definitely benefit from your input!</p>",
+        "id": 1639831,
+        "sender_full_name": "Evy",
+        "timestamp": 1694636816
+    },
+    {
+        "content": "<p>I'm planning to poke at and review this PR this week, Evy. I'll make notes if there's anything I think we could pair on, if you'd be up for that.</p>",
+        "id": 1639834,
+        "sender_full_name": "Karl Stolley",
+        "timestamp": 1694637459
+    },
+    {
+        "content": "<p>Why don’t we open search field by default?</p>",
+        "id": 1639840,
+        "sender_full_name": "Vlad Korobov",
+        "timestamp": 1694638071
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"22433\">Vlad Korobov</span> <a href=\"#narrow/stream/101-design/topic/buddy.20list.20split.20users/near/1639840\">said</a>:</p>\n<blockquote>\n<p>Why don’t we open search field by default?</p>\n</blockquote>\n<p>Is that in the designs? I think it's cleaner to have it closed but don't feel that attached to that. If we have the search field open all the time I'd want to make it prettier :)</p>",
+        "id": 1639856,
+        "sender_full_name": "Evy",
+        "timestamp": 1694639090
+    },
+    {
+        "content": "<p>Well right now we do this without a design pass, I guess and showing the search bar open could be UX improvement. I see that people are reluctant to click search icon when they are actually want to search for a person</p>",
+        "id": 1639936,
+        "sender_full_name": "Vlad Korobov",
+        "timestamp": 1694643139
+    },
+    {
+        "content": "<p>And I will propose the designed version together in the Left Sidebar redesign</p>",
+        "id": 1639937,
+        "sender_full_name": "Vlad Korobov",
+        "timestamp": 1694643165
+    },
+    {
+        "content": "<p>I don't think any similar apps have always-open \"filter users\" widget there; Zulip had it always-open originally several years ago, and it was pointed to as a source of clutter. Doesn't necessarily mean we can't decide those users were wrong, but I figure it's worth mentioning.</p>",
+        "id": 1640008,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1694646585
+    },
+    {
+        "content": "<p>Messenger and Signal have it, though that's mostly 1:1 conversations. Slack doesn't have the buddy list unless you click into a modal, and the modal has the always-open search. Discord doesn't seem to offer user search at all?</p>",
+        "id": 1640026,
+        "sender_full_name": "Evy",
+        "timestamp": 1694648025
+    }
+]

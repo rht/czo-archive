@@ -1,0 +1,150 @@
+<html>
+<head><meta charset="utf-8"><title>too much logging · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/too.20much.20logging.html">too much logging</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="639891"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/too%20much%20logging/near/639891" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matthias <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/too.20much.20logging.html#639891">(Aug 29 2018 at 10:28)</a>:</h4>
+<p>Hi there, <br>
+I've been comparing various containers and noticed that Zulip had the highest disk IO for writes by far. One place that came to mind was all the logging that Zulip is doing which is going way beyond errors and warnings. </p>
+<ul>
+<li>every http request seems to get logged in server as 'INFO'. it would be nice to have a setting to turn this down a bit</li>
+<li>also, server.log is growing endlessly whereas other log files are archives after 100MB. I'd like that for Zulip django.log and server.log as well</li>
+<li>tornado.log sometimes creates 10 archived versions which is more than 1GB space wasted. Any chance that those could be gzipped?</li>
+</ul>
+<p>I understand that two of the three mentioned are dependencies of Zulip but maybe you have some leverage to forward these requests upstream (1) server.log, <strong>Django</strong> archiving large logs 2) <strong>django</strong>, <strong>tornado</strong> (and server.log) zipping of log archives.</p>
+
+
+
+<a name="639893"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/too%20much%20logging/near/639893" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matthias <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/too.20much.20logging.html#639893">(Aug 29 2018 at 10:31)</a>:</h4>
+<p>Django also produces some entries in errors.log for our internal DNS subdomains. They are not used on the public web but every link, we send through zulip which contains such a domain causes an error because django can't look it up to create a preview.</p>
+
+
+
+<a name="639895"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/too%20much%20logging/near/639895" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matthias <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/too.20much.20logging.html#639895">(Aug 29 2018 at 10:32)</a>:</h4>
+<p>here is one example of <a href="http://pve.our-domain.com" target="_blank" title="http://pve.our-domain.com">pve.our-domain.com</a> where pve is defined in the DNS management of our provider but not publically reachable. Only internally it can be reached. I would think that Django would be able to reach it since Zulip is also just internal.</p>
+
+
+
+<a name="639896"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/too%20much%20logging/near/639896" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matthias <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/too.20much.20logging.html#639896">(Aug 29 2018 at 10:33)</a>:</h4>
+<div class="codehilite"><pre><span></span><span class="x">2018-08-29 09:53:54.740 ERR  [] Unable to fetch information from url https://pve.our-domain.com:8006/#v1:0:=lxc%2F100:4:5:::::21, traceback: Traceback (most recent call last):</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/urllib3/contrib/pyopenssl.py&quot;, line 441, in wrap_socket</span>
+<span class="x">    cnx.do_handshake()</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/OpenSSL/SSL.py&quot;, line 1716, in do_handshake</span>
+<span class="x">    self._raise_ssl_error(self._ssl, result)</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/OpenSSL/SSL.py&quot;, line 1456, in _raise_ssl_error</span>
+<span class="x">    _raise_current_error()</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/OpenSSL/_util.py&quot;, line 54, in exception_from_error_queue</span>
+<span class="x">    raise exception_type(errors)</span>
+<span class="x">OpenSSL.SSL.Error: [(&#39;SSL routines&#39;, &#39;tls_process_server_certificate&#39;, &#39;certificate verify failed&#39;)]</span>
+
+<span class="x">During handling of the above exception, another exception occurred:</span>
+
+<span class="x">Traceback (most recent call last):</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/urllib3/connectionpool.py&quot;, line 601, in urlopen</span>
+<span class="x">    chunked=chunked)</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/urllib3/connectionpool.py&quot;, line 346, in _make_request</span>
+<span class="x">    self._validate_conn(conn)</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/urllib3/connectionpool.py&quot;, line 850, in _validate_conn</span>
+<span class="x">    conn.connect()</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/urllib3/connection.py&quot;, line 326, in connect</span>
+<span class="x">    ssl_context=context)</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/urllib3/util/ssl_.py&quot;, line 329, in ssl_wrap_socket</span>
+<span class="x">    return context.wrap_socket(sock, server_hostname=server_hostname)</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/urllib3/contrib/pyopenssl.py&quot;, line 448, in wrap_socket</span>
+<span class="x">    raise ssl.SSLError(&#39;bad handshake: %r&#39; % e)</span>
+<span class="x">ssl.SSLError: (&quot;bad handshake: Error([(&#39;SSL routines&#39;, &#39;tls_process_server_certificate&#39;, &#39;certificate verify failed&#39;)],)&quot;,)</span>
+
+<span class="x">During handling of the above exception, another exception occurred:</span>
+
+<span class="x">Traceback (most recent call last):</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/requests/adapters.py&quot;, line 440, in send</span>
+<span class="x">    timeout=timeout</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/urllib3/connectionpool.py&quot;, line 639, in urlopen</span>
+<span class="x">    _stacktrace=sys.exc_info()[2])</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/urllib3/util/retry.py&quot;, line 388, in increment</span>
+<span class="x">    raise MaxRetryError(_pool, url, error or ResponseError(cause))</span>
+<span class="x">urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host=&#39;pve.our-domain.com&#39;, port=8006): Max retries exceeded with url: / (Caused by SSLError(SSLError(&quot;bad handshake: Error([(&#39;SSL routines&#39;, &#39;tls_process_server_certificate&#39;, &#39;certificate verify failed&#39;)],)&quot;,),))</span>
+
+<span class="x">During handling of the above exception, another exception occurred:</span>
+
+<span class="x">Traceback (most recent call last):</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zerver/lib/url_preview/preview.py&quot;, line 43, in get_link_embed_data</span>
+<span class="x">    data = get_oembed_data(url, maxwidth=maxwidth, maxheight=maxheight)</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zerver/lib/url_preview/oembed/__init__.py&quot;, line 9, in get_oembed_data</span>
+<span class="x">    data = oEmbed(url, maxwidth=maxwidth, maxheight=maxheight)</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/pyoembed/__init__.py&quot;, line 25, in oEmbed</span>
+<span class="x">    oembed_url = provider.oembed_url(url)</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/pyoembed/providers/autodiscover.py&quot;, line 26, in oembed_url</span>
+<span class="x">    response = requests.get(url)</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/requests/api.py&quot;, line 72, in get</span>
+<span class="x">    return request(&#39;get&#39;, url, params=params, **kwargs)</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/requests/api.py&quot;, line 58, in request</span>
+<span class="x">    return session.request(method=method, url=url, **kwargs)</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/requests/sessions.py&quot;, line 508, in request</span>
+<span class="x">    resp = self.send(prep, **send_kwargs)</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/requests/sessions.py&quot;, line 618, in send</span>
+<span class="x">    r = adapter.send(request, **kwargs)</span>
+<span class="x">  File &quot;/home/zulip/deployments/2018-08-18-09-19-05/zulip-py3-venv/lib/python3.5/site-packages/requests/adapters.py&quot;, line 506, in send</span>
+<span class="x">    raise SSLError(e, request=request)</span>
+<span class="x">requests.exceptions.SSLError: HTTPSConnectionPool(host=&#39;pve.our-domain.com&#39;, port=8006): Max retries exceeded with url: / (Caused by SSLError(SSLError(&quot;bad handshake: Error([(&#39;SSL routines&#39;, &#39;tls_process_server_certificate&#39;, &#39;certificate verify failed&#39;)],)&quot;,),))</span>
+</pre></div>
+
+
+
+<a name="639899"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/too%20much%20logging/near/639899" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Elbel <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/too.20much.20logging.html#639899">(Aug 29 2018 at 10:48)</a>:</h4>
+<p>Good point with server.log and every request. Especially since the same things also get logged in nginx's access log.<br>
+However, here on our production server, server.log <strong>does</strong> get rotated together with the other log files:</p>
+<div class="codehilite"><pre><span></span>(#26) ls -ltrh server.log*
+-rw-r--r-- 1 zulip zulip  47M May  8 06:42 server.log.10.gz
+-rw-r--r-- 1 zulip zulip  52M May 18 06:53 server.log.9.gz
+-rw-r--r-- 1 zulip zulip  49M May 30 06:35 server.log.8.gz
+-rw-r--r-- 1 zulip zulip  49M Jun 11 06:32 server.log.7.gz
+-rw-r--r-- 1 zulip zulip  49M Jun 21 06:36 server.log.6.gz
+-rw-r--r-- 1 zulip zulip  47M Jul  2 06:44 server.log.5.gz
+-rw-r--r-- 1 zulip zulip  50M Jul 12 06:55 server.log.4.gz
+-rw-r--r-- 1 zulip zulip  47M Jul 23 06:34 server.log.3.gz
+-rw-r--r-- 1 zulip zulip  52M Aug  3 06:52 server.log.2.gz
+-rw-r--r-- 1 zulip zulip 542M Aug 17 06:37 server.log.1
+-rw-r--r-- 1 zulip zulip 508M Aug 29 12:47 server.log
+</pre></div>
+
+
+
+<a name="639900"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/too%20much%20logging/near/639900" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Elbel <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/too.20much.20logging.html#639900">(Aug 29 2018 at 10:49)</a>:</h4>
+<p>Do you have <code>/etc/logrotate.d/zulip</code>?</p>
+
+
+
+<a name="639902"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/too%20much%20logging/near/639902" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matthias <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/too.20much.20logging.html#639902">(Aug 29 2018 at 10:56)</a>:</h4>
+<p>ah, that's where the action happen!? Interesting. server.log is 500MB limit. A bit too high I find. <br>
+What else do I have to do in order for my changes to take effect?</p>
+
+
+
+<a name="639903"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/too%20much%20logging/near/639903" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matthias <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/too.20much.20logging.html#639903">(Aug 29 2018 at 10:58)</a>:</h4>
+<p>ah, just googled it... that explains a lot. It's doing the rotation only once a day. I once had the case where an incomplete and buggy installation of Zulip caused 2 GB log files in server.log and django.log within a few hours.</p>
+
+
+
+<a name="639904"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/too%20much%20logging/near/639904" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matthias <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/too.20much.20logging.html#639904">(Aug 29 2018 at 10:58)</a>:</h4>
+<p>ok, that solves that issue, thanks <span class="user-mention" data-user-id="1799">@Michael Elbel</span></p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

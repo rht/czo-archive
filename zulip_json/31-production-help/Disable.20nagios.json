@@ -1,0 +1,140 @@
+[
+    {
+        "content": "<p>Hi :-)<br>\nI detected those lines appearing every minute in the logs:</p>\n<div class=\"codehilite\"><pre><span></span><code>Oct 13 10:29:01 host CRON[pid]: (root) CMD (/home/zulip/deployments/current/scripts/nagios/check-rabbitmq-consumers)\nOct 13 10:29:01 host CRON[pid]: (root) CMD (/home/zulip/deployments/current/scripts/nagios/check-rabbitmq-queue &amp;&gt; /var/lib/nagios_state/check-rabbitmq-results-tmp; mv /var/lib/nagios_state/check-rabbitmq-results-tmp /var/lib/nagios_state/check-rabbitmq-results)\n</code></pre></div>\n\n\n<p>I detected a recent <a href=\"https://github.com/zulip/zulip/pull/16439\">issue</a> about this. Is there an option to change this already before the next release which will contain this change?</p>",
+        "id": 1036037,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602578096
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert</span> you can just delete the <code>/etc/cron.d/</code> files with <code>check-rabbitmq</code> in their names.</p>",
+        "id": 1036431,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602614057
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> is that batch of renames something we want to backport to the 3.x branch?</p>",
+        "id": 1036432,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602614071
+    },
+    {
+        "content": "<p>I think it'd be better not to.  The cron job isn't high cost, and it'd be bad if someone <em>was</em> using it for monitoring and we broke it in a stable series.</p>",
+        "id": 1036438,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602614144
+    },
+    {
+        "content": "<p>Yeah, that's fair; we do document them as something one can use, I think.</p>",
+        "id": 1036468,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602615059
+    },
+    {
+        "content": "<p><a href=\"https://zulip.readthedocs.io/en/latest/production/troubleshooting.html#monitoring\">https://zulip.readthedocs.io/en/latest/production/troubleshooting.html#monitoring</a></p>",
+        "id": 1036469,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602615088
+    },
+    {
+        "content": "<p>Looks like not the cron jobs, just the commands.</p>",
+        "id": 1036470,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602615094
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/Disable.20nagios/near/1036431\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"17322\">Robert</span> you can just delete the <code>/etc/cron.d/</code> files with <code>check-rabbitmq</code> in their names.</p>\n</blockquote>\n<p>Thanks!<br>\nDo you mean</p>\n<div class=\"codehilite\"><pre><span></span><code>rabbitmq-numconsumers\nrabbitmq-queuesize\n</code></pre></div>\n\n\n<p>?<br>\nWhat exactly do these two jobs do?</p>",
+        "id": 1036482,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602616999
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert</span> those collect monitoring data that you could use for Nagios alerting.</p>",
+        "id": 1036560,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602626718
+    },
+    {
+        "content": "<p>They're likely not particularly relevant to sites that aren't running at significant scale.</p>",
+        "id": 1036561,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1602626743
+    },
+    {
+        "content": "<p>Ok, so nagios itself is not enabled by default, but only those two helper scripts?</p>",
+        "id": 1037238,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602664595
+    },
+    {
+        "content": "<p>Correct.</p>",
+        "id": 1037476,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1602695447
+    },
+    {
+        "content": "<p>Thank you all! :-)</p>",
+        "id": 1037659,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1602708293
+    },
+    {
+        "content": "<p>I'd like to disable those <code>rabbit*</code> stuff in a way that allows smooth updates of Zulip in the future. So I think in addition to remove those two cron jobs, one needs to</p>\n<ul>\n<li>disable systemd service <code>rabbitmq-server.service</code></li>\n<li>replace <code>puppet_classes = zulip::app_frontend, zulip::memcached, zulip::rabbit, zulip::redis</code> (my db is remote) by <code>zulip::app_frontend, zulip::memcached, zulip::redis</code> in zulip.conf<br>\nRight?</li>\n</ul>",
+        "id": 1044766,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603386932
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert</span> you need rabbitmq-server to run Zulip; the only part that's optional is those monitoring cron jobs.</p>",
+        "id": 1044775,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1603390438
+    },
+    {
+        "content": "<p>(You can run RabbitMQ on a different node if you like, but Zulip requires it to function)</p>",
+        "id": 1044776,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1603390455
+    },
+    {
+        "content": "<p>Ah ok, thank you! So in case of an update, I need to remove the two cron jobs manually again.</p>",
+        "id": 1044881,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603392581
+    },
+    {
+        "content": "<p>If you upgrade within the 3.x branch, yes.  If you upgrade to <code>master</code>, or to 4.x when it is released, you won't.</p>",
+        "id": 1044939,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1603394568
+    },
+    {
+        "content": "<p>Ok, interesting. Why?</p>",
+        "id": 1044948,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603394789
+    },
+    {
+        "content": "<p>In the <code>master</code> branch we stopped installing them, and added code to remove them if they still existed (57d88eedd80).  We didn't backport this change to the 3.x branch, so that branch will still try to ensure those cron jobs are installed every time it gets applies puppet.</p>",
+        "id": 1044962,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1603395119
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> and I <a href=\"#narrow/stream/31-production-help/topic/Disable.20nagios/near/1036438\">discussed above</a> if we should also include that change in the 3.x series, to change the behaviour in the 3.x branch, but from my point of view, making sure that we don't break monitoring for people who <em>are</em> using it is more important than getting those few CPU cycles back for the folks who aren't (though they're certainly in the majority).</p>",
+        "id": 1044965,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1603395231
+    },
+    {
+        "content": "<p>Does that help?</p>",
+        "id": 1044966,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1603395261
+    },
+    {
+        "content": "<p>Yes, thank you for the explanation! :-)</p>",
+        "id": 1045099,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1603404267
+    }
+]

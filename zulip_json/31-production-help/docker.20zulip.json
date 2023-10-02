@@ -1,0 +1,32 @@
+[
+    {
+        "content": "<p>I have been working on <a href=\"https://github.com/zulip/docker-zulip/pull/262\">#262</a> to make docker-zulip use zulip's built in export system. Currently docker-zulip implements it's own command <code>app:backup</code> in <a href=\"http://entrpoint.sh\">entrpoint.sh</a> for handling the backup.</p>\n<p>I have some queries on the expected behavior of commands like <code>app:backup</code>. </p>\n<p>From my understanding most of these commands are supposed to be run using <code>docker-compose run &lt;command name&gt;</code>. </p>\n<ul>\n<li>app:help</li>\n<li>app:managepy</li>\n<li>app:restore</li>\n<li>app:run</li>\n</ul>\n<p>Among them, <code>docker-compose run app:managepy</code> doesn't work because the secrets are not included in the newly created container.  Including <code>initialConfiguration</code> in the command definition does make it work. </p>\n<div class=\"codehilite\"><pre><span></span><code>appManagePy() {\n    COMMAND=&quot;$1&quot;\n    shift 1\n    if [ -z &quot;$COMMAND&quot; ]; then\n        echo &quot;No command given for manage.py. Defaulting to \\&quot;shell\\&quot;.&quot;\n        COMMAND=&quot;shell&quot;\n    fi\n    echo &quot;Running manage.py ...&quot;\n    set +e\n<span class=\"gi\">+  initialConfiguration</span>\n    exec su zulip -c &quot;/home/zulip/deployments/current/manage.py $(printf &#39;%q &#39; &quot;$COMMAND&quot; &quot;$@&quot;)&quot;\n}\n</code></pre></div>\n\n\n<p>I am curious why was <code>initialConfiguration</code> not included in the first place? Is <code>app:managepy</code> not supposed to be run using <code>docker-compose run</code>? </p>\n<p>Then there is the <code>app:backup</code> command which at the moment is invoked within an existing container as a cronjob. </p>\n<div class=\"codehilite\"><pre><span></span><code>autoBackupConfiguration<span class=\"o\">()</span> <span class=\"o\">{</span>\n    <span class=\"k\">if</span> <span class=\"o\">[</span> <span class=\"s2\">&quot;</span><span class=\"nv\">$AUTO_BACKUP_ENABLED</span><span class=\"s2\">&quot;</span> !<span class=\"o\">=</span> <span class=\"s2\">&quot;True&quot;</span> <span class=\"o\">]</span> <span class=\"o\">&amp;&amp;</span> <span class=\"o\">[</span> <span class=\"s2\">&quot;</span><span class=\"nv\">$AUTO_BACKUP_ENABLED</span><span class=\"s2\">&quot;</span> !<span class=\"o\">=</span> <span class=\"s2\">&quot;true&quot;</span> <span class=\"o\">]</span><span class=\"p\">;</span> <span class=\"k\">then</span>\n        rm -f /etc/cron.d/autobackup\n        <span class=\"nb\">echo</span> <span class=\"s2\">&quot;Auto backup is disabled. Continuing.&quot;</span>\n        <span class=\"k\">return</span> <span class=\"m\">0</span>\n    <span class=\"k\">fi</span>\n    <span class=\"nb\">printf</span> <span class=\"s1\">&#39;MAILTO=&quot;&quot;\\n%s cd /;/entrypoint.sh app:backup\\n&#39;</span> <span class=\"s2\">&quot;</span><span class=\"nv\">$AUTO_BACKUP_INTERVAL</span><span class=\"s2\">&quot;</span> &gt; /etc/cron.d/autobackup\n    <span class=\"nb\">echo</span> <span class=\"s2\">&quot;Auto backup enabled.&quot;</span>\n<span class=\"o\">}</span>\n</code></pre></div>\n\n\n<p>Calling <code>docker-compose run app:backup</code> doesn't work because the command does not invoke <code>initialConfiguration</code>. Including <code>initialConfiguration</code> does make the command work. But then it cannot be called from within the cronjob since we don't likely want to call <code>initialConfiguration</code> in a container which is already configured.</p>\n<p>I am actually a bit confused on what is design principle here.  Is it fine for some of these commands to be run inside the container (like the app:backup is called in a cronjob) and some to be run via <code>docker-compose run</code>? Or should we have a uniform style for all? Or am I missing something here?</p>",
+        "id": 999156,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1598377100
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"77\">@Alexander Trost</span> FYI in case case he remembers; most of the existing code around this was written by him before Zulip adopted the project.</p>",
+        "id": 999252,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1598381470
+    },
+    {
+        "content": "<p>I think I'd prefer for these to all work the same way; if I had to guess, the <code>initialConfiguration</code> missing there is an oversight.</p>",
+        "id": 999254,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1598381510
+    },
+    {
+        "content": "<p>Okay. I guess we want all the commands to be run using docker-compose run. What should be done about the backup cronjob which is configured in <code>initialConfiguration</code>? Do we want it to be there? In that case I can make it work directly <code>./managepy backup backup</code> instead of  invoking <code>/entrypoint.sh app:backup</code>. if not I will remove the whole thing and leave it up to the admins to setup the backup.</p>",
+        "id": 999438,
+        "sender_full_name": "Vishnu KS",
+        "timestamp": 1598385961
+    },
+    {
+        "content": "<p>I'd like to remove the entire legacy backup system; folks can always run a cron job on the outside to run the backup command if they want that.</p>",
+        "id": 999470,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1598387512
+    }
+]

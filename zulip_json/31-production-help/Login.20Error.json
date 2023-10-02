@@ -1,0 +1,422 @@
+[
+    {
+        "content": "<p>Hi :) One of our users suddenly stumbled over the problem that they cannot login properly anymore. They try to login over Shibboleth, but after the (successful) login, they only get the \"internal server error\" page and the server sends such an exception to me:</p>\n<div class=\"spoiler-block\"><div class=\"spoiler-header\">\n<p>Exception Message</p>\n</div><div class=\"spoiler-content\" aria-hidden=\"true\">\n<div class=\"codehilite\"><pre><span></span><code>Traceback (most recent call last):\n  File &quot;/srv/zulip-venv-cache/084237fff2af10564fe96d2c02056d168f1e56b0/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/exception.py&quot;, line 55, in inner\n    response = get_response(request)\n  File &quot;/srv/zulip-venv-cache/084237fff2af10564fe96d2c02056d168f1e56b0/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/base.py&quot;, line 197, in _get_response\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)\n  File &quot;/home/zulip/deployments/2023-03-06-21-02-27/./zerver/views/home.py&quot;, line 131, in home\n    return zulip_login_required(home_real)(request)\n  File &quot;/home/zulip/deployments/2023-03-06-21-02-27/./zerver/decorator.py&quot;, line 426, in _wrapped_view\n    return view_func(request, *args, **kwargs)\n  File &quot;/srv/zulip-venv-cache/084237fff2af10564fe96d2c02056d168f1e56b0/zulip-py3-venv/lib/python3.8/site-packages/django/contrib/auth/decorators.py&quot;, line 23, in _wrapped_view\n    return view_func(request, *args, **kwargs)\n  File &quot;/home/zulip/deployments/2023-03-06-21-02-27/./zerver/decorator.py&quot;, line 489, in _wrapped_view_func\n    return view_func(request, *args, **kwargs)\n  File &quot;/home/zulip/deployments/2023-03-06-21-02-27/./zerver/views/home.py&quot;, line 199, in home_real\n    queue_id, page_params = build_page_params_for_home_page_load(\n  File &quot;/home/zulip/deployments/2023-03-06-21-02-27/./zerver/lib/home.py&quot;, line 145, in build_page_params_for_home_page_load\n    register_ret = do_events_register(\n  File &quot;/home/zulip/deployments/2023-03-06-21-02-27/./zerver/lib/events.py&quot;, line 1458, in do_events_register\n    reactivate_user_if_soft_deactivated(user_profile)\n  File &quot;/home/zulip/deployments/2023-03-06-21-02-27/./zerver/lib/soft_deactivation.py&quot;, line 317, in reactivate_user_if_soft_deactivated\n    add_missing_messages(user_profile)\n  File &quot;/home/zulip/deployments/2023-03-06-21-02-27/./zerver/lib/soft_deactivation.py&quot;, line 194, in add_missing_messages\n    if stream_subscription_logs[-1].event_type == RealmAuditLog.SUBSCRIPTION_DEACTIVATED:\nIndexError: list index out of range\n\n\nDeployed code:\n- git: 6.0-980-gcca8417ad4\n- ZULIP_VERSION: 6.0-980-gcca8417ad4\n\n\nRequest info:\n- path: /\n- GET: {}\n- REMOTE_ADDR: &quot;[...]&quot;\n- QUERY_STRING: &quot;&quot;\n- SERVER_NAME: &quot;&quot;\n</code></pre></div>\n</div></div>\n<p>I already restarted the server, but that didn't fix it. Is there something else I could try?</p>",
+        "id": 1544434,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681155142
+    },
+    {
+        "content": "<p>Uh, huh.  Was this server an import?</p>",
+        "id": 1544441,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681155407
+    },
+    {
+        "content": "<p>No, and the user is just a regular user. (And not a new one...)</p>",
+        "id": 1544446,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681155664
+    },
+    {
+        "content": "<p>Is there a function to logout a single user given their <code>UserProfile</code> instance? Maybe that could fix it?</p>",
+        "id": 1544478,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681156341
+    },
+    {
+        "content": "<p>No, being logged in is a function of the session, and sessions aren't indexed by user-id.</p>\n<p>Regardless, this is about the \"soft reactivation\" step for users that haven't logged in for a while.  Logging them out won't help.</p>",
+        "id": 1544479,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681156444
+    },
+    {
+        "content": "<p>The invariant which is being broken is that the user is subscribed to a stream without having an audit log record for that subscription -- or any audit log records for that user.</p>",
+        "id": 1544482,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681156513
+    },
+    {
+        "content": "<p>That shouldn't be possible unless some database hackery has happened with the user.</p>",
+        "id": 1544485,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681156535
+    },
+    {
+        "content": "<p>Hm, my bot just subribed them to a few streams. (That is actually the reason why the user tried to login.)</p>",
+        "id": 1544487,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681156576
+    },
+    {
+        "content": "<p>How do you do the subscription?</p>",
+        "id": 1544488,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681156591
+    },
+    {
+        "content": "<p>Like that: <a href=\"https://github.com/ro-i/tumcsbot/blob/79306552ea54b2e3b279f84270e8f48ee520a989/src/tumcsbot/plugins/subscribe.py#L169\">https://github.com/ro-i/tumcsbot/blob/79306552ea54b2e3b279f84270e8f48ee520a989/src/tumcsbot/plugins/subscribe.py#L169</a></p>",
+        "id": 1544492,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681156712
+    },
+    {
+        "content": "<p><a href=\"https://github.com/ro-i/tumcsbot/blob/79306552ea54b2e3b279f84270e8f48ee520a989/src/tumcsbot/client.py#L385-L388\">https://github.com/ro-i/tumcsbot/blob/79306552ea54b2e3b279f84270e8f48ee520a989/src/tumcsbot/client.py#L385-L388</a><br>\ncalls <code>add_subscription</code> with <code>principals=[...]</code> which I don't think is an API that we provide:<br>\n<a href=\"https://github.com/zulip/python-zulip-api/blob/main/zulip/zulip/__init__.py#L1406-L1415\">https://github.com/zulip/python-zulip-api/blob/main/zulip/zulip/__init__.py#L1406-L1415</a></p>",
+        "id": 1544499,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681157008
+    },
+    {
+        "content": "<p>Oh, hm, I sit corrected -- <code>users/me/subscriptions</code> does take <code>principals</code> (which seems very weird to me)</p>",
+        "id": 1544502,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681157280
+    },
+    {
+        "content": "<p>But isn't that the documented behavior? <a href=\"https://zulip.com/api/subscribe\">https://zulip.com/api/subscribe</a></p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"c1\"># To subscribe other users to a stream, you may pass</span>\n<span class=\"c1\"># the `principals` argument, like so:</span>\n<span class=\"n\">user_id</span> <span class=\"o\">=</span> <span class=\"mi\">26</span>\n<span class=\"n\">result</span> <span class=\"o\">=</span> <span class=\"n\">client</span><span class=\"o\">.</span><span class=\"n\">add_subscriptions</span><span class=\"p\">(</span>\n    <span class=\"n\">streams</span><span class=\"o\">=</span><span class=\"p\">[</span>\n        <span class=\"p\">{</span><span class=\"s2\">\"name\"</span><span class=\"p\">:</span> <span class=\"s2\">\"new stream\"</span><span class=\"p\">,</span> <span class=\"s2\">\"description\"</span><span class=\"p\">:</span> <span class=\"s2\">\"New stream for testing\"</span><span class=\"p\">},</span>\n    <span class=\"p\">],</span>\n    <span class=\"n\">principals</span><span class=\"o\">=</span><span class=\"p\">[</span><span class=\"n\">user_id</span><span class=\"p\">],</span>\n<span class=\"p\">)</span>\n<span class=\"nb\">print</span><span class=\"p\">(</span><span class=\"n\">result</span><span class=\"p\">)</span>\n</code></pre></div>",
+        "id": 1544504,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681157292
+    },
+    {
+        "content": "<p>Yes ^^</p>",
+        "id": 1544505,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681157304
+    },
+    {
+        "content": "<p>Why is it weird?</p>",
+        "id": 1544508,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681157311
+    },
+    {
+        "content": "<p>The <code>me</code> in <code>users/me/subscriptions</code> has some certain implications to me as a reader of the API. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1544510,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681157346
+    },
+    {
+        "content": "<p>It is quite useful to subscribe multiple users at once :)</p>",
+        "id": 1544513,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681157453
+    },
+    {
+        "content": "<p>Oh, for sure.</p>",
+        "id": 1544514,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681157466
+    },
+    {
+        "content": "<p>I was confused why you needed a command (thinking <code>manage.py</code> commands), but then saw you're using the API anyhow :)</p>",
+        "id": 1544516,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1681157550
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert (ro-i)</span>: Can you pop open a <code>./manage.py shell</code> and run (replacing realm and user email):</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"n\">r</span> <span class=\"o\">=</span> <span class=\"n\">get_realm</span><span class=\"p\">(</span><span class=\"s2\">\"\"</span><span class=\"p\">)</span>\n<span class=\"n\">u</span> <span class=\"o\">=</span> <span class=\"n\">get_user_by_delivery_email</span><span class=\"p\">(</span><span class=\"s2\">\"alexmv@zulip.com\"</span><span class=\"p\">,</span> <span class=\"n\">r</span><span class=\"p\">)</span>\n<span class=\"n\">RealmAuditLog</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">filter</span><span class=\"p\">(</span>\n    <span class=\"n\">realm</span><span class=\"o\">=</span><span class=\"n\">r</span><span class=\"p\">,</span>\n    <span class=\"n\">modified_user</span><span class=\"o\">=</span><span class=\"n\">u</span><span class=\"p\">,</span>\n    <span class=\"n\">event_type__in</span><span class=\"o\">=</span><span class=\"p\">[</span>\n        <span class=\"n\">RealmAuditLog</span><span class=\"o\">.</span><span class=\"n\">SUBSCRIPTION_CREATED</span><span class=\"p\">,</span>\n        <span class=\"n\">RealmAuditLog</span><span class=\"o\">.</span><span class=\"n\">SUBSCRIPTION_DEACTIVATED</span><span class=\"p\">,</span>\n        <span class=\"n\">RealmAuditLog</span><span class=\"o\">.</span><span class=\"n\">SUBSCRIPTION_ACTIVATED</span><span class=\"p\">,</span>\n    <span class=\"p\">],</span>\n<span class=\"p\">)</span><span class=\"o\">.</span><span class=\"n\">count</span><span class=\"p\">()</span>\n</code></pre></div>",
+        "id": 1544519,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681157820
+    },
+    {
+        "content": "<p>Sure, result is 61</p>",
+        "id": 1544525,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681157965
+    },
+    {
+        "content": "<p>Pull the stream-ids of the recent streams you added the user to:</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"n\">stream_ids</span> <span class=\"o\">=</span> <span class=\"p\">[</span><span class=\"o\">...</span><span class=\"n\">fill</span> <span class=\"ow\">in</span><span class=\"o\">...</span><span class=\"p\">]</span>\n<span class=\"n\">events</span> <span class=\"o\">=</span> <span class=\"n\">RealmAuditLog</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">filter</span><span class=\"p\">(</span>\n    <span class=\"n\">realm</span><span class=\"o\">=</span><span class=\"n\">r</span><span class=\"p\">,</span>\n    <span class=\"n\">modified_user</span><span class=\"o\">=</span><span class=\"n\">u</span><span class=\"p\">,</span>\n    <span class=\"n\">event_type__in</span><span class=\"o\">=</span><span class=\"p\">[</span>\n        <span class=\"n\">RealmAuditLog</span><span class=\"o\">.</span><span class=\"n\">SUBSCRIPTION_CREATED</span><span class=\"p\">,</span>\n        <span class=\"n\">RealmAuditLog</span><span class=\"o\">.</span><span class=\"n\">SUBSCRIPTION_DEACTIVATED</span><span class=\"p\">,</span>\n        <span class=\"n\">RealmAuditLog</span><span class=\"o\">.</span><span class=\"n\">SUBSCRIPTION_ACTIVATED</span><span class=\"p\">,</span>\n    <span class=\"p\">],</span>\n    <span class=\"n\">modified_stream_id__in</span><span class=\"o\">=</span><span class=\"n\">stream_ids</span><span class=\"p\">,</span>\n<span class=\"p\">)</span>\n<span class=\"kn\">from</span> <span class=\"nn\">collections</span> <span class=\"kn\">import</span> <span class=\"n\">defaultdict</span>\n<span class=\"n\">events_by_stream_id</span> <span class=\"o\">=</span> <span class=\"n\">defaultdict</span><span class=\"p\">(</span><span class=\"nb\">list</span><span class=\"p\">)</span>\n<span class=\"k\">for</span> <span class=\"n\">e</span> <span class=\"ow\">in</span> <span class=\"n\">events</span><span class=\"p\">:</span>\n    <span class=\"n\">events_by_stream_id</span><span class=\"p\">[</span><span class=\"n\">e</span><span class=\"o\">.</span><span class=\"n\">modified_stream_id</span><span class=\"p\">]</span><span class=\"o\">.</span><span class=\"n\">append</span><span class=\"p\">(</span><span class=\"n\">e</span><span class=\"o\">.</span><span class=\"n\">event_type</span><span class=\"p\">)</span>\n<span class=\"k\">for</span> <span class=\"n\">stream_id</span> <span class=\"ow\">in</span> <span class=\"n\">stream_ids</span><span class=\"p\">:</span>\n    <span class=\"nb\">print</span><span class=\"p\">(</span><span class=\"sa\">f</span><span class=\"s2\">\"</span><span class=\"si\">{</span><span class=\"n\">stream_id</span><span class=\"si\">}</span><span class=\"s2\">: </span><span class=\"si\">{</span><span class=\"n\">events_by_stream_id</span><span class=\"p\">[</span><span class=\"n\">stream_id</span><span class=\"p\">]</span><span class=\"si\">}</span><span class=\"s2\">\"</span><span class=\"p\">)</span>\n</code></pre></div>",
+        "id": 1544536,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681158257
+    },
+    {
+        "content": "<p>If you don't know the stream-ids, you can replace the first line with:</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"n\">stream_ids</span> <span class=\"o\">=</span> <span class=\"p\">[</span><span class=\"n\">sub</span><span class=\"o\">.</span><span class=\"n\">recipient</span><span class=\"o\">.</span><span class=\"n\">type_id</span> <span class=\"k\">for</span> <span class=\"n\">sub</span> <span class=\"ow\">in</span> <span class=\"n\">Subscription</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">filter</span><span class=\"p\">(</span><span class=\"n\">user_profile</span><span class=\"o\">=</span><span class=\"n\">u</span><span class=\"p\">,</span> <span class=\"n\">recipient__type</span><span class=\"o\">=</span><span class=\"n\">Recipient</span><span class=\"o\">.</span><span class=\"n\">STREAM</span><span class=\"p\">)]</span>\n</code></pre></div>",
+        "id": 1544554,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681158771
+    },
+    {
+        "content": "<p>Hm, actually the user has been subscribed to 5 new streams... That would be the output for them:</p>\n<div class=\"codehilite\"><pre><span></span><code>1555: [301]\n1556: [301]\n1559: [301]\n1558: [301]\n1557: [301]\n</code></pre></div>\n<p>But with your second addition, I get</p>\n<div class=\"spoiler-block\"><div class=\"spoiler-header\">\n<p>a long list</p>\n</div><div class=\"spoiler-content\" aria-hidden=\"true\">\n<div class=\"codehilite\"><pre><span></span><code>1: [301]\n214: [301]\n216: [301]\n298: [301]\n311: [301, 303]\n412: [301]\n413: [301]\n414: [301]\n421: [301]\n422: [301, 303]\n565: [301]\n868: []\n916: [301, 303]\n917: [301, 303]\n931: [301]\n932: [301]\n933: [301]\n934: [301]\n935: [301]\n936: [301]\n937: [301]\n1013: [301]\n1014: [301]\n1015: [301]\n1016: [301]\n1049: [301]\n1088: [301]\n1091: [303, 301]\n1092: [301]\n1093: [301]\n1098: [303, 301]\n1114: [301, 303]\n1121: [303, 301]\n1125: [301]\n1129: [301]\n1132: [301]\n1137: [301]\n1139: [301]\n1144: [301]\n1147: [301]\n1154: [301]\n1157: [301]\n1160: [301, 303]\n1164: [301]\n1165: [301]\n1166: [301]\n1167: [301]\n1227: [301]\n1555: [301]\n1556: [301]\n1557: [301]\n1558: [301]\n1559: [301]\n</code></pre></div>\n</div></div>",
+        "id": 1544563,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681158989
+    },
+    {
+        "content": "<p>OK, the <code>868: []</code> is the issue.  They're subscribed to that stream without an audit log entry for it.  Is there anything notable about that stream, or the history of it?</p>",
+        "id": 1544567,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681159031
+    },
+    {
+        "content": "<p>And/or, you can see if other users in that stream are in the same state:</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"n\">stream</span> <span class=\"o\">=</span> <span class=\"n\">Stream</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">get</span><span class=\"p\">(</span><span class=\"nb\">id</span><span class=\"o\">=</span><span class=\"mi\">868</span><span class=\"p\">)</span>\n<span class=\"n\">user_ids_in_audit_log</span> <span class=\"o\">=</span> <span class=\"nb\">set</span><span class=\"p\">(</span>\n    <span class=\"n\">RealmAuditLog</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">filter</span><span class=\"p\">(</span>\n        <span class=\"n\">realm</span><span class=\"o\">=</span><span class=\"n\">r</span><span class=\"p\">,</span>\n        <span class=\"n\">event_type__in</span><span class=\"o\">=</span><span class=\"p\">[</span>\n            <span class=\"n\">RealmAuditLog</span><span class=\"o\">.</span><span class=\"n\">SUBSCRIPTION_CREATED</span><span class=\"p\">,</span>\n            <span class=\"n\">RealmAuditLog</span><span class=\"o\">.</span><span class=\"n\">SUBSCRIPTION_DEACTIVATED</span><span class=\"p\">,</span>\n            <span class=\"n\">RealmAuditLog</span><span class=\"o\">.</span><span class=\"n\">SUBSCRIPTION_ACTIVATED</span><span class=\"p\">,</span>\n        <span class=\"p\">],</span>\n        <span class=\"n\">modified_stream</span><span class=\"o\">=</span><span class=\"n\">stream</span><span class=\"p\">,</span>\n    <span class=\"p\">)</span>\n    <span class=\"o\">.</span><span class=\"n\">distinct</span><span class=\"p\">(</span><span class=\"s2\">\"modified_user_id\"</span><span class=\"p\">)</span>\n    <span class=\"o\">.</span><span class=\"n\">values_list</span><span class=\"p\">(</span><span class=\"s2\">\"modified_user_id\"</span><span class=\"p\">,</span> <span class=\"n\">flat</span><span class=\"o\">=</span><span class=\"kc\">True</span><span class=\"p\">)</span>\n<span class=\"p\">)</span>\n<span class=\"n\">subscribed_user_ids</span> <span class=\"o\">=</span> <span class=\"nb\">set</span><span class=\"p\">(</span>\n    <span class=\"n\">Subscription</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">filter</span><span class=\"p\">(</span>\n        <span class=\"n\">recipient__type</span><span class=\"o\">=</span><span class=\"n\">Recipient</span><span class=\"o\">.</span><span class=\"n\">STREAM</span><span class=\"p\">,</span> <span class=\"n\">recipient__type_id</span><span class=\"o\">=</span><span class=\"n\">stream</span><span class=\"o\">.</span><span class=\"n\">id</span>\n    <span class=\"p\">)</span><span class=\"o\">.</span><span class=\"n\">values_list</span><span class=\"p\">(</span><span class=\"s2\">\"user_profile_id\"</span><span class=\"p\">,</span> <span class=\"n\">flat</span><span class=\"o\">=</span><span class=\"kc\">True</span><span class=\"p\">)</span>\n<span class=\"p\">)</span>\n\n<span class=\"k\">for</span> <span class=\"n\">user_id</span> <span class=\"ow\">in</span> <span class=\"n\">subscribed_user_ids</span> <span class=\"o\">-</span> <span class=\"n\">user_ids_in_audit_log</span><span class=\"p\">:</span>\n    <span class=\"nb\">print</span><span class=\"p\">(</span><span class=\"n\">user_id</span><span class=\"p\">)</span>\n</code></pre></div>",
+        "id": 1544589,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681159680
+    },
+    {
+        "content": "<p>Hm, the streams doesn't seem to exist:</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"o\">&gt;&gt;&gt;</span> <span class=\"n\">streams</span> <span class=\"o\">=</span> <span class=\"n\">c</span><span class=\"o\">.</span><span class=\"n\">get_streams</span><span class=\"p\">(</span><span class=\"n\">include_all_active</span><span class=\"o\">=</span><span class=\"kc\">True</span><span class=\"p\">,</span> <span class=\"n\">include_default</span><span class=\"o\">=</span><span class=\"kc\">True</span><span class=\"p\">)</span>\n<span class=\"o\">&gt;&gt;&gt;</span> <span class=\"k\">for</span> <span class=\"n\">i</span> <span class=\"ow\">in</span> <span class=\"n\">streams</span><span class=\"p\">[</span><span class=\"s2\">\"streams\"</span><span class=\"p\">]:</span>\n<span class=\"o\">...</span>     <span class=\"k\">if</span> <span class=\"n\">i</span><span class=\"p\">[</span><span class=\"s2\">\"stream_id\"</span><span class=\"p\">]</span> <span class=\"o\">==</span> <span class=\"mi\">868</span><span class=\"p\">:</span>\n<span class=\"o\">...</span>         <span class=\"nb\">print</span><span class=\"p\">(</span><span class=\"n\">i</span><span class=\"p\">)</span>\n<span class=\"o\">...</span>         <span class=\"k\">break</span>\n<span class=\"o\">...</span>\n<span class=\"o\">&gt;&gt;&gt;</span>\n</code></pre></div>\n<p>(<code>c</code> is a <code>zulip.Client</code> instance with my API key, so Owner permissions)</p>\n<p>There are the following useres:</p>\n<div class=\"codehilite\"><pre><span></span><code>3238\n7355\n26\n7291\n7292\n</code></pre></div>\n<p>I know user id 26 :) Maybe I ask him about this stream. Maybe it's a private stream that has been improperly deleted? <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>",
+        "id": 1544600,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681160046
+    },
+    {
+        "content": "<p>Does it exist on the server?</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"n\">Stream</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">get</span><span class=\"p\">(</span><span class=\"nb\">id</span><span class=\"o\">=</span><span class=\"mi\">868</span><span class=\"p\">)</span>\n</code></pre></div>",
+        "id": 1544602,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681160187
+    },
+    {
+        "content": "<p>But that seems like a plausible guess here.</p>",
+        "id": 1544603,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681160200
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Login.20Error/near/1544602\">said</a>:</p>\n<blockquote>\n<p>Does it exist on the server?</p>\n<p><div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"n\">Stream</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">get</span><span class=\"p\">(</span><span class=\"nb\">id</span><span class=\"o\">=</span><span class=\"mi\">868</span><span class=\"p\">)</span>\n</code></pre></div><br>\n</p>\n</blockquote>\n<p>Yes, like that:<br>\n<code>Out[10]: &lt;Stream: &lt;Stream: 9e1ec35!DEACTIVATED:EIST22&gt;&gt;</code><br>\nI don't think that this is supposed to be like that <span aria-label=\"thinking\" class=\"emoji emoji-1f914\" role=\"img\" title=\"thinking\">:thinking:</span></p>",
+        "id": 1544604,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681160254
+    },
+    {
+        "content": "<p>That's what deactivated streams do look like.</p>",
+        "id": 1544605,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681160272
+    },
+    {
+        "content": "<p>We rename them to preserve the ability to make a new stream wit the old name.</p>",
+        "id": 1544606,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681160295
+    },
+    {
+        "content": "<p>But regardless, they were subscribed to it in some way that didn't leave audit log entries, which bears asking user 26 about.</p>",
+        "id": 1544607,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681160347
+    },
+    {
+        "content": "<p>(deactivating a stream does not tamper with its audit log entries, for obvious reasons)</p>",
+        "id": 1544609,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681160449
+    },
+    {
+        "content": "<p>Hm, so user 26 says that he was in the stream (without problems), and that he doesn't see the stream anymore...</p>",
+        "id": 1544612,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681160526
+    },
+    {
+        "content": "<p>Seems regular so far</p>",
+        "id": 1544613,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681160553
+    },
+    {
+        "content": "<p>What would happen if I completely removed the stream? Would that fix things?</p>",
+        "id": 1544618,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681160827
+    },
+    {
+        "content": "<p>That's not really a supported operation, and would likely make things worse.</p>",
+        "id": 1544621,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681160911
+    },
+    {
+        "content": "<p>We can insert synthetic subscription events for those users.</p>\n<p>I'm also a little surprised this codepath is running for deactivated streams, but I guess we probably need that to have a consistent high-water mark that we've done user UserMessage backfill to.</p>",
+        "id": 1544623,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681160959
+    },
+    {
+        "content": "<p>Bear in mind that if the stream is a private stream without shared history, inserting faked-up subscription events may give them access to messages they shouldn't have been able to read, depending on when you pick as the \"subscription\" time.</p>",
+        "id": 1544627,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681161091
+    },
+    {
+        "content": "<p>Hence why it's a little of interest to us, probably, to know how the stream came to be.</p>\n<p>But we can fudge a fix forward.</p>",
+        "id": 1544629,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681161142
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Login.20Error/near/1544627\">said</a>:</p>\n<blockquote>\n<p>Bear in mind that if the stream is a private stream without shared history, inserting faked-up subscription events may give them access to messages they shouldn't have been able to read, depending on when you pick as the \"subscription\" time.</p>\n</blockquote>\n<p>That wouldn't be an issue in this case because the stream was public all the time.</p>\n<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Login.20Error/near/1544629\">said</a>:</p>\n<blockquote>\n<p>Hence why it's a little of interest to us, probably, to know how the stream came to be.</p>\n</blockquote>\n<p>Unfortunately I cannot really tell anything useful, I'm afraid. The only \"odd\" thing about this stream might be that it had restricted write permissions for a short time (during an exam). But I don't think that there is anything else...</p>",
+        "id": 1544646,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681162391
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert (ro-i)</span> do you when the stream in question was created?</p>",
+        "id": 1544815,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1681175375
+    },
+    {
+        "content": "<p>I seem to recall we had a bug a few years ago where the transaction structure wasn't correct, and so a request that failed partway through could lead to audit log entries not having been created.</p>",
+        "id": 1544816,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1681175422
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"7\">Tim Abbott</span> <a href=\"#narrow/stream/31-production-help/topic/Login.20Error/near/1544815\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"17322\">Robert (ro-i)</span> do you when the stream in question was created?</p>\n</blockquote>\n<p>I don't understand your question <span aria-label=\"see no evil\" class=\"emoji emoji-1f648\" role=\"img\" title=\"see no evil\">:see_no_evil:</span></p>",
+        "id": 1545161,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681216031
+    },
+    {
+        "content": "<p>Hi, I had the exact same problem today.</p>\n<p>In my case, however, it was a completely normal stream. (so it wasn't a deactivated stream) After i found out the stream id, i de-subscribed the affected account from the stream via the zulip gui. Since then, the account can log in normally again.<br>\nThe information here has helped me a lot, thank you.</p>",
+        "id": 1545262,
+        "sender_full_name": "Alex Meyer",
+        "timestamp": 1681224452
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert (ro-i)</span>: I think Tim accidentally a word:</p>\n<blockquote>\n<p>do you <em>know</em> when the stream in question was created?</p>\n</blockquote>",
+        "id": 1545275,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681225381
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"14062\">@Alex Meyer</span>:  Interesting.  Same question to you -- do you know when the stream was created, or when the user might have joined it?</p>",
+        "id": 1545276,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681225419
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Login.20Error/near/1545275\">said</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"17322\">Robert (ro-i)</span>: I think Tim accidentally a word:</p>\n<blockquote>\n<p>do you <em>know</em> when the stream in question was created?</p>\n</blockquote>\n</blockquote>\n<p>no, but there may be a way to find this out programmatically?</p>",
+        "id": 1545619,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681244368
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/Login.20Error/near/1545276\">schrieb</a>:</p>\n<blockquote>\n<p><span class=\"user-mention silent\" data-user-id=\"14062\">Alex Meyer</span>:  Interesting.  Same question to you -- do you know when the stream was created, or when the user might have joined it?</p>\n</blockquote>\n<p>That must have been in 2019 or 2020.</p>",
+        "id": 1545943,
+        "sender_full_name": "Alex Meyer",
+        "timestamp": 1681279363
+    },
+    {
+        "content": "<p>We just got another report of this, so we should consider if there's a migration we should be adding to insert synthetic subscriptions where possible (i.e. for streams that don't have hidden-history)</p>\n<p>The above detection script found no instances of that failure mode on CZO or Zulip Cloud.</p>",
+        "id": 1548024,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681490777
+    },
+    {
+        "content": "<p>We could theoretically attempt to address this at soft-reactivation-time, but I think it's probably better to do in one fell swoop, since it's restoring database consistency.</p>",
+        "id": 1548065,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681493654
+    },
+    {
+        "content": "<p>Yeah, I'd be fine with a synthetic migration of that form; it can pass <code>backfilled=True</code> to mark the rows created that way.</p>",
+        "id": 1548127,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1681496922
+    },
+    {
+        "content": "<p>And I think that's a good path forward assuming we think the issue is that this was the consequence of our not having transactions in this code path as of 2020.</p>",
+        "id": 1548128,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1681496965
+    },
+    {
+        "content": "<p>I find it interesting that we don't have any such errors in Zulip Cloud, though.  That normally gets enough traffic to shake out things like this.</p>",
+        "id": 1548131,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681497091
+    },
+    {
+        "content": "<p>Yeah. I suppose one class of transaction failure can be someone shutting down the server partway through an API request, and Zulip Cloud has very good uptime, so that class of failure might happen more often in self-hosted systems that have lower uptime requirements?</p>",
+        "id": 1548140,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1681497763
+    },
+    {
+        "content": "<p>Potentially!</p>",
+        "id": 1548149,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681497988
+    },
+    {
+        "content": "<p>Is there a fix we could apply for an affected user in the short term?</p>",
+        "id": 1548596,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681567137
+    },
+    {
+        "content": "<p>Yeah, you should be able to run the migration code manually to do the same backfill.  I'm planning to work up that code today.</p>",
+        "id": 1549035,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681741604
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"17322\">@Robert (ro-i)</span>: OK, give this a shot:</p>\n<div class=\"codehilite\" data-code-language=\"Python\"><pre><span></span><code><span class=\"kn\">from</span> <span class=\"nn\">zerver.lib.message</span> <span class=\"kn\">import</span> <span class=\"n\">get_last_message_id</span>\n<span class=\"kn\">from</span> <span class=\"nn\">django.db.models</span> <span class=\"kn\">import</span> <span class=\"n\">Min</span>\n\n<span class=\"k\">for</span> <span class=\"n\">stream</span> <span class=\"ow\">in</span> <span class=\"n\">Stream</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">all</span><span class=\"p\">():</span>\n    <span class=\"n\">subscribed_user_ids</span> <span class=\"o\">=</span> <span class=\"nb\">set</span><span class=\"p\">(</span>\n        <span class=\"n\">Subscription</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">filter</span><span class=\"p\">(</span><span class=\"n\">recipient_id</span><span class=\"o\">=</span><span class=\"n\">stream</span><span class=\"o\">.</span><span class=\"n\">recipient_id</span><span class=\"p\">)</span><span class=\"o\">.</span><span class=\"n\">values_list</span><span class=\"p\">(</span>\n            <span class=\"s2\">\"user_profile_id\"</span><span class=\"p\">,</span> <span class=\"n\">flat</span><span class=\"o\">=</span><span class=\"kc\">True</span>\n        <span class=\"p\">)</span>\n    <span class=\"p\">)</span>\n    <span class=\"n\">user_ids_in_audit_log</span> <span class=\"o\">=</span> <span class=\"nb\">set</span><span class=\"p\">(</span>\n        <span class=\"n\">RealmAuditLog</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">filter</span><span class=\"p\">(</span>\n            <span class=\"n\">realm</span><span class=\"o\">=</span><span class=\"n\">stream</span><span class=\"o\">.</span><span class=\"n\">realm</span><span class=\"p\">,</span>\n            <span class=\"n\">event_type__in</span><span class=\"o\">=</span><span class=\"p\">[</span>\n                <span class=\"mi\">301</span><span class=\"p\">,</span>  <span class=\"c1\"># RealmAuditLog.SUBSCRIPTION_CREATED</span>\n                <span class=\"mi\">302</span><span class=\"p\">,</span>  <span class=\"c1\"># RealmAuditLog.SUBSCRIPTION_ACTIVATED</span>\n                <span class=\"mi\">303</span><span class=\"p\">,</span>  <span class=\"c1\"># RealmAuditLog.SUBSCRIPTION_DEACTIVATED</span>\n            <span class=\"p\">],</span>\n            <span class=\"n\">modified_stream</span><span class=\"o\">=</span><span class=\"n\">stream</span><span class=\"p\">,</span>\n        <span class=\"p\">)</span>\n        <span class=\"o\">.</span><span class=\"n\">distinct</span><span class=\"p\">(</span><span class=\"s2\">\"modified_user_id\"</span><span class=\"p\">)</span>\n        <span class=\"o\">.</span><span class=\"n\">values_list</span><span class=\"p\">(</span><span class=\"s2\">\"modified_user_id\"</span><span class=\"p\">,</span> <span class=\"n\">flat</span><span class=\"o\">=</span><span class=\"kc\">True</span><span class=\"p\">)</span>\n    <span class=\"p\">)</span>\n\n    <span class=\"n\">user_ids_missing_events</span> <span class=\"o\">=</span> <span class=\"n\">subscribed_user_ids</span> <span class=\"o\">-</span> <span class=\"n\">user_ids_in_audit_log</span>\n    <span class=\"k\">if</span> <span class=\"ow\">not</span> <span class=\"n\">user_ids_missing_events</span><span class=\"p\">:</span>\n        <span class=\"k\">continue</span>\n\n    <span class=\"n\">backfills</span> <span class=\"o\">=</span> <span class=\"p\">[]</span>\n    <span class=\"k\">for</span> <span class=\"n\">user_id</span> <span class=\"ow\">in</span> <span class=\"nb\">sorted</span><span class=\"p\">(</span><span class=\"n\">user_ids_missing_events</span><span class=\"p\">):</span>\n        <span class=\"nb\">print</span><span class=\"p\">(</span>\n            <span class=\"sa\">f</span><span class=\"s2\">\"Backfilling subscription event for </span><span class=\"si\">{</span><span class=\"n\">user_id</span><span class=\"si\">}</span><span class=\"s2\"> in </span><span class=\"si\">{</span><span class=\"n\">stream</span><span class=\"o\">.</span><span class=\"n\">name</span><span class=\"si\">}</span><span class=\"s2\"> in </span><span class=\"si\">{</span><span class=\"n\">stream</span><span class=\"o\">.</span><span class=\"n\">realm</span><span class=\"o\">.</span><span class=\"n\">string_id</span><span class=\"si\">}</span><span class=\"s2\">\"</span>\n        <span class=\"p\">)</span>\n        <span class=\"n\">aggregated</span> <span class=\"o\">=</span> <span class=\"n\">UserMessage</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">filter</span><span class=\"p\">(</span>\n            <span class=\"n\">user_profile_id</span><span class=\"o\">=</span><span class=\"n\">user_id</span><span class=\"p\">,</span>\n            <span class=\"n\">message__recipient</span><span class=\"o\">=</span><span class=\"n\">stream</span><span class=\"o\">.</span><span class=\"n\">recipient_id</span><span class=\"p\">,</span>\n        <span class=\"p\">)</span><span class=\"o\">.</span><span class=\"n\">aggregate</span><span class=\"p\">(</span>\n            <span class=\"n\">earliest_date</span><span class=\"o\">=</span><span class=\"n\">Min</span><span class=\"p\">(</span><span class=\"s2\">\"message__date_sent\"</span><span class=\"p\">),</span>\n            <span class=\"n\">earliest_message_id</span><span class=\"o\">=</span><span class=\"n\">Min</span><span class=\"p\">(</span><span class=\"s2\">\"message_id\"</span><span class=\"p\">),</span>\n        <span class=\"p\">)</span>\n\n        <span class=\"c1\"># Assume we subscribed right before the first message we</span>\n        <span class=\"c1\"># saw -- or, if we don't see any, right now.  This makes</span>\n        <span class=\"c1\"># this safe for streams which do not have shared history.</span>\n        <span class=\"k\">if</span> <span class=\"n\">aggregated</span><span class=\"p\">[</span><span class=\"s2\">\"earliest_message_id\"</span><span class=\"p\">]</span> <span class=\"ow\">is</span> <span class=\"ow\">not</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n            <span class=\"n\">event_last_message_id</span> <span class=\"o\">=</span> <span class=\"n\">aggregated</span><span class=\"p\">[</span><span class=\"s2\">\"earliest_message_id\"</span><span class=\"p\">]</span> <span class=\"o\">-</span> <span class=\"mi\">1</span>\n        <span class=\"k\">else</span><span class=\"p\">:</span>\n            <span class=\"n\">event_last_message_id</span> <span class=\"o\">=</span> <span class=\"n\">get_last_message_id</span><span class=\"p\">()</span>\n        <span class=\"k\">if</span> <span class=\"n\">aggregated</span><span class=\"p\">[</span><span class=\"s2\">\"earliest_date\"</span><span class=\"p\">]</span> <span class=\"ow\">is</span> <span class=\"ow\">not</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n            <span class=\"n\">event_time</span> <span class=\"o\">=</span> <span class=\"n\">aggregated</span><span class=\"p\">[</span><span class=\"s2\">\"earliest_date\"</span><span class=\"p\">]</span>\n        <span class=\"k\">else</span><span class=\"p\">:</span>\n            <span class=\"n\">event_time</span> <span class=\"o\">=</span> <span class=\"n\">timezone_now</span><span class=\"p\">()</span>\n\n        <span class=\"n\">log_event</span> <span class=\"o\">=</span> <span class=\"n\">RealmAuditLog</span><span class=\"p\">(</span>\n            <span class=\"n\">event_time</span><span class=\"o\">=</span><span class=\"n\">event_time</span><span class=\"p\">,</span>\n            <span class=\"n\">event_last_message_id</span><span class=\"o\">=</span><span class=\"n\">event_last_message_id</span><span class=\"p\">,</span>\n            <span class=\"n\">backfilled</span><span class=\"o\">=</span><span class=\"kc\">True</span><span class=\"p\">,</span>\n            <span class=\"n\">event_type</span><span class=\"o\">=</span><span class=\"mi\">301</span><span class=\"p\">,</span>  <span class=\"c1\"># RealmAuditLog.SUBSCRIPTION_CREATED</span>\n            <span class=\"n\">realm_id</span><span class=\"o\">=</span><span class=\"n\">stream</span><span class=\"o\">.</span><span class=\"n\">realm_id</span><span class=\"p\">,</span>\n            <span class=\"n\">modified_user_id</span><span class=\"o\">=</span><span class=\"n\">user_id</span><span class=\"p\">,</span>\n            <span class=\"n\">modified_stream_id</span><span class=\"o\">=</span><span class=\"n\">stream</span><span class=\"o\">.</span><span class=\"n\">id</span><span class=\"p\">,</span>\n        <span class=\"p\">)</span>\n        <span class=\"n\">backfills</span><span class=\"o\">.</span><span class=\"n\">append</span><span class=\"p\">(</span><span class=\"n\">log_event</span><span class=\"p\">)</span>\n        <span class=\"nb\">print</span><span class=\"p\">(</span><span class=\"n\">log_event</span><span class=\"o\">.</span><span class=\"vm\">__dict__</span><span class=\"p\">)</span>\n    <span class=\"n\">RealmAuditLog</span><span class=\"o\">.</span><span class=\"n\">objects</span><span class=\"o\">.</span><span class=\"n\">bulk_create</span><span class=\"p\">(</span><span class=\"n\">backfills</span><span class=\"p\">)</span>\n</code></pre></div>",
+        "id": 1551415,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681932769
+    },
+    {
+        "content": "<p>Thanks for the script! So I just run it? Or do I have to consider anything else?</p>",
+        "id": 1551417,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681933006
+    },
+    {
+        "content": "<p>Open up <code>./manage.py shell</code> (as <code>zulip</code>, in <code>~/deployments/current</code>) and then paste that in.</p>",
+        "id": 1551418,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681933037
+    },
+    {
+        "content": "<p><span aria-label=\"thumbs up\" class=\"emoji emoji-1f44d\" role=\"img\" title=\"thumbs up\">:thumbs_up:</span></p>",
+        "id": 1551421,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681933194
+    },
+    {
+        "content": "<p>I notify the affected user and check whether they can login again</p>",
+        "id": 1551422,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681933223
+    },
+    {
+        "content": "<p>Did it print anything out?</p>",
+        "id": 1551423,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681933232
+    },
+    {
+        "content": "<p>yes</p>",
+        "id": 1551425,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681933244
+    },
+    {
+        "content": "<p>Should be a couple lines, not a huge wall, and it looks like it's talking about the right stream?</p>",
+        "id": 1551426,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681933263
+    },
+    {
+        "content": "<p>Yes, three Streams were affected. one line for the first, and 5 for each of the other two :)</p>",
+        "id": 1551429,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681933321
+    },
+    {
+        "content": "<p>I've pushed this as a migration in <a href=\"https://github.com/zulip/zulip/pull/25194\">#25194</a>.</p>",
+        "id": 1551437,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1681933758
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"17322\">Robert (ro-i)</span> <a href=\"#narrow/stream/31-production-help/topic/Login.20Error/near/1551422\">said</a>:</p>\n<blockquote>\n<p>I notify the affected user and check whether they can login again</p>\n</blockquote>\n<p>It works for them again! Thank you so much <span aria-label=\"octopus\" class=\"emoji emoji-1f419\" role=\"img\" title=\"octopus\">:octopus:</span></p>",
+        "id": 1551501,
+        "sender_full_name": "Robert (ro-i)",
+        "timestamp": 1681937306
+    }
+]

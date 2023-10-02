@@ -1,0 +1,159 @@
+<html>
+<head><meta charset="utf-8"><title>x-forwarded-proto in 7.3 · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html">x-forwarded-proto in 7.3</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1634982"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1634982" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> James VL <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1634982">(Sep 04 2023 at 21:25)</a>:</h4>
+<p>I recently updated from 7.0 to 7.3 and am now getting warning emails that the header is not configured correctly.</p>
+<p>I'm running on AWS (dedicated EC2 instance), and the ALB for public requests works fine and does include the header. However, AWS does health checks from the internal ALB instance directly to the EC2 server - there is no proxy in between. As a result, the AWS ALB reports the Zulip server as "unhealthy" because <code>No X-Forwarded-Proto header sent from trusted proxy...</code></p>
+<p>Is there any way around this?</p>
+
+
+
+<a name="1635007"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1635007" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> James VL <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1635007">(Sep 04 2023 at 23:17)</a>:</h4>
+<p>(as a side note, the instance is working fine; however Django will send me an email for every connection attempt that is missing the headers, so for my setup it's about 3 every 5 minutes)</p>
+
+
+
+<a name="1635129"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1635129" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1635129">(Sep 05 2023 at 15:10)</a>:</h4>
+<p>Hm.  This is roughly the configuration that we use for Zulip Cloud, and we don't get warnings.  Let me check our health check configuration.</p>
+
+
+
+<a name="1635147"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1635147" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1635147">(Sep 05 2023 at 16:13)</a>:</h4>
+<p>Ah -- the difference is that Zulip Cloud behind the ALB listens on HTTPS, so the healthcheck is over HTTPS, and the warning only fires if the request comes in over HTTP.</p>
+
+
+
+<a name="1635149"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1635149" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1635149">(Sep 05 2023 at 16:17)</a>:</h4>
+<p>In the configuration where Zulip is using <code>http_only</code>, we cannot distinguish "request from a trusted proxy which sends no headers" from "request from the proxy itself."</p>
+<p>One option is that we can assume that the combination of:</p>
+<ol>
+<li><code>http_only</code></li>
+<li>User correctly configured proxy IPs in Zulip configuration</li>
+<li>Requests are coming from that trusted proxy IP</li>
+<li>That proxy sets <em>no</em> proxy headers</li>
+</ol>
+<p>...to be sufficiently rare that we can squash the warning about <code>X-Forwarded-Proto</code>, since there isn't even an <code>X-Forwarded -For</code>.</p>
+<p>The other angle on this is that we can provide a <code>/health-check</code> URL which is exempt from proxy-header-checking, and does some basic backend service checks.</p>
+
+
+
+<a name="1635152"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1635152" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> James VL <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1635152">(Sep 05 2023 at 16:28)</a>:</h4>
+<p>Either way would be great by me! <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<a name="1635156"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1635156" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> James VL <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1635156">(Sep 05 2023 at 16:33)</a>:</h4>
+<blockquote>
+<ol start="4">
+<li>That proxy sets <em>no</em> proxy headers</li>
+</ol>
+</blockquote>
+<p>Alternatively, you could check that the REAL_IP of the request is that of the proxy itself, e.g.</p>
+<div class="codehilite"><pre><span></span><code>META:
+...
+HTTP_HOST = &#39;10.1.58.10&#39;
+HTTP_USER_AGENT = &#39;ELB-HealthChecker/2.0&#39;
+HTTP_X_FORWARDED_PROTO = &#39;&#39;
+HTTP_X_PROXY_MISCONFIGURATION = &#39;No X-Forwarded-Proto header sent from trusted proxy 10.1.18.51; see example configurations in https://zulip.readthedocs.io/en/latest/production/deployment.html#putting-the-zulip-application-behind-a-reverse-proxy&#39;
+HTTP_X_REAL_IP = &#39;10.1.18.51&#39;
+PATH_INFO = &#39;/&#39;
+QUERY_STRING = &#39;&#39;
+REMOTE_ADDR = &#39;10.1.18.51
+</code></pre></div>
+<p>(IP addrs changed from my actual ones)</p>
+
+
+
+<a name="1635168"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1635168" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1635168">(Sep 05 2023 at 17:15)</a>:</h4>
+<p>Ah, yeah, that's a pretty reasonable and straightforward fix.  I'll put up a PR for that this afternoon.</p>
+<p>Sorry for all of the log spam!</p>
+
+
+
+<a name="1635169"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1635169" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1635169">(Sep 05 2023 at 17:15)</a>:</h4>
+<p>I think we will also add a <code>/health-check</code> URL, which I'll try to remember to note on this topic, but if not it'll certainly be in the upgrade notes.</p>
+
+
+
+<a name="1635176"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1635176" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> James VL <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1635176">(Sep 05 2023 at 17:34)</a>:</h4>
+<p><code>/health-check</code> is always welcome, since that request may be better (either less resources or query for internal state) than simply hitting <code>/</code> and checking for a 200.</p>
+
+
+
+<a name="1635178"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1635178" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> James VL <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1635178">(Sep 05 2023 at 17:35)</a>:</h4>
+<p>And no worries about the email spam! Nothing a temporary email rule can't handle for me in the mean time...</p>
+
+
+
+<a name="1638799"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1638799" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> James VL <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1638799">(Sep 12 2023 at 14:38)</a>:</h4>
+<p><span class="user-mention" data-user-id="12178">@Alex Vandiver</span> any way I can shut this notification off while I'm waiting for the next release? the SES charges are starting to add up...</p>
+
+
+
+<a name="1638802"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1638802" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1638802">(Sep 12 2023 at 14:40)</a>:</h4>
+<p>You can apply this patch to <code>~zulip/deployments/current</code> and run <code>./scripts/restart-server</code>:</p>
+<div class="codehilite" data-code-language="Diff"><pre><span></span><code><span class="gh">diff --git zerver/middleware.py zerver/middleware.py</span>
+<span class="gh">index 0eaa213ec5..4365a186b9 100644</span>
+<span class="gd">--- zerver/middleware.py</span>
+<span class="gi">+++ zerver/middleware.py</span>
+<span class="gu">@@ -641,7 +641,8 @@ class DetectProxyMisconfiguration(MiddlewareMixin):</span>
+<span class="w"> </span>        # localhost over HTTP (e.g. the email gateway).  Skip warnings
+<span class="w"> </span>        # if the remote IP is localhost.
+<span class="w"> </span>        if (
+<span class="gd">-            proxy_state_header != ""</span>
+<span class="gi">+            False</span>
+<span class="gi">+            and proxy_state_header != ""</span>
+<span class="w"> </span>            and not request.is_secure()
+<span class="w"> </span>            and request.META["REMOTE_ADDR"] not in ("127.0.0.1", "::1")
+<span class="w"> </span>        ):
+</code></pre></div>
+
+
+
+<a name="1638848"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1638848" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1638848">(Sep 12 2023 at 15:41)</a>:</h4>
+<p>Pushed <a href="https://github.com/zulip/zulip/pull/26707">#26707</a>.</p>
+
+
+
+<a name="1638924"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1638924" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1638924">(Sep 12 2023 at 17:11)</a>:</h4>
+<p>Merged; I guess we can now backport that to 7.x such that <span class="user-mention silent" data-user-id="19765">James VL</span> can just to <code>upgrade-zulip-from-git 7.x</code> to get the fix.</p>
+
+
+
+<a name="1638947"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1638947" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> James VL <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1638947">(Sep 12 2023 at 17:53)</a>:</h4>
+<p>Very kind of you - I appreciate it! (and I did apply the patch locally - very relieved!)</p>
+
+
+
+<a name="1639292"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/x-forwarded-proto%20in%207.3/near/1639292" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/x-forwarded-proto.20in.207.2E3.html#1639292">(Sep 13 2023 at 04:15)</a>:</h4>
+<p>Pushed <a href="https://github.com/zulip/zulip/pull/26720">#26720</a> for the healthcheck endpoint.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

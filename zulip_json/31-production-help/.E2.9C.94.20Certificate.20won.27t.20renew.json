@@ -1,0 +1,182 @@
+[
+    {
+        "content": "<p>Hi. I have an urgent case, our chat server is down due to an expired LetsEncrypt certifcate<br>\nI did get warning e-mails from LE, but ignored them as I thought that auto-renewing should do its job<br>\nOur server started a few years ago as 1.8.1 and only a month ago I was able to upgrade it to 2.1.8 (had various failures in the past that I couldn't figure out, I have little Unix or general sysadmin experience)<br>\nI suppose the auto-renewal used to work until now (we've never had such problem so far), and was broken by the upgrade</p>\n<p>I tried all the info I could find without success, the <code>setup-certbot</code> and <code>certbot-maybe-renew</code> scripts, even the <code>certbot-auto renew</code> command as called by <code>certbot-maybe-renew</code> but without --quiet<br>\nAll these seem to do nothing and not even print anything important or anything at all<br>\nAnd the files in <code> /etc/letsencrypt/live/&lt;hostname&gt;</code> remain unchanged<br>\nI see the files are actually symlinks to <code>../../archive</code> and there I see there are already 19 copies of each file, the latest ones from July 31 (just 3 months ago)</p>\n<p>Any ideas?</p>\n<p>I see here mentions of the <code>certbot</code> command, but I don't have it installed, should I install and try to run that?</p>",
+        "id": 1273995,
+        "sender_full_name": "Ivan kolev",
+        "timestamp": 1635526101
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"22025\">@Ivan kolev</span> I think we got a similar report recently, looking.</p>",
+        "id": 1273999,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635526356
+    },
+    {
+        "content": "<p>Yeah, see <a href=\"#narrow/stream/2-general/topic/Renew.20Let's.20Encrypt.20certicate/near/1273417\">https://chat.zulip.org/#narrow/stream/2-general/topic/Renew.20Let's.20Encrypt.20certicate/near/1273417</a> for a similar report with advice for investigating.</p>",
+        "id": 1274004,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635526476
+    },
+    {
+        "content": "<p>Though this does sound different -- it sounds like you are running the commands manually.</p>",
+        "id": 1274005,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635526511
+    },
+    {
+        "content": "<p>I suspect it's possible your problem is an indirect result of being on a very old version; are you running Ubuntu 16.04?  It's very possible the version of <code>certbot</code> in that Ubuntu release no longer works.</p>",
+        "id": 1274006,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635526556
+    },
+    {
+        "content": "<p>So I'd consider doing <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-from-ubuntu-16-04-xenial-to-18-04-bionic\">https://zulip.readthedocs.io/en/latest/production/upgrade-or-modify.html#upgrading-from-ubuntu-16-04-xenial-to-18-04-bionic</a> as my next step -- Ubuntu 16.04 has basically reached EOL and you need to do it anyway, and I think there's probably a 50% chance that said upgrade fixes your problem.</p>",
+        "id": 1274007,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635526601
+    },
+    {
+        "content": "<p>Thanks for the quick answer. <br>\nYes, I tried running the cron command manually, doesn't print or do anything<br>\nUbuntu is 18.04, I was forced to upgrade to it by Zulip 2 (that was one of the upgrade problems)</p>",
+        "id": 1274011,
+        "sender_full_name": "Ivan kolev",
+        "timestamp": 1635526757
+    },
+    {
+        "content": "<p>Or even <code>certbot-auto</code> directly, as I extracted it from certbot-maybe-renew:<br>\n<code>/usr/local/sbin/certbot-auto renew --webroot --webroot-path=/var/lib/zulip/certbot-webroot/ --deploy-hook \"-service nginx reload\"</code></p>",
+        "id": 1274012,
+        "sender_full_name": "Ivan kolev",
+        "timestamp": 1635526841
+    },
+    {
+        "content": "<p>From the other topic I learned to look at <code>/var/log/letsencrypt/letsencrypt.log</code>, there I see the only few lines are from 2021-09-21 and the result was <code>Cert not yet due for renewal</code></p>",
+        "id": 1274013,
+        "sender_full_name": "Ivan kolev",
+        "timestamp": 1635526908
+    },
+    {
+        "content": "<p>I think that was the date of the upgrade to 2.1.8, as the directory in deployments is 2021-09-21-20-17-59</p>",
+        "id": 1274015,
+        "sender_full_name": "Ivan kolev",
+        "timestamp": 1635526955
+    },
+    {
+        "content": "<p>I suspect the problem is in <code>certbot-auto</code> (which is not part of Zulip), but then why would it stop working just after the Zulip upgrade?</p>",
+        "id": 1274019,
+        "sender_full_name": "Ivan kolev",
+        "timestamp": 1635527863
+    },
+    {
+        "content": "<p>LE only tries to renew a month(?) before expiration. Are you sure the issue is tied to the upgrade, and not something that broke sometime in the three months ago to one month ago window?</p>",
+        "id": 1274024,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1635530513
+    },
+    {
+        "content": "<p>In particular, <a href=\"https://community.letsencrypt.org/t/end-of-life-plan-for-acmev1/88430\">https://community.letsencrypt.org/t/end-of-life-plan-for-acmev1/88430</a> claims that ACMEv1 was going to be shut down in June 2021. I guess that's a couple months too early, though.</p>",
+        "id": 1274025,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1635530742
+    },
+    {
+        "content": "<p>The root cert they were chaining off expired at the end of September, too (<a href=\"https://calendar.google.com/calendar/u/0/embed?src=letsencrypt.org_caqskun93lgiabjj4ba9cb1rek@group.calendar.google.com&amp;pli=1\">https://calendar.google.com/calendar/u/0/embed?src=letsencrypt.org_caqskun93lgiabjj4ba9cb1rek@group.calendar.google.com&amp;pli=1</a>), though that shouldn't be relevant if you have their root cert directly (which recent devices should).</p>",
+        "id": 1274026,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1635530814
+    },
+    {
+        "content": "<blockquote>\n<p>I did get warning e-mails from LE, but ignored them as I thought that                                                                                                    &gt; auto-renewing should do its job</p>\n</blockquote>\n<p>My vague recollection is LE is smart enough to only send the emails if you haven't renewed a month before expiry, at which point if your LE install is working correctly it would have renewed, so I think they're generally correct?</p>",
+        "id": 1274027,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1635530937
+    },
+    {
+        "content": "<p>I'm not sure the issue is tied to the upgrade, but it's a pretty suspicious coincidence. The latest <code>letsencrypt.log</code> is from 09/21, the same day I did the upgrade, a month + 8 days before the certificate expired (today)</p>\n<p>I started getting e-mails from LE definitely less than a month ago. Looking at my Trash I see one from 10/18 (11 days ago) and one from yesterday, though I think I had one more, maybe exactly a month before expiration (maybe Trash gets auto-cleaned)</p>\n<p>Is it possible that after the expiration the certificate can no longer be updated, and a new one needs to be issued (don't know much about SSL certificates) ?</p>\n<p>Should I try to upgrade <code>certbot-auto</code> ? Or maybe install <code>certbot</code> and try that?</p>",
+        "id": 1274029,
+        "sender_full_name": "Ivan kolev",
+        "timestamp": 1635532209
+    },
+    {
+        "content": "<p>I wouldn't expect expired certs to no longer be renewable by certbot.</p>",
+        "id": 1274031,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1635533512
+    },
+    {
+        "content": "<p>Installing certbot from apt might make sense?</p>",
+        "id": 1274032,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1635533569
+    },
+    {
+        "content": "<p>If I were you, I'd probably be trying to run it manually, and figuring out where the logs are going if not to the console. (If it's failing, there really should be <em>some</em> output)</p>",
+        "id": 1274033,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1635533603
+    },
+    {
+        "content": "<p>(Note that I'm really not a Zulip expert, but have some sysadmin experience, so if there's Zulip-specific quirks I'm unlikely to know them.)</p>",
+        "id": 1274034,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1635533669
+    },
+    {
+        "content": "<p>Afk but there should not be any Zulip quirks; we just run certbot and symlink the certs into place.</p>",
+        "id": 1274035,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635533874
+    },
+    {
+        "content": "<p>I see that the link <a href=\"https://dl.eff.org/certbot-auto\">https://dl.eff.org/certbot-auto</a> that <code>setup-certbot</code> uses to download <code>certbot-auto</code> no longer exists<br>\nSo it looks like certbox-auto was discontinued, or maybe moved</p>\n<p><a href=\"https://certbot.eff.org/lets-encrypt/ubuntubionic-nginx\">https://certbot.eff.org/lets-encrypt/ubuntubionic-nginx</a> says that <code>certbot-auto</code> should be <em>uninstalled</em> to install <code>certbot</code><br>\nI guess I can switch to manual renewing of the certificate<br>\nIf only I can make <code>certbot</code> actually renew the certificate. I'll give it a try.</p>",
+        "id": 1274042,
+        "sender_full_name": "Ivan kolev",
+        "timestamp": 1635534975
+    },
+    {
+        "content": "<p>My guess / very vague recollection is that maybe certbot-auto dated from when certbot was newish and people would want to install it directly. These days, I suspect the normal thing may be to grab it from your distro, so they may have gotten rid of certbot auto.</p>",
+        "id": 1274060,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1635537685
+    },
+    {
+        "content": "<p>certbot proper will do autorenewals too, in case that was the concern</p>",
+        "id": 1274067,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1635538188
+    },
+    {
+        "content": "<p>(The \"auto\" might mean \"auto-updates code\"? Or just that the install process is automated?)</p>",
+        "id": 1274068,
+        "sender_full_name": "Alex Dehnert",
+        "timestamp": 1635538214
+    },
+    {
+        "content": "<p>Have you tried running <code>apt-get update; apt-get upgrade</code> to pull in the new <code>ca-certificates</code> package with <a href=\"https://bugs.launchpad.net/ubuntu/+source/ca-certificates/+bug/1944481\">this fix</a>? Not sure whether this is your problem, but it matches the time frame.</p>",
+        "id": 1274070,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1635538465
+    },
+    {
+        "content": "<p>Thanks, I updated the packages</p>\n<p>It turned out that <code>/usr/local/sbin/certbot-auto</code> was 0 bytes, I'm sorry I didn't notice that earlier. That's why it wouldn't do anything.<br>\nAnd I guess it was empty because it was recently downloaded by <code>setup-certbot</code> from a no-longer existing URL<br>\nI installed <code>certbot</code> following the instructions on its <a href=\"https://certbot.eff.org\">site</a>, ran it with <code>renew</code> and all was fine, the server immediately worked</p>\n<p>I guess my problem was caused by the too old Zulip version, maybe newer versions use a newer certbot distribution.<br>\nI'll try to continue upgrading our Zulip to a fresher major version ASAP. I'm just a bit afraid after the headache I head moving from 1.8 to 2.x</p>",
+        "id": 1274080,
+        "sender_full_name": "Ivan kolev",
+        "timestamp": 1635542382
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"22025\">Ivan kolev</span> has marked this topic as resolved.</p>",
+        "id": 1274081,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1635542386
+    },
+    {
+        "content": "<p>I think I'm not going to try to fix the automatic renewal to match the new <code>certbot</code> command<br>\nI hope it will be fixed by itself once Zulip is upgraded to a recent major version</p>",
+        "id": 1274083,
+        "sender_full_name": "Ivan kolev",
+        "timestamp": 1635542617
+    },
+    {
+        "content": "<p>Zulip 3 and later use <code>certbot</code> from the OS rather than <code>certbot-auto</code>.</p>",
+        "id": 1274086,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1635542689
+    }
+]

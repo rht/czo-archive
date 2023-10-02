@@ -1,0 +1,92 @@
+[
+    {
+        "content": "<p>Hi All, </p>\n<p>Trying to install for the first time on Ubuntu. The install fails at the same stop each time, when trying to move the temp install directory to the /home/zulip/deployments folder. I've ran as root, and using Sudo -s from my main user. </p>\n<p>Install command:</p>\n<div class=\"codehilite\"><pre><span></span>root@tdami-laptop:/# ./tmp/tmp.PHyJVep1Jl/zulip-server-2.1.3/scripts/setup/install --self-signed-cert --email=xyz@hidden.org --hostname=zulip.testlab\n</pre></div>\n\n\n<p>Here is the output:</p>\n<div class=\"codehilite\"><pre><span></span>Database created\n+ &#39;[&#39; 0 = 0 &#39;]&#39;\n++ /tmp/tmp.PHyJVep1Jl/zulip-server-2.1.3/scripts/lib/zulip_tools.py make_deploy_path\n+ deploy_path=/home/zulip/deployments/2020-04-02-17-21-29\n+ mv /tmp/tmp.PHyJVep1Jl/zulip-server-2.1.3 /home/zulip/deployments/2020-04-02-17-21-29\nmv: cannot move &#39;/tmp/tmp.PHyJVep1Jl/zulip-server-2.1.3&#39; to &#39;/home/zulip/deployments/2020-04-02-17-21-29&#39;: Permission denied\n\nZulip installation failed (exit code 1)!\n\nThe install process is designed to be idempotent, so you can retry after resolving whatever issue caused the failure (there should be a traceback above). A log of this installation is available in /var/log/zulip/install.log\n</pre></div>\n\n\n<p>I've ran the mv command as root and it did move successfully.</p>\n<p>Thank you in advance!</p>",
+        "id": 846550,
+        "sender_full_name": "Tyler Dami",
+        "timestamp": 1585863603
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15554\">@Tyler Dami</span> are you using LXC or some other container system?</p>",
+        "id": 846575,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1585865459
+    },
+    {
+        "content": "<p>Moving a file failing as root for permissions reasons seems like an unlikely outcome without that.</p>",
+        "id": 846576,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1585865483
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  Its running in WSL. Does the script change to the security context of the zulip user? I'll try chowning the temp directory to the zulip user.</p>",
+        "id": 846589,
+        "sender_full_name": "Tyler Dami",
+        "timestamp": 1585866055
+    },
+    {
+        "content": "<p>No idea why It cant perform the MV command. Is the 2.1.3 installer new? Could it be a glitch in the installer?</p>\n<p>Edit: 2.1.2 attempted with the same issue. I will create a new VM and try again.</p>",
+        "id": 846637,
+        "sender_full_name": "Tyler Dami",
+        "timestamp": 1585870080
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15554\">@Tyler Dami</span> I don't think it'll work to run Zulip in WSL; you need a real Linux installation.</p>",
+        "id": 846691,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1585873444
+    },
+    {
+        "content": "<p>I suppose this is something we could try to make work; I don't have a convenient way to do WSL testing but it might be an interesting project to investigate.  But it almost certainly doesn't work today without such work having happened.</p>",
+        "id": 846692,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1585873473
+    },
+    {
+        "content": "<p>Why did you describe your system as \"Ubuntu\"?  Are you somehow running Ubuntu within WSL?</p>",
+        "id": 846693,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1585873501
+    },
+    {
+        "content": "<p>WSL actually runs a mini VM on Hyper-V with a pre built instance of Linux in it. The file system is then exposed to both hosts. Ubuntu is one of the pre-built packages. </p>\n<p>I’m wondering if the directory is not actually created in the file system by the time the move command executes. There is some kernel strangeness with WSL. I can move the temp directory directly outside the install script, but when the script runs it claims access is denied. </p>\n<p>I swapped to a full VM in Hyper-V, and it’s working perfectly now.</p>\n<p>I wouldn’t mind doing some more testing, if you have any ideas what might be going on. Thanks for the replies!</p>",
+        "id": 846713,
+        "sender_full_name": "Tyler Dami",
+        "timestamp": 1585878437
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  I believe I found why this is happening. It's an underlying issue with how the NTFS file system under WSL handles open handles to file locations. If there are any open handles the mv command will fail. </p>\n<p><a href=\"https://github.com/microsoft/WSL/issues/1529\" title=\"https://github.com/microsoft/WSL/issues/1529\">https://github.com/microsoft/WSL/issues/1529</a></p>\n<p>Otherwise, I think Zulip would work on Windows in WSL with minimal issues. I will mess around with it more today.</p>",
+        "id": 847227,
+        "sender_full_name": "Tyler Dami",
+        "timestamp": 1586014867
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15554\">@Tyler Dami</span> awesome!  I'd certainly be happy to integrate changes to try to support that if it's workable.</p>",
+        "id": 847689,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1586116923
+    },
+    {
+        "content": "<p>No worries! WSL2 should be out soon and it takes a different approach to file system access that should better implements native Linux system calls and should correct the issue. More an issue with WSL than anything in Zulip. </p>\n<p>I’ll report back when I get WSL2 installed to see if I can get the install to proceed completely.</p>",
+        "id": 847791,
+        "sender_full_name": "Tyler Dami",
+        "timestamp": 1586133941
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"15554\">@Tyler Dami</span> I use zulip on WSL2, it runs very smooth.</p>",
+        "id": 847818,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1586147889
+    },
+    {
+        "content": "<p>see <a href=\"#narrow/stream/49-development-help/topic/Running.20Zulip.20on.20Windows.20(WSL)\" title=\"#narrow/stream/49-development-help/topic/Running.20Zulip.20on.20Windows.20(WSL)\">https://chat.zulip.org/#narrow/stream/49-development-help/topic/Running.20Zulip.20on.20Windows.20(WSL)</a></p>",
+        "id": 847819,
+        "sender_full_name": "Aman (amanagr)",
+        "timestamp": 1586147974
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"5140\">@Aman Agrawal</span> Awesome, good to hear! I do agree upgrading to WSL2 is the biggest challenge.</p>",
+        "id": 848039,
+        "sender_full_name": "Tyler Dami",
+        "timestamp": 1586186261
+    }
+]

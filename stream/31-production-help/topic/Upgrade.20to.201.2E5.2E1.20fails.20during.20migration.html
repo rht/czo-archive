@@ -1,0 +1,291 @@
+<html>
+<head><meta charset="utf-8"><title>Upgrade to 1.5.1 fails during migration · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html">Upgrade to 1.5.1 fails during migration</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="160610"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160610" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Elbel <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160610">(Mar 03 2017 at 13:25)</a>:</h4>
+<p>I have been trying to upgrade our server from 1.3.10 to 1.5.1 and whatever I do and how many intermediate steps I take, I always run into an error during stage 2:</p>
+<div class="codehilite"><pre><span></span>2017-03-03 13:42:18,046 upgrade-zulip-stage-2: Applying database migrations...
+Operations to perform:
+  Apply all migrations: analytics, auth, confirmation, contenttypes, guardian, sessions, sites, social_django, zerver
+Running migrations:
+  Applying zerver.0029_realm_subdomain... OK
+  Applying zerver.0030_realm_org_type... OK
+  Applying zerver.0031_remove_system_avatar_source... OK
+  Applying zerver.0032_verify_all_medium_avatar_images... OK
+  Applying zerver.0033_migrate_domain_to_realmalias... OK
+  Applying zerver.0034_userprofile_enable_online_push_notifications... OK
+  Applying zerver.0035_realm_message_retention_period_days... OK
+  Applying zerver.0036_rename_subdomain_to_string_id... OK
+  Applying zerver.0037_disallow_null_string_id... OK
+  Applying zerver.0038_realm_change_to_community_defaults... OK
+  Applying zerver.0039_realmalias_drop_uniqueness... OK
+  Applying zerver.0040_realm_authentication_methods... OK
+  Applying zerver.0041_create_attachments_for_old_messages...Traceback (most recent call last):
+[...]
+  File &quot;/home/zulip/deployments/2017-03-03-13-40-34/zerver/migrations/0041_create_attachments_for_old_messages.py&quot;, line 33, in check_and_create_attachments
+    realm=user_profile.realm, is_realm_public=is_message_realm_public)
+[...]
+  File &quot;/home/zulip/deployments/2017-03-03-13-40-34/zerver/lib/db.py&quot;, line 19, in wrapper_execute
+    return action(sql, params)
+django.db.utils.DataError: value too long for type character varying(100)
+</pre></div>
+
+
+<p>Calling <code>manage.py migrate</code> manually reproduces the result.</p>
+<p>Could anybody point me into the right direction to find out just what SQL Statement wants to write too much data into too short a DB field?</p>
+
+
+
+<a name="160617"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160617" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160617">(Mar 03 2017 at 14:04)</a>:</h4>
+<p>Strange. I would add a print statement to <code>home/zulip/deployments/2017-03-03-13-40-34/zerver/migrations/0041_create_attachments_for_old_messages.py</code> to try to debug this.  Add something like this right <strong>before</strong> line 33:</p>
+<div class="codehilite"><pre><span></span><span class="k">print</span><span class="p">(</span><span class="n">path_id</span><span class="p">,</span> <span class="n">user_profile</span><span class="o">.</span><span class="n">email</span><span class="p">)</span>
+</pre></div>
+
+
+
+<a name="160619"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160619" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Elbel <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160619">(Mar 03 2017 at 14:18)</a>:</h4>
+<p>Thanks, that was exactly what I needed:</p>
+<div class="codehilite"><pre><span></span>(u&#39;2/e8/w7Dg1PL_gsGpnRcPSEEq7rLa/2016-10-18-12_37_34-19-of-the-best-kids-halloween-costumes-ever-i-will-do-the-same-thing-definitel.png&#39;, u&#39;user@domain&#39;)
+</pre></div>
+
+
+<p>Now I just have to find that thing in the database <img alt=":grimacing:" class="emoji" src="/static/generated/emoji/images/emoji/unicode/1f62c.png" title=":grimacing:"></p>
+
+
+
+<a name="160620"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160620" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160620">(Mar 03 2017 at 14:22)</a>:</h4>
+<p>I believe that string is inside a message, and at line 21 you can try adding <code>print(message.id)</code> and that will give you the id for <code>zerver_message.id</code>.</p>
+
+
+
+<a name="160621"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160621" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160621">(Mar 03 2017 at 14:25)</a>:</h4>
+<p>Another workaround is to say <code>if len(path_id) &gt;= 99: path_id = 'BOGUS'</code> at line 31, and then the migration will complete.  I am 80% confident that this won't break anything but the ability to view that one attachment in that one message, and we can try to clean that up after you get everybody up and running.</p>
+
+
+
+<a name="160622"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160622" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matthias <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160622">(Mar 03 2017 at 14:29)</a>:</h4>
+<p>hi <span class="user-mention" data-user-email="me@consol.de" data-user-id="1799">@Michael Elbel</span> I would also like to upgrade our production server to 1.5.1. After all your failed attempts could you still run 1.3.0 to avoid down times? I'm planning to take a checkpoint in Hyper-V to revert back to a working VM state in any case.</p>
+
+
+
+<a name="160625"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160625" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Elbel <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160625">(Mar 03 2017 at 14:34)</a>:</h4>
+<p>Well, what I did to aviod downtimes was to clone the productive Server VM, rename it to zulip-test, also in the config, reconfigure rabbitmq and do a test upgrade from there using a few snapshots.</p>
+<p>When that is successful, I'll have a checklist of things to do for the actual upgrade.</p>
+
+
+
+<a name="160627"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160627" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matthias <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160627">(Mar 03 2017 at 14:35)</a>:</h4>
+<p>what VM-Host are you using (VMWare, Hyper-V, Qemu?)</p>
+
+
+
+<a name="160628"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160628" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160628">(Mar 03 2017 at 14:38)</a>:</h4>
+<p>Pinging <span class="user-mention" data-user-email="tabbott@zulipchat.com" data-user-id="7">@Tim Abbott</span> to look at this.  He usually comes online in the next few hours.  While it seems clear that the long path_id is the problem here, I'm a little puzzled about the 100-char limit, as the current version of the DB has a TextField for that.  I'm going to try to dig a bit deeper.</p>
+
+
+
+<a name="160629"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160629" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160629">(Mar 03 2017 at 14:40)</a>:</h4>
+<p><span class="user-mention" data-user-email="me@consol.de" data-user-id="1799">@Michael Elbel</span> Can you run these commands?:</p>
+<div class="codehilite"><pre><span></span>(zulip-venv)vagrant@vagrant-base-trusty-amd64:/srv/zulip$ ./manage.py dbshell
+psql (9.3.15)
+SSL connection (cipher: DHE-RSA-AES256-GCM-SHA384, bits: 256)
+Type &quot;help&quot; for help.
+
+zulip=&gt; \d zerver_attachment;
+</pre></div>
+
+
+
+<a name="160634"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160634" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Elbel <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160634">(Mar 03 2017 at 14:47)</a>:</h4>
+<p><span class="user-mention" data-user-email="showell30@yahoo.com" data-user-id="58">@Steve Howell</span> I was thinking along the same lines, still had it in the shell history.</p>
+<p>Before running migration:</p>
+<div class="codehilite"><pre><span></span>zulip=&gt; \d zerver_attachment
+ id              | integer                  | not null default nextval(&#39;zerver_attachment_id_seq&#39;::regclass)
+ file_name       | character varying(100)   | not null
+ path_id         | text                     | not null
+ create_time     | timestamp with time zone | not null
+ owner_id        | integer                  | not null
+ is_realm_public | boolean                  | not null
+ realm_id        | integer                  |
+</pre></div>
+
+
+<p>Following your suggestion I changed the code to this:</p>
+<div class="codehilite"><pre><span></span>            <span class="k">if</span> <span class="n">path_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="c1"># Deal with Paths that are too long for zerver_attachment</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path_id</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">99</span><span class="p">:</span>
+                        <span class="k">print</span><span class="p">(</span><span class="n">path_id</span><span class="p">,</span> <span class="n">user_profile</span><span class="o">.</span><span class="n">email</span><span class="p">)</span>
+                        <span class="k">print</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+                        <span class="n">path_id</span> <span class="o">=</span> <span class="s1">&#39;BOGUS&#39;</span>
+<span class="p">[</span><span class="o">...</span><span class="p">]</span>
+</pre></div>
+
+
+<p>Now afterwards, the table looks like this</p>
+<div class="codehilite"><pre><span></span>zulip=&gt; \d zerver_attachment
+                                       Table &quot;zulip.zerver_attachment&quot;
+     Column      |           Type           |                           Modifiers
+-----------------+--------------------------+----------------------------------------------------------------
+ id              | integer                  | not null default nextval(&#39;zerver_attachment_id_seq&#39;::regclass)
+ file_name       | text                     | not null
+ path_id         | text                     | not null
+ create_time     | timestamp with time zone | not null
+ owner_id        | integer                  | not null
+ is_realm_public | boolean                  | not null
+ realm_id        | integer                  |
+Indexes:
+    &quot;zerver_attachment_pkey&quot; PRIMARY KEY, btree (id)
+    &quot;zerver_attachment_3090ad88&quot; btree (file_name)
+    &quot;zerver_attachment_5e7b1936&quot; btree (owner_id)
+    &quot;zerver_attachment_b16a6265&quot; btree (create_time)
+    &quot;zerver_attachment_b7787107&quot; btree (path_id)
+    &quot;zerver_attachment_ebb45aed&quot; btree (realm_id)
+    &quot;zerver_attachment_file_name_4bc9f8029997a62b_like&quot; btree (file_name varchar_pattern_ops)
+    &quot;zerver_attachment_path_id_24d653d56919de80_like&quot; btree (path_id text_pattern_ops)
+Foreign-key constraints:
+    &quot;zerver_attac_owner_id_313f752ba465b497_fk_zerver_userprofile_id&quot; FOREIGN KEY (owner_id) REFERENCES zerver_userprofile(id) DEFERRABLE INITIALLY DEFERRED
+    &quot;zerver_attachment_realm_id_4a0c7a9ac58943b5_fk_zerver_realm_id&quot; FOREIGN KEY (realm_id) REFERENCES zerver_realm(id) DEFERRABLE INITIALLY DEFERRED
+Referenced by:
+    TABLE &quot;zerver_attachment_messages&quot; CONSTRAINT &quot;zerver_a_attachment_id_40b3ac2c7c1dd744_fk_zerver_attachment_id&quot; FOREIGN KEY (attachment_id) REFERENCES zerver_attachment(id) DEFERRABLE INITIALLY DEFERRED
+</pre></div>
+
+
+<p>I'm guessing the <code>alter table</code> statement runs only <strong>after</strong> the migration has happened.</p>
+
+
+
+<a name="160635"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160635" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Elbel <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160635">(Mar 03 2017 at 14:48)</a>:</h4>
+<p>Now I'll revert to my trusty snapshot and check what happens if I alter that field to be a text before running the migration.</p>
+
+
+
+<a name="160638"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160638" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160638">(Mar 03 2017 at 14:55)</a>:</h4>
+<p>Oh, interesting, now I see the history.  In migration 41, we populate attachements, and then in migration 42, we switched filename from varchar(100) to text.</p>
+
+
+
+<a name="160639"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160639" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160639">(Mar 03 2017 at 14:57)</a>:</h4>
+<p>Once we discovered that field-length was an issue, we probably should have gone back and modified migration 41.  I suspect at the time we didn't think there would be a big chance of that tripping up existing installations, but obviously we were wrong in this case. <img alt=":frowning:" class="emoji" src="/static/generated/emoji/images/emoji/unicode/1f626.png" title=":frowning:"></p>
+
+
+
+<a name="160641"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160641" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Elbel <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160641">(Mar 03 2017 at 14:58)</a>:</h4>
+<p>And since that table was empty anyways, I now did a </p>
+<div class="codehilite"><pre><span></span>alter table zerver_attachment alter file_name type text;
+</pre></div>
+
+
+<p>before doing the upgrade and everything works flawlessly. Thanks again <span class="user-mention" data-user-email="showell30@yahoo.com" data-user-id="58">@Steve Howell</span> for helping me out here, It would probably have taken me another couple of hours to find this one on my own.</p>
+
+
+
+<a name="160642"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160642" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160642">(Mar 03 2017 at 14:59)</a>:</h4>
+<p>You're welcome!  This is a good reminder for us going forward to be more thoughtful about error checking in these types of migrations.</p>
+
+
+
+<a name="160644"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160644" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Elbel <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160644">(Mar 03 2017 at 15:04)</a>:</h4>
+<p>Yeah, I also ran into a load of errors in <code>zerver.0032_verify_all_medium_avatar_images</code> where we were missing .original files for avatars but I'm not sure if that is not our installation that we have been upgrading since 2015.</p>
+
+
+
+<a name="160645"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160645" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Michael Elbel <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160645">(Mar 03 2017 at 15:05)</a>:</h4>
+<p>But I'm not complaining here, I'm glad that there are knowledgeable people helping with a tool we did not pay for <img alt=":grin:" class="emoji" src="/static/generated/emoji/images/emoji/unicode/1f601.png" title=":grin:"></p>
+
+
+
+<a name="160646"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160646" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160646">(Mar 03 2017 at 15:07)</a>:</h4>
+<p>Well, you may not be paying, but error reports like this are super helpful!  Good luck using 1.5.1!</p>
+
+
+
+<a name="160649"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160649" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matthias <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160649">(Mar 03 2017 at 15:21)</a>:</h4>
+<p>there will be more of that coming. I'm planing to upgrade our 1.4.2 to 1.5.1 in the week beginning with the 13th of March. <span class="user-mention" data-user-email="showell30@yahoo.com" data-user-id="58">@Steve Howell</span> what times are u usually online?</p>
+
+
+
+<a name="160650"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160650" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160650">(Mar 03 2017 at 15:22)</a>:</h4>
+<p>The best times to get both me and Tim online are between 10am and 6pm PT (US West Coast).</p>
+
+
+
+<a name="160651"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160651" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160651">(Mar 03 2017 at 15:25)</a>:</h4>
+<p>Right now we are 8 hours behind UTC.  The clocks go forward an hour for us on March 12th for daylight savings, but I doubt we will switch our sleep clocks that quickly.</p>
+
+
+
+<a name="160652"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160652" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160652">(Mar 03 2017 at 15:29)</a>:</h4>
+<p>Are you in Europe?  If so, I would plan to do the upgrade in the evening, and you can coordinate exact times with us a couple days before the 13th.</p>
+
+
+
+<a name="160653"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160653" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matthias <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160653">(Mar 03 2017 at 15:30)</a>:</h4>
+<p>I'm in Germany and also have daylight savings. heck, that's so confusing. This should be it. ok after 2pm our time. <br>
+<a href="https://www.timeanddate.com/worldclock/converter.html?iso=20170313T130000&amp;p1=37&amp;p2=137" target="_blank" title="https://www.timeanddate.com/worldclock/converter.html?iso=20170313T130000&amp;p1=37&amp;p2=137">wordclock</a></p>
+
+
+
+<a name="160654"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160654" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matthias <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160654">(Mar 03 2017 at 15:31)</a>:</h4>
+<p>that would be great. Thanks for that offer. Very generous.</p>
+
+
+
+<a name="160655"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160655" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve Howell <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160655">(Mar 03 2017 at 15:32)</a>:</h4>
+<p>No problem...I would aim more for like 6pm your time to ensure that we're both awake. :)  I'm an early riser, but Tim is more of a night owl.</p>
+
+
+
+<a name="160656"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160656" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matthias <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160656">(Mar 03 2017 at 15:34)</a>:</h4>
+<p>ok, will plan that in</p>
+
+
+
+<a name="160824"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/160824" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#160824">(Mar 03 2017 at 18:00)</a>:</h4>
+<p>Just caught up on this; sounds like we definitely should have edited the existing migration...</p>
+
+
+
+<a name="166581"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Upgrade%20to%201.5.1%20fails%20during%20migration/near/166581" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Matthias <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Upgrade.20to.201.2E5.2E1.20fails.20during.20migration.html#166581">(Mar 12 2017 at 20:20)</a>:</h4>
+<p>would like to come back to the offer of having either or both <span class="user-mention" data-user-email="tabbott@zulipchat.com" data-user-id="7">@Tim Abbott</span>  and <span class="user-mention" data-user-email="showell30@yahoo.com" data-user-id="58">@Steve Howell</span> online for an upgrade.<br>
+will continue in topic <a href="https://chat.zulip.org/#narrow/stream/production.20help/topic/Upgrade.20from.20git" target="_blank" title="https://chat.zulip.org/#narrow/stream/production.20help/topic/Upgrade.20from.20git">Update from git</a></p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

@@ -1,0 +1,584 @@
+<html>
+<head><meta charset="utf-8"><title>zulip 2.1.7 memcached error 31 timeout · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html">zulip 2.1.7 memcached error 31 timeout</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="964711"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/964711" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#964711">(Jul 30 2020 at 16:20)</a>:</h4>
+<p>Somehow we're getting a lot of these Errors (every few seconds during high load, fewer when not as many users are online) we have around 460 users with around 200-300 online during office hours</p>
+<div class="codehilite"><pre><span></span><code>Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.7/site-packages/django_pylibmc/memcached.py&quot;, line 130, in get
+    return super(PyLibMCCache, self).get(key, default, version)
+  File &quot;/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.7/site-packages/django/core/cache/backends/memcached.py&quot;, line 79, in get
+    val = self._cache.get(key)
+pylibmc.Error: error 31 from memcached_get(:1:django.contrib.sessions.cache): (0x5564c93c9790) A TIMEOUT OCCURRED, No active_fd were found,  host: localhost:11211 -&gt; libmemcached/io.cc:259
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.7/site-packages/django_pylibmc/memcached.py&quot;, line 140, in set
+    **COMPRESS_KWARGS)
+pylibmc.ServerDown: error 47 from memcached_set: (0x5564c93c9790) SERVER HAS FAILED AND IS DISABLED UNTIL TIMED RETRY,  host: localhost:11211 -&gt; libmemcached/connect.cc:720
+2020-07-30 16:10:38.643 ERR  [django.pylibmc] MemcachedError: error 31 from memcached_get(:1:django.contrib.sessions.cache): (0x5564c93c9790) A TIMEOUT OCCURRED, No active_fd were found,  host: localhost:11211 -&gt; libmemcached/io.cc:259
+Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.7/site-packages/django/contrib/sessions/backends/base.py&quot;, line 202, in _get_session
+    return self._session_cache
+AttributeError: &#39;SessionStore&#39; object has no attribute &#39;_session_cache&#39;
+</code></pre></div>
+
+
+<p>I've checked the zulp-secrets.conf and used the password to connect to memcached </p>
+<p><code>bmemcached-cli zulip:6452e9d1a829167de999bdd63f316cc252a22cd815b85axxxxx@localhost:11211</code></p>
+<p>sasl users seem to be fine:</p>
+<div class="codehilite"><pre><span></span><code>root@zulip01:~# sasldblistusers2  /etc/sasl2/memcached-sasldb2
+zulip@localhost: userPassword
+zulip@zulip01: userPassword
+</code></pre></div>
+
+
+<p>and that worked. I've tried the settings.py with localhost and 127.0.0.1 and no difference.</p>
+<p>Also Manage.py fill caches works just fine so i don't think its an authentication issue?</p>
+<p>Memcached stats reports a maximum of 16 active connections, which is far away from the 1024 limit.</p>
+<p>Memcached verbose logs also show a lot of connections with <code>Jul 30 16:02:28 zulip01 systemd-memcached-wrapper[12568]: sasl result code:  0</code> which I think  means everything is ok?</p>
+<p>I've thought about editing <code>/home/zulip/deployments/current/zproject/settings.py</code></p>
+<div class="codehilite"><pre><span></span><code>CACHES = {
+    &#39;default&#39;: {
+        &#39;BACKEND&#39;: &#39;django_pylibmc.memcached.PyLibMCCache&#39;,
+        &#39;LOCATION&#39;: MEMCACHED_LOCATION,
+        &#39;TIMEOUT&#39;: 3600,
+        &#39;BINARY&#39;: True,
+        &#39;USERNAME&#39;: MEMCACHED_USERNAME,
+        &#39;PASSWORD&#39;: MEMCACHED_PASSWORD,
+        &#39;OPTIONS&#39;: {
+            &#39;tcp_nodelay&#39;: True,
+            &#39;retry_timeout&#39;: 1,
+        }
+</code></pre></div>
+
+
+<p>adding the <code>no_block</code> Option from here: <a href="http://sendapatch.se/projects/pylibmc/behaviors.html">http://sendapatch.se/projects/pylibmc/behaviors.html</a></p>
+<p>But not quite sure if that would even make a difference.</p>
+<p>One effect of these errors is that Messages are sent with quite a delay, sometimes multiple seconds.</p>
+<p>Any Tips?</p>
+
+
+
+<a name="965260"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965260" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965260">(Jul 30 2020 at 20:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="16455">@Adam Benesh</span> the issue is very likely memcached authentication being misconfigured.</p>
+
+
+
+<a name="965261"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965261" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965261">(Jul 30 2020 at 20:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="699">@Anders Kaseorg</span> were there further fixes in 3.0 for memcached authentication?</p>
+
+
+
+<a name="965273"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965273" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965273">(Jul 30 2020 at 20:03)</a>:</h4>
+<p>when i change the password in zulip-secrets.conf it switches to "authentication failure" so I don't really think its that. esp. since the memcached logs do show successful connections</p>
+
+
+
+<a name="965277"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965277" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965277">(Jul 30 2020 at 20:05)</a>:</h4>
+<p>Can you check <code>dmesg</code>?  I'd like to confirm you're not having OOM kills or anything.</p>
+
+
+
+<a name="965301"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965301" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965301">(Jul 30 2020 at 20:16)</a>:</h4>
+<p>Don't see any process kills in dmesg or anywhere under /var/log</p>
+<p>and i have to correct myself, if i change the password to something wrong it just says error 47 Server has failed. But no more timeouts</p>
+
+
+
+<a name="965308"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965308" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965308">(Jul 30 2020 at 20:18)</a>:</h4>
+<p>also when restarting zulip it can fill the cache just fine so i don't think it's an auth issue:</p>
+<div class="codehilite"><pre><span></span><code>root@zulip01:~# sudo -u zulip /home/zulip/deployments/current/scripts/restart-server --fill-cache
+2020-07-30 20:14:57,865 restart-server: Filling memcached caches
+2020-07-30 20:14:59.191 INFO [] Successfully populated user cache!  Consumed 1 remote cache queries (0.06 time)
+2020-07-30 20:14:59.193 INFO [] Successfully populated client cache!  Consumed 1 remote cache queries (0.0 time)
+2020-07-30 20:14:59.212 INFO [] Successfully populated recipient cache!  Consumed 1 remote cache queries (0.01 time)
+2020-07-30 20:14:59.225 INFO [] Successfully populated stream cache!  Consumed 1 remote cache queries (0.01 time)
+2020-07-30 20:14:59.336 INFO [] Successfully populated huddle cache!  Consumed 1 remote cache queries (0.09 time)
+2020-07-30 20:14:59.370 INFO [] Successfully populated session cache!  Consumed 1 remote cache queries (0.01 time)
+zulip-tornado: stopped
+</code></pre></div>
+
+
+
+<a name="965310"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965310" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965310">(Jul 30 2020 at 20:18)</a>:</h4>
+<p>Hmm, interesting.</p>
+
+
+
+<a name="965313"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965313" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965313">(Jul 30 2020 at 20:18)</a>:</h4>
+<p>What's in /etc/hosts?</p>
+
+
+
+<a name="965314"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965314" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965314">(Jul 30 2020 at 20:18)</a>:</h4>
+<p>I wonder if <code>localhost</code> is somehow misconfigured there.</p>
+
+
+
+<a name="965319"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965319" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965319">(Jul 30 2020 at 20:20)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>root@zulip01:~# cat /etc/hosts
+127.0.0.1       localhost
+::1             localhost ip6-localhost ip6-loopback
+ff02::1         ip6-allnodes
+ff02::2         ip6-allrouters
+</code></pre></div>
+
+
+<p>I've actually tried it with 127.0.0.1 as well, but its the same result</p>
+
+
+
+<a name="965332"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965332" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965332">(Jul 30 2020 at 20:22)</a>:</h4>
+<p>Try removing <code>localhost</code> from that <code>::1</code> line.</p>
+
+
+
+<a name="965333"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965333" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965333">(Jul 30 2020 at 20:23)</a>:</h4>
+<p>So I've just changed it back, at the moment not many people are using our instance, messages go through instantly but as soon as i start spamming test messages it gets delayed and this pops up in the error log:</p>
+<div class="codehilite"><pre><span></span><code>Traceback (most recent call last):
+  File &quot;/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.7/site-packages/django_pylibmc/memcached.py&quot;, line 130, in get
+    return super(PyLibMCCache, self).get(key, default, version)
+  File &quot;/srv/zulip-venv-cache/6176a52fab8737c09656fc8ad0352547e9801c07/zulip-py3-venv/lib/python3.7/site-packages/django/core/cache/backends/memcached.py&quot;, line 79, in get
+    val = self._cache.get(key)
+pylibmc.Error: error 31 from memcached_get(:1:django.contrib.sessions.cache): (0x55d098b9bc80) A TIMEOUT OCCURRED, No active_fd were found,  host: 127.0.0.1:11211 -&gt; libmemcached/io.cc:259
+</code></pre></div>
+
+
+
+<a name="965334"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965334" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965334">(Jul 30 2020 at 20:23)</a>:</h4>
+<p>I've seen weird problems like this caused by IPv6 being listed as <code>localhost</code> rather than <code>localhost6</code> with other services before.</p>
+
+
+
+<a name="965336"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965336" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965336">(Jul 30 2020 at 20:23)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="7">Tim Abbott</span> <a href="#narrow/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout/near/965332">said</a>:</p>
+<blockquote>
+<p>Try removing <code>localhost</code> from that <code>::1</code> line.</p>
+</blockquote>
+<p>ok will do</p>
+
+
+
+<a name="965337"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965337" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965337">(Jul 30 2020 at 20:24)</a>:</h4>
+<p>Yeah, so the nice thing about accessing a cache failing is that you'll get an exception but Zulip will still work, since it doesn't <strong>need</strong> the cache.  That's the full explanation for what you're seeing with things working but lots of error emails.</p>
+
+
+
+<a name="965342"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965342" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965342">(Jul 30 2020 at 20:26)</a>:</h4>
+<p>But i guess without the cache it'll be significantly slower</p>
+
+
+
+<a name="965347"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965347" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965347">(Jul 30 2020 at 20:27)</a>:</h4>
+<p>Well, significantly slower at scale; if you have very little usage, Zulip is very fast even without the cache.</p>
+
+
+
+<a name="965362"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965362" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965362">(Jul 30 2020 at 20:33)</a>:</h4>
+<p>FTR, <code>::1 localhost</code> has been a totally normal configuration for at least <a href="https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=427067">13 years</a>, so if that’s causing a problem I’d still want to know why.</p>
+
+
+
+<a name="965371"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965371" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965371">(Jul 30 2020 at 20:36)</a>:</h4>
+<p>I'm stumped as to why zulip/django can't connect then, </p>
+<p>I can even switch to the zulip user and use a sasl compatible memcached client to connect with the password:</p>
+<div class="codehilite"><pre><span></span><code>bmemcached-cli zulip:6452e9d1a829167de999bdd63f316cc252a22cd815b85a79ead60183bxxxxx@127.0.0.1:11211
+([B]memcached) stats
+{&#39;127.0.0.1:11211&#39;: {&#39;accepting_conns&#39;: &#39;1&#39;,
+                     &#39;auth_cmds&#39;: &#39;525&#39;,
+                     &#39;auth_errors&#39;: &#39;0&#39;,
+                     &#39;bytes&#39;: &#39;20498930&#39;,
+                     &#39;bytes_read&#39;: &#39;24873622&#39;,
+                     &#39;bytes_written&#39;: &#39;15835460&#39;,
+                     &#39;cas_badval&#39;: &#39;0&#39;,
+                     &#39;cas_hits&#39;: &#39;0&#39;,
+                     &#39;cas_misses&#39;: &#39;0&#39;,
+                     &#39;cmd_flush&#39;: &#39;0&#39;,
+                     &#39;cmd_get&#39;: &#39;69915&#39;,
+                     &#39;cmd_set&#39;: &#39;45326&#39;,
+                     &#39;cmd_touch&#39;: &#39;0&#39;,
+                     &#39;conn_yields&#39;: &#39;3273&#39;,
+                     &#39;connection_structures&#39;: &#39;24&#39;,
+                     &#39;crawler_items_checked&#39;: &#39;9343&#39;,
+                     &#39;crawler_reclaimed&#39;: &#39;0&#39;,
+                     &#39;curr_connections&#39;: &#39;13&#39;,
+                     &#39;curr_items&#39;: &#39;45168&#39;,
+                     &#39;decr_hits&#39;: &#39;0&#39;,
+                     &#39;decr_misses&#39;: &#39;0&#39;,
+                     &#39;delete_hits&#39;: &#39;0&#39;,
+                     &#39;delete_misses&#39;: &#39;0&#39;,
+                     &#39;direct_reclaims&#39;: &#39;0&#39;,
+                     &#39;evicted_active&#39;: &#39;0&#39;,
+                     &#39;evicted_unfetched&#39;: &#39;0&#39;,
+                     &#39;evictions&#39;: &#39;0&#39;,
+                     &#39;expired_unfetched&#39;: &#39;0&#39;,
+                     &#39;get_expired&#39;: &#39;0&#39;,
+                     &#39;get_flushed&#39;: &#39;0&#39;,
+                     &#39;get_hits&#39;: &#39;24608&#39;,
+                     &#39;get_misses&#39;: &#39;45307&#39;,
+                     &#39;hash_bytes&#39;: &#39;524288&#39;,
+                     &#39;hash_is_expanding&#39;: &#39;0&#39;,
+                     &#39;hash_power_level&#39;: &#39;16&#39;,
+                     &#39;incr_hits&#39;: &#39;0&#39;,
+                     &#39;incr_misses&#39;: &#39;0&#39;,
+                     &#39;libevent&#39;: &#39;2.1.8-stable&#39;,
+                     &#39;limit_maxbytes&#39;: &#39;2102394880&#39;,
+                     &#39;listen_disabled_num&#39;: &#39;0&#39;,
+                     &#39;log_watcher_sent&#39;: &#39;0&#39;,
+                     &#39;log_watcher_skipped&#39;: &#39;0&#39;,
+                     &#39;log_worker_dropped&#39;: &#39;0&#39;,
+                     &#39;log_worker_written&#39;: &#39;0&#39;,
+                     &#39;lru_bumps_dropped&#39;: &#39;0&#39;,
+                     &#39;lru_crawler_running&#39;: &#39;0&#39;,
+                     &#39;lru_crawler_starts&#39;: &#39;510&#39;,
+                     &#39;lru_maintainer_juggles&#39;: &#39;6798&#39;,
+                     &#39;lrutail_reflocked&#39;: &#39;4&#39;,
+                     &#39;malloc_fails&#39;: &#39;0&#39;,
+                     &#39;max_connections&#39;: &#39;1024&#39;,
+                     &#39;moves_to_cold&#39;: &#39;36142&#39;,
+                     &#39;moves_to_warm&#39;: &#39;5296&#39;,
+                     &#39;moves_within_lru&#39;: &#39;500&#39;,
+                     &#39;pid&#39;: &#39;700&#39;,
+                     &#39;pointer_size&#39;: &#39;64&#39;,
+                     &#39;reclaimed&#39;: &#39;0&#39;,
+                     &#39;rejected_connections&#39;: &#39;0&#39;,
+                     &#39;reserved_fds&#39;: &#39;40&#39;,
+                     &#39;rusage_system&#39;: &#39;1.487569&#39;,
+                     &#39;rusage_user&#39;: &#39;0.348809&#39;,
+                     &#39;slab_global_page_pool&#39;: &#39;0&#39;,
+                     &#39;slab_reassign_busy_deletes&#39;: &#39;0&#39;,
+                     &#39;slab_reassign_busy_items&#39;: &#39;0&#39;,
+                     &#39;slab_reassign_chunk_rescues&#39;: &#39;0&#39;,
+                     &#39;slab_reassign_evictions_nomem&#39;: &#39;0&#39;,
+                     &#39;slab_reassign_inline_reclaim&#39;: &#39;0&#39;,
+                     &#39;slab_reassign_rescues&#39;: &#39;0&#39;,
+                     &#39;slab_reassign_running&#39;: &#39;0&#39;,
+                     &#39;slabs_moved&#39;: &#39;0&#39;,
+                     &#39;threads&#39;: &#39;8&#39;,
+                     &#39;time&#39;: &#39;1596140970&#39;,
+                     &#39;time_in_listen_disabled_us&#39;: &#39;0&#39;,
+                     &#39;total_connections&#39;: &#39;556&#39;,
+                     &#39;total_items&#39;: &#39;45326&#39;,
+                     &#39;touch_hits&#39;: &#39;0&#39;,
+                     &#39;touch_misses&#39;: &#39;0&#39;,
+                     &#39;uptime&#39;: &#39;111&#39;,
+                     &#39;version&#39;: &#39;1.5.6&#39;}}
+</code></pre></div>
+
+
+
+<a name="965389"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965389" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965389">(Jul 30 2020 at 20:43)</a>:</h4>
+<p>A difference between Zulip and that <code>bmemcached-cli</code> invocation is that Zulip sends literally <code>zulip@localhost</code> as the username rather than <code>zulip</code> (<a href="https://github.com/zulip/zulip/pull/15462">#15462</a>), assuming you haven’t customized the <code>MEMCACHED_USERNAME</code> setting.</p>
+
+
+
+<a name="965395"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965395" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965395">(Jul 30 2020 at 20:46)</a>:</h4>
+<p>I've found something else interesting, all the connections to 11211 are in TIME_WAIT condition for some reason</p>
+<div class="codehilite"><pre><span></span><code>tcp        0      0 localhost:37686         localhost:11211         TIME_WAIT   -
+tcp        0      0 localhost:37816         localhost:11211         TIME_WAIT   -
+tcp        0      0 localhost:37782         localhost:11211         TIME_WAIT   -
+tcp        0      0 localhost:44637         localhost:epmd          TIME_WAIT   -
+tcp        0      0 localhost:51921         localhost:25672         TIME_WAIT   -
+tcp        0      0 localhost:43981         localhost:25672         TIME_WAIT   -
+tcp        0      0 localhost:37984         localhost:11211         TIME_WAIT   -
+tcp        0      0 localhost:50791         localhost:epmd          TIME_WAIT   -
+tcp        0      0 localhost:37876         localhost:11211         TIME_WAIT   -
+tcp        0      0 localhost:38681         localhost:epmd          TIME_WAIT   -
+tcp        0      0 localhost:37908         localhost:11211         TIME_WAIT   -
+</code></pre></div>
+
+
+
+<a name="965397"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965397" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965397">(Jul 30 2020 at 20:46)</a>:</h4>
+<p><code>bmemcached-cli</code> doesn’t appear to have a way to send a username containing an <code>@</code>, because it parses that as a delimiter. Try <code>memcping --servers=127.0.0.1 --binary --username=zulip@127.0.0.1 --password=6452…</code>.</p>
+
+
+
+<a name="965405"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965405" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965405">(Jul 30 2020 at 20:49)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="699">Anders Kaseorg</span> <a href="#narrow/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout/near/965397">said</a>:</p>
+<blockquote>
+<p><code>bmemcached-cli</code> doesn’t appear to have a way to send a username containing an <code>@</code>, because it parses that as a delimiter. Try <code>memcping --servers=127.0.0.1 --binary --username=zulip@127.0.0.1 --password=6452…</code>.</p>
+</blockquote>
+<p>Interesting:</p>
+<div class="codehilite"><pre><span></span><code>root@zulip01:~# memcping --servers=127.0.0.1 --binary --username=zulip@127.0.0.1 --password=6452e9d1a829167de999bdd63f316cc252a22cd815b85a79ead60xxxxx
+Failed to ping 127.0.0.1:11211 AUTHENTICATION FAILURE
+</code></pre></div>
+
+
+<p>This is what the sasldb looks like:</p>
+<div class="codehilite"><pre><span></span><code>root@zulip01:~# sasldblistusers2  /etc/sasl2/memcached-sasldb2
+zulip@localhost: userPassword
+zulip@zulip01: userPassword
+</code></pre></div>
+
+
+<p>And I've already done this:</p>
+<div class="codehilite"><pre><span></span><code>cat /etc/sasl2/memcached-zulip-password | saslpasswd2 -f /etc/sasl2/memcached-sasldb2 zulip
+</code></pre></div>
+
+
+
+<a name="965406"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965406" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965406">(Jul 30 2020 at 20:50)</a>:</h4>
+<p>Er, sorry, I meant <code>--username=zulip@localhost</code>.</p>
+
+
+
+<a name="965407"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965407" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965407">(Jul 30 2020 at 20:51)</a>:</h4>
+<p>seems to work without errors</p>
+<div class="codehilite"><pre><span></span><code>root@zulip01:~# memcping --servers=127.0.0.1 --binary --username=zulip@localhost --password=6452e9d1a829167de999bdd63f316cc252a22cd815b85a79eadxxx
+root@zulip01:~# memcping --servers=127.0.0.1 --binary --username=zulip@localhost --password=6452e9d1a829167de999bdd63f316cc252a22cd815b85a79ead6xxx
+root@zulip01:~#
+</code></pre></div>
+
+
+
+<a name="965411"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965411" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965411">(Jul 30 2020 at 20:53)</a>:</h4>
+<p>What version of <code>memcached</code> is this (<code>dpkg-query -W memcached</code>)?</p>
+
+
+
+<a name="965412"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965412" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965412">(Jul 30 2020 at 20:53)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>root@zulip01:~# dpkg-query -W memcached
+memcached       1.5.6-1.1
+</code></pre></div>
+
+
+
+<a name="965422"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965422" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965422">(Jul 30 2020 at 20:57)</a>:</h4>
+<p>Oh, so Debian, not Ubuntu. I wonder if this is a possible symptom of <a href="https://bugs.launchpad.net/ubuntu/+source/libmemcached/+bug/1573594">https://bugs.launchpad.net/ubuntu/+source/libmemcached/+bug/1573594</a>.</p>
+
+
+
+<a name="965433"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965433" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965433">(Jul 30 2020 at 21:04)</a>:</h4>
+<p>Hmm but the Bug was in Versions 1.0 and we‘re on 1.5 already </p>
+<p>And yes we run on Debian 10</p>
+
+
+
+<a name="965437"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965437" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965437">(Jul 30 2020 at 21:05)</a>:</h4>
+<p>i will take a look at socket limitations tomorrow, maybe its hitting some sort of connection limit there</p>
+
+
+
+<a name="965438"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965438" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965438">(Jul 30 2020 at 21:06)</a>:</h4>
+<p>A way you could test this theory is by installing libmemcached11 from Ubuntu:</p>
+<div class="codehilite"><pre><span></span><code>wget https://launchpad.net/ubuntu/+source/libmemcached/1.0.18-4.2ubuntu0.18.04.1/+build/16338164/+files/libmemcached11_1.0.18-4.2ubuntu0.18.04.1_amd64.deb
+dpkg -i libmemcached11_1.0.18-4.2ubuntu0.18.04.1_amd64.deb
+</code></pre></div>
+
+
+<p>and restarting Zulip.</p>
+<div class="codehilite"><pre><span></span><code>supervisorctl restart all
+</code></pre></div>
+
+
+
+<a name="965447"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/965447" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#965447">(Jul 30 2020 at 21:15)</a>:</h4>
+<p>This would actually make perfect sense: that null termination bug is only fixed in an Ubuntu-specific patch because libmemcached upstream has been inactive for three years and hasn’t made a release in six. I did some work toward dropping libmemcached and pylibmc for python-binary-memcached in <a href="https://github.com/zulip/zulip/pull/14925">#14925</a>, and we should probably follow through on that.</p>
+
+
+
+<a name="966073"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/966073" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#966073">(Jul 31 2020 at 06:13)</a>:</h4>
+<p>So i just tried that, even rebooted the entire VM but that didn't help unfortunately, still getting timeouts</p>
+
+
+
+<a name="966230"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/966230" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#966230">(Jul 31 2020 at 07:17)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47 Read binary protocol data:
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47    0x80 0x07 0x00 0x00
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47    0x00 0x00 0x00 0x00
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47    0x00 0x00 0x00 0x00
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47    0x26 0x4a 0x00 0x00
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47    0x00 0x00 0x00 0x00
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47    0x00 0x00 0x00 0x00
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: authenticated() in cmd 0x07 is true
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &gt;47 Writing bin response:
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &gt;47   0x81 0x07 0x00 0x00
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &gt;47   0x00 0x00 0x00 0x00
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &gt;47   0x00 0x00 0x00 0x00
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &gt;47   0x26 0x4a 0x00 0x00
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &gt;47   0x00 0x00 0x00 0x00
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &gt;47   0x00 0x00 0x00 0x00
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: Failed to write, and not due to blocking: Broken pipe
+Jul 31 07:03:27 zulip01 systemd-memcached-wrapper[21283]: &lt;47 connection closed.
+</code></pre></div>
+
+
+<p>memcached verbose logs show Broken pipe errors from time to time,<br>
+might be related to this:</p>
+<p><a href="https://github.com/memcached/memcached/issues/458">https://github.com/memcached/memcached/issues/458</a></p>
+
+
+
+<a name="966964"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/966964" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#966964">(Jul 31 2020 at 09:57)</a>:</h4>
+<p>from </p>
+<div class="codehilite"><pre><span></span><code>netstat -s
+
+[...]
+    127 times the listen queue of a socket overflowed
+    127 SYNs to LISTEN sockets dropped
+</code></pre></div>
+
+
+
+<a name="967936"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/967936" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#967936">(Aug 01 2020 at 02:55)</a>:</h4>
+<p><span class="user-mention" data-user-id="16455">@Adam Benesh</span> Hmm. This seems like it’s going to be complicated to debug, but there’s still some chance that taking libmemcached and pylibmc out of the equation might help. If you’d like to try out the patch that replaces pylibmc with python-binary-memcached, I’ve pushed a branch that has this patch on 3.1 with no other changes, so you should be able to try it with</p>
+<div class="codehilite"><pre><span></span><code>/home/zulip/deployments/current/scripts/upgrade-zulip-from-git 3.1-with-bmemcached
+</code></pre></div>
+
+
+<p>and safely go back to 3.1 if it doesn’t work.</p>
+<p>(If you’re still on 2.1.7, the <a href="https://zulip.readthedocs.io/en/stable/overview/changelog.html#upgrade-notes-for-3-0">upgrade notes for 3.0</a> will apply, and downgrades from 3.1 to 2.1.7 won’t work, as usual.)</p>
+
+
+
+<a name="971577"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/971577" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#971577">(Aug 04 2020 at 07:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="699">@Anders Kaseorg</span>  I installed your branch yesterday evening on our production server. The Upgrade went without a Problem. There is maybe one permissions issue, we use the Apache SSO Backend Solution and after the upgrade the apache User was lacking the permissions for <code>/home/zulip/deployments/current/zproject/</code> I guess that has to be added to the puppet config? </p>
+<p>But other than that I am very satisfied, no more memcached errors <span aria-label="tada" class="emoji emoji-1f389" role="img" title="tada">:tada:</span> , chat is now realtime (before we had 5-15s send times in peak hours).<br>
+Thanks a lot! <span aria-label="heart" class="emoji emoji-2764" role="img" title="heart">:heart:</span></p>
+
+
+
+<a name="971578"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/971578" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#971578">(Aug 04 2020 at 07:08)</a>:</h4>
+<p>Nice! I’m guessing the permission problem is the one that we already fixed in <a href="https://github.com/zulip/zulip/pull/15264">#15264</a>, but it still affected you because the upgrade you just did was launched from the previous version’s upgrade script.</p>
+
+
+
+<a name="971583"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/971583" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#971583">(Aug 04 2020 at 07:41)</a>:</h4>
+<p>Since the Upgrade one of our colleagues can't login via SSO anymore (for all the others it works)</p>
+<div class="codehilite"><pre><span></span><code>2020-08-04 07:38:41.505 ERR  [django.request] Internal Server Error: /accounts/login/sso/
+Traceback (most recent call last):
+  File &quot;/home/zulip/deployments/current/zulip-py3-venv/lib/python3.7/site-packages/django/core/handlers/exception.py&quot;, line 34, in inner
+    response = get_response(request)
+  File &quot;/home/zulip/deployments/current/zulip-py3-venv/lib/python3.7/site-packages/django/core/handlers/base.py&quot;, line 115, in _get_response
+    response = self.process_exception_by_middleware(e, request)
+  File &quot;/home/zulip/deployments/current/zulip-py3-venv/lib/python3.7/site-packages/django/core/handlers/base.py&quot;, line 113, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File &quot;/home/zulip/deployments/current/zerver/decorator.py&quot;, line 439, in _wrapped_view_func
+    return view_func(request, *args, **kwargs)
+  File &quot;/home/zulip/deployments/current/zerver/lib/request.py&quot;, line 366, in _wrapped_view_func
+    return view_func(request, *args, **kwargs)
+  File &quot;/home/zulip/deployments/current/zerver/views/auth.py&quot;, line 392, in remote_user_sso
+    result = ExternalAuthResult(user_profile=user_profile, data_dict=data_dict)
+  File &quot;/home/zulip/deployments/current/zproject/backends.py&quot;, line 991, in __init__
+    assert &#39;email&#39; not in data_dict or data_dict[&#39;email&#39;] == self.user_profile.delivery_email
+AssertionError
+</code></pre></div>
+
+
+<p>Any Idea where the problem could be? The LDAP E-Mail is the Same as in the management console</p>
+<p><code>user_profile = get_user_profile_by_email("email@domain.com")</code></p>
+
+
+
+<a name="971585"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/971585" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#971585">(Aug 04 2020 at 07:47)</a>:</h4>
+<p>Nevermind, found it the issue myself, it seems that django/zulip is now case-sensitive in the User E-Mail , there was a mismatch in one letter between ldap and zulip user db. i used the manage.py change-user-email script :)</p>
+
+
+
+<a name="971989"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/971989" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#971989">(Aug 04 2020 at 17:00)</a>:</h4>
+<p><span class="user-mention" data-user-id="16455">@Adam Benesh</span> these are intended to be case-insensitive, so this is still a bug.  <span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> can you take this one?</p>
+
+
+
+<a name="973826"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/973826" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#973826">(Aug 05 2020 at 14:50)</a>:</h4>
+<p><span class="user-mention" data-user-id="16455">@Adam Benesh</span> thanks for reporting this! <a href="https://github.com/zulip/zulip/pull/16042">#16042</a></p>
+
+
+
+<a name="974008"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/974008" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#974008">(Aug 05 2020 at 18:25)</a>:</h4>
+<p><span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> thank you for fixing it <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<a name="974072"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/974072" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#974072">(Aug 05 2020 at 18:41)</a>:</h4>
+<p>Merged and backported to the 3.x branch, so this will be in the zulip 3.2 release.</p>
+
+
+
+<a name="974074"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/974074" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#974074">(Aug 05 2020 at 18:42)</a>:</h4>
+<p><span class="user-mention" data-user-id="16455">@Adam Benesh</span> thanks again for the report; were you to not have resolved this via editing LDAP, you could now get the fix via <code>upgrade-zulip-from-git 3.x</code>.  (<code>3.x</code> being the branch that will become the next 3.x release)</p>
+
+
+
+<a name="974742"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/974742" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Adam Benesh <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#974742">(Aug 06 2020 at 06:08)</a>:</h4>
+<p>Will the memcached fixes from <span class="user-mention" data-user-id="699">@Anders Kaseorg</span>  branch <code>3.1-with-bmemcached</code> also be included in 3.2? Because so far it's working flawlessly</p>
+
+
+
+<a name="974830"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/974830" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#974830">(Aug 06 2020 at 06:50)</a>:</h4>
+<p>We're going to do some more testing but assuming that goes well, yes.</p>
+
+
+
+<a name="1024999"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/1024999" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> mouk <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#1024999">(Sep 25 2020 at 10:32)</a>:</h4>
+<p>We were seeing the error 47 from memcached_set in 3.1 every now and then. We have now upgraded to 3.2 and the error seems to be gone. Thanks!</p>
+
+
+
+<a name="1025183"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/zulip%202.1.7%20memcached%20error%2031%20timeout/near/1025183" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/zulip.202.2E1.2E7.20memcached.20error.2031.20timeout.html#1025183">(Sep 25 2020 at 17:56)</a>:</h4>
+<p><span class="user-mention" data-user-id="16223">@mouk</span> awesome, thanks for the confirmation.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

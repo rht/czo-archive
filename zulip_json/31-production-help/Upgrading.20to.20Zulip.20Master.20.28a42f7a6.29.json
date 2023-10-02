@@ -1,0 +1,146 @@
+[
+    {
+        "content": "<p>Tried upgrading to Master this evening:<br>\nProblem was:<br>\n<code>0306_custom_profile_field_date_format.py</code><br>\nThis caused <code>django.db.utils.DataError: invalid value \"stri\" for \"YYYY\"</code><br>\nI do not know about anyone having created a UserProfile Date field.  (But I am not a 100% certain)<br>\nI \"fixed\" this by just removing the operations from this Migration.</p>\n<p>A thing I noticed is that the version installed seems to be different to the one installed here. (Still Home Icon on \"All messages\", \"new topics\" is still modal).<br>\nMy dev environment does seem to be the same. So this seems to be wanted behaviour?</p>\n<p>(Just as a notice. We run custom changes on top of master. But not anything that should change something here)</p>",
+        "id": 1110128,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1611864886
+    },
+    {
+        "content": "<p>So someone got a value starting with <code>stri</code> into a custom profile field of type Date? That shouldn’t have been possible.</p>",
+        "id": 1110140,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1611865722
+    },
+    {
+        "content": "<p>Can you check what the value is?</p>\n<div class=\"codehilite\" data-code-language=\"Bash Session\"><pre><span></span><code><span class=\"gp\">$ </span>su zulip -c <span class=\"s1\">'psql zulip'</span>\n<span class=\"go\">zulip=&gt; SELECT * FROM zerver_customprofilefield AS f, zerver_customprofilefieldvalue WHERE f.id = field_id AND field_type = 4 AND value LIKE 'stri%';</span>\n</code></pre></div>",
+        "id": 1110141,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1611865786
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>zulip=&gt; SELECT * FROM zerver_customprofilefield AS f, zerver_customprofilefieldvalue WHERE f.id = field_id AND field_type = 4 AND value LIKE &#39;stri%&#39;;\n id | name | field_type | realm_id | hint | field_data | order | id | value | field_id | user_profile_id | rendered_value\n----+------+------------+----------+------+------------+-------+----+-------+----------+-----------------+----------------\n(0 rows)\n</code></pre></div>",
+        "id": 1110142,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1611865926
+    },
+    {
+        "content": "<p>Here is the full Error</p>\n<div class=\"codehilite\"><pre><span></span><code>2021-01-28 19:23:08,939 upgrade-zulip-stage-2: Applying database migrations...\nOperations to perform:\n  Apply all migrations: analytics, auth, confirmation, contenttypes, otp_static, otp_totp, sessions, social_django, two_factor, zerver\nRunning migrations:\n  Applying zerver.0306_custom_profile_field_date_format...Traceback (most recent call last):\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/utils.py&quot;, line 82, in _execute\n    return self.cursor.execute(sql)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zerver/lib/db.py&quot;, line 33, in execute\n    return wrapper_execute(self, super().execute, query, vars)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zerver/lib/db.py&quot;, line 20, in wrapper_execute\n    return action(sql, params)\npsycopg2.errors.InvalidDatetimeFormat: invalid value &quot;stri&quot; for &quot;YYYY&quot;\nDETAIL:  Value must be an integer.\n\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File &quot;./manage.py&quot;, line 50, in &lt;module&gt;\n    execute_from_command_line(sys.argv)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/__init__.py&quot;, line 401, in execute_from_command_line\n    utility.execute()\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/__init__.py&quot;, line 395, in execute\n    self.fetch_command(subcommand).run_from_argv(self.argv)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py&quot;, line 330, in run_from_argv\n    self.execute(*args, **cmd_options)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py&quot;, line 371, in execute\n    output = self.handle(*args, **options)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/base.py&quot;, line 85, in wrapped\n    res = handle_func(*args, **kwargs)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/core/management/commands/migrate.py&quot;, line 245, in handle\n    fake_initial=fake_initial,\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/migrations/executor.py&quot;, line 117, in migrate\n    state = self._migrate_all_forwards(state, plan, full_plan, fake=fake, fake_initial=fake_initial)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/migrations/executor.py&quot;, line 147, in _migrate_all_forwards\n    state = self.apply_migration(state, migration, fake=fake, fake_initial=fake_initial)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/migrations/executor.py&quot;, line 227, in apply_migration\n    state = migration.apply(state, schema_editor)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/migrations/migration.py&quot;, line 124, in apply\n    operation.database_forwards(self.app_label, schema_editor, old_state, project_state)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/migrations/operations/special.py&quot;, line 105, in database_forwards\n    self._run_sql(schema_editor, self.sql)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/migrations/operations/special.py&quot;, line 130, in _run_sql\n    schema_editor.execute(statement, params=None)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/base/schema.py&quot;, line 142, in execute\n    cursor.execute(sql, params)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/utils.py&quot;, line 66, in execute\n    return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/utils.py&quot;, line 75, in _execute_with_wrappers\n    return executor(sql, params, many, context)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/utils.py&quot;, line 84, in _execute\n    return self.cursor.execute(sql, params)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/utils.py&quot;, line 90, in __exit__\n    raise dj_exc_value.with_traceback(traceback) from exc_value\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zulip-py3-venv/lib/python3.6/site-packages/django/db/backends/utils.py&quot;, line 82, in _execute\n    return self.cursor.execute(sql)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zerver/lib/db.py&quot;, line 33, in execute\n    return wrapper_execute(self, super().execute, query, vars)\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/zerver/lib/db.py&quot;, line 20, in wrapper_execute\n    return action(sql, params)\ndjango.db.utils.DataError: invalid value &quot;stri&quot; for &quot;YYYY&quot;\nDETAIL:  Value must be an integer.\n\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/2021-01-28-20-22-02/scripts/lib/upgrade-zulip-stage-2&quot;, line 285, in &lt;module&gt;\n    subprocess.check_call([&quot;./manage.py&quot;, &quot;migrate&quot;, &quot;--noinput&quot;], preexec_fn=su_to_zulip)\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 311, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;./manage.py&#39;, &#39;migrate&#39;, &#39;--noinput&#39;]&#39; returned non-zero exit status 1.\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/lib/upgrade-zulip-from-git&quot;, line 81, in &lt;module&gt;\n    deploy_path, &quot;--from-git&quot;, *deploy_options])\n  File &quot;/usr/lib/python3.6/subprocess.py&quot;, line 311, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;/home/zulip/deployments/2021-01-28-20-22-02/scripts/lib/upgrade-zulip-stage-2&#39;, &#39;/home/zulip/deployments/2021-01-28-20-22-02&#39;, &#39;--from-git&#39;]&#39; returned non-zero exit status 1.\n</code></pre></div>",
+        "id": 1110143,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1611866008
+    },
+    {
+        "content": "<p>Maybe there are leading spaces or something? Try changing <code>LIKE 'stri%'</code> to <code>LIKE '%stri%'</code>.</p>",
+        "id": 1110147,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1611866579
+    },
+    {
+        "content": "<p>Still no success</p>",
+        "id": 1110148,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1611866718
+    },
+    {
+        "content": "<p>I tried without even checking for 'stri':</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip=&gt; SELECT * FROM zerver_customprofilefield AS f, zerver_customprofilefieldvalue WHERE f.id = field_id AND field_type = 4;\n id | name | field_type | realm_id | hint | field_data | order | id | value | field_id | user_profile_id | rendered_value\n----+------+------------+----------+------+------------+-------+----+-------+----------+-----------------+----------------\n(0 rows)\n</code></pre></div>",
+        "id": 1110149,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1611866759
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>zulip=&gt; SELECT * FROM zerver_customprofilefield AS f, zerver_customprofilefieldvalue WHERE f.id = field_id;\n id |  name  | field_type | realm_id |            hint            |      field_data      | order | id |    value    | field_id | user_profile_id | rendered_value\n----+--------+------------+----------+----------------------------+----------------------+-------+----+-------------+----------+-----------------+----------------\n  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  1 | strifel     |        1 |              11 |\n  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  2 | someGithubName |        1 |              29 |\n  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  3 | someGithubName |        1 |               9 |\n  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  4 | someGithubName  |        1 |              21 |\n  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  5 | someGithubName |        1 |              25 |\n  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  6 | someGithubName |        1 |              69 |\n  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  7 | someGithubName |        1 |              27 |\n  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  8 | someGithubName|        1 |              12 |\n  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 |  9 | someGithubName  |        1 |              23 |\n  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 | 10 | someGithubName |        1 |              20 |\n  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 | 11 | someGithubName |        1 |              24 |\n  1 | GitHub |          7 |        2 | Enter your GitHub username | {&quot;subtype&quot;:&quot;github&quot;} |     1 | 12 | someGithubName  |        1 |              28 |\n</code></pre></div>",
+        "id": 1110151,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1611866891
+    },
+    {
+        "content": "<p>Running the SQL Query from the migration directly in the database throws the same error:</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip=&gt; UPDATE zerver_customprofilefieldvalue\nzulip-&gt;                 SET value = to_char(to_date(value, &#39;YYYY-MM-DD&#39;), &#39;YYYY-MM-DD&#39;)\nzulip-&gt;                 FROM zerver_customprofilefield AS f\nzulip-&gt;                 WHERE f.id = field_id\nzulip-&gt;                 AND f.field_type = 4\nzulip-&gt;                 AND value &lt;&gt; to_char(to_date(value, &#39;YYYY-MM-DD&#39;), &#39;YYYY-MM-DD&#39;);\nERROR:  invalid value &quot;stri&quot; for &quot;YYYY&quot;\nDETAIL:  Value must be an integer.\n</code></pre></div>",
+        "id": 1110152,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1611867051
+    },
+    {
+        "content": "<p>Well that is quite a mystery…last I checked, the consensus of most mathematicians was that 7 is not equal to 4. <span aria-label=\"expressionless\" class=\"emoji emoji-1f611\" role=\"img\" title=\"expressionless\">:expressionless:</span></p>",
+        "id": 1110153,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1611867141
+    },
+    {
+        "content": "<p><del>I think I found a fix: (\"(\" in the last row) </del></p>\n<div class=\"codehilite\"><pre><span></span><code>zulip=&gt; UPDATE zerver_customprofilefieldvalue\n                SET value = to_char(to_date(value, &#39;YYYY-MM-DD&#39;), &#39;YYYY-MM-DD&#39;)\n                FROM zerver_customprofilefield AS f\n                WHERE FALSE\n                AND field_type = 4\n                AND (value &lt;&gt; to_char(to_date(value, &#39;YYYY-MM-DD&#39;), &#39;YYYY-MM-DD&#39;));\nUPDATE 0\n</code></pre></div>",
+        "id": 1110159,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1611867362
+    },
+    {
+        "content": "<p>Surely you didn’t mean <code>WHERE FALSE</code>?</p>",
+        "id": 1110161,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1611867441
+    },
+    {
+        "content": "<p>Oh. This was a experiment I forgot to remove. Sorry</p>",
+        "id": 1110162,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1611867455
+    },
+    {
+        "content": "<p>So the \"()\" does not fix it.<br>\nBut the last row is the problem: (I just used the wrong with the FALSE again):</p>\n<div class=\"codehilite\"><pre><span></span><code>zulip=&gt; UPDATE zerver_customprofilefieldvalue\n                SET value = to_char(to_date(value, &#39;YYYY-MM-DD&#39;), &#39;YYYY-MM-DD&#39;)\n                FROM zerver_customprofilefield AS f\n                WHERE f.id = field_id\n                AND f.field_type = 4;\nUPDATE 0\n</code></pre></div>",
+        "id": 1110164,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1611867523
+    },
+    {
+        "content": "<p>Ohh, I see…your query plan resulted in evaluation of the <code>value</code> condition even when the <code>field_type</code> condition failed.</p>",
+        "id": 1110165,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1611867602
+    },
+    {
+        "content": "<p>That makes sense. (More than my FALSE :) )<br>\nBut that seems like a issue not only I do should run into</p>",
+        "id": 1110166,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1611867759
+    },
+    {
+        "content": "<p>There’s some nondeterminism in that the query plan depends on the table statistics, but yes, I am surprised this is the first time we’ve seen this.</p>",
+        "id": 1110168,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1611867840
+    },
+    {
+        "content": "<p>Can you try this?</p>\n<div class=\"codehilite\" data-code-language=\"PostgreSQL SQL dialect\"><pre><span></span><code><span class=\"k\">UPDATE</span> <span class=\"n\">zerver_customprofilefieldvalue</span>\n<span class=\"k\">SET</span> <span class=\"k\">value</span> <span class=\"o\">=</span> <span class=\"n\">to_char</span><span class=\"p\">(</span><span class=\"n\">to_date</span><span class=\"p\">(</span><span class=\"k\">value</span><span class=\"p\">,</span> <span class=\"s1\">'YYYY-MM-DD'</span><span class=\"p\">),</span> <span class=\"s1\">'YYYY-MM-DD'</span><span class=\"p\">)</span>\n<span class=\"k\">FROM</span> <span class=\"n\">zerver_customprofilefield</span> <span class=\"k\">AS</span> <span class=\"n\">f</span>\n<span class=\"k\">WHERE</span> <span class=\"n\">f</span><span class=\"mf\">.</span><span class=\"n\">id</span> <span class=\"o\">=</span> <span class=\"n\">field_id</span>\n<span class=\"k\">AND</span> <span class=\"n\">f</span><span class=\"mf\">.</span><span class=\"n\">field_type</span> <span class=\"o\">=</span> <span class=\"mf\">4</span>\n<span class=\"k\">AND</span> <span class=\"k\">CASE</span>\n        <span class=\"k\">WHEN</span> <span class=\"n\">f</span><span class=\"mf\">.</span><span class=\"n\">field_type</span> <span class=\"o\">=</span> <span class=\"mf\">4</span>\n        <span class=\"k\">THEN</span> <span class=\"k\">value</span> <span class=\"o\">&lt;&gt;</span> <span class=\"n\">to_char</span><span class=\"p\">(</span><span class=\"n\">to_date</span><span class=\"p\">(</span><span class=\"k\">value</span><span class=\"p\">,</span> <span class=\"s1\">'YYYY-MM-DD'</span><span class=\"p\">),</span> <span class=\"s1\">'YYYY-MM-DD'</span><span class=\"p\">)</span>\n    <span class=\"k\">END</span><span class=\"p\">;</span>\n</code></pre></div>",
+        "id": 1110171,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1611868321
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>zulip=&gt; UPDATE zerver_customprofilefieldvalue\nzulip-&gt; SET value = to_char(to_date(value, &#39;YYYY-MM-DD&#39;), &#39;YYYY-MM-DD&#39;)\nzulip-&gt; FROM zerver_customprofilefield AS f\nzulip-&gt; WHERE f.id = field_id\nzulip-&gt; AND f.field_type = 4\nzulip-&gt; AND CASE\nzulip-&gt;         WHEN f.field_type = 4\nzulip-&gt;         THEN value &lt;&gt; to_char(to_date(value, &#39;YYYY-MM-DD&#39;), &#39;YYYY-MM-DD&#39;)\nzulip-&gt;     END;\nUPDATE 0\n</code></pre></div>",
+        "id": 1110173,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1611868359
+    },
+    {
+        "content": "<p>Great, I’ll go with that.</p>",
+        "id": 1110174,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1611868420
+    },
+    {
+        "content": "<p>Thanks. For helping</p>",
+        "id": 1110175,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1611868432
+    },
+    {
+        "content": "<p>Thanks for debugging!</p>",
+        "id": 1110177,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1611868463
+    },
+    {
+        "content": "<p>Opened <a href=\"https://github.com/zulip/zulip/pull/17153\">#17153</a>.</p>",
+        "id": 1110180,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1611868868
+    }
+]

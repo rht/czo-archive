@@ -1,0 +1,405 @@
+<html>
+<head><meta charset="utf-8"><title>Automatic deployment · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html">Automatic deployment</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1259991"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1259991" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1259991">(Sep 29 2021 at 07:42)</a>:</h4>
+<p>Hello, </p>
+<p>I'm looking to automate the full installation even the lastest steps where it asks to go to an URL to create the Zulip organization.<br>
+Is there a way to script that?</p>
+<p>PS: I'm using ansible to deploy Zulip with SAML auth.</p>
+
+
+
+<a name="1260009"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260009" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260009">(Sep 29 2021 at 09:00)</a>:</h4>
+<p>I have check with the <code>manage.py</code> script, but there is no <code>create_realm</code> function.</p>
+
+
+
+<a name="1260012"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260012" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260012">(Sep 29 2021 at 09:45)</a>:</h4>
+<p>I have found a way: </p>
+<div class="codehilite"><pre><span></span><code>/home/zulip/deployments/current/manage.py shell
+=&gt; do_create_realm(string_id=&quot;&quot;, name=&quot;Demo&quot;, emails_restricted_to_domains=False)
+/home/zulip/deployments/current/manage.py create_user -r 2 --this-user-has-accepted-the-tos   --password ... test@test.com &quot;Admin1&quot;
+</code></pre></div>
+
+
+
+<a name="1260013"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260013" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260013">(Sep 29 2021 at 09:45)</a>:</h4>
+<p>so this thing is that do_create_realm is not an option for manage.py</p>
+
+
+
+<a name="1260021"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260021" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260021">(Sep 29 2021 at 11:31)</a>:</h4>
+<p>I have added a new file : <br>
+<code>$ cat /home/zulip/deployments/current/zerver/management/commands/create_realm.py</code></p>
+<div class="codehilite" data-code-language="Python"><pre><span></span><code><span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">from</span> <span class="nn">zerver.lib.management</span> <span class="kn">import</span> <span class="n">ZulipBaseCommand</span>
+<span class="kn">from</span> <span class="nn">zerver.lib.actions</span> <span class="kn">import</span> <span class="n">do_create_realm</span>
+
+<span class="k">class</span> <span class="nc">Command</span><span class="p">(</span><span class="n">ZulipBaseCommand</span><span class="p">):</span>
+    <span class="n">help</span> <span class="o">=</span> <span class="s2">"""Change the stream name for a realm."""</span>
+
+    <span class="k">def</span> <span class="nf">add_arguments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">:</span> <span class="n">ArgumentParser</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s2">"&lt;name&gt;"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"name of REALM"</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span>
+        <span class="n">do_create_realm</span><span class="p">(</span><span class="n">string_id</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">emails_restricted_to_domains</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">invite_required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+<a name="1260022"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260022" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260022">(Sep 29 2021 at 11:32)</a>:</h4>
+<p>(deleted)</p>
+
+
+
+<a name="1260023"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260023" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260023">(Sep 29 2021 at 11:34)</a>:</h4>
+<p>and now I can do: </p>
+<div class="codehilite" data-code-language="Bash"><pre><span></span><code>/home/zulip/deployments/current/manage.py create_realm <span class="s2">"DEMO"</span>
+</code></pre></div>
+<p>and then </p>
+<div class="codehilite" data-code-language="Bash"><pre><span></span><code>/home/zulip/deployments/current/manage.py create_user --password <span class="s2">"..."</span>  --this-user-has-accepted-the-tos -r <span class="m">2</span> email@domain.com <span class="s2">"FirstUser"</span>
+/home/zulip/deployments/current/manage.py change_user_role -r <span class="m">2</span> <span class="s2">"email@domain.com"</span> admin
+</code></pre></div>
+
+
+
+<a name="1260029"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260029" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rein Zustand <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260029">(Sep 29 2021 at 12:09)</a>:</h4>
+<p>^ sounds useful. Also, with <code>manage.py create_realm</code>, people no longer need to set up their email if they just want to run a Zulip realm as an experiment.<br>
+Edit: nvm, I got mixed up between user creation and realm creation. Still useful to have <code>create_realm</code> nevertheless.</p>
+
+
+
+<a name="1260038"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260038" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jamie Strachan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260038">(Sep 29 2021 at 14:17)</a>:</h4>
+<p>This is great, thank you. I would like to see that checked in!<br>
+Anyone know if realm commands seem to be missing from the API by design?</p>
+
+
+
+<a name="1260039"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260039" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260039">(Sep 29 2021 at 14:20)</a>:</h4>
+<p><span class="user-mention silent" data-user-id="21617">Jamie Strachan</span> <a href="#narrow/stream/31-production-help/topic/Automatic.20deployment/near/1260038">said</a>:</p>
+<blockquote>
+<p>Anyone know if realm commands seem to be missing from the API by design?</p>
+</blockquote>
+<p>I don't know, but it will be nice to be able to set admin config from cli. I'll work on something like I did for create_realm as I need it quite soon.</p>
+
+
+
+<a name="1260127"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260127" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260127">(Sep 29 2021 at 17:25)</a>:</h4>
+<p><span class="user-mention" data-user-id="21617">@Jamie Strachan</span> which realm commands in particular are you looking for?  The API settings for modifying a realm are just missing documentation, which is one of the missing endpoints we're most likely to add in the near future.</p>
+<p>But creating a realm doesn't naturally make sense as a thing to offer via the API for security model reasons.  (Self-hosted servers probably don't want random folks being able to create new organizations via the API; and it's typically a rare enough operation that a web workflow is a nicer experience).</p>
+
+
+
+<a name="1260129"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260129" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260129">(Sep 29 2021 at 17:26)</a>:</h4>
+<p><span class="user-mention" data-user-id="9869">@delaf</span> I think we'd be open to merging a <code>create_realm</code> management command that included creating a realm owner as part of its script (i.e. all 3 steps you have above).  The tool you've written would violate an invariant we'd like the code to be able to rely on, namely that every organization has an owner.</p>
+
+
+
+<a name="1260250"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260250" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260250">(Sep 29 2021 at 19:22)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> ok, does something like this would match your requirements ?<br>
+<code>manage.py create_realm --realm-name "DEMO" --user-email email@domain.com --user-password "..."  --user-name  "FirstUser" </code> ?</p>
+
+
+
+<a name="1260269"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260269" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260269">(Sep 29 2021 at 19:31)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> is there a way with CLI to change REALM parameters ? (parameters like "default language", "24-hour time",  "Prevent users from changing their name",  etc). I did not find anything, but I think I could create a "set_realm_parameters" options to <code>manage.py</code> that will call <code>do_set_realm_property()</code>?</p>
+
+
+
+<a name="1260319"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260319" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260319">(Sep 29 2021 at 20:26)</a>:</h4>
+<p><span class="user-mention" data-user-id="9869">@delaf</span> I'd expect one to do so with the API once your realm is created.</p>
+
+
+
+<a name="1260320"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1260320" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1260320">(Sep 29 2021 at 20:26)</a>:</h4>
+<p>via <code>PATCH /realm</code>.</p>
+
+
+
+<a name="1261594"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1261594" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1261594">(Oct 01 2021 at 09:40)</a>:</h4>
+<p>ok <span class="user-mention" data-user-id="7">@Tim Abbott</span></p>
+
+
+
+<a name="1272007"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272007" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272007">(Oct 26 2021 at 11:40)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> </p>
+<div class="codehilite" data-code-language="Python"><pre><span></span><code><span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">from</span> <span class="nn">django.core</span> <span class="kn">import</span> <span class="n">validators</span>
+<span class="kn">from</span> <span class="nn">django.core.exceptions</span> <span class="kn">import</span> <span class="n">ValidationError</span>
+<span class="kn">from</span> <span class="nn">django.core.management.base</span> <span class="kn">import</span> <span class="n">CommandError</span>
+<span class="kn">from</span> <span class="nn">django.db.utils</span> <span class="kn">import</span> <span class="n">IntegrityError</span>
+<span class="kn">from</span> <span class="nn">zerver.lib.management</span> <span class="kn">import</span> <span class="n">ZulipBaseCommand</span>
+<span class="kn">from</span> <span class="nn">zerver.lib.initial_password</span> <span class="kn">import</span> <span class="n">initial_password</span>
+<span class="kn">from</span> <span class="nn">zerver.lib.actions</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">do_create_realm</span><span class="p">,</span>
+    <span class="n">do_create_user</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">zerver.models</span> <span class="kn">import</span> <span class="n">UserProfile</span>
+
+<span class="k">class</span> <span class="nc">Command</span><span class="p">(</span><span class="n">ZulipBaseCommand</span><span class="p">):</span>
+    <span class="n">help</span> <span class="o">=</span> <span class="s2">"""Create a new REALM with its owner."""</span>
+
+    <span class="k">def</span> <span class="nf">add_arguments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">:</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s2">"&lt;name&gt;"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"name of REALM"</span><span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+            <span class="s2">"--string-id"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"The REALM string-id. Empty if not used."</span>
+        <span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+            <span class="s2">"--password"</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">"password of new user. For development only."</span>
+            <span class="s2">" Note that we recommend against setting "</span>
+            <span class="s2">"passwords this way, since they can be snooped by any user account "</span>
+            <span class="s2">"on the server via `ps -ef` or by any superuser with"</span>
+            <span class="s2">"read access to the user's bash history."</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+            <span class="s2">"--password-file"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"The file containing the password of the new user."</span>
+        <span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+            <span class="s2">"--disable-invite-required"</span><span class="p">,</span>
+            <span class="n">action</span><span class="o">=</span><span class="s2">"store_true"</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">"Create Realm with invite disabled."</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+            <span class="s2">"email"</span><span class="p">,</span>
+            <span class="n">metavar</span><span class="o">=</span><span class="s2">"&lt;email&gt;"</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">"email address of the REALM admin"</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+            <span class="s2">"full_name"</span><span class="p">,</span>
+            <span class="n">metavar</span><span class="o">=</span><span class="s2">"&lt;full name&gt;"</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">"full name of the REALM user"</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span>
+        <span class="n">email</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s2">"email"</span><span class="p">]</span>
+        <span class="n">full_name</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s2">"full_name"</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">validators</span><span class="o">.</span><span class="n">validate_email</span><span class="p">(</span><span class="n">email</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">ValidationError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CommandError</span><span class="p">(</span><span class="s2">"Invalid email address."</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">options</span><span class="p">[</span><span class="s2">"string_id"</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">string_id</span> <span class="o">=</span><span class="n">options</span><span class="p">[</span><span class="s2">"string_id"</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">string_id</span> <span class="o">=</span> <span class="s2">""</span>
+
+        <span class="k">if</span> <span class="n">options</span><span class="p">[</span><span class="s2">"password_file"</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">options</span><span class="p">[</span><span class="s2">"password_file"</span><span class="p">])</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">pw</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">options</span><span class="p">[</span><span class="s2">"password"</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">pw</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s2">"password"</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">user_initial_password</span> <span class="o">=</span> <span class="n">initial_password</span><span class="p">(</span><span class="n">email</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">user_initial_password</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">CommandError</span><span class="p">(</span><span class="s2">"Password is unusable."</span><span class="p">)</span>
+            <span class="n">pw</span> <span class="o">=</span> <span class="n">user_initial_password</span>
+        <span class="k">if</span> <span class="n">options</span><span class="p">[</span><span class="s2">"disable_invite_required"</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">invite_required</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">invite_required</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">realm</span> <span class="o">=</span> <span class="n">do_create_realm</span><span class="p">(</span><span class="n">string_id</span><span class="o">=</span><span class="n">string_id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">invite_required</span><span class="o">=</span><span class="n">invite_required</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AssertionError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CommandError</span><span class="p">(</span><span class="s2">"Realm '</span><span class="si">{}</span><span class="s2">' already exists."</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">string_id</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">do_create_user</span><span class="p">(</span>
+                <span class="n">email</span><span class="p">,</span>
+                <span class="n">pw</span><span class="p">,</span>
+                <span class="n">realm</span><span class="p">,</span>
+                <span class="n">full_name</span><span class="p">,</span>
+        <span class="n">role</span><span class="o">=</span><span class="n">UserProfile</span><span class="o">.</span><span class="n">ROLE_REALM_OWNER</span><span class="p">,</span>
+                <span class="n">acting_user</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">IntegrityError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CommandError</span><span class="p">(</span><span class="s2">"User already exists."</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+<a name="1272008"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272008" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272008">(Oct 26 2021 at 11:42)</a>:</h4>
+<p>I have integrate the 3 steps into one : </p>
+<ul>
+<li>create the realm</li>
+<li>create the user </li>
+<li>
+<p>make the user admin<br>
+=&gt;  </p>
+</li>
+<li>
+<p>create the realm and create a owner for it</p>
+</li>
+</ul>
+
+
+
+<a name="1272333"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272333" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272333">(Oct 26 2021 at 20:44)</a>:</h4>
+<p><span class="user-mention" data-user-id="9869">@delaf</span> cool, thanks for sharing.  I think there are probably something things we'd want to tweak to make it harder to do passwords wrong (E.g. maybe just prompt on the console if they don't use a password file?), but it seems like something we can iterate from.  Want to make a pull request?</p>
+
+
+
+<a name="1272339"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272339" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272339">(Oct 26 2021 at 21:17)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> please find it: <a href="https://github.com/zulip/zulip/pull/20074">PR 20075</a></p>
+
+
+
+<a name="1272340"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272340" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272340">(Oct 26 2021 at 21:20)</a>:</h4>
+<p>for password, I took the code from the <code>create_user</code> command</p>
+
+
+
+<a name="1272419"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272419" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272419">(Oct 26 2021 at 22:29)</a>:</h4>
+<p>hum, mypy check fails but I do not understand why</p>
+
+
+
+<a name="1272421"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272421" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272421">(Oct 26 2021 at 22:31)</a>:</h4>
+<p><span class="user-mention" data-user-id="9869">@delaf</span> <a href="https://zulip.readthedocs.io/en/latest/git/index.html">https://zulip.readthedocs.io/en/latest/git/index.html</a> may be useful, since it looks like you accidentally closed the pull request when adjusting your branch.</p>
+
+
+
+<a name="1272422"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272422" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272422">(Oct 26 2021 at 22:32)</a>:</h4>
+<p>GitHub supports updating pull requests by just force-pushing to the branch; so one never needs to close and reopen them.</p>
+
+
+
+<a name="1272423"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272423" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272423">(Oct 26 2021 at 22:32)</a>:</h4>
+<p>ohh !</p>
+
+
+
+<a name="1272424"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272424" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272424">(Oct 26 2021 at 22:32)</a>:</h4>
+<p>sorry</p>
+
+
+
+<a name="1272429"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272429" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272429">(Oct 26 2021 at 22:35)</a>:</h4>
+<p>so now is it <a href="https://github.com/zulip/zulip/pull/20075">PR20075</a> (with the correct URL)</p>
+
+
+
+<a name="1272430"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272430" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272430">(Oct 26 2021 at 22:35)</a>:</h4>
+<p>You can type just <a href="https://github.com/zulip/zulip/pull/20075">#20075</a>, and our linkifiers will do the right thing <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<a name="1272433"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272433" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272433">(Oct 26 2021 at 22:37)</a>:</h4>
+<p><code>#XXX</code> is linked to our ticket system on our zulip, so I did not think about using it here for PR ^^</p>
+
+
+
+<a name="1272434"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272434" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272434">(Oct 26 2021 at 22:38)</a>:</h4>
+<p>Yeah, makes sense <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<a name="1272435"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272435" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272435">(Oct 26 2021 at 22:39)</a>:</h4>
+<p>ok just check the available linkifiers on this zulip instance. I'll use them ;-)</p>
+
+
+
+<a name="1272436"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272436" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272436">(Oct 26 2021 at 22:39)</a>:</h4>
+<p>btw any idea for the mypy failing check ?</p>
+
+
+
+<a name="1272444"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272444" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272444">(Oct 26 2021 at 22:48)</a>:</h4>
+<p><span class="user-mention" data-user-id="9869">@delaf</span> yeah, I suspect you have argparse parameters that have <code>""</code> as the value if you don't specify them, and then code that does something different if they are <code>None</code>, and that's impossible.</p>
+
+
+
+<a name="1272445"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272445" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272445">(Oct 26 2021 at 22:49)</a>:</h4>
+<p>Not sure -- it could be that mypy is inferring incorrectly, but you should be able to test whether you get <code>None</code> or <code>""</code>.</p>
+
+
+
+<a name="1272446"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272446" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272446">(Oct 26 2021 at 22:50)</a>:</h4>
+<p>That’s strange as the code for password has been copied from the user_create command. I’ll check that tomorrow and will update the PR. Thank you</p>
+
+
+
+<a name="1272749"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1272749" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1272749">(Oct 27 2021 at 09:27)</a>:</h4>
+<p>Ok I have updated the PR to pass mypy checks.</p>
+
+
+
+<a name="1289708"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1289708" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1289708">(Dec 02 2021 at 01:16)</a>:</h4>
+<p><span class="user-mention" data-user-id="9869">@delaf</span> just did a review on this pull request.</p>
+
+
+
+<a name="1289791"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1289791" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> delaf <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1289791">(Dec 02 2021 at 08:05)</a>:</h4>
+<p><span class="user-mention" data-user-id="7">@Tim Abbott</span> I have added some comments</p>
+
+
+
+<a name="1290004"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1290004" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1290004">(Dec 02 2021 at 17:25)</a>:</h4>
+<p>Great <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<a name="1300558"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Automatic%20deployment/near/1300558" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Jamie Strachan <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Automatic.20deployment.html#1300558">(Dec 22 2021 at 19:13)</a>:</h4>
+<p>Thanks for the reply, <span class="user-mention" data-user-id="7">@Tim Abbott</span> .  We are working on a system where another database and admin portal will be used to create groups and users, and we would like to programmatically add these users and groups (equivalent to realms) into Zulip, without any emails or any further action required.<br>
+We've got something worked out now!</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

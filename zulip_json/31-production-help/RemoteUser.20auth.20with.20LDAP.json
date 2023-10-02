@@ -1,0 +1,116 @@
+[
+    {
+        "content": "<p>I'm trying to set up a SSO login to a LDAP user database.<br>\nUnfortunately, my email addresses are completely different from my LDAP user names.<br>\nIs there any way to get this  to work?</p>",
+        "id": 607952,
+        "sender_full_name": "bl",
+        "timestamp": 1530761891
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"8526\">@bl</span> yes, just use option (C) documented in <code>/etc/zulip/settings.py</code>.</p>",
+        "id": 607958,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1530771462
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> I tried this already.<br>\nThe Problem is, that I have my LDAP user in REMOTE_USER.<br>\nIf I don't set SSO_APPEND_DOMAIN, I get an error from <a href=\"https://github.com/zulip/zulip/blob/master/zerver/views/auth.py#L199\" target=\"_blank\" title=\"https://github.com/zulip/zulip/blob/master/zerver/views/auth.py#L199\">https://github.com/zulip/zulip/blob/master/zerver/views/auth.py#L199</a><br>\nIf I do set SSO_APPEND_DOMAIN to something random, I get a message about the user not being found.<br>\nIf I set both SSO_APPEND_DOMAIN and LDAP_APPEND_DOMAIN to the same thing, everything works, but I have the wrong email address for my user.</p>\n<p>Looking at the code, I don't think this can work at all, because there is no way to look up zulip user by LDAP user id afaics. (Well, there is ldap_to_django_username but this is a) incorrect and b) not used in this case.)</p>",
+        "id": 607993,
+        "sender_full_name": "bl",
+        "timestamp": 1530777746
+    },
+    {
+        "content": "<p>So, just to be clear, you're using some third-party SSO with RemoteUserBackend, but that gets you a username that isn't the same as your email address?</p>",
+        "id": 608008,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1530780077
+    },
+    {
+        "content": "<p>I see, yes, we don't have direct support for that.  You should be able to make it work with a small patch to <code>remote_user_sso</code> in <code>zerver/views/auth.py</code> to just do the LDAP lookup of the user's email address using <code>REMOTE_USER</code>.</p>",
+        "id": 608009,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1530780122
+    },
+    {
+        "content": "<p>If you'd like help with writing that sort of thing, you should get a support contract via contacting <a href=\"mailto:support@zulipchat.com\" title=\"mailto:support@zulipchat.com\">support@zulipchat.com</a>.  The ideal version would be merged into mainline as an option, but it shouldn't be too hard to make a custom thing for your server.</p>",
+        "id": 608010,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1530780188
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"8526\">@bl</span> sorry I misunderstood what you were describing as your setup; you're actually not using LDAP for authentication, just for looking up the email.</p>",
+        "id": 608011,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1530780219
+    },
+    {
+        "content": "<p>Essentially.<br>\nI have an apache doing SSO via kerberos and this gives me the LDAP user name in REMOTE_USER.<br>\nzulip should now query the LDAP to populate the user if it's new and check if the LDAP account is still enabled otherwise.<br>\nAs far as I know, this is by far the most common setup for auth via REMOTE_USER.</p>",
+        "id": 608016,
+        "sender_full_name": "bl",
+        "timestamp": 1530780523
+    },
+    {
+        "content": "<p>You'd be surprised how many different setups people have using the REMOTE_USER backend; or at least, I have been <span class=\"emoji emoji-1f603\" title=\"smiley\">:smiley:</span>.<br>\nI agree that's a reasonable setup that we'd like to support out of the box eventually (and we should open an issue for it).</p>",
+        "id": 608027,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1530781682
+    },
+    {
+        "content": "<p>If you have time to do so, that'd be great; otherwise I'll probably take care of it later (have to go AFK very soon)</p>",
+        "id": 608029,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1530781740
+    },
+    {
+        "content": "<p>(And I don't think this is likely to be done in the immediate future without a paying support customer asking for it, since we have lots of other priorities and few volunteers enjoy working on enterprise login related issues)</p>",
+        "id": 608030,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1530781959
+    },
+    {
+        "content": "<p>Imho the biggest problem is, that there is no login name field in the db.<br>\nThis blows up with LDAP even without SSO. You can log in with your user name and password, but for example the sync_ldap_user_data command will also fail.</p>",
+        "id": 608058,
+        "sender_full_name": "bl",
+        "timestamp": 1530782898
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"8526\">@bl</span> there is no need for a login name field and I think it would be counterproductive (because then if you update the username in LDAP things break); what you want to do is to look up the LDAP data by username using <code>AUTH_LDAP_USER_SEARCH</code> when you need it.</p>",
+        "id": 608060,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1530782982
+    },
+    {
+        "content": "<p>Yes, but there are a bunch of conversation functions: ldap_to_django_username, django_to_ldap_username, remote_user_to_email and maybe email_to_username. RIght now, none of those do the right thing afaics.<br>\nGetting the LDAP user name from the email right now also requires an LDAP query, and a different one then getting the email from the ldap user name.</p>",
+        "id": 608066,
+        "sender_full_name": "bl",
+        "timestamp": 1530783615
+    },
+    {
+        "content": "<p>The other functions are only used if you're using LDAPAuthBackend with one of the modes that you're not using.</p>",
+        "id": 608076,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1530784321
+    },
+    {
+        "content": "<p>I made some progress and now I can login with my initial admin user.<br>\nBut signup for other user doesn't work.<br>\nIf I go to the /accounts/login/sso/ page, I get a message \"no account found\" and a signup button. If I click the signup button, I end up at the zulip registration page with my organisation, but no button or anything to actually sign up.<br>\nIdeally, the signup should happen automatically on first visit to the site.</p>",
+        "id": 608694,
+        "sender_full_name": "bl",
+        "timestamp": 1530818807
+    },
+    {
+        "content": "<p>I'm not even sure, where I could start looking for this problem.</p>",
+        "id": 608709,
+        "sender_full_name": "bl",
+        "timestamp": 1530818884
+    },
+    {
+        "content": "<p>If you have this configured properly, it should indeed just create an account on first visit to the site.</p>",
+        "id": 608824,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1530826450
+    },
+    {
+        "content": "<p>I believe we've made some logging improvements in master (becoming available in the 1.9.0 beta soon) that might make debugging for your situation easier.</p>",
+        "id": 608825,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1530826506
+    }
+]

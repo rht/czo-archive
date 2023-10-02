@@ -1,0 +1,212 @@
+[
+    {
+        "content": "<p>As a part of auditing the removal of user groups (<a href=\"https://github.com/zulip/zulip/pull/19528\">#19528</a>) via the API and also allowing reactivation, we may support the deactivation/reactivation of user groups.</p>",
+        "id": 1463084,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1668299196
+    },
+    {
+        "content": "<p>It will be mostly similar to how deactivation/reactivation works for users and streams. The web client will instead have access to deactivation/reactivation. It might be useful to keep a way for \"real\" deletion, but I'm not sure what the use cases are. The deactivation/reactivation semantics is sufficient most of the time.</p>",
+        "id": 1463085,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1668299555
+    },
+    {
+        "content": "<p>Upon deactivation, the user group memberships are unchanged. The supergroup is unchanged, but memberships of a deactivated subgroup will not be a part of the supergroup.</p>",
+        "id": 1463086,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1668299880
+    },
+    {
+        "content": "<p>I wonder if there is anything else to consider?</p>",
+        "id": 1463087,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1668300092
+    },
+    {
+        "content": "<p>What would be the use cases for this feature?</p>",
+        "id": 1463662,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1668455295
+    },
+    {
+        "content": "<p>I think if we are to enable user group based permission management, it would be useful to reactivate user group since it carries more information that might still be needed.<br>\nThe user will be able to change their mind later and recover the settings they have for user groups earlier.</p>",
+        "id": 1463846,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1668462190
+    },
+    {
+        "content": "<p>Is the proposal for \"deactivate user group\" to be an option in <em>addition</em> to deleting it, or would this replace deletion?</p>\n<p>Streams can only be archived, not fully deleted, though I suppose deletion can help reduce clutter from groups that are definitely no longer useful.</p>",
+        "id": 1463888,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1668463406
+    },
+    {
+        "content": "<blockquote>\n<p>The user will be able to change their mind later and recover the settings they have for user groups earlier.</p>\n</blockquote>\n<p>I understand that this is what the deactivation feature would offer; just wondering if we have ideas on when this will come up / how likely it is to be useful. It's possible we should add an issue to the backlog, without it necessarily being part of the initial implementation.</p>",
+        "id": 1463889,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1668463512
+    },
+    {
+        "content": "<p>Got it. Opened <a href=\"https://github.com/zulip/zulip/pull/23568\">#23568</a> for backlogging. There isn't an urgent/necessary use case in mind yet.</p>",
+        "id": 1463939,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1668465934
+    },
+    {
+        "content": "<p>An issue related to this is that the audit log entries are planned to be created using the modified <code>UserGroup</code>'s id.</p>",
+        "id": 1594077,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1686870983
+    },
+    {
+        "content": "<p>When a user group is deleted, the corresponding audit log entries will also be deleted due to cascade deletion.</p>",
+        "id": 1594079,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1686871011
+    },
+    {
+        "content": "<p>This might be the intended behavior. I'm not sure if we want to create a replacement user group as we did for <code>do_delete_user</code>.</p>",
+        "id": 1594082,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1686871637
+    },
+    {
+        "content": "<p>Nnng, that's not good -- auditlog entries should pretty much never be deleted.  I think we need to preserve some sort of tombstone, which may mean that we don't call <code>.delete()</code> but rather mark it inactive and remove it from all membership chains.</p>",
+        "id": 1594144,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686875387
+    },
+    {
+        "content": "<p>I tested <code>do_delete_user</code> and it did remove the relevant audit log entries. As a side note, I think for <a href=\"https://github.com/zulip/zulip/pull/24920\">#24920</a> to be viable we need to preserve them for user deletion.</p>",
+        "id": 1594574,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1686952190
+    },
+    {
+        "content": "<p>Yeah agreed it's a bug that user deletion does that; I don't really like the way we do user deletion at all.</p>",
+        "id": 1600490,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1687982774
+    },
+    {
+        "content": "<p>We might want to consider making user group deletion more of a deactivate operation that frees up the name... Though I can't say I have a great proposal for how to do that nicely.</p>",
+        "id": 1600491,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1687982821
+    },
+    {
+        "content": "<p>I want to set up a discussion on the design of user group deactivation here.<br>\nLooking for comments and help with the unresolved questions that I have.</p>",
+        "id": 1613520,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1689919842
+    },
+    {
+        "content": "<h1>Proposal:</h1>\n<p>When a user group is deactivated, we set the field \"deactivated\" to True.<br>\nThere will be some side effects as a part of the deactivation. We should also<br>\nmodify changes to other systems that user groups interact with. Details<br>\ndiscussed below, where the related fields are parenthesized:</p>\n<h2>Group-group memberships (<code>direct_subgroups</code>/<code>direct_supergroups</code>)</h2>\n<p>When deactivated, the deactivated group should be removed from existing<br>\ngroup-group memberships. Or, to keep the memberships, we just skip deactivated<br>\nuser groups in recursive queries. This will disable the DAG constraint check,<br>\nso we must re-check the constraints when reactivating the user group. The<br>\ndownside is that it is harder to give an actionable error message when<br>\nreactivation fails due to discovered cycles.</p>\n<h2>Group based settings (<code>can_mention_group</code>/<code>can_remove_subscribers_group</code>)</h2>\n<p>When deactivated, <code>can_mention_group</code>, <code>can_remove_subscribers_group</code>, etc. need to<br>\nbe reassigned to another group before deactivation. In the UI, we can<br>\npotentially prompt the user to set them back to the defaults either through a<br>\nseparate request or a flag to the deactivation endpoint.</p>\n<h2>Audit logs (<code>modified_user_group</code>)</h2>\n<p>Audit logs should be unaffected. We record <code>USER_GROUP_DEACTIVATION</code> and<br>\n<code>USER_GROUP_REACTIVATION</code> events.</p>\n<h2>Mentions (<code>mentioned_user_group</code>)</h2>\n<p>Modify <code>MentionData</code> so that deactivated user groups are not included.<br>\nWe can do something similar to extracting <code>get_linkable_streams</code> and have<br>\n<code>get_linkable_user_groups</code>.</p>\n<p>I'm not too sure about the handling of missed messages for this one. Should we<br>\nskip notifications for deactivated user groups? When should the check happen?</p>\n<h2>Questions</h2>\n<ul>\n<li>Should we allow deactivating system groups?</li>\n<li>Should changes to other fields, including name, description, and direct members be allowed?</li>\n<li>How should deactivation interact with user group mentions in messages?</li>\n<li>What are some other use cases of UserGroup that might be affected?</li>\n</ul>",
+        "id": 1613521,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1689920208
+    },
+    {
+        "content": "<p>cc <span class=\"user-mention\" data-user-id=\"10242\">@Sahil Batra</span> because you might have more context.</p>",
+        "id": 1613522,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1689920264
+    },
+    {
+        "content": "<p>I just came across this thread while catching up... <span class=\"user-mention\" data-user-id=\"19400\">@Zixuan James Li</span> were the questions above resolved elsewhere, or do we still need to figure them out?</p>",
+        "id": 1638445,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694468484
+    },
+    {
+        "content": "<p>These are still open questions. Follow-ups can be continued here!</p>",
+        "id": 1638446,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1694468609
+    },
+    {
+        "content": "<blockquote>\n<p>Should changes to other fields, including name, description, and direct members be allowed?</p>\n</blockquote>\n<p>If there is a deactivated user group named <code>foo</code>, does that mean a new group with the same name can't be created? If so, it's helpful if deactivated groups can be renamed (cf. <a href=\"https://github.com/zulip/zulip/pull/26661\">#26661</a> for the same problem for streams).</p>\n<p>Not sure if anything else about the group would need to be editable -- perhaps not?</p>",
+        "id": 1638451,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694468719
+    },
+    {
+        "content": "<blockquote>\n<p>How should deactivation interact with user group mentions in messages?</p>\n</blockquote>\n<p>I would expect that it's not possible to mention deactivated groups. So they wouldn't show up in @-mention typeahead, and wouldn't be treated as mentions if you manually type out the mention syntax.</p>",
+        "id": 1638452,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694468785
+    },
+    {
+        "content": "<blockquote>\n<p>Should we allow deactivating system groups?</p>\n</blockquote>\n<p>It's probably simpler if we don't? I think we should set things up so that users never feel like they need to do that.</p>",
+        "id": 1638454,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694468885
+    },
+    {
+        "content": "<p><a href=\"https://github.com/zulip/zulip/pull/26236\">#26236</a> might have something useful when it comes to reactivation.</p>",
+        "id": 1641011,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1694740632
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"19257\">Alya Abbott</span> <a href=\"#narrow/stream/101-design/topic/Support.20user.20group.20deactivation/near/1638451\">said</a>:</p>\n<blockquote>\n<p>If there is a deactivated user group named <code>foo</code>, does that mean a new group with the same name can't be created? If so, it's helpful if deactivated groups can be renamed (cf. <a href=\"https://github.com/zulip/zulip/pull/26661\">#26661</a> for the same problem for streams).</p>\n</blockquote>\n<p>Yeah, I think allowing renaming the user group when deactivated would be pretty useful to avoid disrupting existing user group mentions.</p>",
+        "id": 1641013,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1694740956
+    },
+    {
+        "content": "<p>Thinking of past issues with renaming items which can be in message content, is it considered important to maintain a connection from an old group name mention to the old group, rather than one which happens to be named the same in future?</p>",
+        "id": 1641027,
+        "sender_full_name": "Neil Pilgrim (neiljp)",
+        "timestamp": 1694744155
+    },
+    {
+        "content": "<p>Hm, good question. Maybe we'd want hovering over the group mention to show the info for the group that was being referred to, not the current group with the same name?</p>",
+        "id": 1641687,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1694825130
+    },
+    {
+        "content": "<p>The current behavior if that if you mention <code>@group_original_name</code>, what we actually store is the ID of the group in a <code>data-user-group-id</code> attribute, and when rendering that user group, the web app at least will rewrite the text so that it's always displayed as <code>@group_current_name</code>. I think we want other clients to do the same, and they may well do so; I just haven't checked.</p>",
+        "id": 1642234,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1695050855
+    },
+    {
+        "content": "<p>We have a decent amount of flexibility in how we handle a deactivated/deleted user group there; one could imagine any of the following:</p>\n<ul>\n<li>A \"deleted group\" pill.</li>\n<li>A \"Unknown group\" pill. (We will likely need some version of this if/when we add support for groups that some users cannot access the basic metadata on, which may be a thing we want).</li>\n<li>A \"Deleted group previously named {group_original_name}\" pill.</li>\n</ul>",
+        "id": 1642235,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1695051080
+    },
+    {
+        "content": "<blockquote>\n<p>A \"deleted group\" pill.</p>\n</blockquote>\n<p>I guess this could provide the original name on click or hover.</p>",
+        "id": 1642384,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695062718
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"19400\">@Zixuan James Li</span> What would be helpful to unblock next steps here? Any issues you'd like to have written up at this point?</p>",
+        "id": 1642387,
+        "sender_full_name": "Alya Abbott",
+        "timestamp": 1695062835
+    },
+    {
+        "content": "<p>I guess we still need to choose a name for the field. We used <code>is_active</code> for users, but <code>deactivated</code> for streams. And then we can start implementing the deactivation/reactivation API and start a discussion in <a class=\"stream\" data-stream-id=\"378\" href=\"/#narrow/stream/378-api-design\">#api design</a>.</p>",
+        "id": 1644253,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1695263921
+    },
+    {
+        "content": "<p>This will change the UserGroup dict returned <code>POST /register</code> and <code>GET /events</code>, so that the client knows if the user group is active and implements checks for that.</p>",
+        "id": 1644258,
+        "sender_full_name": "Zixuan James Li",
+        "timestamp": 1695263999
+    },
+    {
+        "content": "<p>The variable name question is definitely for the API design stream, but \"deactivated\" is the one we picked (the user field is a Django default) and probably clearer.</p>",
+        "id": 1644879,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1695323733
+    }
+]

@@ -1,0 +1,157 @@
+<html>
+<head><meta charset="utf-8"><title>docker memcached and zulip · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html">docker memcached and zulip</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="804642"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804642" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804642">(Dec 28 2019 at 01:22)</a>:</h4>
+<p>Been trying to deploy zulip and it's dependencies on different machines. <br>
+I'm deploying docker-zulip container and memcached on the same machine.<br>
+I'm having this error.</p>
+<p>**File "/home/zulip/deployments/2019-12-14-03-04-44/zulip-py3-venv/lib/python3.6/site-packages/django_pylibmc/memcached.py", line 151, in delete<br>
+  return super(PyLibMCCache, self).delete(*args, **kwargs)<br>
+File "/home/zulip/deployments/2019-12-14-03-04-44/zulip-py3-venv/lib/python3.6/site-packages/django/core/cache/backends/memcached.py", line 92, in delete<br>
+  self._cache.delete(key)<br>
+File "/home/zulip/deployments/2019-12-14-03-04-44/zulip-py3-venv/lib/python3.6/site-packages/django_pylibmc/memcached.py", line 140, in set<br>
+<strong>COMPRESS_KWARGS)</strong></p>
+<p>Does anyone know anything about it?</p>
+
+
+
+<a name="804670"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804670" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804670">(Dec 28 2019 at 09:52)</a>:</h4>
+<p><span class="user-mention" data-user-id="14300">@Luís Correia</span> That’s just part of the middle of a Python traceback, not a complete error. A complete traceback starts with <code>Traceback (most recent call last):</code>, and ends with the line <em>two lines after</em> the last <code>File</code> line, which is most important because it contains the actual exception that was thrown. There may be some relevant surrounding context before or after too, so when in doubt, include more rather than less. (By the way, you can enclose code blocks in <code> ``` </code> for proper formatting.)</p>
+
+
+
+<a name="804671"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804671" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804671">(Dec 28 2019 at 09:59)</a>:</h4>
+<p>I'm doing this with ansible:</p>
+<div class="codehilite"><pre><span></span>- name: Run memcached
+  docker_container:
+    name: memcached
+    image: sameersbn/memcached:1.5.6-2
+
+- name: Run zulip
+  docker_container:
+    name: zulip
+    published_ports:
+      - &#39;80:80&#39;
+      - &#39;443:443&#39;
+    image: zulip/docker-zulip:2.1.1-0
+    env:
+      DB_HOST: &quot;{{ database }}&quot;
+      DB_HOST_PORT: &#39;5432&#39;
+      DB_USER: &#39;zulip&#39;
+      SSL_CERTIFICATE_GENERATION: &#39;self-signed&#39;
+      SETTING_MEMCACHED_LOCATION: &#39;127.0.0.1:11211&#39;
+ ```
+</pre></div>
+
+
+
+<a name="804672"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804672" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804672">(Dec 28 2019 at 09:59)</a>:</h4>
+<p>but somehow it always end up in memcached error</p>
+
+
+
+<a name="804674"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804674" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804674">(Dec 28 2019 at 10:01)</a>:</h4>
+<p><span class="user-mention" data-user-id="699">@Anders Kaseorg</span>  this is the error then:</p>
+<p><strong>pylibmc.ServerDown: error 47 from memcached_set: (0x366c5c0) SERVER HAS FAILED AND IS DISABLED UNTIL TIMED RETRY, host: memcached:11211 -&gt; libmemcached/connect.cc:720</strong></p>
+
+
+
+<a name="804675"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804675" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804675">(Dec 28 2019 at 10:02)</a>:</h4>
+<p>Docker containers have their own network, so you can’t reach your memcached container from your zulip container on 127.0.0.1.</p>
+
+
+
+<a name="804676"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804676" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804676">(Dec 28 2019 at 10:05)</a>:</h4>
+<p>Yes, i'm doing that. I've set <strong>SETTING_MEMCACHED_LOCATION: 127.0.0.1:11211</strong></p>
+
+
+
+<a name="804677"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804677" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804677">(Dec 28 2019 at 10:05)</a>:</h4>
+<p>Both containers are on the same machine</p>
+
+
+
+<a name="804678"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804678" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804678">(Dec 28 2019 at 10:05)</a>:</h4>
+<p>What I’m telling you is that 127.0.0.1 will not work.</p>
+
+
+
+<a name="804679"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804679" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804679">(Dec 28 2019 at 10:06)</a>:</h4>
+<p>Each container has its own 127.0.0.1.</p>
+
+
+
+<a name="804680"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804680" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804680">(Dec 28 2019 at 10:06)</a>:</h4>
+<p>sorry, i read it all wrong</p>
+
+
+
+<a name="804681"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804681" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804681">(Dec 28 2019 at 10:07)</a>:</h4>
+<p>I've tried setting <strong>SETTING_MEMCACHED_LOCATION: memcached:11211</strong></p>
+
+
+
+<a name="804682"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804682" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804682">(Dec 28 2019 at 10:07)</a>:</h4>
+<p>but it doesn't work either</p>
+
+
+
+<a name="804683"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804683" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804683">(Dec 28 2019 at 10:08)</a>:</h4>
+<p>I’m not familiar enough with how Ansible sets up Docker to say whether that should work. It works with docker-compose.</p>
+
+
+
+<a name="804684"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804684" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804684">(Dec 28 2019 at 10:11)</a>:</h4>
+<p>Try logging into the zulip container with <code>docker exec -it zulip bash</code> and try your favorite debugging steps like <code>ping memcached</code> or <code>nc memcached 11211</code>.</p>
+
+
+
+<a name="804685"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804685" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804685">(Dec 28 2019 at 10:13)</a>:</h4>
+<p>yeah, me too. I'm still learning how to use ansible <span aria-label="sweat smile" class="emoji emoji-1f605" role="img" title="sweat smile">:sweat_smile:</span></p>
+
+
+
+<a name="804686"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804686" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804686">(Dec 28 2019 at 10:13)</a>:</h4>
+<p>thank you, i'm gonna try that</p>
+
+
+
+<a name="804687"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804687" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Anders Kaseorg <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804687">(Dec 28 2019 at 10:17)</a>:</h4>
+<p>It looks like Ansible can <a href="https://docs.ansible.com/ansible/latest/modules/docker_compose_module.html" target="_blank" title="https://docs.ansible.com/ansible/latest/modules/docker_compose_module.html">manage docker-compose</a>, so maybe it would help to set it up that way, perhaps using <a href="https://github.com/zulip/docker-zulip/blob/master/docker-compose.yml" target="_blank" title="https://github.com/zulip/docker-zulip/blob/master/docker-compose.yml">our docker-compose.yml</a> as a guide.</p>
+
+
+
+<a name="804688"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/docker%20memcached%20and%20zulip/near/804688" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Luís Correia <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/docker.20memcached.20and.20zulip.html#804688">(Dec 28 2019 at 10:22)</a>:</h4>
+<p>Thank you very much. I'm deploying the application and i'm gonna try that</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

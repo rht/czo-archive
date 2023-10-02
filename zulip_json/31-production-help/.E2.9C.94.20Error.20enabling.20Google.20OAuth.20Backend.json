@@ -1,0 +1,74 @@
+[
+    {
+        "content": "<p>Hi,</p>\n<p>I want to enable the Google OAuth Backend. I edited the settings.py file and if I uncomment <code>SOCIAL_AUTH_GOOGLE_KEY</code><br>\nand fill in my client id like</p>\n<div class=\"codehilite\"><pre><span></span><code>SOCIAL_AUTH_GOOGLE_KEY = 12345678910-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com\n</code></pre></div>\n<p>and restart the server with</p>\n<div class=\"codehilite\"><pre><span></span><code>su zulip -c &#39;/home/zulip/deployments/current/scripts/restart-server&#39;\n</code></pre></div>\n<p>I get the following error message:</p>\n<div class=\"codehilite\"><pre><span></span><code>2022-04-28 08:33:11,153 restart-server: Restarting zulip-workers:zulip_events_deferred_work\nzulip-workers:zulip_events_deferred_work: stopped\nzulip-workers:zulip_events_deferred_work: ERROR (spawn error)\nTraceback (most recent call last):\n  File &quot;/home/zulip/deployments/current/scripts/restart-server&quot;, line 122, in &lt;module&gt;\n    restart_or_start(worker)\n  File &quot;/home/zulip/deployments/current/scripts/restart-server&quot;, line 106, in restart_or_start\n    subprocess.check_call([&quot;supervisorctl&quot;, our_verb, service])\n  File &quot;/usr/lib/python3.9/subprocess.py&quot;, line 373, in check_call\n    raise CalledProcessError(retcode, cmd)\nsubprocess.CalledProcessError: Command &#39;[&#39;supervisorctl&#39;, &#39;restart&#39;, &#39;zulip-workers:zulip_events_deferred_work&#39;]&#39; returned non-zero exit status 7.\n</code></pre></div>\n<p>If I comment out <code>SOCIAL_AUTH_GOOGLE_KEY</code>restarting the server just works fine.<br>\nSo I have no idea what's going wrong here.</p>\n<p>My enabled auth backends:</p>\n<div class=\"codehilite\"><pre><span></span><code>AUTHENTICATION_BACKENDS: Tuple[str, ...] = (\n    &quot;zproject.backends.EmailAuthBackend&quot;,  # Email and password; just requires SMTP setup\n    &#39;zproject.backends.GoogleAuthBackend&#39;,  # Google auth, setup below\n    # &#39;zproject.backends.GitHubAuthBackend&#39;,  # GitHub auth, setup below\n    # &#39;zproject.backends.GitLabAuthBackend&#39;,  # GitLab auth, setup below\n    # &#39;zproject.backends.AzureADAuthBackend&#39;,  # Microsoft Azure Active Directory auth, setup below\n    # &#39;zproject.backends.AppleAuthBackend&#39;,  # Apple auth, setup below\n    # &#39;zproject.backends.SAMLAuthBackend&#39;, # SAML, setup below\n    # &#39;zproject.backends.ZulipLDAPAuthBackend&#39;,  # LDAP, setup below\n    # &#39;zproject.backends.ZulipRemoteUserBackend&#39;,  # Local SSO, setup docs on readthedocs\n    # &#39;zproject.backends.GenericOpenIdConnectBackend&#39;,  # Generic OIDC integration, setup below\n)\n</code></pre></div>",
+        "id": 1375122,
+        "sender_full_name": "Ronny",
+        "timestamp": 1651135001
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"14849\">@Ronny</span> I'm pretty sure that <code>SOCIAL_AUTH_GOOGLE_KEY</code> needs to be inside quotes.</p>",
+        "id": 1375217,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651161710
+    },
+    {
+        "content": "<p>(Or in <code>zulip-secrets.conf</code> -- <code>settings.py</code> is a python program and strings need to be inside quotes, i.e. <code>\"11235489-...\"</code></p>",
+        "id": 1375218,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1651161753
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Thank you for your hint! Of course, quotes solved the problem! It seems my brain was in standby this morning <span aria-label=\"see no evil\" class=\"emoji emoji-1f648\" role=\"img\" title=\"see no evil\">:see_no_evil:</span> Maybe the line from the <a href=\"https://github.com/zulip/zulip/blob/4325bf0fc91011a263f9b27065659aca09ca3d49/zproject/prod_settings_template.py#L292\">template</a> and the <code>&lt;</code>and <code>&gt;</code>misleads me...</p>\n<p>Btw, there are no quotes at all in my <code>zulip-secrets.conf</code>. Should the passwords all be quoted?</p>",
+        "id": 1375412,
+        "sender_full_name": "Ronny",
+        "timestamp": 1651171354
+    },
+    {
+        "content": "<p>No, .conf and .py are different formats.</p>",
+        "id": 1375419,
+        "sender_full_name": "Anders Kaseorg",
+        "timestamp": 1651171542
+    },
+    {
+        "content": "<p>Ok, .py with quotes and .conf without?</p>",
+        "id": 1375420,
+        "sender_full_name": "Ronny",
+        "timestamp": 1651171578
+    },
+    {
+        "content": "<p>Yes.</p>",
+        "id": 1375437,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651172190
+    },
+    {
+        "content": "<p>Pushed <a href=\"https://github.com/zulip/zulip/pull/21945\">#21945</a> to fix those places which were missing quotes.</p>",
+        "id": 1375439,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651172200
+    },
+    {
+        "content": "<p>to fast for me ;-)</p>",
+        "id": 1375441,
+        "sender_full_name": "Ronny",
+        "timestamp": 1651172312
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"14849\">Ronny</span> has marked this topic as resolved.</p>",
+        "id": 1375442,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1651172331
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/.E2.9C.94.20Error.20enabling.20Google.20OAuth.20Backend/near/1375439\">said</a>:</p>\n<blockquote>\n<p>Pushed <a href=\"https://github.com/zulip/zulip/pull/21945\">#21945</a> to fix those places which were missing quotes.</p>\n</blockquote>\n<p>btw (you fixed it in your commit), are there any differences in python between single and double quotes?</p>",
+        "id": 1375445,
+        "sender_full_name": "Ronny",
+        "timestamp": 1651172442
+    },
+    {
+        "content": "<p>There's no difference.  We (and our linter) prefer double quotes for consistency.</p>",
+        "id": 1375446,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1651172507
+    }
+]

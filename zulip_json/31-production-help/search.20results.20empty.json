@@ -1,0 +1,152 @@
+[
+    {
+        "content": "<p>Hello,<br>\nWe've used Zulip for a few years now in the context of our org, and since a few version we've lost the search feature: any full text search returns empty results.<br>\nI've ran the <code>/home/zulip/deployments/current/scripts/setup/reindex-textual-data --force</code> command, but no improvements. <br>\nI have 0 rows in fts_update_log table.<br>\nThe <code>process-fts-updates</code> runs and the last lines are</p>\n<div class=\"codehilite\"><pre><span></span><code>2023-08-10 15:26:40,694 DEBUG: process_fts_updates: listening for search index updates\n2023-08-10 15:26:40,697 DEBUG: process_fts_updates: Processed 0 rows catching up\n</code></pre></div>\n<p>I'm a little lost as to what to try and recover the feature.</p>",
+        "id": 1622965,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691682901
+    },
+    {
+        "content": "<p>The <code>/home/zulip/deployments/current/scripts/setup/reindex-textual-data --force</code> returned a bunch of lines like</p>\n<div class=\"codehilite\"><pre><span></span><code>2023-08-10 15:53:01,037 INFO: Composed([SQL(&#39;REINDEX INDEX &#39;), Identifier(&#39;unique_user_count&#39;)]) -- on analytics_usercount, 56 MB\n2023-08-10 15:53:01,773 INFO: Composed([SQL(&#39;REINDEX INDEX &#39;), Identifier(&#39;unique_user_count_null_subgroup&#39;)]) -- on analytics_usercount, 56 MB\n2023-08-10 15:53:02,156 INFO: Composed([SQL(&#39;REINDEX INDEX &#39;), Identifier(&#39;upper_subject_idx&#39;)]) -- on zerver_message, 466 MB\n2023-08-10 15:53:02,930 INFO: Composed([SQL(&#39;REINDEX INDEX &#39;), Identifier(&#39;zerver_message_recipient_subject&#39;)]) -- on zerver_message, 466 MB\n2023-08-10 15:53:04,514 INFO: Composed([SQL(&#39;REINDEX INDEX &#39;), Identifier(&#39;zerver_message_subject_5d7e2aa35453755a_like&#39;)]) -- on zerver_message, 466 MB\n2023-08-10 15:53:05,080 INFO: Composed([SQL(&#39;REINDEX INDEX &#39;), Identifier(&#39;zerver_message_recipient_upper_subject&#39;)]) -- on zerver_message, 466 MB\n2023-08-10 15:53:06,511 INFO: Composed([SQL(&#39;REINDEX INDEX &#39;), Identifier(&#39;zerver_message_b5e3374e&#39;)]) -- on zerver_message, 466 MB\n</code></pre></div>",
+        "id": 1622966,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691683031
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"27524\">@Stephane Poss</span> This isn't my area of expertise, but I think you'll get some help later today.  Can you provide info on the version of the database you're running?</p>",
+        "id": 1622969,
+        "sender_full_name": "Steve Howell",
+        "timestamp": 1691683186
+    },
+    {
+        "content": "<p>We are using pg 15 on ubuntu 22.04.</p>",
+        "id": 1622970,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691683194
+    },
+    {
+        "content": "<p>I ran today the upgrade (and found a nasty issue in the doc)</p>",
+        "id": 1622971,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691683222
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span><code>rm -rf /srv/zulip-venv-cache/*\n/home/zulip/deployments/current/scripts/lib/upgrade-zulip-stage-2 \\\n    /home/zulip/deployments/current/ --ignore-static-assets --audit-fts-indexes\n</code></pre></div>\n<p>deleted the virtual env that the entire service relies on...</p>",
+        "id": 1622972,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691683258
+    },
+    {
+        "content": "<p>Fixed that by recreating the venv :-(</p>",
+        "id": 1622974,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691683345
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/search.20results.20empty\">#issues &gt; search results empty</a> by <span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span>.</p>",
+        "id": 1623008,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1691687760
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"27524\">@Stephane Poss</span>: \"Since a new version\" implies you just did an upgrade.  Can you say what version of Zulip you were upgrading from, and to?  Did you <a href=\"https://zulip.readthedocs.io/en/latest/production/upgrade.html#upgrading-postgresql\">upgrade PostgreSQL</a> afterwards?  Did you upgrade the operating system version?</p>",
+        "id": 1623009,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1691687843
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"27524\">Stephane Poss</span> <a href=\"#narrow/stream/31-production-help/topic/search.20results.20empty/near/1622971\">said</a>:</p>\n<blockquote>\n<p>I ran today the upgrade (and found a nasty issue in the doc)</p>\n</blockquote>\n<p>The instructions you show are for upgrading the OS.  There's a known bug in 7.2 which causes the step you quote to error out -- the fix will be in a 7.3 release that we expect to make soon.</p>",
+        "id": 1623010,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1691687980
+    },
+    {
+        "content": "<p>So, it's a little complicated: In May, I upgraded from Zulip 5 to Zulip 7 after upgrading the OS (from ubuntu 16.04 to 22.04, I know, big change). At that time I missed the OS upgrade instructions. Today I read them while researching why we had lost the search. But we've lost the search since moving from v2 to v4 maybe a year ago. At that time the OS had not been updated.</p>",
+        "id": 1623036,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691688715
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"27524\">Stephane Poss</span> <a href=\"#narrow/stream/31-production-help/topic/search.20results.20empty/near/1623036\">said</a>:</p>\n<blockquote>\n<p>But we've lost the search since moving from v2 to v4 maybe a year ago</p>\n</blockquote>\n<p>Sorry, what was v2 and was moved to v4?</p>",
+        "id": 1623038,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1691688825
+    },
+    {
+        "content": "<p>zulip</p>",
+        "id": 1623040,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691688840
+    },
+    {
+        "content": "<p>I can't remember if it was v4 to maybe v5. But we were on v2 before the upgrade for sure</p>",
+        "id": 1623043,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691688873
+    },
+    {
+        "content": "<p><code>/var/log/zulip/upgrade.log</code> should have the full upgrade history</p>",
+        "id": 1623044,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1691688890
+    },
+    {
+        "content": "<p>right, I'll check it now</p>",
+        "id": 1623045,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691688906
+    },
+    {
+        "content": "<p>But regardless, the history was:</p>\n<ol>\n<li>Be running Zulip Server 2.x on Ubuntu 16.04</li>\n<li>Upgrade to Zulip Server 5.x</li>\n<li>Upgrade OS to 22.04, without fixing indexes</li>\n<li>Upgrade to Zulip Server 7.x (in May)</li>\n</ol>",
+        "id": 1623047,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1691688969
+    },
+    {
+        "content": "<p>yes</p>",
+        "id": 1623051,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691689063
+    },
+    {
+        "content": "<p>Actually, I see from the log that the upgrade was in april 2020 on ubuntu 18.04</p>",
+        "id": 1623061,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691689374
+    },
+    {
+        "content": "<p>then last May</p>",
+        "id": 1623063,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691689385
+    },
+    {
+        "content": "<p>OK, so there was an intermediate OS upgrade in there</p>",
+        "id": 1623068,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1691689459
+    },
+    {
+        "content": "<p>The OS upgrade is the real worry, since it causes index corruption which can lead to accumulating bad data.  But that's not the symptom here.</p>\n<p>Are you using <a href=\"https://zulip.readthedocs.io/en/latest/subsystems/full-text-search.html\">pgroonga search</a>, or the default?</p>",
+        "id": 1623070,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1691689523
+    },
+    {
+        "content": "<p>default</p>",
+        "id": 1623081,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691690612
+    },
+    {
+        "content": "<p>Hello, wondering if you had any suggestion? I'm not afraid of running sql statements if needed.</p>",
+        "id": 1623510,
+        "sender_full_name": "Stephane Poss",
+        "timestamp": 1691761383
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"27524\">@Stephane Poss</span> I'm pretty sure this isn't something we've seen before; you might want to get a paid support contract since I'm not sure I see an easy path to debugging this without access to the system in question.</p>",
+        "id": 1624860,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1692047720
+    }
+]

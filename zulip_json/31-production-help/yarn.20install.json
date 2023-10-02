@@ -1,0 +1,98 @@
+[
+    {
+        "content": "<p>Anyone having issues with yarn?  Running docker-compose on a vanilla Debian 11 on a GCP instance, It goes through the build, but then hangs:</p>\n<div class=\"codehilite\"><pre><span></span><code>Extracting to /srv/zulip-yarn...\nAdding to /usr/bin\nSuccessfully installed Yarn 1.22.10!\n+ sudo -- mkdir -p /srv/zulip-npm-cache\n+ sudo -- chown 1000:1000 /srv/zulip-npm-cache\nCached version not found! Installing node modules.\n+ /srv/zulip-yarn/bin/yarn install --non-interactive --frozen-lockfile --prefer-offline\nyarn install v1.22.10\n[1/4] Resolving packages...\n[2/4] Fetching packages...\ninfo There appears to be trouble with your network connection. Retrying...\ninfo There appears to be trouble with your network connection. Retrying...\ninfo There appears to be trouble with your network connection. Retrying...\ninfo There appears to be trouble with your network connection. Retrying...\nerror An unexpected error occurred: &quot;https://registry.yarnpkg.com/date-fns/-/date-fns-2.21.3.tgz: ESOCKETTIMEDOUT&quot;.\ninfo If you think this is a bug, please open a bug report with the information provided in &quot;/srv/zulip-npm-cache/e71327cb5d712597442760de7c49261df589e9eb/yarn-error.log&quot;.\ninfo Visit https://yarnpkg.com/en/docs/cli/install for documentation about this command.\n\nError running a subcommand of ./lib/provision.py: /srv/zulip-yarn/bin/yarn install --non-interactive --frozen-lockfile --prefer-offline\nActual error output for the subcommand is just above this.\n\n\nProvisioning failed (exit code 1)!\n\n* Look at the traceback(s) above to find more about the errors.\n* Resolve the errors or get help on chat.\n* If you can fix this yourself, you can re-run tools/provision at any time.\n* Logs are here: zulip/var/log/provision.log\n\nERROR: Service &#39;zulip&#39; failed to build: The command &#39;/bin/sh -c SKIP_VENV_SHELL_WARNING=1 ./tools/provision --build-release-tarball-only&#39; returned a non-zero code: 1\n</code></pre></div>\n<p>Trying to figure a way that maybe I can increase the network timeout...how to add --network-timeout 100000 to the yarn command perhaps?</p>",
+        "id": 1344909,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1647359188
+    },
+    {
+        "content": "<p>The URL it fails to fetch seems to work.<br>\nSo maybe it was a temporary issue? Alternatively it could be your internet connection</p>",
+        "id": 1344927,
+        "sender_full_name": "Felix (strifel)",
+        "timestamp": 1647361698
+    },
+    {
+        "content": "<p>wget works fine to that url from that instance, so I believe it may be a false positive?  Not too sure, as I don't know how yarn works.</p>",
+        "id": 1344962,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1647363480
+    },
+    {
+        "content": "<p>Does the problem persist if you re-run?</p>",
+        "id": 1344964,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1647364045
+    },
+    {
+        "content": "<p>Yes, been trying the past week at different times during the day - it has failed like 50 times, succeeded once.</p>",
+        "id": 1344965,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1647364137
+    },
+    {
+        "content": "<p>Just did a docker system prune, same issue....</p>",
+        "id": 1345001,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1647366102
+    },
+    {
+        "content": "<p>error An unexpected error occurred: \"<a href=\"https://registry.yarnpkg.com/date-fns/-/date-fns-2.21.3.tgz\">https://registry.yarnpkg.com/date-fns/-/date-fns-2.21.3.tgz</a>: ESOCKETTIMEDOUT\".<br>\nYet, right away I do a wget in 0.03 seconds:</p>\n<div class=\"codehilite\"><pre><span></span><code># wget https://registry.yarnpkg.com/date-fns/-/date-fns-2.21.3.tgz\n--2022-03-15 17:44:11--  https://registry.yarnpkg.com/date-fns/-/date-fns-2.21.3.tgz\nResolving registry.yarnpkg.com (registry.yarnpkg.com)... 104.16.22.35, 104.16.24.35, 104.16.19.35, ...\nConnecting to registry.yarnpkg.com (registry.yarnpkg.com)|104.16.22.35|:443... connected.\nHTTP request sent, awaiting response... 200 OK\nLength: 650279 (635K) [application/octet-stream]\nSaving to: ‘date-fns-2.21.3.tgz’\n\ndate-fns-2.21.3.tgz                   100%[======================================================================&gt;] 635.04K  --.-KB/s    in 0.03s\n\n2022-03-15 17:44:11 (22.3 MB/s) - ‘date-fns-2.21.3.tgz’ saved [650279/650279]\n</code></pre></div>",
+        "id": 1345003,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1647366346
+    },
+    {
+        "content": "<p>This is almost certainly something with your Docker network configuration.</p>",
+        "id": 1345004,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1647366370
+    },
+    {
+        "content": "<p>Hmnnn...maybe.</p>",
+        "id": 1345007,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1647366398
+    },
+    {
+        "content": "<p>We do restrict the size of the docker networks:</p>\n<div class=\"codehilite\"><pre><span></span><code># cat /etc/docker/daemon.json\n{\n    &quot;bip&quot;: &quot;172.17.0.1/24&quot;,\n        &quot;default-address-pools&quot;:\n        [\n                {&quot;base&quot;:&quot;172.17.0.0/20&quot;,&quot;size&quot;:24}\n        ]\n}\n</code></pre></div>\n<p>as our wireguard is in 172.20.8.x</p>",
+        "id": 1345012,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1647366529
+    },
+    {
+        "content": "<p>not much in here:</p>\n<div class=\"codehilite\"><pre><span></span><code># head -30 /data/docker/overlay2/3ad4e6193bb4d27fc1ead60493f1b45f6ad210bd90b0c562663fed42f0a6842a/diff/srv/zulip-npm-cache/e71327cb5d712597442760de7c49261df589e9eb/yarn-error.log\nArguments:\n  /usr/local/nvm/versions/node/v14.16.1/bin/node /srv/zulip-yarn/bin/yarn.js install --non-interactive --frozen-lockfile --prefer-offline\n\nPATH:\n  /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n\nYarn version:\n  1.22.10\n\nNode version:\n  14.16.1\n\nPlatform:\n  linux x64\n\nTrace:\n  Error: https://registry.yarnpkg.com/date-fns/-/date-fns-2.21.3.tgz: ESOCKETTIMEDOUT\n      at ClientRequest.&lt;anonymous&gt; (/srv/zulip-yarn/lib/cli.js:141376:19)\n      at Object.onceWrapper (events.js:421:28)\n      at ClientRequest.emit (events.js:315:20)\n      at TLSSocket.emitRequestTimeout (_http_client.js:784:9)\n      at Object.onceWrapper (events.js:421:28)\n      at TLSSocket.emit (events.js:327:22)\n      at TLSSocket.Socket._onTimeout (net.js:483:8)\n      at listOnTimeout (internal/timers.js:554:17)\n      at processTimers (internal/timers.js:497:7)\n\nnpm manifest:\n  {\n    &quot;name&quot;: &quot;zulip&quot;,\n</code></pre></div>",
+        "id": 1345140,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1647370491
+    },
+    {
+        "content": "<p>TBH, I don't think it's a network issue with GCP nor the system nor docker - as so much more is downloaded/installed before it gets' to that section...</p>",
+        "id": 1345150,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1647370980
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"10092\">@Geoff Wild</span> well, <code>yarn</code> downloads from a different host, so it just is a hint about in what way the networking configuration is broken. E.g. I could imagine that IPv6 is broken on the system, and Yarn connects to servers with an IPv6 address (and the previous download steps don't.  (I don't specifically know whether that's true -- just thinking about the types of issues that might make one network request work and others consistently fail).</p>",
+        "id": 1345336,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1647375173
+    },
+    {
+        "content": "<p>Update:  I tested the install on a system (in AWS) with Ubuntu 20.04 - and it works.  Waiting for the GCP admin to spawn me an Ubuntu instance instead of Debian - just to rule that out.  Will keep you posted.</p>",
+        "id": 1345342,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1647375382
+    },
+    {
+        "content": "<p>Interesting!</p>",
+        "id": 1345366,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1647376056
+    },
+    {
+        "content": "<p>Very interesting indeed!  Ubuntu 20.04 on GCP works!</p>\n<div class=\"codehilite\"><pre><span></span><code># docker-compose ps\n                Name                               Command               State                                  Ports\n-----------------------------------------------------------------------------------------------------------------------------------------------------\ndocker-zulip_database_1_c9898c34c6e9    docker-entrypoint.sh postgres    Up      5432/tcp\ndocker-zulip_memcached_1_5be154222917   docker-entrypoint.sh sh -e ...   Up      11211/tcp\ndocker-zulip_rabbitmq_1_74ebbd5ecea6    docker-entrypoint.sh rabbi ...   Up      25672/tcp, 4369/tcp, 5671/tcp, 5672/tcp\ndocker-zulip_redis_1_ab9023977aab       docker-entrypoint.sh sh -e ...   Up      6379/tcp\ndocker-zulip_zulip_1_6c2f527e69bd       /sbin/entrypoint.sh app:run      Up      0.0.0.0:443-&gt;443/tcp,:::443-&gt;443/tcp,\n                                                                                 0.0.0.0:80-&gt;80/tcp,:::80-&gt;80/tcp\n</code></pre></div>",
+        "id": 1345501,
+        "sender_full_name": "Geoff Wild",
+        "timestamp": 1647383186
+    }
+]

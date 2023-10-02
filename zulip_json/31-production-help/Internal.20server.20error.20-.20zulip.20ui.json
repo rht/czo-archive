@@ -1,0 +1,122 @@
+[
+    {
+        "content": "<p>Hello - we are facing  below error when accessing zulip ui. We recently saw the storage was full and later freed up some space for postgres sql. Post that accessing UI is resulting in below error. Is it ok to do zulip server restart? Kindly advise.. <br>\n\"Internal server error<br>\nThis Zulip server is currently experiencing some technical difficulties. Sorry about that!</p>\n<p>The page will reload automatically soon after service is restored.\"</p>",
+        "id": 1434140,
+        "sender_full_name": "Sanjyoth Satish",
+        "timestamp": 1663004309
+    },
+    {
+        "content": "<p>If the disk fills up, many services may be in a bad state (PostgreSQL and RabbitMQ especially). The documentation on <a href=\"https://zulip.readthedocs.io/en/latest/production/troubleshooting.html#checking-status-with-supervisorctl-status\">checking status of services</a> or  <a href=\"https://zulip.readthedocs.io/en/latest/production/troubleshooting.html#restarting-services-with-supervisorctl-restart\">restarting services</a> may be of interest.</p>",
+        "id": 1434155,
+        "sender_full_name": "Matt",
+        "timestamp": 1663005152
+    },
+    {
+        "content": "<p>Thanks <span class=\"user-mention\" data-user-id=\"24078\">@Matt Keller</span> Btw we are planning to enable the message retention policy so that only couple of months of data can be retained and others can be deleted. Is there a way to trigger the cleanup immediately ? if not when it can be triggered?</p>",
+        "id": 1434476,
+        "sender_full_name": "Sanjyoth Satish",
+        "timestamp": 1663046556
+    },
+    {
+        "content": "<p>Restarting \"supervisorctl stop all, start all\" didn't help. Any other pointers will be really helpful. We need to access the GUI to enable message retention policy but UI is giving internal server error even after restart.. Can someone please help in here?</p>",
+        "id": 1434582,
+        "sender_full_name": "Sanjyoth Satish",
+        "timestamp": 1663069528
+    },
+    {
+        "content": "<p>There is documentation on the <a href=\"https://zulip.com/help/message-retention-policy#important-details\">Message Retention Policy</a> which elaborates on when the retention system runs, and also <a href=\"https://zulip.com/help/edit-or-delete-a-message#how-deletion-works\">how deleting works</a>.  There is a CLI command, as it is run out of cron, but it's not going to give you what you're looking for. You need to resolve your larger problem first. </p>\n<p>You restarted everything, but have you confirmed that <a href=\"https://zulip.readthedocs.io/en/latest/production/troubleshooting.html#checking-status-with-supervisorctl-status\">everything needed is actually running</a>? Have you looked through your logs? <code>/var/log/zulip/errors.log</code> may be of particular interest.</p>",
+        "id": 1434590,
+        "sender_full_name": "Matt",
+        "timestamp": 1663072350
+    },
+    {
+        "content": "<p>Below are the things i see running for all processes:</p>\n<p>zulipbash:/var/log/zulip$ supervisorctl status<br>\ngo-camo                                                         RUNNING   pid 3396314, uptime 6:47:54<br>\nprocess-fts-updates                                             RUNNING   pid 3396320, uptime 6:47:54<br>\nsmokescreen                                                     RUNNING   pid 3396315, uptime 6:47:54<br>\nzulip-django                                                    RUNNING   pid 3396316, uptime 6:47:54<br>\nzulip-tornado                                                   RUNNING   pid 3396317, uptime 6:47:54<br>\nzulip-workers:zulip_events_deferred_work                        RUNNING   pid 3396321, uptime 6:47:54<br>\nzulip-workers:zulip_events_digest_emails                        RUNNING   pid 3396322, uptime 6:47:54<br>\nzulip-workers:zulip_events_email_mirror                         RUNNING   pid 3396323, uptime 6:47:54<br>\nzulip-workers:zulip_events_email_senders                        RUNNING   pid 3396328, uptime 6:47:54<br>\nzulip-workers:zulip_events_embed_links                          RUNNING   pid 3396324, uptime 6:47:54<br>\nzulip-workers:zulip_events_embedded_bots                        RUNNING   pid 3396325, uptime 6:47:54<br>\nzulip-workers:zulip_events_error_reports                        RUNNING   pid 3396326, uptime 6:47:54<br>\nzulip-workers:zulip_events_invites                              RUNNING   pid 3396327, uptime 6:47:54<br>\nzulip-workers:zulip_events_missedmessage_emails                 RUNNING   pid 3396329, uptime 6:47:54<br>\nzulip-workers:zulip_events_missedmessage_mobile_notifications   RUNNING   pid 3396330, uptime 6:47:54<br>\nzulip-workers:zulip_events_outgoing_webhooks                    RUNNING   pid 3396331, uptime 6:47:54<br>\nzulip-workers:zulip_events_user_activity                        RUNNING   pid 3396332, uptime 6:47:54<br>\nzulip-workers:zulip_events_user_activity_interval               RUNNING   pid 3396333, uptime 6:47:54<br>\nzulip-workers:zulip_events_user_presence                        RUNNING   pid 3396334, uptime 6:47:54<br>\nzulip_deliver_scheduled_emails                                  RUNNING   pid 3396318, uptime 6:47:54<br>\nzulip_deliver_scheduled_messages                                RUNNING   pid 3396319, uptime 6:47:54</p>\n<p>Here is the error.log details:</p>\n<p>2022-09-13 12:51:51.931 ERR  [django.request] Internal Server Error: /<br>\nTraceback (most recent call last):<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/exception.py\", line 47, in inner<br>\n    response = get_response(request)<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/core/handlers/base.py\", line 181, in _get_response<br>\n    response = wrapped_callback(request, *callback_args, **callback_kwargs)<br>\n  File \"/home/zulip/deployments/2022-05-13-00-24-30/./zerver/views/home.py\", line 128, in home<br>\n    return zulip_login_required(home_real)(request)<br>\n  File \"/home/zulip/deployments/2022-05-13-00-24-30/./zerver/decorator.py\", line 432, in _wrapped_view<br>\n    return view_func(request, *args, **kwargs)<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/contrib/auth/decorators.py\", line 21, in _wrapped_view<br>\n    return view_func(request, *args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-05-13-00-24-30/./zerver/decorator.py\", line 481, in _wrapped_view_func<br>\n    return rate_limit()(view_func)(request, *args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-05-13-00-24-30/./zerver/decorator.py\", line 984, in wrapped_func<br>\n    return func(request, *args, **kwargs)<br>\n  File \"/home/zulip/deployments/2022-05-13-00-24-30/./zerver/views/home.py\", line 219, in home_real<br>\n    queue_id, page_params = build_page_params_for_home_page_load(<br>\n  File \"/home/zulip/deployments/2022-05-13-00-24-30/./zerver/lib/home.py\", line 145, in build_page_params_for_home_page_load<br>\n    register_ret = do_events_register(<br>\n  File \"/home/zulip/deployments/2022-05-13-00-24-30/./zerver/lib/events.py\", line 1372, in do_events_register<br>\n    ret = fetch_initial_state_data(<br>\n  File \"/home/zulip/deployments/2022-05-13-00-24-30/./zerver/lib/events.py\", line 398, in fetch_initial_state_data<br>\n    state[\"raw_users\"] = get_raw_user_data(<br>\n  File \"/home/zulip/deployments/2022-05-13-00-24-30/./zerver/lib/users.py\", line 589, in get_raw_user_data<br>\n    user_dicts = get_realm_user_dicts(<a href=\"http://realm.id\">realm.id</a>)<br>\n  File \"/home/zulip/deployments/2022-05-13-00-24-30/./zerver/lib/cache.py\", line 206, in func_with_caching<br>\n    cache_set(key, val, cache_name=cache_name, timeout=timeout)<br>\n  File \"/home/zulip/deployments/2022-05-13-00-24-30/./zerver/lib/cache.py\", line 253, in cache_set<br>\n    cache_backend.set(final_key, (val,), timeout=timeout)<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/django/core/cache/backends/memcached.py\", line 82, in set<br>\n    if not self._cache.set(key, value, self.get_backend_timeout(timeout)):<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/bmemcached/client/replicating.py\", line 117, in set<br>\n    returns.append(server.set(key, value, time, compress_level=compress_level))<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/bmemcached/protocol.py\", line 605, in set<br>\n    return self._set_add_replace('set', key, value, time, compress_level=compress_level)<br>\n  File \"/srv/zulip-venv-cache/726c7d1d35d9cd61bb4b70e98167a1db7b0c524d/zulip-py3-venv/lib/python3.8/site-packages/bmemcached/protocol.py\", line 584, in _set_add_replace<br>\n    raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)<br>\nbmemcached.exceptions.MemcachedException: (\"Code: 3 Message: b'Too large.'\", 3)</p>",
+        "id": 1434596,
+        "sender_full_name": "Sanjyoth Satish",
+        "timestamp": 1663073939
+    },
+    {
+        "content": "<p>That points to a possible problem with memcache. As root, <code>service memcached status</code> may be interesting, but probably a <code>restart</code> will be necessary. After that I recommend restarting all of the Zulip components with <code>/home/zulip/deployments/current/scripts/restart-server</code></p>",
+        "id": 1434611,
+        "sender_full_name": "Matt",
+        "timestamp": 1663075106
+    },
+    {
+        "content": "<p>Thanks <span class=\"user-mention\" data-user-id=\"24078\">@Matt Keller</span> We will check and get back in 10 mins</p>",
+        "id": 1434612,
+        "sender_full_name": "Jaganath Srinivasan",
+        "timestamp": 1663075255
+    },
+    {
+        "content": "<p>Hi <span class=\"user-mention\" data-user-id=\"24078\">@Matt Keller</span></p>",
+        "id": 1434616,
+        "sender_full_name": "Visvanathan",
+        "timestamp": 1663075723
+    },
+    {
+        "content": "<p>Seems like thats running fine  </p>\n<p>root:/var/log/zulip# service memcached status<br>\n● memcached.service - memcached daemon<br>\n     Loaded: loaded (/lib/systemd/system/memcached.service; enabled; vendor preset: enabled)<br>\n    Drop-In: /etc/systemd/system/memcached.service.d<br>\n             └─zulip-fix-sasl.conf<br>\n     Active: active (running) since Fri 2022-05-13 00:28:20 UTC; 4 months 1 days ago<br>\n       Docs: man:memcached(1)<br>\n   Main PID: 65119 (memcached)<br>\n      Tasks: 10 (limit: 19185)<br>\n     Memory: 184.5M<br>\n     CGroup: /system.slice/memcached.service<br>\n             └─65119 /usr/bin/memcached -m 2000 -p 11211 -u memcache -l 127.0.0.1 -P /var/run/memcached/memca&gt;</p>\n<p>May 13 00:28:20 ip-xx-xx-xx-xx systemd[1]: Started memcached daemon.</p>",
+        "id": 1434617,
+        "sender_full_name": "Sanjyoth Satish",
+        "timestamp": 1663075727
+    },
+    {
+        "content": "<p>Yes, but as it's been running since before you ran out of disk space, it is suspect as to how <em>well</em> it is running. I would restart it, and then do the Zulip <code>restart-server</code> I mentioned above.</p>",
+        "id": 1434619,
+        "sender_full_name": "Matt",
+        "timestamp": 1663076043
+    },
+    {
+        "content": "<p>Got it, let me give it a try during off hours of our traffic and come back soon with latest findings.  Thanks for the valuable insight<br>\n<span class=\"user-mention\" data-user-id=\"24078\">@Matt Keller</span></p>",
+        "id": 1434620,
+        "sender_full_name": "Sanjyoth Satish",
+        "timestamp": 1663076279
+    },
+    {
+        "content": "<p>We did the restart of memcached followed by stop-server, start-server of zulip. The issue still persists and getting internal server error. Just checked the code might be hitting from below snippet:<br>\nif status != self.STATUS['success']:<br>\n    if status == self.STATUS['key_exists']:<br>\n        return False<br>\n    elif status == self.STATUS['key_not_found']:<br>\n        return False<br>\n    elif status == self.STATUS['server_disconnected']:<br>\n        return False<br>\n    raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)     &lt;--- Issue we are hitting</p>",
+        "id": 1435317,
+        "sender_full_name": "Sanjyoth Satish",
+        "timestamp": 1663156897
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"23281\">@Sanjyoth Satish</span> what version of Zulip are you running? And how many total users do you have on your server?</p>",
+        "id": 1435457,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663176471
+    },
+    {
+        "content": "<p>I suspect I know what the issue is, but more information would help confirm.</p>",
+        "id": 1435458,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663176590
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>  Here are the answers for your query:<br>\nwhat version of Zulip are you running?<br>\nbash:~/deployments/current$ cat version.py |grep ZULIP_VERSION<br>\nZULIP_VERSION = \"5.1\"</p>\n<p>how many total users do you have on your server<br>\napprox 45,000 users and keeps growing.</p>",
+        "id": 1435933,
+        "sender_full_name": "Sanjyoth Satish",
+        "timestamp": 1663220887
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"23281\">@Sanjyoth Satish</span> ok, I'd recommend you upgrade to 5.5, but that's probably not your problem.</p>",
+        "id": 1436270,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663270538
+    },
+    {
+        "content": "<p>I think the core issue is that your userbase is large enough that the data set for all users in the organization no longer fit in the 1MB limit for a memcached cache item. The cache is question is likely not essential to Zulip running, so you can try applying this patch to disable it and restarting your Zulip server to see whether that resolves the issue as a temporary solution to get your server working again:</p>\n<div class=\"codehilite\"><pre><span></span><code>diff --git a/zerver/models.py b/zerver/models.py\nindex a5969f8e7d..bf8fc42c74 100644\n--- a/zerver/models.py\n+++ b/zerver/models.py\n@@ -3838,7 +3838,7 @@ def get_user_by_id_in_realm_including_cross_realm(\n     raise UserProfile.DoesNotExist()\n\n\n-@cache_with_key(realm_user_dicts_cache_key, timeout=3600 * 24 * 7)\n+# @cache_with_key(realm_user_dicts_cache_key, timeout=3600 * 24 * 7)\n def get_realm_user_dicts(realm_id: int) -&gt; List[Dict[str, Any]]:\n     return UserProfile.objects.filter(\n         realm_id=realm_id,\n</code></pre></div>",
+        "id": 1436271,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663270646
+    },
+    {
+        "content": "<p>Thanks <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Let me try that and come back</p>\n<p>Btw the zulip server as such is still working and users are able to exchange messages via apis,  but the main reason why we want to use zulip UI is to enable message retention policy &amp; set it to 30 days, that way we can save storage. Is there a way we can achieve deleting the messages older than 30 days via clis or updating the settings as zulip ui is not working for us right now?</p>",
+        "id": 1436623,
+        "sender_full_name": "Sanjyoth Satish",
+        "timestamp": 1663310831
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"23281\">@Sanjyoth Satish</span> you can do that with the API; though it's not documented.</p>",
+        "id": 1436805,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1663352482
+    }
+]

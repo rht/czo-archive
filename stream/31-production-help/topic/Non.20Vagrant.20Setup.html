@@ -1,0 +1,119 @@
+<html>
+<head><meta charset="utf-8"><title>Non Vagrant Setup · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html">Non Vagrant Setup</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="94553"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/94553" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Saumya Rawat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#94553">(Dec 15 2016 at 19:16)</a>:</h4>
+<p>Hi! I am following the non-vagrant setup on Arch Linux and running into an error at executing postgres-init-dev-db. At <code>psql -h localhost zulip_base zulip</code> I get the error message:  <code>could not change directory to "&lt;location of cloned zulip&gt;": Permission denied</code></p>
+
+
+
+<a name="94630"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/94630" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#94630">(Dec 15 2016 at 19:47)</a>:</h4>
+<p>Hi <span class="user-mention" data-user-email="saumya.rawat25@gmail.com">@Saumya Rawat</span>!  We can help you debug this; it may be the case that Arch Linux requires some additional details</p>
+
+
+
+<a name="94631"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/94631" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#94631">(Dec 15 2016 at 19:47)</a>:</h4>
+<p>That issue sounds like basically a problem with your current working directory</p>
+
+
+
+<a name="94632"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/94632" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#94632">(Dec 15 2016 at 19:47)</a>:</h4>
+<p>that command switches to the <code>postgres</code> user, which is the special admin user for postgres operations</p>
+
+
+
+<a name="94633"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/94633" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#94633">(Dec 15 2016 at 19:47)</a>:</h4>
+<p>I bet your Zulip clone isn't world-readable on your machine, and thus the postgres can't read it</p>
+
+
+
+<a name="94634"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/94634" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#94634">(Dec 15 2016 at 19:48)</a>:</h4>
+<p>I think we should be able to fix that by adding an additional argument to the <code>su postgres</code> command to change the current working directory to the postgres user's homedir</p>
+
+
+
+<a name="94639"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/94639" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#94639">(Dec 15 2016 at 19:49)</a>:</h4>
+<p>Can you try changing the <code>ROOT_POSTGRES=</code> line to add e.g. <code>cd / &amp;&amp;</code> at the start of the command?</p>
+
+
+
+<a name="94641"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/94641" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#94641">(Dec 15 2016 at 19:50)</a>:</h4>
+<p>hmm, that may not work</p>
+
+
+
+<a name="94643"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/94643" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#94643">(Dec 15 2016 at 19:50)</a>:</h4>
+<p>Since we run some commands from the Zulip repo as the <code>postgres</code> user</p>
+
+
+
+<a name="94644"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/94644" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#94644">(Dec 15 2016 at 19:50)</a>:</h4>
+<p>OK, so I think the conclusion here is that we probably require the zulip clone to be readable by the postgres user on the system; the easiest way to do that is to make it world-readable</p>
+
+
+
+<a name="94680"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/94680" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Saumya Rawat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#94680">(Dec 15 2016 at 20:05)</a>:</h4>
+<p>Hmm yeah that sounds right! I'll try it out, thanks! </p>
+
+
+
+<a name="95315"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/95315" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Saumya Rawat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#95315">(Dec 16 2016 at 07:02)</a>:</h4>
+<p>Further in the process of the non vagrant setup, <br>
+On running <code>./manage.py compilemessages</code>, due to the non existence of zulip/var/log directory I got the error message </p>
+<blockquote>
+<p>File "/home/levicorpus/Documents/zulip/scripts/lib/log-management-command", line 15, in &lt;module&gt;<br>
+     file_handler = logging.FileHandler(settings.MANAGEMENT_LOG_PATH)<br>
+     File "/usr/lib64/python3.5/logging/__init__.py", line 1008, in __init__<br>
+     StreamHandler.__init__(self, self._open())<br>
+     File "/usr/lib64/python3.5/logging/__init__.py", line 1037, in _open<br>
+     return open(self.baseFilename, self.mode, encoding=self.encoding)<br>
+     FileNotFoundError: [Errno 2] No such file or directory: '/home/levicorpus/Documents/zulip/var/log/manage.log'</p>
+</blockquote>
+<p>I believe it's because of the default behaviour of FileHandler which creates the log file if it does not exist but <em>not</em> the directory as mentioned here : <a href="http://stackoverflow.com/questions/32133856/logger-cannot-find-file" target="_blank" title="http://stackoverflow.com/questions/32133856/logger-cannot-find-file">http://stackoverflow.com/questions/32133856/logger-cannot-find-file</a>.  Once I created the folder log inside var, the command ran perfectly. </p>
+<p>Should there be a mkdir command in the manage.py or scripts/lib/log-management-command to take care of that or was it because of some error in my config somewhere?</p>
+
+
+
+<a name="95473"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/95473" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#95473">(Dec 16 2016 at 14:56)</a>:</h4>
+<p><span class="user-mention" data-user-email="saumya.rawat25@gmail.com">@Saumya Rawat</span> I think that's actually probably a recent regression; we used to log in development in a directory that didn't need to be created. So I think we have two follow-up items you can work on as first contributions:</p>
+<ul>
+<li>Check permissions on the Zulip directory are world-readable early in <code>postgres-init-dev-db</code>, and give a nice error message explaining the problem you had to work around</li>
+<li>Make <code>manage.py</code> in development check if <code>var/log</code> exists, and if not, create it, to try to eliminate that second problem.</li>
+</ul>
+
+
+
+<a name="95537"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/95537" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Saumya Rawat <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#95537">(Dec 16 2016 at 16:50)</a>:</h4>
+<p>Great! I already did the second one, will read up on the format for commiting it create a PR for the two. :) </p>
+
+
+
+<a name="95541"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/Non%20Vagrant%20Setup/near/95541" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/Non.20Vagrant.20Setup.html#95541">(Dec 16 2016 at 16:59)</a>:</h4>
+<p>Awesome, thanks <span class="user-mention" data-user-email="saumya.rawat25@gmail.com">@Saumya Rawat</span>!</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

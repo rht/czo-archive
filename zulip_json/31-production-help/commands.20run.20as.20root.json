@@ -1,0 +1,62 @@
+[
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"26850\">Dominik Weckmüller</span> <a href=\"https://geo.rocks/post/zulip-server-setup/#7-maintenance\">said in their blog post</a>:</p>\n<blockquote>\n<p>Just be careful that you never execute the Zulip scripts as <code>root</code> but always as Zulip user or with <code>su zulip -c</code> in front of the command. I did it once which led to an awful bug where Zulip changed ownership on the system messing with the DB and other components. No fun, but something easily revertible with <code>chown -R zulip:zulip /home/</code>.</p>\n</blockquote>\n<p>Do you recall what command you ran that did this?  The recommendation of only running things as <code>root</code> if it's absolutely necessary is good advice, but we generally also try to prevent commands from messing things up if run as the wrong user.</p>",
+        "id": 1588632,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686238341
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26850\">@Dominik Weckmüller</span> just to make sure he sees the question, since quote-and-reply does a silent mention.</p>",
+        "id": 1588829,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1686251099
+    },
+    {
+        "content": "<p>Thanks for mentioning me <span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span>. <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span>  Unfortunately I don't quite remember at what point exactly I messed it up, but it happened when running the normal installation commands only that at some point I forgot to become zulip user and executed any of the Zulip scripts as root (which changed the owner to root). I guess it must have been any of <code>/home/zulip/deployments/current/scripts</code>. </p>\n<p>I suppose I was configuring SMTP and restarted the server as root with <code>/home/zulip/deployments/current/scripts/restart-server</code> instead of <code>su zulip -c /home/zulip/deployments/current/scripts/restart-server </code>.</p>\n<p>I am pretty sure it was a command like this, just not exactly which one. I think it's a quite dangerous trap more people could fall into. We eventually found the error in the logs. I'll have a look tomorrow at work and post it here.</p>",
+        "id": 1588862,
+        "sender_full_name": "Dominik Weckmüller",
+        "timestamp": 1686254844
+    },
+    {
+        "content": "<p>If you can find which one, that'd be helpful -- it'd be great to save others from that potential danger.</p>\n<p><code>restart-server</code> specifically does have a check for this, so it wasn't that one. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1588863,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686254926
+    },
+    {
+        "content": "<p>Ah wait, I think I also set up push notifications for mobile that day... <br>\nAnyway before playing to much of a guessing game I'll better dive in the logs again :D</p>",
+        "id": 1588866,
+        "sender_full_name": "Dominik Weckmüller",
+        "timestamp": 1686255020
+    },
+    {
+        "content": "<p>I think I found the culprit. After I sent emails for resetting the passwords to all users via <a href=\"https://zulip.readthedocs.io/en/latest/production/management-commands.html#other-useful-manage-py-commands\">management command</a>: </p>\n<p><code>./manage.py send_password_reset_email</code></p>\n<p>It started to have problems. Logs:</p>\n<div class=\"codehilite\"><pre><span></span><code>2023-04-24 07:45:51.328 WARN [zulip.queue:9800] TornadoQueueClient attempting to reconnect to RabbitMQ\n2023-04-24 07:46:04.714 ERR [pika.adapters.blocking_connection:9800] Unexpected connection close detected: ConnectionClosedByBroker: (320) &quot;CONNECTION_FORCED - user &#39;zulip&#39; is deleted&quot;\n2023-04-24 07:46:04.717 WARN [zulip.queue:9800] Failed to send to rabbitmq, trying to reconnect and send again\n2023-04-24 07:46:44.607 ERR [pika.adapters.utils.io_services_utils] _AsyncBaseTransport._produce() failed, aborting connection: error=ConnectionResetError(104, &#39;Connection reset by peer&#39;); sock=&lt;socket.socket fd=27, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=(&#39;127.0.0.1&#39;, 60328)&gt;; Caller&#39;s stack:\npika.exceptions.ProbableAccessDeniedError: ConnectionClosedByBroker: (530) &quot;NOT_ALLOWED - access to vhost &#39;/&#39; refused for user &#39;zulip&#39;&quot;\n</code></pre></div>",
+        "id": 1588869,
+        "sender_full_name": "Dominik Weckmüller",
+        "timestamp": 1686255470
+    },
+    {
+        "content": "<p>If you need any more logs or other info, let me know! :)</p>",
+        "id": 1588870,
+        "sender_full_name": "Dominik Weckmüller",
+        "timestamp": 1686255542
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"26850\">@Dominik Weckmüller</span>: We also assert that isn't running as root, for the management commands:</p>\n<div class=\"codehilite\" data-code-language=\"Bash Session\"><pre><span></span><code><span class=\"gp\">root@alexmv-prod:/home/zulip/deployments/current# </span>./manage.py<span class=\"w\"> </span><span class=\"nb\">help</span>\n<span class=\"go\">manage.py should not be run as root. Use `su zulip` to switch to the 'zulip'</span>\n<span class=\"go\">user before rerunning this, or use</span>\n<span class=\"go\">  su zulip -c '/home/zulip/deployments/2023-06-07-20-20-00/manage.py ...'</span>\n<span class=\"go\">to switch users and run this as a single command.</span>\n</code></pre></div>\n<p>Those errors you show are from rabbitmq, specifically, and aren't about filesystem permissions at all.  Thoat looks like <code>scripts/setup/configure-rabbitmq</code> got run (again?) and dropped the <code>zulip</code> rabbitmq user.</p>",
+        "id": 1589703,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686338198
+    },
+    {
+        "content": "<p>hmm... one other thing I noticed - which could be related to the error logs too - is that for some reason I always ran OOM (out of memory) on a 4GB RAM server with default config and only 9 users (out of which 2-3 we're trying to change their password contemporarily), to be exact <a href=\"https://www.hetzner.com/cloud\">the x86 CX21 from Hetzner</a>.<br>\nAfter upgrading to 8GB the errors were not occuring any more.</p>\n<p>Note that I did not have the same problems with Arm64 4GB RAM CAX11 (which is afaik one of the cheapest options to host a Zulip instance).</p>\n<p>Tomorrow I'll have another look in the logs but I suppose if noone else had the same issues, I made some other mistake somewhere I simply don't remember.</p>",
+        "id": 1590823,
+        "sender_full_name": "Dominik Weckmüller",
+        "timestamp": 1686490094
+    },
+    {
+        "content": "<p>Interesting that the ARM worked better than the x86 for the same RAM.</p>\n<p>We've seen notes about increased memory consumption on 6.x and later, but we have not done a thorough investigation.  See also <a class=\"stream-topic\" data-stream-id=\"3\" href=\"/#narrow/stream/3-backend/topic/reducing.20minimal.20memory.20usage\">#backend &gt; reducing minimal memory usage</a>.</p>",
+        "id": 1591177,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1686582826
+    }
+]

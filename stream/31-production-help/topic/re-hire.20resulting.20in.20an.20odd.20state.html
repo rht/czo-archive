@@ -1,0 +1,78 @@
+<html>
+<head><meta charset="utf-8"><title>re-hire resulting in an odd state · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/re-hire.20resulting.20in.20an.20odd.20state.html">re-hire resulting in an odd state</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="641183"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/re-hire%20resulting%20in%20an%20odd%20state/near/641183" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim April <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/re-hire.20resulting.20in.20an.20odd.20state.html#641183">(Sep 04 2018 at 16:59)</a>:</h4>
+<p>We had someone who had left the company (and was deactived using <code>manage.py deactivate_user</code>) who has returned. What is the correct way to reactivate the user?</p>
+
+
+
+<a name="641184"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/re-hire%20resulting%20in%20an%20odd%20state/near/641184" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim April <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/re-hire.20resulting.20in.20an.20odd.20state.html#641184">(Sep 04 2018 at 17:00)</a>:</h4>
+<p>I tried modifying the <code>is_active</code> field in the database for the user and then ran the <code>restart_server</code> script, but i'm still seeing some odd behavior </p>
+<ul>
+<li>Unable to send PMs to the user when they were showing up in the user list</li>
+<li>unable to see them in the user list now</li>
+</ul>
+
+
+
+<a name="641186"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/re-hire%20resulting%20in%20an%20odd%20state/near/641186" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/re-hire.20resulting.20in.20an.20odd.20state.html#641186">(Sep 04 2018 at 17:31)</a>:</h4>
+<p><span class="user-mention" data-user-id="73">@Tim April</span> this is the way to do it from the UI: <a href="https://zulipchat.com/help/deactivate-or-reactivate-a-user" target="_blank" title="https://zulipchat.com/help/deactivate-or-reactivate-a-user">https://zulipchat.com/help/deactivate-or-reactivate-a-user</a><br>
+Ultimately setting is_active to True is all it's doing, plus possibly clearing cache entries and so on</p>
+
+
+
+<a name="641187"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/re-hire%20resulting%20in%20an%20odd%20state/near/641187" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/re-hire.20resulting.20in.20an.20odd.20state.html#641187">(Sep 04 2018 at 17:31)</a>:</h4>
+<div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">do_reactivate_user</span><span class="p">(</span><span class="n">user_profile</span><span class="p">:</span> <span class="n">UserProfile</span><span class="p">,</span> <span class="n">acting_user</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">UserProfile</span><span class="p">]</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="c1"># Unlike do_activate_user, this is meant for re-activating existing users,</span>
+    <span class="c1"># so it doesn&#39;t reset their password, etc.</span>
+    <span class="n">user_profile</span><span class="o">.</span><span class="n">is_active</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">user_profile</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">update_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;is_active&quot;</span><span class="p">])</span>
+
+    <span class="n">event_time</span> <span class="o">=</span> <span class="n">timezone_now</span><span class="p">()</span>
+    <span class="n">RealmAuditLog</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">realm</span><span class="o">=</span><span class="n">user_profile</span><span class="o">.</span><span class="n">realm</span><span class="p">,</span> <span class="n">modified_user</span><span class="o">=</span><span class="n">user_profile</span><span class="p">,</span>
+                                 <span class="n">event_type</span><span class="o">=</span><span class="n">RealmAuditLog</span><span class="o">.</span><span class="n">USER_REACTIVATED</span><span class="p">,</span> <span class="n">event_time</span><span class="o">=</span><span class="n">event_time</span><span class="p">,</span>
+                                 <span class="n">acting_user</span><span class="o">=</span><span class="n">acting_user</span><span class="p">,</span>
+                                 <span class="n">requires_billing_update</span><span class="o">=</span><span class="n">activity_change_requires_seat_update</span><span class="p">(</span><span class="n">user_profile</span><span class="p">))</span>
+    <span class="n">do_increment_logging_stat</span><span class="p">(</span><span class="n">user_profile</span><span class="o">.</span><span class="n">realm</span><span class="p">,</span> <span class="n">COUNT_STATS</span><span class="p">[</span><span class="s1">&#39;active_users_log:is_bot:day&#39;</span><span class="p">],</span>
+                              <span class="n">user_profile</span><span class="o">.</span><span class="n">is_bot</span><span class="p">,</span> <span class="n">event_time</span><span class="p">)</span>
+
+    <span class="n">notify_created_user</span><span class="p">(</span><span class="n">user_profile</span><span class="p">)</span>
+</pre></div>
+
+
+
+<a name="641211"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/re-hire%20resulting%20in%20an%20odd%20state/near/641211" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim April <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/re-hire.20resulting.20in.20an.20odd.20state.html#641211">(Sep 04 2018 at 19:06)</a>:</h4>
+<p>seems to be better now, maybe it just needed some time</p>
+
+
+
+<a name="641215"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/re-hire%20resulting%20in%20an%20odd%20state/near/641215" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Rishi Gupta <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/re-hire.20resulting.20in.20an.20odd.20state.html#641215">(Sep 04 2018 at 19:20)</a>:</h4>
+<p><span class="user-mention" data-user-id="73">@Tim April</span> yeah, I suspect it's stale data in cache, then. We have a post-save hook that clears cache data, so in general it's recommended to do things from <code>./manage.py shell</code> (using <code>.save()</code>) instead of <code>dbshell</code>. In this case</p>
+<div class="codehilite"><pre><span></span>    <span class="n">user_profile</span><span class="o">.</span><span class="n">is_active</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">user_profile</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+
+
+
+<a name="641784"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/re-hire%20resulting%20in%20an%20odd%20state/near/641784" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Tim Abbott <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/re-hire.20resulting.20in.20an.20odd.20state.html#641784">(Sep 06 2018 at 19:40)</a>:</h4>
+<p>Yeah the correct way to reactivate, either via web ui or management command, would have handled caching correctly.</p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

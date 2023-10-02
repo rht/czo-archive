@@ -1,0 +1,317 @@
+<html>
+<head><meta charset="utf-8"><title>LDAP / Active Directory infinite page refresh after login · production help · Zulip Chat Archive</title></head>
+<h2>Stream: <a href="https://rht.github.io/czo-archive/stream/31-production-help/index.html">production help</a></h2>
+<h3>Topic: <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html">LDAP / Active Directory infinite page refresh after login</a></h3>
+
+<hr>
+
+<base href="https://chat.zulip.org">
+
+<head><link href="https://rht.github.io/czo-archive/style.css" rel="stylesheet"></head>
+
+<a name="1615795"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1615795" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1615795">(Jul 25 2023 at 18:06)</a>:</h4>
+<p>Hi,</p>
+<p>I'm trying to move to Zulip from Rocket.Chat, and I've done the install, set up LDAP (Active Directory) in the settings file, and I can log in as an Active Directory user, but, after I log in, the page refreshes rapidly and infinitely until I am "banned" for too many requests.</p>
+<div class="codehilite"><pre><span></span><code> {&quot;result&quot;:&quot;error&quot;,&quot;msg&quot;:&quot;API usage exceeded rate limit&quot;,&quot;code&quot;:&quot;RATE_LIMIT_HIT&quot;,&quot;retry-after&quot;:45.25421094894409}
+</code></pre></div>
+<p>If I log in as an "email authentication" user, this doesn't happen.  </p>
+<p>If I log in as an LDAP / AD user using the IP address of my Zulip installation (LAN or WAN, doesn't matter), this doesn't happen.</p>
+<p>If I use Authentik to handle my AD login via SAML, this doesn't happen (but I don't want to have an extra VM for Authentik when I have no other use for it)</p>
+<p>Only if I log in as an LDAP / AD user, using my hostname, I have an infinitely looping page refresh.</p>
+<p>I am not behind a reverse proxy.</p>
+<p>There is nothing else installed on the VM running Zulip.</p>
+<p>I've recorded a video to demonstrate what's happening, but I don't know if posting a link to that is allowed.</p>
+<p>I have the same results whether I'm running the docker version or the "normal" version.</p>
+<p>Browser choice doesn't seem to matter, as the same thing happens on a mobile device as on a PC, visiting via the WAN IP on a mobile device using only cellular data, and logging in as an LDAP suer works fine, opening another tab in the same mobile browser also on cellular data and visiting via hostname has an infinite page refresh.</p>
+<p>Any ideas about what I'm doing wrong that's causing this?</p>
+
+
+
+<a name="1615940"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1615940" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1615940">(Jul 25 2023 at 21:18)</a>:</h4>
+<p><span class="user-mention" data-user-id="27440">@Steve</span>: Can you check the error logs in <code>/var/log/zulip/errors.log</code>, or the Django logs in <code>/var/log/zulip/django.log</code> and show anything that's happening there?</p>
+<p>I <em>expect</em> that there's a 403 or something happening which is triggering the reload, but that may be coming with more debug information.</p>
+
+
+
+<a name="1615969"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1615969" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1615969">(Jul 25 2023 at 21:56)</a>:</h4>
+<p>errors.log seems to contain nothing noteworthy, there's some stuff in there from before I figured out if I needed user@domain or domain\user or just user, but otherwise nothing.</p>
+<p>django.log is full of...things, but none of it really means much to me beyond "it says I logged in".  I don't know if there's a way to share the logs privately if you want to see if something jumps out at you as "wrong" (because of being full of private information), but, if I clear django.log before login, and log in via IP address, the resulting log is 29 lines long, if I clear the log and then log in again via hostname, the log is 504 lines long, and appears to be full of HTTP 302s</p>
+
+
+
+<a name="1615978"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1615978" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1615978">(Jul 25 2023 at 22:02)</a>:</h4>
+<p>Nothing notable about auth in between those HTTP 302's?</p>
+<p>You can DM me an attachment of logs if you'd like.  Though <span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> has more context on the auth stack than I do.</p>
+
+
+
+<a name="1615979"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1615979" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1615979">(Jul 25 2023 at 22:04)</a>:</h4>
+<p>I'll send you a DM, and my best guess is "I don't think so?".  It seems to 302 to "somewhere" and then get 200 that it's there and then 302 and then 200 and then 302...etc.</p>
+
+
+
+<a name="1615989"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1615989" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1615989">(Jul 25 2023 at 22:09)</a>:</h4>
+<p>Ah, OK, this is about Zulip being unhappy loading with the hostname in its URL, as opposed to being loaded with its IP in the URL.  Somehow I missed that before.</p>
+
+
+
+<a name="1615990"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1615990" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1615990">(Jul 25 2023 at 22:10)</a>:</h4>
+<p>Can you share any hostname-adjacent settings in <code>/etc/zulip/settings.py</code>?  None of those have IP addresses in them, right?</p>
+
+
+
+<a name="1615993"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1615993" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1615993">(Jul 25 2023 at 22:13)</a>:</h4>
+<p>Yeah, at first I thought I had something messed up with the reverse proxy not sending the correct headers, so I tried again and just used another of my WAN addresses to give to just Zulip it's own internet connection and no reverse proxy at all, but had the same results.</p>
+<div class="codehilite"><pre><span></span><code>EXTERNAL_HOST = &#39;zulip.myreal.tld&#39;
+ALLOWED_HOSTS = [&quot;10.50.30.91&quot;, &quot;WAN.IP.HERE&quot;, &quot;zulip.domain.local&quot;]
+</code></pre></div>
+
+
+
+<a name="1615996"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1615996" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1615996">(Jul 25 2023 at 22:16)</a>:</h4>
+<p>I'm very confused by the logs you sent -- they show, in the <code>https://zulip.myreal.tld/</code> case, the browser makes a request to <code>/login/</code> which gets 302'd to <code>/</code> because the server knows you're logged in.</p>
+<p>Something in the JS side is attempting to redirect you.  Can you fire up the JS console and see if there's any smoking gun there?</p>
+
+
+
+<a name="1615999"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1615999" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1615999">(Jul 25 2023 at 22:21)</a>:</h4>
+<p>I haven't touched JS in probably 10+ years, so I'm maybe unhelpful here, but, it is maybe complaining about a gravatar? There's a 401 in the JS console.</p>
+<div class="codehilite"><pre><span></span><code>/json/events?dont_block=false&amp;queue_id=e3c0f89a-ed88-4bee-825f-62faaf946055&amp;last_event_id=-1&amp;client_gravatar=true&amp;slim_presence=true:1
+
+
+        Failed to load resource: the server responded with a status of 401 ()
+blueslip.ts:34 Cleaning up our event queue
+blueslip.ts:34 Setting reload_in_progress in beforeunload handler
+blueslip.ts:34 Ignoring GET /json/messages response while reloading
+blueslip.ts:34 Ignoring POST /json/users/me/presence response while reloading
+blueslip.ts:34 Ignoring POST /json/users/me/presence response while reloading
+blueslip.ts:34 Ignoring DELETE /json/events error response while reloading
+</code></pre></div>
+
+
+
+<a name="1616001"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1616001" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1616001">(Jul 25 2023 at 22:23)</a>:</h4>
+<p>Hm.  Are those fresh?  I don't see any 401's in the logs you sent.  Open up the request inspector and see which request is 401'ing?</p>
+
+
+
+<a name="1616005"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1616005" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1616005">(Jul 25 2023 at 22:26)</a>:</h4>
+<p>I also might be missing something, because the JS console clears like every 1/4 second as the page refreshes, and I had to click the browser "stop" button to get anything, but yes, that's from right now.  I'm not familiar with what the request inspector is.</p>
+
+
+
+<a name="1616008"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1616008" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1616008">(Jul 25 2023 at 22:29)</a>:</h4>
+<p><a href="https://developer.chrome.com/docs/devtools/network/">https://developer.chrome.com/docs/devtools/network/</a> is the network inspector.</p>
+<p><a href="https://developer.chrome.com/docs/devtools/console/reference/#persist">https://developer.chrome.com/docs/devtools/console/reference/#persist</a> will also let you persist the logs across reloads.</p>
+
+
+
+<a name="1616012"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1616012" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1616012">(Jul 25 2023 at 22:30)</a>:</h4>
+<p>That's Chrome, but Firefox and others have similar tools.</p>
+
+
+
+<a name="1616013"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1616013" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1616013">(Jul 25 2023 at 22:34)</a>:</h4>
+<p><a href="/user_uploads/2/92/GpaaLg-hvq4b50P317Cz0izL/JS-console-1690324310599.log">JS-console-1690324310599.log</a><br>
+OK, I have a long log, but again, it isn't very meaningful to me.</p>
+
+
+
+<a name="1616014"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1616014" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1616014">(Jul 25 2023 at 22:35)</a>:</h4>
+<p>So that's claiming that an HTTPS request to <code>/json/events</code> is returning a 401.  That's not what Django was returning.</p>
+
+
+
+<a name="1616015"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1616015" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1616015">(Jul 25 2023 at 22:37)</a>:</h4>
+<p>The network inspector tab, if you open it for the window ytou're in, and then navigate (you need to check "Preserve log" on that as well) will show every request the browser makes, and its response code.</p>
+<p>Verifying that the browser is getting a 401 from that HTTP request would be nice.</p>
+<p>You should also look at <code>/var/log/nginx/access.log</code> and verify that there are not actually any 401's at the end of it.</p>
+
+
+
+<a name="1616016"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1616016" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1616016">(Jul 25 2023 at 22:38)</a>:</h4>
+<p>Oh, hang on.  Tornado is what's 401'ing</p>
+
+
+
+<a name="1616017"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1616017" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1616017">(Jul 25 2023 at 22:38)</a>:</h4>
+<p>Show the end of <code>/var/log/zulip/tornado*.log</code>?</p>
+
+
+
+<a name="1616018"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1616018" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1616018">(Jul 25 2023 at 22:39)</a>:</h4>
+<div class="codehilite"><pre><span></span><code>2023-07-25 22:35:32.527 INFO [zr:9800] 127.0.0.1       POST    200   3ms /api/v1/events/internal [6c972d92-b858-4b7c-a35d-0f1fe4cb9985/0] (10@root via internal)
+2023-07-25 22:35:32.599 INFO [zr:9800] 127.0.0.1       POST    200   3ms /api/v1/events/internal [6c972d92-b858-4b7c-a35d-0f1fe4cb9985/0] (10@root via internal)
+2023-07-25 22:35:32.825 INFO [zr:9800] 10.50.10.64     GET     401   6ms /json/events (unauth@root via Mozilla)
+2023-07-25 22:35:32.902 INFO [zr:9800] 10.50.10.64     DELETE  401   4ms /json/events (unauth@root via Mozilla)
+2023-07-25 22:35:32.935 INFO [zr:9800] 127.0.0.1       POST    200   2ms /api/v1/events/internal [1c4ad223-ec7b-44e6-b616-cf3a34a2c651/0] (10@root via internal)
+2023-07-25 22:35:33.018 INFO [zr:9800] 127.0.0.1       POST    200   2ms /api/v1/events/internal [1c4ad223-ec7b-44e6-b616-cf3a34a2c651/0] (10@root via internal)
+2023-07-25 22:35:33.200 INFO [zr:9800] 10.50.10.64     GET     401   1ms /json/events (unauth@root via Mozilla)
+2023-07-25 22:35:33.245 INFO [zr:9800] 10.50.10.64     DELETE  401   1ms /json/events (unauth@root via Mozilla)
+2023-07-25 22:35:33.291 INFO [zr:9800] 127.0.0.1       POST    200   2ms /api/v1/events/internal [d9b8d849-ad9d-4afe-b18d-14fbe4fbaf87/0] (10@root via internal)
+2023-07-25 22:35:33.376 INFO [zr:9800] 127.0.0.1       POST    200   3ms /api/v1/events/internal [d9b8d849-ad9d-4afe-b18d-14fbe4fbaf87/0] (10@root via internal)
+2023-07-25 22:35:33.548 INFO [zr:9800] 10.50.10.64     GET     401   1ms /json/events (unauth@root via Mozilla)
+2023-07-25 22:35:33.614 INFO [zr:9800] 10.50.10.64     DELETE  401   1ms /json/events (unauth@root via Mozilla)
+2023-07-25 22:35:33.638 INFO [zr:9800] 127.0.0.1       POST    200   2ms /api/v1/events/internal [8fcc9b58-40e1-49d5-887a-e15a1ed76f9a/0] (10@root via internal)
+2023-07-25 22:35:33.709 INFO [zr:9800] 127.0.0.1       POST    200   3ms /api/v1/events/internal [8fcc9b58-40e1-49d5-887a-e15a1ed76f9a/0] (10@root via internal)
+2023-07-25 22:35:33.867 INFO [zr:9800] 10.50.10.64     GET     401   1ms /json/events (unauth@root via Mozilla)
+2023-07-25 22:35:33.913 INFO [zr:9800] 10.50.10.64     DELETE  401   1ms /json/events (unauth@root via Mozilla)
+2023-07-25 22:35:33.953 INFO [zr:9800] 127.0.0.1       POST    200   2ms /api/v1/events/internal [54a9e971-258f-4504-9c2c-7713c5efd0fd/0] (10@root via internal)
+2023-07-25 22:35:34.042 INFO [zr:9800] 127.0.0.1       POST    200   2ms /api/v1/events/internal [54a9e971-258f-4504-9c2c-7713c5efd0fd/0] (10@root via internal)
+2023-07-25 22:35:34.208 INFO [zr:9800] 10.50.10.64     GET     401   1ms /json/events (unauth@root via Mozilla)
+2023-07-25 22:35:34.252 INFO [zr:9800] 10.50.10.64     DELETE  401   1ms /json/events (unauth@root via Mozilla)
+2023-07-25 22:35:34.290 INFO [zr:9800] 127.0.0.1       POST    200   2ms /api/v1/events/internal [3ee7a3a8-94e9-4e35-8087-967a098a4deb/0] (10@root via internal)
+2023-07-25 22:35:34.377 INFO [zr:9800] 127.0.0.1       POST    200   2ms /api/v1/events/internal [3ee7a3a8-94e9-4e35-8087-967a098a4deb/0] (10@root via internal)
+2023-07-25 22:35:34.536 INFO [zr:9800] 10.50.10.64     GET     401   1ms /json/events (unauth@root via Mozilla)
+2023-07-25 22:35:34.581 INFO [zr:9800] 10.50.10.64     DELETE  401   1ms /json/events (unauth@root via Mozilla)
+2023-07-25 22:35:34.623 INFO [zr:9800] 127.0.0.1       POST    200   2ms /api/v1/events/internal [491e20bb-586b-49d6-b12c-2ce74a0cd698/0] (10@root via internal)
+2023-07-25 22:35:34.698 INFO [zr:9800] 127.0.0.1       POST    200   2ms /api/v1/events/internal [491e20bb-586b-49d6-b12c-2ce74a0cd698/0] (10@root via internal)
+2023-07-25 22:35:43.524 INFO [:9800] Tornado 9800 removed 29 expired event queues owned by 1 users in 0.000s.  Now 59 active queues, 0 handlers, latest ID 3012
+2023-07-25 22:36:43.524 INFO [:9800] Tornado 9800 removed 12 expired event queues owned by 1 users in 0.000s.  Now 47 active queues, 0 handlers, latest ID 3012
+2023-07-25 22:37:43.533 INFO [:9800] Tornado 9800 removed 0 expired event queues owned by 0 users in 0.000s.  Now 47 active queues, 0 handlers, latest ID 3012
+</code></pre></div>
+
+
+
+<a name="1616019"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1616019" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1616019">(Jul 25 2023 at 22:40)</a>:</h4>
+<p>OK, well, that's something.  But I'm not clear on why Tornado doesn't like the request when there's a hostname on it.</p>
+<blockquote>
+<p>I'm trying to move to Zulip from Rocket.Chat</p>
+</blockquote>
+<p>Did you do anything interesting here?  Was this an import of Rocket.Chat data, or a fresh install?</p>
+
+
+
+<a name="1616021"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1616021" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1616021">(Jul 25 2023 at 22:44)</a>:</h4>
+<p>Fresh install, I haven't moved any data, more of an "I'd like to use Product X instead of Product Y".<br>
+Clean OS install of Debian 11, had this result, tried again on a clean install of Ubuntu 22.04.2.  Same thing with Deb12.<br>
+Installed the OS, did the usual install of curl and sudo because of them not being there out of the box on Debian, and then followed <a href="https://zulip.readthedocs.io/en/stable/production/install.html">https://zulip.readthedocs.io/en/stable/production/install.html</a></p>
+<hr>
+<p>attaching last 50 lines of the nginx log as well.<br>
+<a href="/user_uploads/2/c7/lrxMW1Sti7Pa_7c4DQ_BCRv-/nginx-log.txt">nginx-log.txt</a></p>
+<hr>
+<p>going to call it a day and try again on this tomorrow, thanks for the help so far. <span aria-label="smile" class="emoji emoji-1f642" role="img" title="smile">:smile:</span></p>
+
+
+
+<a name="1616668"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1616668" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1616668">(Jul 26 2023 at 16:16)</a>:</h4>
+<p>I started from scratch again after work last night, set up new Ubuntu and Debian VMs, on different hypervisors at work, and then again on my homelab, and between trying on 4 new VMs at work and 4 new VMs at home, on two different AD environments, using different domains from work and different personally owned domains, I still have the page infinitely refreshing when logging in as an Active Directory user, and still only if I log in to my Zulip installations using my hostname instead of my IP address.</p>
+<p>This leads me to believe the problem is me and I'm doing something wrong with the setup, but because it accepts the usernames and passwords, and allows me to log in, and I'm not getting entries in errors.log, I have no clue how to figure out what the thing I'm doing wrong is.</p>
+
+
+
+<a name="1616671"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1616671" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1616671">(Jul 26 2023 at 16:31)</a>:</h4>
+<p>Something is not lining up when tornado tries to get the auth information, while Django is happy with it.  Any ideas, <span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> ?</p>
+
+
+
+<a name="1617015"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1617015" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1617015">(Jul 27 2023 at 10:20)</a>:</h4>
+<p>Hmm, i dont have any hypotheses based on the info so far - <span class="user-mention" data-user-id="27440">@Steve</span> Could you send the <code>django.log</code> output generated during such a bugged login to me as well? As well as <code>ldap.log</code>, though I doubt those will be relevant to the problem - since it sounds like on the ldap side things are working fine</p>
+
+
+
+<a name="1617055"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1617055" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1617055">(Jul 27 2023 at 12:45)</a>:</h4>
+<p>Sure, I'll get those things send over to you.</p>
+
+
+
+<a name="1617099"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1617099" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Mateusz Mandera <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1617099">(Jul 27 2023 at 14:58)</a>:</h4>
+<p><span class="user-mention" data-user-id="27440">@Steve</span> I don't know how it would cause the observed symptoms, but I do see something not quite right with the ldap config. So we should fix that up and see if that changes anything.</p>
+<p>You have:</p>
+<div class="codehilite"><pre><span></span><code>LDAP_APPEND_DOMAIN = &quot;yourzulip.example.com&quot;
+
+## LDAP attribute to find a user&#39;s email address.
+##
+## Leave as None if users log in with their email addresses,
+## or if using LDAP_APPEND_DOMAIN.
+LDAP_EMAIL_ATTR = &quot;mail&quot;
+</code></pre></div>
+<p>So these are inconsistent. Looking at the rest of the config and logs, it seems to me that your config is for logging in with <code>sAMAccountName</code>, and grabbing the user email from the <code>mail</code> attr, right?  In which case, you'd want to set <code>LDAP_APPEND_DOMAIN = None</code>, because you're using this config type from our doc <a href="https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#ldap-including-active-directory">https://zulip.readthedocs.io/en/latest/production/authentication-methods.html#ldap-including-active-directory</a>:<br>
+<a href="/user_uploads/2/1a/s4GHmtlaWtIT-V3w8doO4Dvg/image.png">image.png</a></p>
+<div class="message_inline_image"><a href="/user_uploads/2/1a/s4GHmtlaWtIT-V3w8doO4Dvg/image.png" title="image.png"><img src="/user_uploads/2/1a/s4GHmtlaWtIT-V3w8doO4Dvg/image.png"></a></div><p>The changes are applied with <code>/home/zulip/deployments/current/scripts/restart-server</code>, right?</p>
+
+
+
+<a name="1617101"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1617101" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1617101">(Jul 27 2023 at 15:01)</a>:</h4>
+<p>I've been restarting the server to apply changes with...</p>
+<div class="codehilite"><pre><span></span><code>supervisorctl restart zulip-django
+</code></pre></div>
+<p>...or just by rebooting the VM.<br>
+I'll make those changes and see what happens, I appended the mail domain because my mail domain and LDAP / AD domain are different.</p>
+
+
+
+<a name="1617108"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1617108" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1617108">(Jul 27 2023 at 15:06)</a>:</h4>
+<p>Oh - that command would totally explain the symptoms.  Django works, but Tornado didn't get restarted and has old settings.</p>
+
+
+
+<a name="1617109"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1617109" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1617109">(Jul 27 2023 at 15:06)</a>:</h4>
+<p>I think a real <code>restart-server</code> should fix you up</p>
+
+
+
+<a name="1617110"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1617110" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1617110">(Jul 27 2023 at 15:07)</a>:</h4>
+<p>Can you help show us where you found a reference to just restarting Django, so we can fix the docs up?</p>
+
+
+
+<a name="1617111"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1617111" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1617111">(Jul 27 2023 at 15:13)</a>:</h4>
+<p><a href="https://zulip.readthedocs.io/en/latest/production/troubleshooting.html">https://zulip.readthedocs.io/en/latest/production/troubleshooting.html</a></p>
+<p>Under the section about if you've made a change to settings.py</p>
+<p>However, I might just be misreading it.  It looks like it's to restart "a service" and then gives an example of  "a service"</p>
+
+
+
+<a name="1617112"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1617112" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1617112">(Jul 27 2023 at 15:14)</a>:</h4>
+<p>Also, everything is working as intended now, thanks <span class="user-mention" data-user-id="12178">@Alex Vandiver</span> and <span class="user-mention" data-user-id="10349">@Mateusz Mandera</span> :-)</p>
+
+
+
+<a name="1617120"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1617120" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Alex Vandiver <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1617120">(Jul 27 2023 at 16:06)</a>:</h4>
+<p>We should update that wording to clarify that restarting just one service for settings changes is not recommended, and will lead to inconsistent behavior</p>
+
+
+
+<a name="1617131"></a>
+<h4><a href="https://chat.zulip.org#narrow/stream/31-production%20help/topic/LDAP%20/%20Active%20Directory%20infinite%20page%20refresh%20after%20login/near/1617131" class="zl"><img src="https://rht.github.io/czo-archive/assets/img/zulip.svg" alt="view this post on Zulip" style="width:20px;height:20px;"></a> Steve <a href="https://rht.github.io/czo-archive/stream/31-production-help/topic/LDAP.20.2F.20Active.20Directory.20infinite.20page.20refresh.20after.20login.html#1617131">(Jul 27 2023 at 16:52)</a>:</h4>
+<p>That and I admittedly didn't read it very clearly, I've kind of trained myself to see "monospace font, different colored block, copy and paste that one" <span aria-label="rolling on the floor laughing" class="emoji emoji-1f923" role="img" title="rolling on the floor laughing">:rolling_on_the_floor_laughing:</span></p>
+
+
+
+<hr><p>Last updated: Oct 02 2023 at 04:38 UTC</p>
+</html>

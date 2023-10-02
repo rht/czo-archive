@@ -1,0 +1,110 @@
+[
+    {
+        "content": "<p>Hi there, I just installed Zulip at home. I have a somewhat unique setup where Zulip is behind a reverse proxy. That reverse proxy server (Cloudron) runs several other apps which also use Mailgun. When using the same mailgun credentials in Zulip, I get Relaying Denied. I've gone through the troubleshooting steps but I can't figure out what's wrong and why only Zulip won't work when the other things will on the same physical hardware on the same network.</p>",
+        "id": 1274064,
+        "sender_full_name": "IanH",
+        "timestamp": 1635538019
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16458\">@IanH</span> <a href=\"https://help.mailgun.com/hc/en-us/articles/360012360833-Why-Did-I-Receive-Relaying-Denied-\">https://help.mailgun.com/hc/en-us/articles/360012360833-Why-Did-I-Receive-Relaying-Denied-</a> might be helpful.</p>",
+        "id": 1274134,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635544772
+    },
+    {
+        "content": "<p>I double checked my credentials and the URL but everything was correct</p>",
+        "id": 1274527,
+        "sender_full_name": "IanH",
+        "timestamp": 1635715338
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"16458\">@IanH</span> one possibility is that Zulip is sending from a different <code>From</code> address than your other software, and you need to configure Mailgun to accept that sender.</p>",
+        "id": 1274762,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635790148
+    },
+    {
+        "content": "<p>If that doesn't work, I'd try asking Mailgun support for help.</p>",
+        "id": 1274763,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635790155
+    },
+    {
+        "content": "<p>The second bullet in <a href=\"https://zulip.readthedocs.io/en/latest/production/email.html#troubleshooting\">https://zulip.readthedocs.io/en/latest/production/email.html#troubleshooting</a> is the issue I have in mind.</p>",
+        "id": 1274765,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1635790179
+    },
+    {
+        "content": "<p>Can you show the output from <a href=\"https://zulip.readthedocs.io/en/latest/production/email.html#troubleshooting\">the <code>send_test_email</code> command</a>?  My first guess is that one of the confgs is typo'd and as such not actually providing the right (or any) auth.</p>\n<p>Another possibility, based on your \"at home\", is that Mailgun doesn't allow direct SMTP connections from a consumer (e.g. cable) IP address, which is a restriction that some SMTP servers enforce to limit spam.  It'd surprise me if mailgun did that and didn't document that on their \"relaying denied\" FAQ, however.</p>",
+        "id": 1274885,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1635797752
+    },
+    {
+        "content": "<p>yeah, here's the log:</p>\n<div class=\"codehilite\"><pre><span></span><code>Failed to send mails: (550, b&#39;5.7.1 Relaying denied&#39;, &#39;admin@domain.tools&#39;)\n\nFull SMTP log follows:\nconnect: to (&#39;smtp.mailgun.org&#39;, 587) None\nreply: b&#39;220 Mailgun Influx ready\\r\\n&#39;\nreply: retcode (220); Msg: b&#39;Mailgun Influx ready&#39;\nconnect: b&#39;Mailgun Influx ready&#39;\nsend: &#39;ehlo zulip\\r\\n&#39;\nreply: b&#39;250-smtp-out-n04.prod.us-east-1.postgun.com\\r\\n&#39;\nreply: b&#39;250-AUTH PLAIN LOGIN\\r\\n&#39;\nreply: b&#39;250-SIZE 52428800\\r\\n&#39;\nreply: b&#39;250-8BITMIME\\r\\n&#39;\nreply: b&#39;250-SMTPUTF8\\r\\n&#39;\nreply: b&#39;250-PIPELINING\\r\\n&#39;\nreply: b&#39;250 STARTTLS\\r\\n&#39;\nreply: retcode (250); Msg: b&#39;smtp-out-n04.prod.us-east-1.postgun.com\\nAUTH PLAIN LOGIN\\nSIZE 52428800\\n8BITMIME\\nSMTPUTF8\\nPIPELINING\\nSTARTTLS&#39;\nsend: &#39;STARTTLS\\r\\n&#39;\nreply: b&#39;220 Go ahead\\r\\n&#39;\nreply: retcode (220); Msg: b&#39;Go ahead&#39;\nsend: &#39;ehlo zulip\\r\\n&#39;\nreply: b&#39;250-smtp-out-n04.prod.us-east-1.postgun.com\\r\\n&#39;\nreply: b&#39;250-AUTH PLAIN LOGIN\\r\\n&#39;\nreply: b&#39;250-SIZE 52428800\\r\\n&#39;\nreply: b&#39;250-8BITMIME\\r\\n&#39;\nreply: b&#39;250-SMTPUTF8\\r\\n&#39;\nreply: b&#39;250 PIPELINING\\r\\n&#39;\nreply: retcode (250); Msg: b&#39;smtp-out-n04.prod.us-east-1.postgun.com\\nAUTH PLAIN LOGIN\\nSIZE 52428800\\n8BITMIME\\nSMTPUTF8\\nPIPELINING&#39;\nsend: &#39;mail FROM:&lt;admin@domain.tools&gt; size=616\\r\\n&#39;\nreply: b&#39;550 5.7.1 Relaying denied\\r\\n&#39;\nreply: retcode (550); Msg: b&#39;5.7.1 Relaying denied&#39;\nsend: &#39;rset\\r\\n&#39;\n\nEmail sending failed!\n</code></pre></div>",
+        "id": 1275062,
+        "sender_full_name": "IanH",
+        "timestamp": 1635812539
+    },
+    {
+        "content": "<p>I currently have email set to:</p>\n<div class=\"codehilite\"><pre><span></span><code>EMAIL_HOST = &#39;smtp.mailgun.org&#39;\nEMAIL_HOST_USER = &#39;rosa@mail.domain.tools&#39;\n\n## Passwords and secrets are not stored in this file.  The password\n## for user EMAIL_HOST_USER goes in `/etc/zulip/zulip-secrets.conf`.\n## In that file, set `email_password`.  For example:\n# email_password = abcd1234\n\n## EMAIL_USE_TLS and EMAIL_PORT are required for most SMTP providers.\nEMAIL_USE_TLS = True\nEMAIL_PORT = 587\n\n## The noreply address to be used as the sender for certain generated\n## emails.  Messages sent to this address could contain sensitive user\n## data and should not be delivered anywhere.  The default is\n## e.g. noreply-{token}@zulip.example.com (if EXTERNAL_HOST is\n## zulip.example.com).  There are potential security issues if you set\n## ADD_TOKENS_TO_NOREPLY_ADDRESS=False to remove the token; see\n## https://zulip.readthedocs.io/en/latest/production/email.html for details.\nADD_TOKENS_TO_NOREPLY_ADDRESS = False\n#TOKENIZED_NOREPLY_EMAIL_ADDRESS = &quot;noreply-{token}@example.com&quot;\n## NOREPLY_EMAIL_ADDRESS is the sender for noreply emails that don&#39;t\n## contain confirmation links (where the security problem fixed by\n## ADD_TOKENS_TO_NOREPLY_ADDRESS does not exist), as well as for\n## confirmation emails when ADD_TOKENS_TO_NOREPLY_ADDRESS=False.\nNOREPLY_EMAIL_ADDRESS = &#39;noreply@doamin.tools&#39;\n</code></pre></div>",
+        "id": 1275063,
+        "sender_full_name": "IanH",
+        "timestamp": 1635812619
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span> <a href=\"#narrow/stream/31-production-help/topic/relaying.20denied/near/1274885\">said</a>:</p>\n<blockquote>\n<p>Another possibility, based on your \"at home\", is that Mailgun doesn't allow direct SMTP connections from a consumer (e.g. cable) IP address, which is a restriction that some SMTP servers enforce to limit spam.  It'd surprise me if mailgun did that and didn't document that on their \"relaying denied\" FAQ, however.</p>\n</blockquote>\n<p>Other applications I host at home can send/receive mail without a problem (but they aren't behind the same reverse proxy Zulip is, if that matters)</p>",
+        "id": 1275066,
+        "sender_full_name": "IanH",
+        "timestamp": 1635813114
+    },
+    {
+        "content": "<p>I don't see an attempt at auth there, unless you elided it.  Does <code>egrep '^email_password\\s*=\\s*\\S+' /etc/zulip/zulip-secrets.conf</code> match any lines?</p>",
+        "id": 1275070,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1635813270
+    },
+    {
+        "content": "<p>(don't show the output, if so, because that's your password)</p>",
+        "id": 1275072,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1635813289
+    },
+    {
+        "content": "<p>oh my god, well I fixed email and also figured out why twitter embeds wouldn't work. zulip/secrets.conf is not zulip/zullip-secrets.conf , sorry for the false alarm folks, I can't believe I didn't notice that earlier</p>",
+        "id": 1275079,
+        "sender_full_name": "IanH",
+        "timestamp": 1635813514
+    },
+    {
+        "content": "<p>No worries. <span aria-label=\"smile\" class=\"emoji emoji-1f642\" role=\"img\" title=\"smile\">:smile:</span></p>",
+        "id": 1275083,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1635813587
+    },
+    {
+        "content": "<p><span class=\"user-mention silent\" data-user-id=\"16458\">IanH</span> has marked this topic as resolved.</p>",
+        "id": 1275085,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1635813616
+    },
+    {
+        "content": "<p>I wonder if setting <code>EMAIL_HOST_USER</code> but not the <code>email_password</code> secret should throw a warning or error in the logs.</p>",
+        "id": 1275086,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1635813643
+    },
+    {
+        "content": "<p>good idea, I can post it in feeback if it's not there</p>",
+        "id": 1275088,
+        "sender_full_name": "IanH",
+        "timestamp": 1635813679
+    },
+    {
+        "content": "<p><a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/.E2.9C.94.20.27Last.20active.27.20not.20worked\">#issues &gt; ✔ 'Last active' not worked</a> has a bit of a related problem, but a bad hostname instead.</p>\n<p>I think it's worth starting a topic in <a class=\"stream\" data-stream-id=\"137\" href=\"/#narrow/stream/137-feedback\">#feedback</a> about if and when we want to do a configuration reasonableness check, particularly for email.</p>",
+        "id": 1275099,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1635813981
+    }
+]

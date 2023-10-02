@@ -1,0 +1,62 @@
+[
+    {
+        "content": "<p>Hi Zulip Community!</p>\n<p>Our zulip server has been running fine without needing admin or any maintence for the past 3 months. </p>\n<p>However, it recently went down in a strange manner. A few issues all happened around the same time:</p>\n<ol>\n<li>We were late on our cloud provider payment so our server was shutdown for a short period</li>\n<li>SSL certs for our zulip server <a href=\"http://team.stackmate.org\">team.stackmate.org</a> expired</li>\n</ol>\n<p>After clearing our payment dues and reissuing our ssl certs, we have been unable to access our server and get an Ambiguous 500 Error. </p>\n<p>I have opened this PR <a href=\"https://github.com/zulip/zulip/issues/23699#issuecomment-1344570643\">https://github.com/zulip/zulip/issues/23699#issuecomment-1344570643</a> with the entire error message requesting help and was redirected to this server. </p>\n<p>I have been inspecting the server today and unable to find the source of this issue. </p>\n<p>A side issue that I noticed is that when setting up Outgoing SMTP I have to keep updating settings.py manually from inside the docker container every time I restart the container. All required variables are passed as ENV in docker-compose yet they require manual setup. </p>\n<p>Currently I am able to access the login page at <a href=\"https://team.stackmate.org\">https://team.stackmate.org</a>, however, we are unable to:</p>\n<ol>\n<li>Login to old accounts</li>\n<li>Send password reset emails</li>\n<li>Get registration emails for new users.</li>\n</ol>\n<p>Also note: we have changed the email being used for outgoing SMTP. Is this an issue or can this email keep being changed without some reconfig?</p>",
+        "id": 1478899,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1670922842
+    },
+    {
+        "content": "<p>This topic was moved here from <a class=\"stream-topic\" data-stream-id=\"9\" href=\"/#narrow/stream/9-issues/topic/Ambiguous.20500.20Error\">#issues &gt; Ambiguous 500 Error</a> by <span class=\"user-mention silent\" data-user-id=\"12178\">Alex Vandiver</span>.</p>",
+        "id": 1478968,
+        "sender_full_name": "Notification Bot",
+        "timestamp": 1670945253
+    },
+    {
+        "content": "<p>The SSL certificate expiration is likely unrelated; it looks like you're using Lets Encrypt, so presumably it expired because the regular renewal didn't happen because the host was down.  Having an expired certificate for a bit won't cause any lasting harm, so we can likely ignore that part of the incident.</p>",
+        "id": 1478973,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670945380
+    },
+    {
+        "content": "<p>It sounds like you're using <code>docker-compose</code>.  The failure mode of \"Realm matching query does not exist\" sounds like your PostgreSQL server re-initialized itself with a clean empty schema and no data -- or, at least, some part of the datbase is missing.</p>",
+        "id": 1478974,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670945545
+    },
+    {
+        "content": "<p>I don't think you've told us what version of Zulip this is, and if you did any upgrades as part of your recovery.</p>\n<p>Note that <a href=\"https://github.com/zulip/docker-zulip/releases/tag/6.0-0\"><code>6.0-0</code> changed two potentially-relevant things</a>:</p>\n<ul>\n<li>It defaults to using Docker managed volumes (were you usiung thoise before?)</li>\n<li>It uses PostgreSQL 14, not PostgreSQL 10, which requires explicit steps to transfer the data.</li>\n</ul>",
+        "id": 1478976,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670945821
+    },
+    {
+        "content": "<p>Thanks for the support <span class=\"user-mention\" data-user-id=\"12178\">@Alex Vandiver</span> !</p>\n<p>I am using  <code>zulip/docker-zulip:5.6-0</code>. I did not run any upgrades. I am still very new to zulip so I didn't attempt doing anything out of the ordinary.</p>\n<p>I am using mounted docker volumes:<br>\nFor postgres in docker-compose I have the following:</p>\n<div class=\"codehilite\"><pre><span></span><code> - &quot;/mnt/secure-storage/postgresql/data:/var/lib/postgresql/data:rw&quot;\n</code></pre></div>\n<p>Which is usually what I do for most of my applications.</p>\n<p>I briefly inspected the postgres database. I noticed a lot of tables . Should I be inspecting anything in particular?</p>\n<p>Our organisation has only been using zulip for a few months and so its not a deal breaker if we lose data this time around, however I would like to :</p>\n<ol>\n<li>debug this issue and get to the bottom of it</li>\n<li>know what to do in the future to avoid any data loss. I suppose this would primarily be backups and how to recover old state.</li>\n</ol>",
+        "id": 1479055,
+        "sender_full_name": "Vishal Menon",
+        "timestamp": 1670953323
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"25451\">@Vishal Menon</span> well backups are always good to have just in case, but we're not aware of any data loss issues with Zulip, and hope to keep it that way.</p>",
+        "id": 1479209,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1670962748
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"25451\">@Vishal Menon</span> you can check the contents of the <code>zerver_realm</code> table; if it contains less than 2 realms, then that's a useful signal. (Or the <code>zerver_message</code> table -- it should have a lot of messages).</p>",
+        "id": 1479211,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1670962796
+    },
+    {
+        "content": "<p>I suspect that whatever went wrong here involves the fact that your hosting provider shut down the system.</p>",
+        "id": 1479212,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1670962899
+    },
+    {
+        "content": "<p>And that specifically it may not have been a clean shutdown, so the PostgreSQL instance may have been in inconsistent state.</p>",
+        "id": 1479221,
+        "sender_full_name": "Alex Vandiver",
+        "timestamp": 1670963039
+    }
+]

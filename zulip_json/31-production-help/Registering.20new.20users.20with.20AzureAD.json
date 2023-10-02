@@ -1,0 +1,380 @@
+[
+    {
+        "content": "<p>We have changed our server from LDAP authentication to use the AzureAD social auth.<br>\nThis works perfectly for existing users, but new users are unable to join.<br>\nThe symptoms look like <a href=\"https://github.com/zulip/zulip/issues/9127#issuecomment-385125472\" target=\"_blank\" title=\"https://github.com/zulip/zulip/issues/9127#issuecomment-385125472\">https://github.com/zulip/zulip/issues/9127#issuecomment-385125472</a><br>\nContinuing to register or using the \"sign up\" link on the home page produces a page with just the realm description - all authentication methods except for AzureAD are disabled in <code>settings.py</code></p>",
+        "id": 764068,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562331724
+    },
+    {
+        "content": "<p>Using release 2.0.4</p>",
+        "id": 764069,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562332199
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2772\">@Shane Kearns</span> thanks for the report!  That backend is relatively new and not used extensively, so it's possible there's a bug here.  It's also possible you have some security configuration in \"organization permissions\" limiting users to a given email domain that doesn't match the users you're trying to add, or requiring that users have an invtation.  Can you check that isn't the case?</p>",
+        "id": 764832,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562562247
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> Invites are not required, there is a domain restriction but it matches the domain in use.<br>\nThe other aspect is that AzureAD is \"federated\", and chains onto SAML authentication. So it's possible that an API we call after receiving an authenticated user does not behave as expected. (I didn't see anything in the error logs though)</p>",
+        "id": 764959,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562588507
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2772\">@Shane Kearns</span> are you a programmer?  If so, I can provide some advice on where to add print statements to debug where this is failing for you.</p>",
+        "id": 765026,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562614346
+    },
+    {
+        "content": "<p>I am. Yes please, I found some things in zerver/backends.py but not where it ties in with new user provisioning</p>",
+        "id": 765298,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562674396
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2772\">@Shane Kearns</span> great!  The key function for this flow is <code>social_auth_finish</code> in that file.  There's two possibilities.  The first is that it is failing somewhere early in that function (or not getting there); you should be able to print-debug that without too much trouble.  And then this block at the end of <code>social_auth_finish</code> has arguments that are a nice summary of the authentication result:</p>\n<div class=\"codehilite\"><pre><span></span>    return redirect_and_log_into_subdomain(realm, full_name, email_address,\n                                           is_signup=is_signup,\n                                           redirect_to=redirect_to,\n                                           multiuse_object_key=multiuse_object_key)\n</pre></div>\n\n\n<p>I would add a print statement for all those arguments, restart the server, try the signup flow, and then find it (and any other print output) in <code>/var/log/zulip/django.log</code>.</p>",
+        "id": 765465,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562700477
+    },
+    {
+        "content": "<p>That will likely tell us where the wrong thing is happening.</p>",
+        "id": 765466,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562700554
+    },
+    {
+        "content": "<p>this part is the same for login and new user creation?</p>",
+        "id": 765468,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562700646
+    },
+    {
+        "content": "<p>other than is_signup</p>",
+        "id": 765470,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562700663
+    },
+    {
+        "content": "<p>Yes, exactly, it's the same code path, and which page you were on just determines the <code>is_signup</code> bit.</p>",
+        "id": 765471,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562700680
+    },
+    {
+        "content": "<p>So the key thing we'll see here is whether it gets to this point and <code>email_address</code> is set to the right value.</p>",
+        "id": 765473,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562700710
+    },
+    {
+        "content": "<p>although there's no social buttons on the sign up page</p>",
+        "id": 765475,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562700735
+    },
+    {
+        "content": "<p>There aren't?</p>",
+        "id": 765476,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562700744
+    },
+    {
+        "content": "<p>no, there's nothing at all when email &amp; password is disabled except the realm description</p>",
+        "id": 765477,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562700774
+    },
+    {
+        "content": "<p>Hmm, that's not expected.</p>",
+        "id": 765478,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562700793
+    },
+    {
+        "content": "<p>Oh, I see what's going on.</p>",
+        "id": 765479,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562700838
+    },
+    {
+        "content": "<p><code>&lt;div class=\"right side\"&gt;</code> has no content</p>",
+        "id": 765480,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562700879
+    },
+    {
+        "content": "<p>Yeah, OK, in 2.0.x, we are missing a block for azuread in the templates for that page.</p>",
+        "id": 765481,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562700889
+    },
+    {
+        "content": "<p>Are you running 2.0.4?</p>",
+        "id": 765482,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562700895
+    },
+    {
+        "content": "<p>yes</p>",
+        "id": 765483,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562700898
+    },
+    {
+        "content": "<p>OK let me backport the missing template change onto our for-2.0.5 branch and push it so you can test-install that.</p>",
+        "id": 765485,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562700941
+    },
+    {
+        "content": "<p>(Since 2.0.x we changed it to be all generated by a loop, but apparently in 2.0.x it's still manual blocks for each backend, and we apparently have azuread on /login and not /register)</p>",
+        "id": 765486,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562700983
+    },
+    {
+        "content": "<p>I see.. didn't it use to auto create users on login?</p>",
+        "id": 765487,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562701054
+    },
+    {
+        "content": "<p>or was that only for LDAP</p>",
+        "id": 765488,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562701061
+    },
+    {
+        "content": "<p>Only the LDAP setup will do that.  Though the other ones should take you to a page offering to let you create an account, it's possible that feature is since 2.0.x</p>",
+        "id": 765489,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562701115
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2772\">@Shane Kearns</span> OK, you should be able to do an <code>upgrade-zulip-from-git 2.0.0-series</code> and get that /register form added.  </p>\n<p>(You'll also get a handful of other bugfixes scheduled for 2.0.5)</p>",
+        "id": 765497,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562702438
+    },
+    {
+        "content": "<p>checking...</p>",
+        "id": 765498,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562702458
+    },
+    {
+        "content": "<p>signup button is there</p>",
+        "id": 765508,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562703259
+    },
+    {
+        "content": "<p>but goes to a 404 page</p>",
+        "id": 765509,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562703274
+    },
+    {
+        "content": "<p><code>/login/azuread/?subdomain=&amp;is_signup=1&amp;multiuse_object_key=</code></p>",
+        "id": 765510,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562703297
+    },
+    {
+        "content": "<p>login button goes to <code>/login/azuread-oauth2/?subdomain=&amp;is_signup=0&amp;multiuse_object_key=</code> which redirects to azure as it should</p>",
+        "id": 765511,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562703451
+    },
+    {
+        "content": "<p><strong>-oauth2</strong> differs</p>",
+        "id": 765512,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562703468
+    },
+    {
+        "content": "<p>Oops, fixed.  That's the trouble with backporting changes that use variables; you get to introduce typos again.</p>",
+        "id": 765520,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562704085
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2772\">@Shane Kearns</span> try again?</p>",
+        "id": 765521,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562704089
+    },
+    {
+        "content": "<div class=\"codehilite\"><pre><span></span>    {% block content %}\n  File &quot;/home/zulip/deployments/2019-07-09-21-28-29/zproject/../templates/zerver/portico.html&quot;, line 20, in block &quot;content&quot;\n    {% block portico_content %}\n  File &quot;/home/zulip/deployments/2019-07-09-21-28-29/zproject/../templates/zerver/accounts_home.html&quot;, line 103, in block &quot;portico_content&quot;\n    &lt;form class=&quot;form-inline azure-wrapper&quot; action=&quot;{{ url(&#39;signup-social&#39;, args=(&#39;azuread-oauth2&#39;,)) }}&quot; method=&quot;get&quot;&gt;\n  File &quot;/home/zulip/deployments/2019-07-09-21-28-29/zulip-py3-venv/lib/python3.6/site-packages/django/urls/base.py&quot;, line 91, in reverse\n    return force_text(iri_to_uri(resolver._reverse_with_prefix(view, prefix, *args, **kwargs)))\n  File &quot;/home/zulip/deployments/2019-07-09-21-28-29/zulip-py3-venv/lib/python3.6/site-packages/django/urls/resolvers.py&quot;, line 497, in _reverse_with_prefix\n    raise NoReverseMatch(msg)\ndjango.urls.exceptions.NoReverseMatch: Reverse for &#39;signup-social&#39; with arguments &#39;(&#39;azuread-oauth2&#39;,)&#39; not found. 2 pattern(s) tried: [&#39;accounts/register/social/(\\\\w+)$&#39;, &#39;en/accounts/register/social/(\\\\w+)$&#39;]\n</pre></div>",
+        "id": 765524,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562704448
+    },
+    {
+        "content": "<p>Interesting.  Maybe backporting this is going to be annoying.</p>",
+        "id": 765525,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562704570
+    },
+    {
+        "content": "<p>Would you be up for upgrading to a 2.1-beta branch?</p>",
+        "id": 765526,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562704584
+    },
+    {
+        "content": "<p>on my test server, yes</p>",
+        "id": 765527,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562704600
+    },
+    {
+        "content": "<p>My guess is that'll fix this, but I'm not sure it's worth spending more time trying to backport the change to 2.0.x</p>",
+        "id": 765528,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562704603
+    },
+    {
+        "content": "<p>OK, great, can you try just upgrading to master there?  My belief is that should resolve at least this <code>/register</code> issue for you.</p>",
+        "id": 765529,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562704619
+    },
+    {
+        "content": "<p>master will become 2.1?</p>",
+        "id": 765530,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562704647
+    },
+    {
+        "content": "<p>Yes, exactly.</p>",
+        "id": 765531,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562704710
+    },
+    {
+        "content": "<p>It's what we run on this server as well as <a href=\"http://zulipchat.com\" target=\"_blank\" title=\"http://zulipchat.com\">zulipchat.com</a></p>",
+        "id": 765532,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562704720
+    },
+    {
+        "content": "<p>downgrading is a bit inconvenient, so if it's hard to recreate your test server, you may want to do a backup+restore and do it there.</p>",
+        "id": 765533,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562704743
+    },
+    {
+        "content": "<p>Invite links did seem to get around the problem, test server is running a backup from a couple of weeks ago so I was going to ask the affected user to try again there</p>",
+        "id": 765534,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562704931
+    },
+    {
+        "content": "<p>That'll be tomorrow, assuming upgrade to master works</p>",
+        "id": 765535,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562705205
+    },
+    {
+        "content": "<p>Getting the same python exception on master</p>",
+        "id": 765537,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562705494
+    },
+    {
+        "content": "<p>The <code>reverse</code> one?</p>",
+        "id": 765539,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562705933
+    },
+    {
+        "content": "<p>Interesting.</p>",
+        "id": 765540,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562705935
+    },
+    {
+        "content": "<p>yes</p>",
+        "id": 765541,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562705950
+    },
+    {
+        "content": "<p>OK let me investigate.</p>",
+        "id": 765542,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562705965
+    },
+    {
+        "content": "<p>(I'm only aware of ~1 other site using the azuread backend, so I'm not surprised there may be bugs here)</p>",
+        "id": 765543,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562706009
+    },
+    {
+        "content": "<p>Yeah what we really want is SAML, but azureAD is a proxy for that</p>",
+        "id": 765544,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562706042
+    },
+    {
+        "content": "<p>And too many people have failed to add SAML support to take it on lightly</p>",
+        "id": 765545,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562706079
+    },
+    {
+        "content": "<p>I'm about to head home, let me know if there's another version to try</p>",
+        "id": 765546,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562706213
+    },
+    {
+        "content": "<p>OK just merged <a href=\"https://github.com/zulip/zulip/commit/6758b016ac6f332cc9f0f246753b1ba20b3a514c\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/6758b016ac6f332cc9f0f246753b1ba20b3a514c\">6758b016ac6f332cc9f0f246753b1ba20b3a514c</a>, which should fix the /register thing in master.  So if you re-deploy master, you should get past that exception.</p>",
+        "id": 765553,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562707170
+    },
+    {
+        "content": "<p>I'm suspicious that caused the whole issue.</p>",
+        "id": 765554,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562707176
+    },
+    {
+        "content": "<p>Almost successful - the registration workflow worked with azureAD, but the registration page asked for the user to enter a password</p>",
+        "id": 766030,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562767686
+    },
+    {
+        "content": "<p>This might be a configuration issue as the test server still had LDAP configured, even though LDAP authentication was disabled.</p>",
+        "id": 766032,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1562767853
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"2772\">@Shane Kearns</span> OK -- keep my updated.  The next thing in my plans for the codebase is to run our unit tests for the GitHub auth backend against the AzureAD one, which would make any potential issues with that flow easily reproducible with tests.</p>",
+        "id": 766133,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1562777682
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-id=\"7\">@Tim Abbott</span> sorry it took a while to get back to you. The fix you made on master is working correctly - after I removed the LDAP configuration on staging and restarted, a new new user going through the signup workflow was prompted for their full name instead of a password at the last step.<br>\nSending invite links is a workaround for production.</p>",
+        "id": 770927,
+        "sender_full_name": "Shane Kearns",
+        "timestamp": 1563799091
+    },
+    {
+        "content": "<p>OK, great.</p>",
+        "id": 771071,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1563817737
+    }
+]

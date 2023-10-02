@@ -1,0 +1,68 @@
+[
+    {
+        "content": "<p>Using 1.7.1 The install is running with Email auth but trying to configure LDAP auth instead against AD. I have Django 1.8 LTS with LDAP auth working against this AD server in another application. My settings for Zulip are:</p>\n<div class=\"codehilite\"><pre><span></span>AUTH_LDAP_USER_ATTR_MAP = {&#39;full_name&#39;: &#39;cn&#39;,}\nAUTH_LDAP_SERVER_URI = &#39;ldap://sjc-dc251.domain.com&#39;\nAUTH_LDAP_USER_SEARCH = LDAPSearch(&#39;DC=domain,DC=com&#39;, ldap.SCOPE_SUBTREE, &quot;(mail=%(user)s)&quot;,)\nLDAP_APPEND_DOMAIN = None\nAUTH_LDAP_CONNECTION_OPTIONS = {ldap.OPT_REFERRALS: 0, ldap.OPT_X_TLS_REQUIRE_CERT: 0,}\nAUTH_LDAP_BIND_DN = &#39;cn=ldapbind,cn=Users,dc=domain,dc=com&#39;\nAUTH_LDAP_BIND_PASSWORD = &#39;xxxxx&#39;\n</pre></div>\n\n\n<p>When testing with ./manage.py query_ldap I get an bind error:</p>\n<div class=\"codehilite\"><pre><span></span>ldap.INVALID_CREDENTIALS: {&#39;info&#39;: &#39;80090308: LdapErr: DSID-0C0903D9, comment: AcceptSecurityContext error, data 52e, v2580&#39;, &#39;desc&#39;: &#39;Invalid credentials&#39;}\n</pre></div>\n\n\n<p>Seems pretty straight forward however the same credentials work on the same system using ldapsearch tool. Sample ldapsearch CLI is </p>\n<div class=\"codehilite\"><pre><span></span>ldapsearch -W -H ldap://sjc-dc251.domain.com -x -D &quot;cn=ldapbind,cn=Users,dc=domain,dc=com&quot; -b &quot;dc=domain,dc=com&quot; -L &quot;sAMAccountName=srussell&quot; cn\n</pre></div>\n\n\n<p>Not sure why I'm seeing invalid auth from Zulip testing though?</p>",
+        "id": 487560,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518058475
+    },
+    {
+        "content": "<p>So I’m fairly sure this is a straight up settings config issue. Is there a way I can see the ldap bind db and password actually being used? Checking logs doesn’t show them.</p>",
+        "id": 488093,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518092715
+    },
+    {
+        "content": "<p>Apparently I needed to add auth_ldap_bind_password manually to the /etc/zulip/zulip-secrets.conf file. Once done and restarted services the query_ldap works as expected.</p>",
+        "id": 488385,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518102591
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"scott@frak.ms\" data-user-id=\"5233\">@Scott Russell</span> Glad you got it working!</p>",
+        "id": 488591,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518112602
+    },
+    {
+        "content": "<p>The solution here is documented there in the config file, but there is kind of a lot of prose there. Here's the documentation for <code>AUTH_LDAP_BIND_DN</code>:</p>\n<div class=\"codehilite\"><pre><span></span># This DN will be used to bind to your server. If unset, anonymous\n# binds are performed.  If set, you need to specify the password as\n# &#39;auth_ldap_bind_password&#39; in zulip-secrets.conf.\nAUTH_LDAP_BIND_DN = &quot;&quot;\n</pre></div>",
+        "id": 488596,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518112678
+    },
+    {
+        "content": "<p>I'm going to edit that to more like</p>\n<div class=\"codehilite\"><pre><span></span># This DN will be used to bind to your server. If unset, anonymous\n# binds are performed.\n#\n# If set, you need to specify the password in zulip-secrets.conf ,\n# as &#39;auth_ldap_bind_password&#39;.\nAUTH_LDAP_BIND_DN = &quot;&quot;\n</pre></div>\n\n\n<p>since that seems like a good detail to highlight.</p>",
+        "id": 488603,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518112913
+    },
+    {
+        "content": "<p>I'm also curious: how did you originally come across <code>AUTH_LDAP_BIND_PASSWORD</code> as a thing you needed to set? That may be another spot where we should make the documentation a little clearer.</p>",
+        "id": 488604,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518112961
+    },
+    {
+        "content": "<p>(Edited, as <a href=\"https://github.com/zulip/zulip/commit/9e7002674\" target=\"_blank\" title=\"https://github.com/zulip/zulip/commit/9e7002674\">9e7002674</a>.)</p>",
+        "id": 488608,
+        "sender_full_name": "Greg Price",
+        "timestamp": 1518113180
+    },
+    {
+        "content": "<p>Because in my troubleshooting I was looking for a way to see if the DN and PASS were set. So I loaded up ./manage.py shell and checked settings.AUTH_LDAP_* values until I noticed theAUTH_LDAP_BIND_PASSWORD. was empty. Being experienced in Django, I went looking for other settings.conf files and that is where I noticed it being set via get_secrets().</p>\n<p>It would be great that if AUTH_LDAP_BIND_DN is set to some value, that ./manage.py checkconfig would catch the missing auth_ldap_bind_password in the zulip-secrets.conf. I think that would have solved it for me quicker?</p>",
+        "id": 489480,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518130533
+    },
+    {
+        "content": "<p>And by solved it I mean I should have read the comments closer.</p>",
+        "id": 489481,
+        "sender_full_name": "Scott Russell",
+        "timestamp": 1518130550
+    },
+    {
+        "content": "<p><span class=\"user-mention\" data-user-email=\"scott@frak.ms\" data-user-id=\"5233\">@Scott Russell</span> that's a good idea and probably an easy check for us to add.  <span class=\"user-mention\" data-user-email=\"greg@zulipchat.com\" data-user-id=\"2187\">@Greg Price</span> do you see a reason that wouldn't be easy to do (just crash the server if the <code>DN</code> is set and no password is?)</p>",
+        "id": 489685,
+        "sender_full_name": "Tim Abbott",
+        "timestamp": 1518143533
+    }
+]
